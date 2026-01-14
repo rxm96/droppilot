@@ -465,7 +465,7 @@ function App() {
     addGame, addGameFromSelect, priorityGames, previewPriorityGames, removeGame,
     dragIndex, dragOverIndex, setDragIndex, setDragOverIndex, handleDropReorder,
     obeyPriority, setObeyPriority: handleSetObeyPriority,
-    autoClaim, setAutoClaim: handleSetAutoClaim,
+    autoClaim: autoClaim, setAutoClaim: handleSetAutoClaim,
     autoSelect, setAutoSelect: handleSetAutoSelect,
     autoSwitchEnabled, setAutoSwitchEnabled: handleSetAutoSwitchEnabled,
     demoMode, setDemoMode: handleSetDemoMode,
