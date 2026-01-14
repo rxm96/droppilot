@@ -20,7 +20,7 @@ export function UpdateOverlay({ updateStatus, onInstallUpdate }: Props) {
   const { t } = useI18n();
   const resolvedStatus: UpdateStatus = updateStatus ?? { state: "idle" };
   const statusState = resolvedStatus.state;
-  const forcePreview = true;
+  const forcePreview = false;
   const needsPreview =
     forcePreview && statusState !== "downloading" && statusState !== "downloaded";
   const effectiveState = needsPreview ? "downloaded" : statusState;
