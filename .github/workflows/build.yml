@@ -50,6 +50,7 @@ jobs:
           name: droppilot-${{ runner.os }}
           path: |
             release/*.exe
+            release/*.blockmap
             release/*.dmg
             release/*.zip
             release/*.yml
@@ -63,12 +64,14 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+          merge-multiple: true
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/**/release/*.exe
-            artifacts/**/release/*.dmg
-            artifacts/**/release/*.zip
-            artifacts/**/release/*.yml
+            artifacts/*.exe
+            artifacts/*.blockmap
+            artifacts/*.dmg
+            artifacts/*.zip
+            artifacts/*.yml
