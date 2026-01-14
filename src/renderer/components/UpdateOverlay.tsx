@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { useI18n } from "../i18n";
 
 type UpdateStatus = {
@@ -18,19 +18,19 @@ type Props = {
 
 export function UpdateOverlay({ updateStatus, onInstallUpdate }: Props) {
   const { t } = useI18n();
-  if (!updateStatus) return null;
+  const resolvedStatus: UpdateStatus = updateStatus ?? { state: "idle" };
+  const statusState = resolvedStatus.state;
   const forcePreview = true;
   const needsPreview =
-    forcePreview && updateStatus.state !== "downloading" && updateStatus.state !== "downloaded";
-  const effectiveState = needsPreview ? "downloaded" : updateStatus.state;
+    forcePreview && statusState !== "downloading" && statusState !== "downloaded";
+  const effectiveState = needsPreview ? "downloaded" : statusState;
   const isDownloading = effectiveState === "downloading";
   const isReady = effectiveState === "downloaded";
-  if (!isDownloading && !isReady) return null;
 
-  const progressPct = Math.min(100, Math.max(0, Math.round(updateStatus.progress ?? 0)));
+  const progressPct = Math.min(100, Math.max(0, Math.round(resolvedStatus.progress ?? 0)));
   const showProgress = isDownloading && Number.isFinite(progressPct);
   const canInstall =
-    updateStatus.state === "downloaded" && typeof onInstallUpdate === "function";
+    resolvedStatus.state === "downloaded" && typeof onInstallUpdate === "function";
   const formatBytes = (bytes?: number) => {
     if (!bytes || bytes <= 0) return "0 MB";
     const mb = bytes / (1024 * 1024);
@@ -39,8 +39,8 @@ export function UpdateOverlay({ updateStatus, onInstallUpdate }: Props) {
   const subtitle = isDownloading
     ? t("settings.updateDownloading", {
         percent: progressPct,
-        transferred: formatBytes(updateStatus.transferred),
-        total: formatBytes(updateStatus.total),
+        transferred: formatBytes(resolvedStatus.transferred),
+        total: formatBytes(resolvedStatus.total),
       })
     : t("settings.updateDownloaded");
 
@@ -58,13 +58,14 @@ export function UpdateOverlay({ updateStatus, onInstallUpdate }: Props) {
     };
   }, [isDownloading, isReady]);
 
+  if (!isDownloading && !isReady) return null;
+
   return (
     <div className="update-overlay" role="status" aria-live="polite">
       <div className="update-overlay-card">
-        <div className="update-overlay-icon">
-          <span className="material-symbols-rounded" aria-hidden="true">
-            system_update_alt
-          </span>
+        <div className="update-overlay-orbit" aria-hidden="true">
+          <span className="orbit-dot" />
+          <span className="orbit-dot small" />
         </div>
         <h2 className="update-overlay-title">
           {isDownloading ? t("titlebar.updateDownloading") : t("titlebar.updateReady")}
