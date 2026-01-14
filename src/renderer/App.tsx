@@ -571,6 +571,55 @@ function App() {
     }
   }, []);
 
+  const handleDownloadUpdate = useCallback(async () => {
+    if (!window.electronAPI?.app?.downloadUpdate) {
+      setUpdateStatus({ state: "error", message: "Download API unavailable" });
+      return;
+    }
+    setUpdateStatus({ state: "downloading", progress: 0 });
+    try {
+      const res = await window.electronAPI.app.downloadUpdate();
+      if (!res) {
+        setUpdateStatus({ state: "error", message: "No response" });
+        return;
+      }
+      if (!res.ok && res.status === "unsupported") {
+        setUpdateStatus({ state: "unsupported" });
+        return;
+      }
+      if (!res.ok) {
+        setUpdateStatus({ state: "error", message: res.message || "Download failed" });
+      }
+    } catch (err) {
+      setUpdateStatus({
+        state: "error",
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }, []);
+
+  const handleInstallUpdate = useCallback(async () => {
+    if (!window.electronAPI?.app?.installUpdate) {
+      setUpdateStatus({ state: "error", message: "Install API unavailable" });
+      return;
+    }
+    try {
+      const res = await window.electronAPI.app.installUpdate();
+      if (res && !res.ok && res.status === "unsupported") {
+        setUpdateStatus({ state: "unsupported" });
+        return;
+      }
+      if (res && !res.ok) {
+        setUpdateStatus({ state: "error", message: res.message || "Install failed" });
+      }
+    } catch (err) {
+      setUpdateStatus({
+        state: "error",
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }, []);
+
   const handleStartLoginWithCreds = useCallback(
     () => startLoginWithCreds(creds),
     [startLoginWithCreds, creds],
@@ -768,6 +817,8 @@ function App() {
     showUpdateCheck: isWindows,
     updateStatus,
     checkUpdates: handleCheckUpdates,
+    downloadUpdate: handleDownloadUpdate,
+    installUpdate: handleInstallUpdate,
   };
   const controlProps = {
     priorityPlan,
@@ -806,7 +857,7 @@ function App() {
           <TitleBar
             version={appVersion}
             updateStatus={updateStatus}
-            onCheckUpdates={handleCheckUpdates}
+            onCheckUpdates={handleDownloadUpdate}
           />
         )}
         <div className="app-shell">

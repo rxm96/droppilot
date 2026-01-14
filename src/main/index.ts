@@ -15,6 +15,8 @@ const auth = new AuthController();
 const twitchService = new TwitchService(loadSession);
 let tray: Tray | null = null;
 let updateTimer: NodeJS.Timeout | null = null;
+const UPDATE_INTERVAL_MS = 60 * 60 * 1000;
+let lastUpdateNotice: string | null = null;
 
 if (process.platform === "win32") {
   app.setAppUserModelId("com.droppilot.app");
@@ -115,7 +117,7 @@ function setupAutoUpdater() {
   if (process.platform !== "win32") return;
   if (!app.isPackaged) return;
 
-  autoUpdater.autoDownload = true;
+  autoUpdater.autoDownload = false;
 
   const broadcast = (payload: Record<string, unknown>) => {
     for (const win of BrowserWindow.getAllWindows()) {
@@ -124,10 +126,19 @@ function setupAutoUpdater() {
       }
     }
   };
+  const notify = (title: string, body?: string) => {
+    if (!Notification.isSupported()) return;
+    new Notification({ title, body: body ?? "" }).show();
+  };
 
   autoUpdater.on("update-available", (info) => {
     console.log("update: available");
     broadcast({ status: "available", version: info?.version });
+    const version = info?.version ? String(info.version) : null;
+    if (version && version !== lastUpdateNotice) {
+      notify("Update available", `DropPilot ${version} is ready to download.`);
+      lastUpdateNotice = version;
+    }
   });
   autoUpdater.on("update-not-available", () => {
     console.log("update: none");
@@ -147,15 +158,15 @@ function setupAutoUpdater() {
     });
   });
   autoUpdater.on("update-downloaded", () => {
-    autoUpdater.quitAndInstall();
     broadcast({ status: "downloaded" });
+    notify("Update ready", "Restart DropPilot to install the update.");
   });
 
   const check = () => {
     void autoUpdater.checkForUpdates();
   };
   check();
-  updateTimer = setInterval(check, 4 * 60 * 60 * 1000);
+  updateTimer = setInterval(check, UPDATE_INTERVAL_MS);
 }
 
 app.whenReady().then(() => {

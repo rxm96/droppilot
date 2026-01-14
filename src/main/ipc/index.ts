@@ -227,17 +227,46 @@ export function registerIpcHandlers(deps: {
       return { ok: false, status: "unsupported" };
     }
     try {
+      autoUpdater.autoDownload = false;
       const result = await autoUpdater.checkForUpdates();
       const version = result?.updateInfo?.version;
       if (version && version !== app.getVersion()) {
-        try {
-          await autoUpdater.downloadUpdate();
-        } catch {
-          // download may already be in progress; ignore
-        }
         return { ok: true, status: "available", version };
       }
       return { ok: true, status: "none" };
+    } catch (err) {
+      return {
+        ok: false,
+        status: "error",
+        message: err instanceof Error ? err.message : String(err),
+      };
+    }
+  });
+
+  ipcMain.handle("app/downloadUpdate", async () => {
+    if (process.platform !== "win32" || !app.isPackaged) {
+      return { ok: false, status: "unsupported" };
+    }
+    try {
+      autoUpdater.autoDownload = false;
+      await autoUpdater.downloadUpdate();
+      return { ok: true };
+    } catch (err) {
+      return {
+        ok: false,
+        status: "error",
+        message: err instanceof Error ? err.message : String(err),
+      };
+    }
+  });
+
+  ipcMain.handle("app/installUpdate", async () => {
+    if (process.platform !== "win32" || !app.isPackaged) {
+      return { ok: false, status: "unsupported" };
+    }
+    try {
+      autoUpdater.quitAndInstall();
+      return { ok: true };
     } catch (err) {
       return {
         ok: false,

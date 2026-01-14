@@ -60,6 +60,8 @@ type SettingsProps = {
   settingsError?: string | null;
   showUpdateCheck?: boolean;
   checkUpdates?: () => void;
+  downloadUpdate?: () => void;
+  installUpdate?: () => void;
   updateStatus?: {
     state: "idle" | "checking" | "available" | "downloading" | "downloaded" | "none" | "error" | "unsupported";
     message?: string;
@@ -131,6 +133,8 @@ export function SettingsView({
   settingsError,
   showUpdateCheck,
   checkUpdates,
+  downloadUpdate,
+  installUpdate,
   updateStatus,
 }: SettingsProps) {
   const { t } = useI18n();
@@ -141,6 +145,8 @@ export function SettingsView({
   };
   const progressPct = Math.min(100, Math.max(0, Math.round(updateStatus?.progress ?? 0)));
   const showProgress = updateStatus?.state === "downloading" && Number.isFinite(progressPct);
+  const canDownload = updateStatus?.state === "available" && typeof downloadUpdate === "function";
+  const canInstall = updateStatus?.state === "downloaded" && typeof installUpdate === "function";
   const updateLabel = (() => {
     if (!updateStatus || updateStatus.state === "idle") return null;
     switch (updateStatus.state) {
@@ -221,6 +227,16 @@ export function SettingsView({
                 >
                   {t("settings.checkUpdates")}
                 </button>
+                {canDownload ? (
+                  <button type="button" onClick={downloadUpdate}>
+                    {t("settings.updateDownload")}
+                  </button>
+                ) : null}
+                {canInstall ? (
+                  <button type="button" onClick={installUpdate}>
+                    {t("settings.updateInstall")}
+                  </button>
+                ) : null}
               </div>
             </div>
           ) : null}
