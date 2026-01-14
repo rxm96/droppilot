@@ -1,0 +1,52 @@
+{
+  "name": "droppilot",
+  "version": "0.1.0",
+  "type": "commonjs",
+  "description": "DropPilot - Twitch drops automation with Electron + React + TypeScript",
+  "main": "dist-electron/main/index.js",
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "echo \"Add linter\""
+  },
+  "build": {
+    "appId": "com.droppilot.app",
+    "productName": "DropPilot",
+    "icon": "icons/icon.png",
+    "files": [
+      "dist/**",
+      "dist-electron/**",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "icons",
+        "to": "icons"
+      }
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "nsis"
+    }
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "electron": "^30.0.0",
+    "electron-builder": "^24.6.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.10",
+    "vite-plugin-electron": "^0.15.5",
+    "vite-plugin-electron-renderer": "^0.14.5"
+  }
+}
