@@ -19,15 +19,16 @@ if (process.platform === "win32") {
 }
 
 function createWindow(): BrowserWindow {
+  const isMac = process.platform === "darwin";
   const win = new BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 1100,
     minHeight: 760,
     title: "DropPilot",
-    autoHideMenuBar: true,
-    titleBarStyle: "hidden",
-    frame: false,
+    autoHideMenuBar: !isMac,
+    titleBarStyle: isMac ? "default" : "hidden",
+    frame: isMac,
     backgroundColor: "#040814",
     webPreferences: {
       // preload bundle name matches vite-plugin-electron output (preload.js)

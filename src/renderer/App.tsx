@@ -50,6 +50,7 @@ function App() {
   const isLinked = auth.status === "ok";
   const isLinkedOrDemo = isLinked || demoMode;
   const allowWatching = isLinkedOrDemo;
+  const isMac = useMemo(() => typeof navigator !== "undefined" && /mac/i.test(navigator.platform), []);
   const authErrorHandlerRef = useRef<(message?: string) => void>(() => {});
   const forwardAuthError = useCallback((message?: string) => {
     authErrorHandlerRef.current?.(message);
@@ -493,7 +494,7 @@ function App() {
   return (
     <I18nProvider language={language}>
       <div className="window-shell">
-        <TitleBar />
+        {!isMac && <TitleBar />}
         <div className="app-shell">
           <Hero
             isLinked={isLinkedOrDemo}
