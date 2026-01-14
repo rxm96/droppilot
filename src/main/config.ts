@@ -18,8 +18,11 @@ const TWITCH_ANDROID_USER_AGENTS = [
 
 const DEFAULT_TWITCH_USER_AGENT = TWITCH_ANDROID_USER_AGENTS[0];
 const pickUserAgent = (list: string[]) =>
-  list[Math.floor(Math.random() * list.length)] || DEFAULT_TWITCH_USER_AGENT;
+  list.length ? list[Math.floor(Math.random() * list.length)] : DEFAULT_TWITCH_USER_AGENT;
 
+// Note: pickUserAgent is intentionally called once at module initialization to choose
+// a stable User-Agent for this process. It does not rotate per request; if per-request
+// rotation is required, call this helper at request time instead of using the constant.
 // User-Agent matching the Android app client.
 export const TWITCH_WEB_USER_AGENT =
   process.env.TWITCH_WEB_USER_AGENT ?? pickUserAgent(TWITCH_ANDROID_USER_AGENTS);
