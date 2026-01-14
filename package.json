@@ -1,6 +1,6 @@
 {
   "name": "droppilot",
-  "version": "1.1.10",
+  "version": "1.1.11",
   "type": "commonjs",
   "description": "DropPilot - Twitch drops automation with Electron + React + TypeScript",
   "main": "dist-electron/main/index.js",
@@ -38,6 +38,7 @@
       "output": "release"
     },
     "win": {
+      "artifactName": "DropPilot-Setup-${version}.${ext}",
       "target": "nsis"
     }
   },
