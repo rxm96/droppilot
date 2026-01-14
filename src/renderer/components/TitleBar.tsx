@@ -16,12 +16,19 @@ type Props = {
     version?: string;
     progress?: number;
   };
-  onCheckUpdates?: () => void;
+  onDownloadUpdate?: () => void;
+  onInstallUpdate?: () => void;
 };
 
 type WindowAction = "minimize" | "maximize" | "restore" | "close" | "hide-to-tray";
 
-export function TitleBar({ title = "DropPilot", version, updateStatus, onCheckUpdates }: Props) {
+export function TitleBar({
+  title = "DropPilot",
+  version,
+  updateStatus,
+  onDownloadUpdate,
+  onInstallUpdate,
+}: Props) {
   const { t } = useI18n();
   const handle = (action: WindowAction) => {
     window.electronAPI.app.windowControl(action);
@@ -43,7 +50,10 @@ export function TitleBar({ title = "DropPilot", version, updateStatus, onCheckUp
     updateState === "available" && updateStatus?.version
       ? `${t("titlebar.updateAvailable")} (${updateStatus.version})`
       : updateLabel;
-  const canTriggerUpdate = updateState === "available" && typeof onCheckUpdates === "function";
+  const canDownloadUpdate = updateState === "available" && typeof onDownloadUpdate === "function";
+  const canInstallUpdate = updateState === "downloaded" && typeof onInstallUpdate === "function";
+  const updateAction = canDownloadUpdate ? onDownloadUpdate : canInstallUpdate ? onInstallUpdate : undefined;
+  const disableUpdateAction = updateState === "downloading" || !updateAction;
 
   return (
     <div className="titlebar">
@@ -56,8 +66,8 @@ export function TitleBar({ title = "DropPilot", version, updateStatus, onCheckUp
           <button
             type="button"
             className={`title-btn titlebar-update ${updateState === "downloading" ? "loading" : ""}`}
-            onClick={canTriggerUpdate ? onCheckUpdates : undefined}
-            disabled={!canTriggerUpdate}
+            onClick={updateAction}
+            disabled={disableUpdateAction}
             aria-label={updateTitle}
             title={updateTitle}
           >

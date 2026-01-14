@@ -43,6 +43,10 @@
     "win": {
       "artifactName": "DropPilot-Setup-${version}.${ext}",
       "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": true,
+      "allowToChangeInstallationDirectory": false
     }
   },
   "dependencies": {
