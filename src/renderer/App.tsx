@@ -28,9 +28,13 @@ import { logDebug, logWarn } from "./utils/logger";
 
 const PAGE_SIZE = 8;
 type UpdateStatus = {
-  state: "idle" | "checking" | "available" | "none" | "error" | "unsupported";
+  state: "idle" | "checking" | "available" | "downloading" | "downloaded" | "none" | "error" | "unsupported";
   message?: string;
   version?: string;
+  progress?: number;
+  transferred?: number;
+  total?: number;
+  bytesPerSecond?: number;
 };
 
 function App() {
@@ -95,6 +99,7 @@ function App() {
   const [autoSelectEnabled, setAutoSelectEnabled] = useState<boolean>(true);
   const [nowTick, setNowTick] = useState(Date.now());
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ state: "idle" });
+  const [appVersion, setAppVersion] = useState<string>("");
   const isLinked = auth.status === "ok";
   const isLinkedOrDemo = isLinked || demoMode;
   const allowWatching = isLinkedOrDemo;
@@ -162,6 +167,49 @@ function App() {
   useEffect(() => {
     const unsubscribe = window.electronAPI.logs?.onMainLog?.((payload) => {
       logDebug(`[main:${payload.scope}]`, ...(payload.args ?? []));
+    });
+    return () => {
+      if (typeof unsubscribe === "function") unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchVersion = async () => {
+      const res = await window.electronAPI.app?.getVersion?.();
+      if (!cancelled && res?.version) {
+        setAppVersion(String(res.version));
+      }
+    };
+    void fetchVersion();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = window.electronAPI.app?.onUpdateStatus?.((payload) => {
+      const status = payload?.status;
+      if (status === "available") {
+        setUpdateStatus({ state: "available", version: payload.version as string | undefined });
+      } else if (status === "none") {
+        setUpdateStatus({ state: "none" });
+      } else if (status === "downloading") {
+        setUpdateStatus({
+          state: "downloading",
+          progress: Number(payload.percent ?? 0),
+          transferred: Number(payload.transferred ?? 0),
+          total: Number(payload.total ?? 0),
+          bytesPerSecond: Number(payload.bytesPerSecond ?? 0),
+        });
+      } else if (status === "downloaded") {
+        setUpdateStatus({ state: "downloaded" });
+      } else if (status === "error") {
+        setUpdateStatus({
+          state: "error",
+          message: payload.message ? String(payload.message) : "Update error",
+        });
+      }
     });
     return () => {
       if (typeof unsubscribe === "function") unsubscribe();
@@ -754,7 +802,7 @@ function App() {
   return (
     <I18nProvider language={language}>
       <div className="window-shell">
-        {!isMac && <TitleBar />}
+        {!isMac && <TitleBar version={appVersion} />}
         <div className="app-shell">
           <Hero
             isLinked={isLinkedOrDemo}

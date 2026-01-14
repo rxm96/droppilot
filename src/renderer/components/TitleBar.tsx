@@ -2,11 +2,12 @@ import { useI18n } from "../i18n";
 
 type Props = {
   title?: string;
+  version?: string;
 };
 
 type WindowAction = "minimize" | "maximize" | "restore" | "close" | "hide-to-tray";
 
-export function TitleBar({ title = "DropPilot" }: Props) {
+export function TitleBar({ title = "DropPilot", version }: Props) {
   const { t } = useI18n();
   const handle = (action: WindowAction) => {
     window.electronAPI.app.windowControl(action);
@@ -14,7 +15,10 @@ export function TitleBar({ title = "DropPilot" }: Props) {
 
   return (
     <div className="titlebar">
-      <div className="titlebar-title">{title}</div>
+      <div className="titlebar-title">
+        {title}
+        {version ? <span className="titlebar-version">v{version}</span> : null}
+      </div>
       <div className="titlebar-actions">
         <button
           type="button"

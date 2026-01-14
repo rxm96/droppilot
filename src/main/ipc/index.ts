@@ -230,6 +230,11 @@ export function registerIpcHandlers(deps: {
       const result = await autoUpdater.checkForUpdates();
       const version = result?.updateInfo?.version;
       if (version && version !== app.getVersion()) {
+        try {
+          await autoUpdater.downloadUpdate();
+        } catch {
+          // download may already be in progress; ignore
+        }
         return { ok: true, status: "available", version };
       }
       return { ok: true, status: "none" };
@@ -240,6 +245,10 @@ export function registerIpcHandlers(deps: {
         message: err instanceof Error ? err.message : String(err),
       };
     }
+  });
+
+  ipcMain.handle("app/getVersion", async () => {
+    return { version: app.getVersion() };
   });
 
   ipcMain.handle("app/notify", async (_event, payload: { title?: string; body?: string }) => {

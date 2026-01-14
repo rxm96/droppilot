@@ -61,9 +61,13 @@ type SettingsProps = {
   showUpdateCheck?: boolean;
   checkUpdates?: () => void;
   updateStatus?: {
-    state: "idle" | "checking" | "available" | "none" | "error" | "unsupported";
+    state: "idle" | "checking" | "available" | "downloading" | "downloaded" | "none" | "error" | "unsupported";
     message?: string;
     version?: string;
+    progress?: number;
+    transferred?: number;
+    total?: number;
+    bytesPerSecond?: number;
   };
 };
 
@@ -130,6 +134,13 @@ export function SettingsView({
   updateStatus,
 }: SettingsProps) {
   const { t } = useI18n();
+  const formatBytes = (bytes?: number) => {
+    if (!bytes || bytes <= 0) return "0 MB";
+    const mb = bytes / (1024 * 1024);
+    return `${mb.toFixed(1)} MB`;
+  };
+  const progressPct = Math.min(100, Math.max(0, Math.round(updateStatus?.progress ?? 0)));
+  const showProgress = updateStatus?.state === "downloading" && Number.isFinite(progressPct);
   const updateLabel = (() => {
     if (!updateStatus || updateStatus.state === "idle") return null;
     switch (updateStatus.state) {
@@ -137,6 +148,14 @@ export function SettingsView({
         return t("settings.updateChecking");
       case "available":
         return t("settings.updateAvailable", { version: updateStatus.version ?? "?" });
+      case "downloading":
+        return t("settings.updateDownloading", {
+          percent: progressPct,
+          transferred: formatBytes(updateStatus.transferred),
+          total: formatBytes(updateStatus.total),
+        });
+      case "downloaded":
+        return t("settings.updateDownloaded");
       case "none":
         return t("settings.updateNone");
       case "unsupported":
@@ -187,6 +206,11 @@ export function SettingsView({
               <div>
                 <div className="label">{t("settings.updates")}</div>
                 {updateLabel ? <p className="meta">{updateLabel}</p> : null}
+                {showProgress ? (
+                  <div className="progress-bar small" style={{ marginTop: 8 }}>
+                    <span style={{ width: `${progressPct}%` }} />
+                  </div>
+                ) : null}
               </div>
               <div className="settings-actions">
                 <button

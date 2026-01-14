@@ -193,6 +193,16 @@ body {
   color: #f3f6ff;
   text-transform: uppercase;
   opacity: 0.92;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.titlebar-version {
+  font-size: 11px;
+  letter-spacing: 0.4px;
+  color: rgba(243, 246, 255, 0.6);
+  text-transform: none;
 }
 
 .titlebar-actions {

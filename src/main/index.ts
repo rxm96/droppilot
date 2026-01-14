@@ -117,24 +117,38 @@ function setupAutoUpdater() {
 
   autoUpdater.autoDownload = true;
 
-  autoUpdater.on("update-available", () => {
+  const broadcast = (payload: Record<string, unknown>) => {
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed()) {
+        win.webContents.send("app/updateStatus", payload);
+      }
+    }
+  };
+
+  autoUpdater.on("update-available", (info) => {
     console.log("update: available");
+    broadcast({ status: "available", version: info?.version });
   });
   autoUpdater.on("update-not-available", () => {
     console.log("update: none");
+    broadcast({ status: "none" });
   });
   autoUpdater.on("error", (err) => {
     console.warn("update: error", err);
+    broadcast({ status: "error", message: err instanceof Error ? err.message : String(err) });
+  });
+  autoUpdater.on("download-progress", (progress) => {
+    broadcast({
+      status: "downloading",
+      percent: progress.percent,
+      transferred: progress.transferred,
+      total: progress.total,
+      bytesPerSecond: progress.bytesPerSecond,
+    });
   });
   autoUpdater.on("update-downloaded", () => {
-    const notif = new Notification({
-      title: "DropPilot Update",
-      body: "Update downloaded. Click to restart and install.",
-    });
-    notif.on("click", () => {
-      autoUpdater.quitAndInstall();
-    });
-    notif.show();
+    autoUpdater.quitAndInstall();
+    broadcast({ status: "downloaded" });
   });
 
   const check = () => {

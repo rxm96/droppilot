@@ -63,6 +63,13 @@ const api = {
     windowControl: (action: "minimize" | "maximize" | "restore" | "close" | "hide-to-tray") =>
       ipcRenderer.invoke("app/windowControl", { action }),
     checkUpdates: () => ipcRenderer.invoke("app/checkUpdates"),
+    onUpdateStatus: (handler: (payload: { status: string; [key: string]: unknown }) => void) => {
+      const listener = (_event: unknown, payload: { status: string; [key: string]: unknown }) =>
+        handler(payload);
+      ipcRenderer.on("app/updateStatus", listener);
+      return () => ipcRenderer.removeListener("app/updateStatus", listener);
+    },
+    getVersion: () => ipcRenderer.invoke("app/getVersion"),
     notify: (payload: { title: string; body?: string }) =>
       ipcRenderer.invoke("app/notify", payload),
   },
