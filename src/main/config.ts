@@ -1,3 +1,5 @@
+import { randomInt } from "node:crypto";
+
 // Default: Android App client to avoid integrity checks. Override via env if needed.
 export const TWITCH_CLIENT_ID = process.env.TWITCH_CLIENT_ID ?? "kd1unb4b3q4t58fwlpcbzcbnm76a8fp";
 // Optional: needed for refresh_token grant. Leave unset if you cannot store secrets.
@@ -16,7 +18,7 @@ const TWITCH_ANDROID_USER_AGENTS = [
   "Dalvik/2.1.0 (Linux; U; Android 14; SM-X306B Build/UP1A.231005.007) tv.twitch.android.app/25.3.0/2503006",
 ];
 
-const pickUserAgent = (list: string[]) => list[Math.floor(Math.random() * list.length)];
+const pickUserAgent = (list: string[]) => list[randomInt(0, list.length)];
 
 // Note: pickUserAgent is intentionally called once at module initialization to choose
 // a stable User-Agent for this process. It does not rotate per request; if per-request
