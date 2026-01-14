@@ -3,15 +3,47 @@ import { useI18n } from "../i18n";
 type Props = {
   title?: string;
   version?: string;
+  updateStatus?: {
+    state:
+      | "idle"
+      | "checking"
+      | "available"
+      | "downloading"
+      | "downloaded"
+      | "none"
+      | "error"
+      | "unsupported";
+    version?: string;
+    progress?: number;
+  };
+  onCheckUpdates?: () => void;
 };
 
 type WindowAction = "minimize" | "maximize" | "restore" | "close" | "hide-to-tray";
 
-export function TitleBar({ title = "DropPilot", version }: Props) {
+export function TitleBar({ title = "DropPilot", version, updateStatus, onCheckUpdates }: Props) {
   const { t } = useI18n();
   const handle = (action: WindowAction) => {
     window.electronAPI.app.windowControl(action);
   };
+  const updateState = updateStatus?.state;
+  const showUpdate =
+    updateState === "available" || updateState === "downloading" || updateState === "downloaded";
+  const updateProgress =
+    updateState === "downloading" && typeof updateStatus?.progress === "number"
+      ? Math.round(updateStatus.progress)
+      : null;
+  const updateLabel =
+    updateState === "available"
+      ? t("titlebar.updateAvailable")
+      : updateState === "downloading"
+        ? t("titlebar.updateDownloading")
+        : t("titlebar.updateReady");
+  const updateTitle =
+    updateState === "available" && updateStatus?.version
+      ? `${t("titlebar.updateAvailable")} (${updateStatus.version})`
+      : updateLabel;
+  const canTriggerUpdate = updateState === "available" && typeof onCheckUpdates === "function";
 
   return (
     <div className="titlebar">
@@ -20,6 +52,24 @@ export function TitleBar({ title = "DropPilot", version }: Props) {
         {version ? <span className="titlebar-version">v{version}</span> : null}
       </div>
       <div className="titlebar-actions">
+        {showUpdate ? (
+          <button
+            type="button"
+            className={`title-btn titlebar-update ${updateState === "downloading" ? "loading" : ""}`}
+            onClick={canTriggerUpdate ? onCheckUpdates : undefined}
+            disabled={!canTriggerUpdate}
+            aria-label={updateTitle}
+            title={updateTitle}
+          >
+            <span className="titlebar-update-icon material-symbols-rounded" aria-hidden="true">
+              system_update_alt
+            </span>
+            <span className="titlebar-update-text">
+              {updateLabel}
+              {updateProgress !== null ? ` ${updateProgress}%` : ""}
+            </span>
+          </button>
+        ) : null}
         <button
           type="button"
           className="title-btn tray"
@@ -27,7 +77,10 @@ export function TitleBar({ title = "DropPilot", version }: Props) {
           aria-label={t("titlebar.tray")}
           title={t("titlebar.tray")}
         >
-          <span>{t("titlebar.tray")}</span>
+          <span className="titlebar-btn-icon material-symbols-rounded" aria-hidden="true">
+            arrow_downward
+          </span>
+          <span className="titlebar-btn-text">{t("titlebar.tray")}</span>
         </button>
         <button
           type="button"
@@ -35,7 +88,9 @@ export function TitleBar({ title = "DropPilot", version }: Props) {
           onClick={() => handle("minimize")}
           aria-label={t("titlebar.minimize")}
         >
-          <span>&minus;</span>
+          <span className="titlebar-btn-icon material-symbols-rounded" aria-hidden="true">
+            remove
+          </span>
         </button>
         <button
           type="button"
@@ -43,7 +98,9 @@ export function TitleBar({ title = "DropPilot", version }: Props) {
           onClick={() => handle("maximize")}
           aria-label={t("titlebar.maximize")}
         >
-          <span>&#9723;</span>
+          <span className="titlebar-btn-icon material-symbols-rounded" aria-hidden="true">
+            crop_square
+          </span>
         </button>
         <button
           type="button"
@@ -51,7 +108,9 @@ export function TitleBar({ title = "DropPilot", version }: Props) {
           onClick={() => handle("close")}
           aria-label={t("titlebar.close")}
         >
-          <span>&#10005;</span>
+          <span className="titlebar-btn-icon material-symbols-rounded" aria-hidden="true">
+            close
+          </span>
         </button>
       </div>
     </div>

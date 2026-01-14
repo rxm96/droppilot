@@ -99,6 +99,9 @@ const translations: Translations = {
     "titlebar.minimize": "Minimize",
     "titlebar.maximize": "Maximize",
     "titlebar.close": "Close",
+    "titlebar.updateAvailable": "Update available",
+    "titlebar.updateDownloading": "Downloading update",
+    "titlebar.updateReady": "Update ready",
 
     "control.title": "Control",
     "control.subtitle": "Active watching and campaign progress.",
@@ -336,6 +339,9 @@ const translations: Translations = {
     "titlebar.minimize": "Minimieren",
     "titlebar.maximize": "Maximieren",
     "titlebar.close": "Schließen",
+    "titlebar.updateAvailable": "Update verfuegbar",
+    "titlebar.updateDownloading": "Update laedt",
+    "titlebar.updateReady": "Update bereit",
 
     "control.title": "Control",
     "control.subtitle": "Aktives Watching und Kampagnen-Progress.",

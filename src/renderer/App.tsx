@@ -802,7 +802,13 @@ function App() {
   return (
     <I18nProvider language={language}>
       <div className="window-shell">
-        {!isMac && <TitleBar version={appVersion} />}
+        {!isMac && (
+          <TitleBar
+            version={appVersion}
+            updateStatus={updateStatus}
+            onCheckUpdates={handleCheckUpdates}
+          />
+        )}
         <div className="app-shell">
           <Hero
             isLinked={isLinkedOrDemo}

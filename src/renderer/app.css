@@ -241,12 +241,32 @@ body {
 }
 
 .title-btn span {
-  width: 100%;
-  height: 100%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
+}
+
+.material-symbols-rounded {
+  font-family: "Material Symbols Rounded";
+  font-weight: normal;
+  font-style: normal;
+  font-variation-settings: "FILL" 0, "wght" 500, "GRAD" 0, "opsz" 24;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-flex;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-size: 18px;
+  -webkit-font-feature-settings: "liga";
+  -webkit-font-smoothing: antialiased;
+}
+
+.titlebar-btn-icon.material-symbols-rounded,
+.titlebar-update-icon.material-symbols-rounded {
+  font-size: 16px;
 }
 
 .title-btn:hover {
@@ -268,6 +288,50 @@ body {
 .title-btn.close:hover {
   background: #2c1622;
   border-color: #a23a4d;
+}
+
+.titlebar-update {
+  width: auto;
+  padding: 0 12px;
+  gap: 8px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(136, 208, 255, 0.9), rgba(156, 139, 255, 0.95));
+  color: #05102a;
+  border: none;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 10px 20px rgba(88, 140, 255, 0.25);
+}
+
+.titlebar-update.loading {
+  background: linear-gradient(135deg, rgba(136, 208, 255, 0.55), rgba(156, 139, 255, 0.6));
+}
+
+.titlebar-update:hover {
+  background: linear-gradient(135deg, rgba(158, 222, 255, 0.95), rgba(172, 156, 255, 0.98));
+}
+
+.titlebar-update.loading:hover {
+  background: linear-gradient(135deg, rgba(136, 208, 255, 0.6), rgba(156, 139, 255, 0.7));
+}
+
+.titlebar-update:disabled {
+  cursor: default;
+  opacity: 0.7;
+  transform: none;
+}
+
+.titlebar-update-text {
+  white-space: nowrap;
+}
+
+.titlebar-btn-text {
+  margin-left: 6px;
+  font-size: 12px;
 }
 
 /* Scrollbar styling */
@@ -750,8 +814,11 @@ a,
 }
 
 .nav-icon svg {
-  width: 18px;
-  height: 18px;
+  display: none;
+}
+
+.nav-icon .material-symbols-rounded {
+  font-size: 18px;
 }
 
 .nav-text {
