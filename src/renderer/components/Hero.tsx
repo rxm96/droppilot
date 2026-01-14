@@ -54,7 +54,6 @@ export function Hero({
       <div className="hero-left">
         <div className="hero-head">
           <div>
-            <p className="eyebrow">{t("app.name")}</p>
             <h1>{t("hero.title")}</h1>
           </div>
           <div className="pill-row">

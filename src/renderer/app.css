@@ -372,6 +372,7 @@ body {
 
 .app-hero.compact {
   margin-bottom: 12px;
+  grid-template-columns: 1fr;
 }
 
 .hero-left {
@@ -397,6 +398,7 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 10px;
+  align-items: stretch;
 }
 
 h1 {
@@ -477,13 +479,59 @@ h1 {
 }
 
 .kpi-card {
+  padding: 12px 14px;
   min-height: 100%;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(136, 208, 255, 0.18);
+  background:
+    linear-gradient(180deg, rgba(12, 18, 34, 0.9), rgba(10, 15, 28, 0.95)),
+    var(--panel);
+  box-shadow:
+    0 12px 24px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.kpi-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    120% 100% at 0% 0%,
+    rgba(136, 208, 255, 0.18),
+    transparent 60%
+  );
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.kpi-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  opacity: 0.6;
+}
+
+.kpi-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.kpi-card .label {
+  margin-bottom: 4px;
+  font-size: 11px;
+  letter-spacing: 1.8px;
 }
 
 .kpi-value {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
   color: #f5f7ff;
+  letter-spacing: -0.2px;
 }
 
 .kpi-meta {
