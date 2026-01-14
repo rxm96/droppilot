@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppContent } from "./components/AppContent";
 import { Hero } from "./components/Hero";
 import { TitleBar } from "./components/TitleBar";
+import { UpdateOverlay } from "./components/UpdateOverlay";
 import { useAlertEffects } from "./hooks/useAlertEffects";
 import { useAuth } from "./hooks/useAuth";
 import { useChannels } from "./hooks/useChannels";
@@ -857,9 +858,11 @@ function App() {
           <TitleBar
             version={appVersion}
             updateStatus={updateStatus}
-            onCheckUpdates={handleDownloadUpdate}
+            onDownloadUpdate={handleDownloadUpdate}
+            onInstallUpdate={handleInstallUpdate}
           />
         )}
+        <UpdateOverlay updateStatus={updateStatus} onInstallUpdate={handleInstallUpdate} />
         <div className="app-shell">
           <Hero
             isLinked={isLinkedOrDemo}

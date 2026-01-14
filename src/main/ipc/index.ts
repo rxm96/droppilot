@@ -265,7 +265,7 @@ export function registerIpcHandlers(deps: {
       return { ok: false, status: "unsupported" };
     }
     try {
-      autoUpdater.quitAndInstall();
+      autoUpdater.quitAndInstall(true, true);
       return { ok: true };
     } catch (err) {
       return {

@@ -334,6 +334,58 @@ body {
   font-size: 12px;
 }
 
+.update-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(140% 120% at 20% 10%, rgba(136, 208, 255, 0.18), transparent 55%),
+    radial-gradient(120% 120% at 80% 0%, rgba(156, 139, 255, 0.18), transparent 60%),
+    rgba(4, 8, 20, 0.92);
+  backdrop-filter: blur(8px);
+}
+
+.update-overlay-card {
+  width: min(560px, 92vw);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  text-align: center;
+  padding: 26px 28px;
+  border-radius: 20px;
+  border: 1px solid var(--border-strong);
+  background:
+    linear-gradient(160deg, rgba(12, 18, 34, 0.96), rgba(8, 12, 24, 0.98)),
+    var(--panel);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+}
+
+.update-overlay-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(136, 208, 255, 0.22), rgba(156, 139, 255, 0.28));
+  border: 1px solid rgba(136, 208, 255, 0.35);
+  color: #eaf2ff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+.update-overlay-title {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: -0.3px;
+}
+
 /* Scrollbar styling */
 *::-webkit-scrollbar {
   width: 8px;
