@@ -1,4 +1,5 @@
-import { app, BrowserWindow, shell, Tray, Menu, nativeImage } from "electron";
+import { app, BrowserWindow, shell, Tray, Menu, nativeImage, Notification } from "electron";
+import { autoUpdater } from "electron-updater";
 import { join } from "node:path";
 import { format } from "node:url";
 import { AuthController } from "./auth";
@@ -13,6 +14,7 @@ const devServerUrl = process.env.VITE_DEV_SERVER_URL ?? "http://localhost:5173";
 const auth = new AuthController();
 const twitchService = new TwitchService(loadSession);
 let tray: Tray | null = null;
+let updateTimer: NodeJS.Timeout | null = null;
 
 if (process.platform === "win32") {
   app.setAppUserModelId("com.droppilot.app");
@@ -109,9 +111,43 @@ function createTray(win: BrowserWindow) {
   return tray;
 }
 
+function setupAutoUpdater() {
+  if (process.platform !== "win32") return;
+  if (!app.isPackaged) return;
+
+  autoUpdater.autoDownload = true;
+
+  autoUpdater.on("update-available", () => {
+    console.log("update: available");
+  });
+  autoUpdater.on("update-not-available", () => {
+    console.log("update: none");
+  });
+  autoUpdater.on("error", (err) => {
+    console.warn("update: error", err);
+  });
+  autoUpdater.on("update-downloaded", () => {
+    const notif = new Notification({
+      title: "DropPilot Update",
+      body: "Update downloaded. Click to restart and install.",
+    });
+    notif.on("click", () => {
+      autoUpdater.quitAndInstall();
+    });
+    notif.show();
+  });
+
+  const check = () => {
+    void autoUpdater.checkForUpdates();
+  };
+  check();
+  updateTimer = setInterval(check, 4 * 60 * 60 * 1000);
+}
+
 app.whenReady().then(() => {
   const win = createWindow();
   createTray(win);
+  setupAutoUpdater();
 
   // Forward TwitchService debug logs into renderer console (DevTools) and main console.
   const forwardLog = (scope: string, ...args: unknown[]) => {
@@ -147,5 +183,12 @@ app.whenReady().then(() => {
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
+  }
+});
+
+app.on("before-quit", () => {
+  if (updateTimer) {
+    clearInterval(updateTimer);
+    updateTimer = null;
   }
 });
