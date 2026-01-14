@@ -1,5 +1,4 @@
 import type { InventoryState, ProfileState, StatsState } from "../types";
-import { obfuscateName } from "../utils";
 import { useI18n } from "../i18n";
 
 type OverviewProps = {
@@ -92,8 +91,8 @@ export function OverviewView({
           {profile.status === "ready" ? (
             <div className="profile-row compact">
               <div>
-                <div className="meta">{obfuscateName(profile.displayName)}</div>
-                <div className="meta muted">@{obfuscateName(profile.login)}</div>
+                <div className="meta">{profile.displayName}</div>
+                <div className="meta muted">@{profile.login}</div>
               </div>
               <div className={`pill ${isLinked ? "ghost" : "danger"}`}>
                 {isLinked ? t("overview.linked") : t("overview.notLinked")}

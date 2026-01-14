@@ -1,5 +1,5 @@
 import type { ErrorInfo, ProfileState } from "../types";
-import { formatRemaining, obfuscateName } from "../utils";
+import { formatRemaining } from "../utils";
 import { useI18n } from "../i18n";
 
 type HeroProps = {
@@ -39,8 +39,8 @@ export function Hero({
     profile.displayName &&
     profile.displayName.toLowerCase() !== profile.login.toLowerCase();
 
-  const maskedDisplay = profile.status === "ready" ? obfuscateName(profile.displayName) : "";
-  const maskedLogin = profile.status === "ready" ? obfuscateName(profile.login) : "";
+  const displayName = profile.status === "ready" ? profile.displayName : "";
+  const login = profile.status === "ready" ? profile.login : "";
 
   const progressPct = typeof targetProgress === "number" ? `${Math.round(targetProgress)}%` : "--";
   const nextWatchLabel = typeof nextWatchIn === "number" ? formatRemaining(nextWatchIn) : "--";
@@ -92,8 +92,8 @@ export function Hero({
             <div className="profile-row small">
               {profile.avatar && <img src={profile.avatar} alt="" />}
               <div>
-                <div className="meta">{maskedDisplay}</div>
-                {showLoginLine ? <div className="meta muted">@{maskedLogin}</div> : null}
+                <div className="meta">{displayName}</div>
+                {showLoginLine ? <div className="meta muted">@{login}</div> : null}
               </div>
             </div>
           ) : (

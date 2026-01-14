@@ -84,13 +84,3 @@ export function formatRemaining(seconds?: number | null) {
   const mins = minutes % 60;
   return `${hours}h ${mins}m`;
 }
-
-export function obfuscateName(name?: string | null) {
-  if (!name) return "";
-  const trimmed = name.trim();
-  if (!trimmed) return "";
-  if (trimmed.length === 1) return trimmed + "***";
-  const first = trimmed[0];
-  const last = trimmed[trimmed.length - 1];
-  return `${first}***${last}`;
-}
