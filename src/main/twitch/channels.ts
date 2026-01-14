@@ -9,7 +9,7 @@ export type PriorityPlan = {
 
 export function buildPriorityPlan(
   inventory: InventoryItem[],
-  priorityGames: string[]
+  priorityGames: string[],
 ): PriorityPlan {
   // Consider only non-claimed drops
   const activeItems = inventory.filter((i) => i.status !== "claimed");

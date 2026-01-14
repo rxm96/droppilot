@@ -55,7 +55,7 @@ export function useTargetDrops({
       const allForGame = inventoryItems.filter((i) => i.game === targetGame);
       const activeRelevant = withCategories.filter(
         ({ item, category }) =>
-          item.game === targetGame && (category === "in-progress" || category === "upcoming")
+          item.game === targetGame && (category === "in-progress" || category === "upcoming"),
       );
       const sortedActive = [...activeRelevant].sort((a, b) => {
         const endA = a.item.endsAt ? Date.parse(a.item.endsAt) : null;
@@ -68,11 +68,13 @@ export function useTargetDrops({
         if (startA !== startB) return startA - startB;
         const remainingA = Math.max(
           0,
-          Math.max(0, Number(a.item.requiredMinutes) || 0) - Math.max(0, Number(a.item.earnedMinutes) || 0)
+          Math.max(0, Number(a.item.requiredMinutes) || 0) -
+            Math.max(0, Number(a.item.earnedMinutes) || 0),
         );
         const remainingB = Math.max(
           0,
-          Math.max(0, Number(b.item.requiredMinutes) || 0) - Math.max(0, Number(b.item.earnedMinutes) || 0)
+          Math.max(0, Number(b.item.requiredMinutes) || 0) -
+            Math.max(0, Number(b.item.earnedMinutes) || 0),
         );
         if (remainingA !== remainingB) return remainingA - remainingB;
         return (a.item.title || "").localeCompare(b.item.title || "");
@@ -86,7 +88,7 @@ export function useTargetDrops({
     const claimedDrops = targetDrops.filter((i) => i.status === "claimed").length;
     const hasUnclaimedTarget = withCategories.some(
       ({ item, category }) =>
-        item.game === targetGame && (category === "in-progress" || category === "upcoming")
+        item.game === targetGame && (category === "in-progress" || category === "upcoming"),
     );
     const canWatchTarget = allowWatching && !!targetGame && hasUnclaimedTarget;
     const showNoDropsHint = !!targetGame && !hasUnclaimedTarget;
@@ -99,22 +101,33 @@ export function useTargetDrops({
       map.set(key, { req: Math.max(existing.req, req), earned: Math.max(existing.earned, earned) });
       return map;
     }, new Map<string, { req: number; earned: number }>());
-    const totalRequiredMinutes = Array.from(campaignMinutes.values()).reduce((acc, v) => acc + v.req, 0);
-    const totalEarnedMinutes = Array.from(campaignMinutes.values()).reduce((acc, v) => acc + v.earned, 0);
+    const totalRequiredMinutes = Array.from(campaignMinutes.values()).reduce(
+      (acc, v) => acc + v.req,
+      0,
+    );
+    const totalEarnedMinutes = Array.from(campaignMinutes.values()).reduce(
+      (acc, v) => acc + v.earned,
+      0,
+    );
     const liveDeltaMinutesRaw =
       watching && inventoryFetchedAt ? Math.max(0, (nowTick - inventoryFetchedAt) / 60000) : 0;
     const liveDeltaMinutes = Math.min(
       liveDeltaMinutesRaw,
-      Math.max(0, totalRequiredMinutes - totalEarnedMinutes)
+      Math.max(0, totalRequiredMinutes - totalEarnedMinutes),
     );
     const activeDrop = targetDrops.find((d) => d.status !== "claimed") || null;
-    const activeDropRequired = activeDrop ? Math.max(0, Number(activeDrop.requiredMinutes) || 0) : 0;
+    const activeDropRequired = activeDrop
+      ? Math.max(0, Number(activeDrop.requiredMinutes) || 0)
+      : 0;
     const activeDropEarned = activeDrop ? Math.max(0, Number(activeDrop.earnedMinutes) || 0) : 0;
     const liveDeltaApplied = activeDrop
       ? Math.min(liveDeltaMinutes, Math.max(0, activeDropRequired - activeDropEarned))
       : 0;
     const targetProgress = totalRequiredMinutes
-      ? Math.min(100, Math.round(((totalEarnedMinutes + liveDeltaApplied) / totalRequiredMinutes) * 100))
+      ? Math.min(
+          100,
+          Math.round(((totalEarnedMinutes + liveDeltaApplied) / totalRequiredMinutes) * 100),
+        )
       : 0;
     const activeDropVirtualEarned = activeDrop
       ? Math.min(activeDropRequired, activeDropEarned + liveDeltaApplied)

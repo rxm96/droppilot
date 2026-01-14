@@ -21,12 +21,13 @@ const LEVELS: LogLevel[] = ["debug", "info", "warn", "error"];
 
 const safeStringify = (value: unknown) => {
   if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") return String(value);
+  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint")
+    return String(value);
   if (value instanceof Error) {
     return JSON.stringify(
       { name: value.name, message: value.message, stack: value.stack },
       null,
-      2
+      2,
     );
   }
   try {
@@ -98,8 +99,7 @@ export function DebugView({ snapshot }: DebugViewProps) {
       if (!levels[entry.level]) return false;
       if (!needle) return true;
       return (
-        entry.message.toLowerCase().includes(needle) ||
-        entry.level.toLowerCase().includes(needle)
+        entry.message.toLowerCase().includes(needle) || entry.level.toLowerCase().includes(needle)
       );
     });
   }, [logs, levels, query]);
@@ -147,7 +147,9 @@ export function DebugView({ snapshot }: DebugViewProps) {
           <div className="card-header-row">
             <div className="label">{t("debug.snapshot")}</div>
             <div className="debug-controls">
-              <span className="pill ghost small">{t("debug.total")}: {formatNumber(logs.length)}</span>
+              <span className="pill ghost small">
+                {t("debug.total")}: {formatNumber(logs.length)}
+              </span>
               <button type="button" className="ghost subtle-btn" onClick={copySnapshot}>
                 {copied ? t("debug.copied") : t("debug.copy")}
               </button>
@@ -167,10 +169,14 @@ export function DebugView({ snapshot }: DebugViewProps) {
                   {autoScroll ? t("debug.status.autoScrollOn") : t("debug.status.autoScrollOff")}
                 </span>
               </div>
-              <button type="button" className="ghost subtle-btn" onClick={() => {
-                clearLogBuffer();
-                setLogs([]);
-              }}>
+              <button
+                type="button"
+                className="ghost subtle-btn"
+                onClick={() => {
+                  clearLogBuffer();
+                  setLogs([]);
+                }}
+              >
                 {t("debug.clear")}
               </button>
               <button type="button" className="ghost subtle-btn" onClick={togglePaused}>
@@ -217,7 +223,9 @@ export function DebugView({ snapshot }: DebugViewProps) {
                       <span className={`pill ghost small level-${entry.level}`}>{entry.level}</span>
                       <span className="meta muted">{new Date(entry.at).toLocaleTimeString()}</span>
                     </div>
-                    <div className="debug-log-message">{entry.message || t("debug.emptyMessage")}</div>
+                    <div className="debug-log-message">
+                      {entry.message || t("debug.emptyMessage")}
+                    </div>
                     {entry.args.length > 0 ? (
                       <details>
                         <summary>{t("debug.details")}</summary>

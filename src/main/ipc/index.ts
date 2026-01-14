@@ -1,4 +1,5 @@
-import { BrowserWindow, ipcMain, Notification } from "electron";
+import { BrowserWindow, ipcMain, Notification, app } from "electron";
+import { autoUpdater } from "electron-updater";
 import type { AuthController, AuthResult } from "../auth";
 import type { TwitchService } from "../twitch/service";
 import type { SessionData } from "../core/storage";
@@ -16,7 +17,12 @@ export function registerIpcHandlers(deps: {
   saveSettings: (data: Partial<SettingsData>) => Promise<SettingsData>;
   loadStats: () => Promise<StatsData>;
   saveStats: (data: Partial<StatsData>) => Promise<StatsData>;
-  bumpStats: (delta: { minutes?: number; claims?: number; lastDropTitle?: string; lastGame?: string }) => Promise<StatsData>;
+  bumpStats: (delta: {
+    minutes?: number;
+    claims?: number;
+    lastDropTitle?: string;
+    lastGame?: string;
+  }) => Promise<StatsData>;
   resetStats: () => Promise<StatsData>;
 }) {
   const {
@@ -121,7 +127,7 @@ export function registerIpcHandlers(deps: {
         }
         return { error: "unknown", message: err instanceof Error ? err.message : String(err) };
       }
-    }
+    },
   );
 
   ipcMain.handle(
@@ -138,7 +144,7 @@ export function registerIpcHandlers(deps: {
         }
         return { error: "unknown", message: err instanceof Error ? err.message : String(err) };
       }
-    }
+    },
   );
 
   ipcMain.handle("settings/get", async () => {
@@ -167,43 +173,72 @@ export function registerIpcHandlers(deps: {
 
   ipcMain.handle(
     "stats/bump",
-    async (_e, payload: { minutes?: number; claims?: number; lastDropTitle?: string; lastGame?: string }) => {
+    async (
+      _e,
+      payload: { minutes?: number; claims?: number; lastDropTitle?: string; lastGame?: string },
+    ) => {
       return bumpStats(payload);
-    }
+    },
   );
 
   ipcMain.handle("stats/reset", async () => {
     return resetStats();
   });
 
-  ipcMain.handle("app/windowControl", async (event, payload: { action: "minimize" | "maximize" | "restore" | "close" | "hide-to-tray" }) => {
-    const win = BrowserWindow.fromWebContents(event.sender);
-    if (!win) return { ok: false, message: "No window" };
-    try {
-      switch (payload.action) {
-        case "minimize":
-          win.minimize();
-          break;
-        case "maximize":
-          win.maximize();
-          break;
-        case "restore":
-          if (win.isMaximized()) {
-            win.unmaximize();
-          } else {
-            win.restore();
-          }
-          break;
-        case "close":
-          win.close();
-          break;
-        case "hide-to-tray":
-          win.hide();
-          break;
+  ipcMain.handle(
+    "app/windowControl",
+    async (
+      event,
+      payload: { action: "minimize" | "maximize" | "restore" | "close" | "hide-to-tray" },
+    ) => {
+      const win = BrowserWindow.fromWebContents(event.sender);
+      if (!win) return { ok: false, message: "No window" };
+      try {
+        switch (payload.action) {
+          case "minimize":
+            win.minimize();
+            break;
+          case "maximize":
+            win.maximize();
+            break;
+          case "restore":
+            if (win.isMaximized()) {
+              win.unmaximize();
+            } else {
+              win.restore();
+            }
+            break;
+          case "close":
+            win.close();
+            break;
+          case "hide-to-tray":
+            win.hide();
+            break;
+        }
+        return { ok: true };
+      } catch (err) {
+        return { ok: false, message: err instanceof Error ? err.message : String(err) };
       }
-      return { ok: true };
+    },
+  );
+
+  ipcMain.handle("app/checkUpdates", async () => {
+    if (process.platform !== "win32" || !app.isPackaged) {
+      return { ok: false, status: "unsupported" };
+    }
+    try {
+      const result = await autoUpdater.checkForUpdates();
+      const version = result?.updateInfo?.version;
+      if (version && version !== app.getVersion()) {
+        return { ok: true, status: "available", version };
+      }
+      return { ok: true, status: "none" };
     } catch (err) {
-      return { ok: false, message: err instanceof Error ? err.message : String(err) };
+      return {
+        ok: false,
+        status: "error",
+        message: err instanceof Error ? err.message : String(err),
+      };
     }
   });
 

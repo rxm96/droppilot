@@ -11,7 +11,14 @@ type OverviewProps = {
   logout: () => void;
 };
 
-export function OverviewView({ profile, isLinked, inventory, stats, resetStats, logout }: OverviewProps) {
+export function OverviewView({
+  profile,
+  isLinked,
+  inventory,
+  stats,
+  resetStats,
+  logout,
+}: OverviewProps) {
   const { t, language } = useI18n();
   const totalDrops = inventory.status === "ready" ? inventory.items.length : 0;
   const totalActive =
@@ -20,7 +27,9 @@ export function OverviewView({ profile, isLinked, inventory, stats, resetStats, 
       : 0;
   const statsData = stats.status === "ready" ? stats.data : null;
   const formatNumber = (val: number) =>
-    new Intl.NumberFormat(language === "de" ? "de-DE" : "en-US").format(Math.max(0, Math.round(val)));
+    new Intl.NumberFormat(language === "de" ? "de-DE" : "en-US").format(
+      Math.max(0, Math.round(val)),
+    );
   const formatTime = (ts?: number) => (ts ? new Date(ts).toLocaleTimeString() : "n/a");
 
   return (
@@ -86,7 +95,9 @@ export function OverviewView({ profile, isLinked, inventory, stats, resetStats, 
                 <div className="meta">{obfuscateName(profile.displayName)}</div>
                 <div className="meta muted">@{obfuscateName(profile.login)}</div>
               </div>
-              <div className={`pill ${isLinked ? "ghost" : "danger"}`}>{isLinked ? t("overview.linked") : t("overview.notLinked")}</div>
+              <div className={`pill ${isLinked ? "ghost" : "danger"}`}>
+                {isLinked ? t("overview.linked") : t("overview.notLinked")}
+              </div>
             </div>
           ) : (
             <p className="meta">{t("overview.profileMissing")}</p>

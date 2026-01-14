@@ -35,7 +35,7 @@ export function useSmartAlerts(settings: SmartAlertSettings) {
       lastSentRef.current.set(payload.key, now);
       void api({ title: payload.title, body: payload.body });
     },
-    [canNotify]
+    [canNotify],
   );
 
   return { notify };

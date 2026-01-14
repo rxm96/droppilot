@@ -49,7 +49,8 @@ export function useInventoryRefresh({
     let timeout: number | undefined;
     const minDelay = Math.max(MIN_REFRESH_MS, refreshMinMs);
     const maxDelay = Math.max(minDelay, refreshMaxMs);
-    const withJitter = () => minDelay + Math.floor(Math.random() * Math.max(1, maxDelay - minDelay));
+    const withJitter = () =>
+      minDelay + Math.floor(Math.random() * Math.max(1, maxDelay - minDelay));
     const scheduleNext = (delayMs: number) => {
       const nextAt = Date.now() + delayMs;
       setInventoryRefresh((prev) => ({
@@ -88,7 +89,8 @@ export function useInventoryRefresh({
     let cancelled = false;
     const minDelay = Math.max(MIN_REFRESH_MS, refreshMinMs);
     const maxDelay = Math.max(minDelay, refreshMaxMs);
-    const withJitter = () => minDelay + Math.floor(Math.random() * Math.max(1, maxDelay - minDelay));
+    const withJitter = () =>
+      minDelay + Math.floor(Math.random() * Math.max(1, maxDelay - minDelay));
     let timeout: number | undefined;
     const scheduleNext = (delayMs: number) => {
       const nextAt = Date.now() + delayMs;

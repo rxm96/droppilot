@@ -28,7 +28,7 @@ export function useDropClaimAlerts({ language, alertsDropClaimed, notify, bumpSt
         dedupeMs: 60_000,
       });
     },
-    [alertsDropClaimed, bumpStats, language, notify]
+    [alertsDropClaimed, bumpStats, language, notify],
   );
 
   const handleTestAlert = useCallback(() => {

@@ -8,7 +8,10 @@ type IpcErrorPayload = {
   message?: string;
 };
 
-export function errorInfoFromIpc(res: IpcErrorPayload | null | undefined, fallbackMessage: string): ErrorInfo {
+export function errorInfoFromIpc(
+  res: IpcErrorPayload | null | undefined,
+  fallbackMessage: string,
+): ErrorInfo {
   if (!res || typeof res !== "object") {
     return { message: fallbackMessage };
   }
@@ -38,7 +41,7 @@ export function errorInfoFromUnknown(err: unknown, fallbackMessage: string): Err
 export function resolveErrorMessage(
   t: TFunc,
   error: ErrorInfo | null | undefined,
-  fallbackKey = "error.unknown"
+  fallbackKey = "error.unknown",
 ): string {
   if (!error) return t(fallbackKey);
   if (error.code) {

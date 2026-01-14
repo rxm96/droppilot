@@ -1,5 +1,12 @@
 import { useMemo } from "react";
-import type { AuthState, ErrorInfo, InventoryState, ProfileState, StatsState, WatchingState } from "../types";
+import type {
+  AuthState,
+  ErrorInfo,
+  InventoryState,
+  ProfileState,
+  StatsState,
+  WatchingState,
+} from "../types";
 import type { InventoryRefreshState } from "./useInventoryRefresh";
 import type { WatchStats } from "./useWatchPing";
 import type { ActiveDropInfo } from "./useTargetDrops";
@@ -136,6 +143,6 @@ export function useDebugSnapshot({
       watchStats.lastOk,
       watchStats.nextAt,
       watching,
-    ]
+    ],
   );
 }

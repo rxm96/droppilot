@@ -101,7 +101,9 @@ export function InventoryView({
       )}
       {inventory.status === "idle" && <p className="meta">{t("inventory.idle")}</p>}
 
-      {inventory.status === "ready" && filteredCount === 0 && <p className="meta">{t("inventory.empty")}</p>}
+      {inventory.status === "ready" && filteredCount === 0 && (
+        <p className="meta">{t("inventory.empty")}</p>
+      )}
 
       {inventory.status === "ready" && filteredCount > 0 && (
         <ul className="inventory-list">
@@ -111,7 +113,10 @@ export function InventoryView({
             const updated = changes.updated.has(item.id);
             const animate = !firstRenderRef.current && (added || updated);
             const req = Math.max(0, Number(item.requiredMinutes) || 0);
-            const earned = Math.min(req || Number.POSITIVE_INFINITY, Math.max(0, Number(item.earnedMinutes) || 0));
+            const earned = Math.min(
+              req || Number.POSITIVE_INFINITY,
+              Math.max(0, Number(item.earnedMinutes) || 0),
+            );
             const pct = req ? Math.min(100, Math.round((earned / req) * 100)) : 0;
             return (
               <li
@@ -158,7 +163,9 @@ export function InventoryView({
           >
             {t("inventory.prev")}
           </button>
-          <span className="meta">{t("inventory.page", { current: currentPage, total: totalPages })}</span>
+          <span className="meta">
+            {t("inventory.page", { current: currentPage, total: totalPages })}
+          </span>
           <button
             type="button"
             className="ghost"

@@ -1,4 +1,12 @@
-import type { AutoSwitchInfo, ChannelEntry, ClaimStatus, ErrorInfo, PriorityPlan, InventoryItem, WatchingState } from "../types";
+import type {
+  AutoSwitchInfo,
+  ChannelEntry,
+  ClaimStatus,
+  ErrorInfo,
+  PriorityPlan,
+  InventoryItem,
+  WatchingState,
+} from "../types";
 import { mapStatusLabel } from "../utils";
 import { useI18n } from "../i18n";
 import { useMemo, useRef, useEffect, useState } from "react";
@@ -88,10 +96,10 @@ export function ControlView({
       : null;
   const claimStatusText =
     claimStatus?.kind === "success"
-      ? claimStatus.message ?? ""
+      ? (claimStatus.message ?? "")
       : claimErrorText
-      ? `${claimErrorText}${claimStatus?.title ? `: ${claimStatus.title}` : ""}`
-      : "";
+        ? `${claimErrorText}${claimStatus?.title ? `: ${claimStatus.title}` : ""}`
+        : "";
 
   const dropChangedIds = useMemo(() => {
     const prev = prevDropsRef.current;
@@ -142,7 +150,7 @@ export function ControlView({
       setExitingChannels((prev) => {
         const existing = new Set(prev.map((c) => c.id));
         const toAdd = channelsFromMap(prevChannelsRef.current).filter(
-          (c) => removedIds.includes(c.id) && !existing.has(c.id)
+          (c) => removedIds.includes(c.id) && !existing.has(c.id),
         );
         return [...prev, ...toAdd];
       });
@@ -171,7 +179,7 @@ export function ControlView({
   }, [channels, exitingChannels]);
 
   function channelsFromMap(
-    source: Map<string, { viewers: number; title: string }>
+    source: Map<string, { viewers: number; title: string }>,
   ): ChannelEntry[] {
     const entries: ChannelEntry[] = [];
     for (const [id, data] of source) {
@@ -209,9 +217,13 @@ export function ControlView({
       return formatNumber(val);
     }
   };
-  const activeEtaText = activeDropInfo?.eta ? new Date(activeDropInfo.eta).toLocaleTimeString() : null;
+  const activeEtaText = activeDropInfo?.eta
+    ? new Date(activeDropInfo.eta).toLocaleTimeString()
+    : null;
   const activeChannel =
-    watching && channels.length ? channels.find((c) => c.id === watching.id || c.login === watching.login) : null;
+    watching && channels.length
+      ? channels.find((c) => c.id === watching.id || c.login === watching.login)
+      : null;
   const activeThumb = activeChannel?.thumbnail
     ? activeChannel.thumbnail.replace("{width}", "640").replace("{height}", "360")
     : null;
@@ -230,7 +242,9 @@ export function ControlView({
           <p className="meta">{t("control.subtitle")}</p>
         </div>
         <div className="status-row">
-          {watchError ? <span className="pill ghost danger-chip">{t("control.pingError")}</span> : null}
+          {watchError ? (
+            <span className="pill ghost danger-chip">{t("control.pingError")}</span>
+          ) : null}
         </div>
       </div>
       {claimStatus && (
@@ -243,7 +257,9 @@ export function ControlView({
           className="watch-visual"
           style={
             activeThumb
-              ? { backgroundImage: `linear-gradient(120deg, rgba(5,10,22,0.8), rgba(8,12,26,0.8)), url(${activeThumb})` }
+              ? {
+                  backgroundImage: `linear-gradient(120deg, rgba(5,10,22,0.8), rgba(8,12,26,0.8)), url(${activeThumb})`,
+                }
               : undefined
           }
         />
@@ -255,7 +271,11 @@ export function ControlView({
                 <div>
                   <div className="watch-name">
                     <span>{watching.name}</span>
-                    <span className="live-dot" aria-label={t("control.live")} title={t("control.live")} />
+                    <span
+                      className="live-dot"
+                      aria-label={t("control.live")}
+                      title={t("control.live")}
+                    />
                   </div>
                   <div className="meta">
                     {watching.game}
@@ -279,16 +299,23 @@ export function ControlView({
               </div>
               {autoSwitchInfo ? (
                 <p className="meta muted">
-                  Auto-Switch ({autoSwitchInfo.reason}): {autoSwitchInfo.from?.name ?? "Unknown"} -{">"}{" "}
-                  {autoSwitchInfo.to.name} um {new Date(autoSwitchInfo.at).toLocaleTimeString()}
+                  Auto-Switch ({autoSwitchInfo.reason}): {autoSwitchInfo.from?.name ?? "Unknown"} -
+                  {">"} {autoSwitchInfo.to.name} um{" "}
+                  {new Date(autoSwitchInfo.at).toLocaleTimeString()}
                 </p>
               ) : null}
-              {watchErrorText ? <p className="error">{t("control.pingError")}: {watchErrorText}</p> : null}
+              {watchErrorText ? (
+                <p className="error">
+                  {t("control.pingError")}: {watchErrorText}
+                </p>
+              ) : null}
             </>
           ) : (
             <div className="watch-empty">
               <p className="meta">{t("control.noChannel")}</p>
-              <p className="meta muted">{showNoDropsHint ? t("control.noDropsHint") : t("control.pickStream")}</p>
+              <p className="meta muted">
+                {showNoDropsHint ? t("control.noDropsHint") : t("control.pickStream")}
+              </p>
             </div>
           )}
         </div>
@@ -342,10 +369,16 @@ export function ControlView({
                   <div className="pill-row">
                     <span className="pill ghost small">
                       {activeDropInfo.remainingMinutes > 0
-                        ? t("control.rest", { time: formatDuration(activeDropInfo.remainingMinutes * 60_000) })
+                        ? t("control.rest", {
+                            time: formatDuration(activeDropInfo.remainingMinutes * 60_000),
+                          })
                         : t("control.done")}
                     </span>
-                    {activeEtaText ? <span className="pill ghost small">{t("control.eta", { time: activeEtaText })}</span> : null}
+                    {activeEtaText ? (
+                      <span className="pill ghost small">
+                        {t("control.eta", { time: activeEtaText })}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
               ) : (
@@ -362,12 +395,18 @@ export function ControlView({
                     const req = Math.max(0, Number(d.requiredMinutes) || 0);
                     const earned = Math.max(0, Number(d.earnedMinutes) || 0);
                     const isActive = activeDropInfo?.id === d.id;
-                    const virtualEarned = isActive ? Math.min(req, earned + liveDeltaApplied) : Math.min(req, earned);
+                    const virtualEarned = isActive
+                      ? Math.min(req, earned + liveDeltaApplied)
+                      : Math.min(req, earned);
                     const pct = req ? Math.min(100, Math.round((virtualEarned / req) * 100)) : 0;
                     const remainingMs = req ? Math.max(0, req - virtualEarned) * 60_000 : 0;
                     const statusLabel = mapStatusLabel(d.status, (key) => t(key));
                     const statusClass =
-                      d.status === "claimed" ? "claimed" : d.status === "progress" ? "progress" : "locked";
+                      d.status === "claimed"
+                        ? "claimed"
+                        : d.status === "progress"
+                          ? "progress"
+                          : "locked";
                     const animate = !firstRenderRef.current && dropChangedIds.has(d.id);
                     return (
                       <li
@@ -380,8 +419,12 @@ export function ControlView({
                             <div className="drop-title">{d.title}</div>
                             <div className="meta muted">
                               {Math.round(virtualEarned)}/{req} min
-                              {isActive && liveDeltaApplied > 0 ? ` | +${Math.round(liveDeltaApplied)}m live` : ""}
-                              {isActive && remainingMs > 0 ? ` | ${t("control.eta", { time: formatDuration(remainingMs) })}` : ""}
+                              {isActive && liveDeltaApplied > 0
+                                ? ` | +${Math.round(liveDeltaApplied)}m live`
+                                : ""}
+                              {isActive && remainingMs > 0
+                                ? ` | ${t("control.eta", { time: formatDuration(remainingMs) })}`
+                                : ""}
                             </div>
                           </div>
                           <span className="pill ghost small">{statusLabel}</span>
@@ -407,7 +450,11 @@ export function ControlView({
         <div className="card">
           <div className="label">{t("control.targetTitle")}</div>
           <div className="filters-row" style={{ marginBottom: 8 }}>
-            <select className="select" value={targetGame} onChange={(e) => setActiveTargetGame(e.target.value)}>
+            <select
+              className="select"
+              value={targetGame}
+              onChange={(e) => setActiveTargetGame(e.target.value)}
+            >
               <option value="">{t("control.noTarget")}</option>
               {(priorityPlan?.order.length ? priorityPlan.order : priorityGames).map((g) => (
                 <option key={g} value={g}>
@@ -425,7 +472,8 @@ export function ControlView({
                 {t("control.activeTarget")}: {targetGame}
               </p>
               <p className="meta muted">
-                {t("control.streamsFound")}: {channels.length > 0 ? channels.length : 0} | {t("control.dropsOpen")}: {totalDrops}
+                {t("control.streamsFound")}: {channels.length > 0 ? channels.length : 0} |{" "}
+                {t("control.dropsOpen")}: {totalDrops}
               </p>
             </>
           ) : (
@@ -438,15 +486,23 @@ export function ControlView({
               {t("control.channelsLoading")}
             </p>
           ) : null}
-          {canWatchTarget && channelErrorText && <p className="error">{t("control.channelError")}: {channelErrorText}</p>}
+          {canWatchTarget && channelErrorText && (
+            <p className="error">
+              {t("control.channelError")}: {channelErrorText}
+            </p>
+          )}
           <div className={`channel-grid-wrapper ${channelsLoading ? "loading" : ""}`}>
             {canWatchTarget && channels.length > 0 ? (
               <ul className="channel-grid">
                 {combinedChannels.map((c, idx) => {
-                  const thumb = c.thumbnail ? c.thumbnail.replace("{width}", "320").replace("{height}", "180") : null;
+                  const thumb = c.thumbnail
+                    ? c.thumbnail.replace("{width}", "320").replace("{height}", "180")
+                    : null;
                   const isActive = watching?.id === c.id;
                   const loginLabel =
-                    c.login && c.displayName && c.displayName.toLowerCase() !== c.login.toLowerCase()
+                    c.login &&
+                    c.displayName &&
+                    c.displayName.toLowerCase() !== c.login.toLowerCase()
                       ? `@${c.login}`
                       : "";
                   const languageTag = c.language ? c.language.toUpperCase() : "";
@@ -460,8 +516,8 @@ export function ControlView({
                         c.exiting
                           ? "animate-exit"
                           : !firstRenderRef.current && channelChangedIds.has(c.id)
-                          ? "animate-item"
-                          : ""
+                            ? "animate-item"
+                            : ""
                       }`}
                       style={
                         !firstRenderRef.current && channelChangedIds.has(c.id) && !c.exiting
@@ -478,7 +534,12 @@ export function ControlView({
                         }
                       }}
                     >
-                      {thumb ? <div className="channel-thumb" style={{ backgroundImage: `url(${thumb})` }} /> : null}
+                      {thumb ? (
+                        <div
+                          className="channel-thumb"
+                          style={{ backgroundImage: `url(${thumb})` }}
+                        />
+                      ) : null}
                       <span className="viewer-badge">{formatViewers(c.viewers)}</span>
                       <div className="channel-content">
                         <div className="channel-header">

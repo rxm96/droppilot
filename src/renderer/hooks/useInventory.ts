@@ -41,7 +41,10 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
   const autoClaimEnabled = opts?.autoClaim !== false;
   const [inventory, setInventory] = useState<InventoryState>({ status: "idle" });
   const [inventoryRefreshing, setInventoryRefreshing] = useState(false);
-  const [inventoryChanges, setInventoryChanges] = useState<{ added: Set<string>; updated: Set<string> }>({
+  const [inventoryChanges, setInventoryChanges] = useState<{
+    added: Set<string>;
+    updated: Set<string>;
+  }>({
     added: new Set(),
     updated: new Set(),
   });
@@ -49,7 +52,9 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
   const [claimStatus, setClaimStatus] = useState<ClaimStatus | null>(null);
   const totalMinutesRef = useRef<number | null>(null);
   const claimAttemptsRef = useRef<Map<string, number>>(new Map());
-  const fetchInventoryRef = useRef<(opts?: FetchInventoryOpts) => Promise<void>>(() => Promise.resolve());
+  const fetchInventoryRef = useRef<(opts?: FetchInventoryOpts) => Promise<void>>(() =>
+    Promise.resolve(),
+  );
 
   const fetchInventory = useCallback(
     async (opts?: FetchInventoryOpts) => {
@@ -57,8 +62,8 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
         inventory.status === "ready"
           ? inventory.items
           : inventory.status === "error" && inventory.items
-          ? inventory.items
-          : [];
+            ? inventory.items
+            : [];
       const hadItems = prevItems.length > 0;
       logInfo("inventory: fetch start", { forceLoading: opts?.forceLoading, hadItems });
       if (!hadItems || opts?.forceLoading) {
@@ -97,9 +102,12 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
         const nextItems = res as InventoryItem[];
         const nextTotalMinutes = nextItems.reduce(
           (acc: number, item) => acc + Math.max(0, Number(item.earnedMinutes) || 0),
-          0
+          0,
         );
-        logInfo("inventory: fetch success", { items: nextItems.length, totalMinutes: nextTotalMinutes });
+        logInfo("inventory: fetch success", {
+          items: nextItems.length,
+          totalMinutes: nextTotalMinutes,
+        });
         if (totalMinutesRef.current !== null) {
           const deltaMinutes = Math.max(0, nextTotalMinutes - totalMinutesRef.current);
           if (deltaMinutes > 0) {
@@ -157,7 +165,11 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
                 throw errorInfoFromIpc(claimRes as any, "Claim fehlgeschlagen");
               }
               onClaimed({ title: drop.title, game: drop.game });
-              logInfo("inventory: auto-claimed", { title: drop.title, game: drop.game, id: drop.id });
+              logInfo("inventory: auto-claimed", {
+                title: drop.title,
+                game: drop.game,
+                id: drop.id,
+              });
               setClaimStatus({
                 kind: "success",
                 message: `Auto-claimed: ${drop.title}`,
@@ -195,7 +207,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
         setInventoryRefreshing(false);
       }
     },
-    [inventory, onClaimed, onMinutesEarned, onAuthError]
+    [inventory, onClaimed, onMinutesEarned, onAuthError],
   );
 
   fetchInventoryRef.current = fetchInventory;
@@ -212,12 +224,12 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
     inventory.status === "ready"
       ? inventory.items
       : inventory.status === "error" && inventory.items
-      ? inventory.items
-      : [];
+        ? inventory.items
+        : [];
 
   const uniqueGames = useMemo(
     () => Array.from(new Set(inventoryItems.map((i) => i.game))).sort(),
-    [inventoryItems]
+    [inventoryItems],
   );
 
   const withCategories = useMemo(
@@ -226,7 +238,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
         item,
         category: getCategory(item, isLinked),
       })),
-    [inventoryItems, isLinked]
+    [inventoryItems, isLinked],
   );
 
   return {

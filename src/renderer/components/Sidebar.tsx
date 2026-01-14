@@ -81,13 +81,15 @@ export function Sidebar({
         <div className="sidebar-status-row">
           <div>
             <p className="eyebrow">{t("session.title")}</p>
-            <h4 className="sidebar-title">{isLinked ? t("session.connected") : t("session.disconnected")}</h4>
+            <h4 className="sidebar-title">
+              {isLinked ? t("session.connected") : t("session.disconnected")}
+            </h4>
             <p className="meta">
               {auth.status === "pending"
                 ? t("session.loggingIn")
                 : isLinked
-                ? t("session.ready")
-                : t("session.loginNeeded")}
+                  ? t("session.ready")
+                  : t("session.loginNeeded")}
             </p>
           </div>
           <span className={`chip ${isLinked ? "chip-ok" : "chip-warn"}`}>
@@ -154,7 +156,11 @@ export function Sidebar({
               value={creds.token}
               onChange={(e) => setCreds({ ...creds, token: e.target.value })}
             />
-            <button type="button" onClick={startLoginWithCreds} disabled={auth.status === "pending"}>
+            <button
+              type="button"
+              onClick={startLoginWithCreds}
+              disabled={auth.status === "pending"}
+            >
               {auth.status === "pending" ? t("session.login") : t("session.loginCredentials")}
             </button>
           </div>

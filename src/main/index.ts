@@ -52,7 +52,7 @@ function createWindow(): BrowserWindow {
         pathname: join(__dirname, "../../dist/renderer/index.html"),
         protocol: "file:",
         slashes: true,
-      })
+      }),
     );
   }
 

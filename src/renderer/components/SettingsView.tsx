@@ -58,6 +58,13 @@ type SettingsProps = {
   importSettings: () => void;
   settingsInfo?: string | null;
   settingsError?: string | null;
+  showUpdateCheck?: boolean;
+  checkUpdates?: () => void;
+  updateStatus?: {
+    state: "idle" | "checking" | "available" | "none" | "error" | "unsupported";
+    message?: string;
+    version?: string;
+  };
 };
 
 export function SettingsView({
@@ -118,8 +125,30 @@ export function SettingsView({
   importSettings,
   settingsInfo,
   settingsError,
+  showUpdateCheck,
+  checkUpdates,
+  updateStatus,
 }: SettingsProps) {
   const { t } = useI18n();
+  const updateLabel = (() => {
+    if (!updateStatus || updateStatus.state === "idle") return null;
+    switch (updateStatus.state) {
+      case "checking":
+        return t("settings.updateChecking");
+      case "available":
+        return t("settings.updateAvailable", { version: updateStatus.version ?? "?" });
+      case "none":
+        return t("settings.updateNone");
+      case "unsupported":
+        return t("settings.updateUnsupported");
+      case "error":
+        return updateStatus.message
+          ? `${t("settings.updateError")}: ${updateStatus.message}`
+          : t("settings.updateError");
+      default:
+        return null;
+    }
+  })();
   return (
     <>
       <div className="settings-sections">
@@ -153,6 +182,24 @@ export function SettingsView({
               <option value="en">{t("settings.language.en")}</option>
             </select>
           </div>
+          {showUpdateCheck ? (
+            <div className="settings-row">
+              <div>
+                <div className="label">{t("settings.updates")}</div>
+                {updateLabel ? <p className="meta">{updateLabel}</p> : null}
+              </div>
+              <div className="settings-actions">
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={checkUpdates}
+                  disabled={!checkUpdates || updateStatus?.state === "checking"}
+                >
+                  {t("settings.checkUpdates")}
+                </button>
+              </div>
+            </div>
+          ) : null}
         </section>
 
         <section className="settings-section">
@@ -164,7 +211,11 @@ export function SettingsView({
           </div>
           {uniqueGames.length > 0 && (
             <div className="settings-row">
-              <select className="select" value={selectedGame || ""} onChange={(e) => setSelectedGame(e.target.value)}>
+              <select
+                className="select"
+                value={selectedGame || ""}
+                onChange={(e) => setSelectedGame(e.target.value)}
+              >
                 <option value="">{t("settings.addFromDropsOption")}</option>
                 {uniqueGames.map((g) => (
                   <option key={g} value={g}>
@@ -254,13 +305,21 @@ export function SettingsView({
           </div>
           <div className="toggle-row">
             <label className="toggle">
-              <input type="checkbox" checked={autoClaim} onChange={(e) => setAutoClaim(e.target.checked)} />
+              <input
+                type="checkbox"
+                checked={autoClaim}
+                onChange={(e) => setAutoClaim(e.target.checked)}
+              />
               <span>{t("settings.autoClaim")}</span>
             </label>
           </div>
           <div className="toggle-row">
             <label className="toggle">
-              <input type="checkbox" checked={autoSelect} onChange={(e) => setAutoSelect(e.target.checked)} />
+              <input
+                type="checkbox"
+                checked={autoSelect}
+                onChange={(e) => setAutoSelect(e.target.checked)}
+              />
               <span>{t("settings.autoSelect")}</span>
             </label>
           </div>
@@ -276,7 +335,11 @@ export function SettingsView({
           </div>
           <div className="toggle-row">
             <label className="toggle">
-              <input type="checkbox" checked={demoMode} onChange={(e) => setDemoMode(e.target.checked)} />
+              <input
+                type="checkbox"
+                checked={demoMode}
+                onChange={(e) => setDemoMode(e.target.checked)}
+              />
               <span>{t("settings.demoMode")}</span>
             </label>
           </div>
@@ -330,7 +393,11 @@ export function SettingsView({
           </div>
           <div className="toggle-row">
             <label className="toggle">
-              <input type="checkbox" checked={alertsEnabled} onChange={(e) => setAlertsEnabled(e.target.checked)} />
+              <input
+                type="checkbox"
+                checked={alertsEnabled}
+                onChange={(e) => setAlertsEnabled(e.target.checked)}
+              />
               <span>{t("settings.alerts.enabled")}</span>
             </label>
           </div>
@@ -421,7 +488,12 @@ export function SettingsView({
           </div>
           <div className="settings-row">
             <div className="settings-actions">
-              <button type="button" className="ghost" onClick={sendTestAlert} disabled={!alertsEnabled}>
+              <button
+                type="button"
+                className="ghost"
+                onClick={sendTestAlert}
+                disabled={!alertsEnabled}
+              >
                 {t("settings.alerts.test")}
               </button>
             </div>

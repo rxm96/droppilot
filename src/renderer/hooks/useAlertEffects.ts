@@ -80,17 +80,13 @@ export function useAlertEffects({
     notify({
       key: `new-drops:${games.join("|")}:${addedItems.length}`,
       title: translate(language, "alerts.title.newDrops"),
-      body: translate(language, "alerts.body.newDrops", { count: addedItems.length, games: gameLabel }),
+      body: translate(language, "alerts.body.newDrops", {
+        count: addedItems.length,
+        games: gameLabel,
+      }),
       dedupeMs: 30_000,
     });
-  }, [
-    alertsNewDrops,
-    inventory.status,
-    inventoryChanges.added,
-    inventoryItems,
-    language,
-    notify,
-  ]);
+  }, [alertsNewDrops, inventory.status, inventoryChanges.added, inventoryItems, language, notify]);
 
   useEffect(() => {
     if (!alertsWatchError) return;
@@ -134,14 +130,7 @@ export function useAlertEffects({
       }),
       dedupeMs: 24 * 60 * 60 * 1000,
     });
-  }, [
-    activeDropInfo,
-    alertsDropEndingMinutes,
-    alertsDropEndingSoon,
-    language,
-    notify,
-    watching,
-  ]);
+  }, [activeDropInfo, alertsDropEndingMinutes, alertsDropEndingSoon, language, notify, watching]);
 
   return { autoSwitchInfo };
 }

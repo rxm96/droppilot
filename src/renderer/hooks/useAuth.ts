@@ -4,7 +4,11 @@ import type { AuthState } from "../types";
 type AuthHook = {
   auth: AuthState;
   startLogin: () => Promise<void>;
-  startLoginWithCreds: (creds: { username: string; password: string; token?: string }) => Promise<void>;
+  startLoginWithCreds: (creds: {
+    username: string;
+    password: string;
+    token?: string;
+  }) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -41,7 +45,11 @@ export function useAuth(): AuthHook {
     }
   };
 
-  const startLoginWithCreds = async (creds: { username: string; password: string; token?: string }) => {
+  const startLoginWithCreds = async (creds: {
+    username: string;
+    password: string;
+    token?: string;
+  }) => {
     setAuth({ status: "pending" });
     try {
       await window.electronAPI.auth.loginCredentials({

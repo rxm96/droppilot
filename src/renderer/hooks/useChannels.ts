@@ -34,7 +34,10 @@ export function useChannels({
   const [autoSwitch, setAutoSwitch] = useState<AutoSwitchInfo | null>(null);
 
   const isFresh = (game: string, now = Date.now()) =>
-    fetchedAt !== null && fetchedGame === game && now - fetchedAt < 5 * 60_000 && channels.length > 0;
+    fetchedAt !== null &&
+    fetchedGame === game &&
+    now - fetchedAt < 5 * 60_000 &&
+    channels.length > 0;
 
   const fetchChannels = async (gameName: string, { force }: { force?: boolean } = {}) => {
     if (!allowWatching) return;

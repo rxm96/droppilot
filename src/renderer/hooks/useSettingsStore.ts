@@ -101,8 +101,12 @@ export function useSettingsStore(): SettingsHook {
       setAutoClaim(res.autoClaim !== false);
       setAutoSelect(res.autoSelect !== false);
       setAutoSwitchEnabled(res.autoSwitch !== false);
-      setRefreshMinMs(Number.isFinite(res.refreshMinMs) && res.refreshMinMs ? res.refreshMinMs : 120_000);
-      setRefreshMaxMs(Number.isFinite(res.refreshMaxMs) && res.refreshMaxMs ? res.refreshMaxMs : 240_000);
+      setRefreshMinMs(
+        Number.isFinite(res.refreshMinMs) && res.refreshMinMs ? res.refreshMinMs : 120_000,
+      );
+      setRefreshMaxMs(
+        Number.isFinite(res.refreshMaxMs) && res.refreshMaxMs ? res.refreshMaxMs : 240_000,
+      );
       setDemoMode(res.demoMode === true);
       setAlertsEnabled(res.alertsEnabled !== false);
       setAlertsNotifyWhileFocused(res.alertsNotifyWhileFocused === true);
@@ -111,7 +115,7 @@ export function useSettingsStore(): SettingsHook {
       setAlertsDropEndingMinutes(
         Number.isFinite(res.alertsDropEndingMinutes) && res.alertsDropEndingMinutes
           ? Math.min(60, Math.max(1, res.alertsDropEndingMinutes))
-          : 5
+          : 5,
       );
       setAlertsWatchError(res.alertsWatchError !== false);
       setAlertsAutoSwitch(res.alertsAutoSwitch !== false);
@@ -136,8 +140,12 @@ export function useSettingsStore(): SettingsHook {
       setAutoClaim(saved.autoClaim !== false);
       setAutoSelect(saved.autoSelect !== false);
       setAutoSwitchEnabled(saved.autoSwitch !== false);
-      setRefreshMinMs(Number.isFinite(saved.refreshMinMs) && saved.refreshMinMs ? saved.refreshMinMs : 120_000);
-      setRefreshMaxMs(Number.isFinite(saved.refreshMaxMs) && saved.refreshMaxMs ? saved.refreshMaxMs : 240_000);
+      setRefreshMinMs(
+        Number.isFinite(saved.refreshMinMs) && saved.refreshMinMs ? saved.refreshMinMs : 120_000,
+      );
+      setRefreshMaxMs(
+        Number.isFinite(saved.refreshMaxMs) && saved.refreshMaxMs ? saved.refreshMaxMs : 240_000,
+      );
       setDemoMode(saved.demoMode === true);
       setAlertsEnabled(saved.alertsEnabled !== false);
       setAlertsNotifyWhileFocused(saved.alertsNotifyWhileFocused === true);
@@ -146,7 +154,7 @@ export function useSettingsStore(): SettingsHook {
       setAlertsDropEndingMinutes(
         Number.isFinite(saved.alertsDropEndingMinutes) && saved.alertsDropEndingMinutes
           ? Math.min(60, Math.max(1, saved.alertsDropEndingMinutes))
-          : 5
+          : 5,
       );
       setAlertsWatchError(saved.alertsWatchError !== false);
       setAlertsAutoSwitch(saved.alertsAutoSwitch !== false);
@@ -290,8 +298,12 @@ export function useSettingsStore(): SettingsHook {
       setAutoClaim(saved.autoClaim !== false);
       setAutoSelect(saved.autoSelect !== false);
       setAutoSwitchEnabled(saved.autoSwitch !== false);
-      setRefreshMinMs(Number.isFinite(saved.refreshMinMs) && saved.refreshMinMs ? saved.refreshMinMs : 120_000);
-      setRefreshMaxMs(Number.isFinite(saved.refreshMaxMs) && saved.refreshMaxMs ? saved.refreshMaxMs : 240_000);
+      setRefreshMinMs(
+        Number.isFinite(saved.refreshMinMs) && saved.refreshMinMs ? saved.refreshMinMs : 120_000,
+      );
+      setRefreshMaxMs(
+        Number.isFinite(saved.refreshMaxMs) && saved.refreshMaxMs ? saved.refreshMaxMs : 240_000,
+      );
       setDemoMode(saved.demoMode === true);
       setAlertsEnabled(saved.alertsEnabled !== false);
       setAlertsNotifyWhileFocused(saved.alertsNotifyWhileFocused === true);
@@ -300,7 +312,7 @@ export function useSettingsStore(): SettingsHook {
       setAlertsDropEndingMinutes(
         Number.isFinite(saved.alertsDropEndingMinutes) && saved.alertsDropEndingMinutes
           ? Math.min(60, Math.max(1, saved.alertsDropEndingMinutes))
-          : 5
+          : 5,
       );
       setAlertsWatchError(saved.alertsWatchError !== false);
       setAlertsAutoSwitch(saved.alertsAutoSwitch !== false);

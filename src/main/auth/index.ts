@@ -217,7 +217,7 @@ export class AuthController {
       expires_in: number;
       interval: number;
     },
-    isCancelled?: () => boolean
+    isCancelled?: () => boolean,
   ): Promise<AuthResult> {
     const start = Date.now();
     const expiresAt = start + device.expires_in * 1000;

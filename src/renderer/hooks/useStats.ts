@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import type { StatsData, StatsState } from "../types";
 
-const computeNext = (current: StatsData, delta: { minutes?: number; claims?: number; lastDropTitle?: string; lastGame?: string }): StatsData => {
+const computeNext = (
+  current: StatsData,
+  delta: { minutes?: number; claims?: number; lastDropTitle?: string; lastGame?: string },
+): StatsData => {
   const minutes = Math.max(0, delta.minutes ?? 0);
   const claims = Math.max(0, delta.claims ?? 0);
   return {
@@ -33,7 +36,12 @@ export function useStats() {
   }, []);
 
   const bumpStats = useCallback(
-    async (delta: { minutes?: number; claims?: number; lastDropTitle?: string; lastGame?: string }) => {
+    async (delta: {
+      minutes?: number;
+      claims?: number;
+      lastDropTitle?: string;
+      lastGame?: string;
+    }) => {
       setStats((prev) => {
         if (prev.status === "ready" && prev.data) {
           return { status: "ready", data: computeNext(prev.data, delta) };
@@ -48,7 +56,7 @@ export function useStats() {
         // ignore
       }
     },
-    []
+    [],
   );
 
   const resetStats = useCallback(async () => {
@@ -56,7 +64,10 @@ export function useStats() {
       const res = await window.electronAPI.stats.reset();
       setStats({ status: "ready", data: res as StatsData });
     } catch (err) {
-      setStats({ status: "error", message: err instanceof Error ? err.message : "Stats: Reset fehlgeschlagen" });
+      setStats({
+        status: "error",
+        message: err instanceof Error ? err.message : "Stats: Reset fehlgeschlagen",
+      });
     }
   }, []);
 

@@ -62,7 +62,7 @@ export class TwitchService {
       "Detailed campaigns",
       detailed.length,
       "drop lengths",
-      detailed.map((c) => c.timeBasedDrops?.length ?? 0)
+      detailed.map((c) => c.timeBasedDrops?.length ?? 0),
     );
 
     for (const campaign of detailed) {
@@ -102,7 +102,7 @@ export class TwitchService {
         const requiredMinutes = requiredValid.length ? Math.min(...requiredValid) : 0;
         let status = mapStatus(rawStatus, drop);
         if (status === "claimed" && requiredMinutes > 0 && watched === 0) {
-          // Align with Python: claimed drops report full progress
+          // Claimed drops report full progress.
           watched = requiredMinutes;
         }
         // Heuristics: treat watched progress as "progress" even if status says locked; treat fully watched as claimable
@@ -138,7 +138,7 @@ export class TwitchService {
       this.debug("No drops built", { summary, dropsCount });
       throw new TwitchServiceError(
         "inventory.empty",
-        `No drops found. ${summary} dropsCount=${dropsCount}`
+        `No drops found. ${summary} dropsCount=${dropsCount}`,
       );
     }
 
@@ -163,13 +163,10 @@ export class TwitchService {
         },
         variables: { name },
       },
-      "DirectoryGameRedirect"
+      "DirectoryGameRedirect",
     );
     const slug =
-      res?.data?.game?.slug ??
-      res?.data?.game?.displayName ??
-      res?.data?.game?.name ??
-      null;
+      res?.data?.game?.slug ?? res?.data?.game?.displayName ?? res?.data?.game?.name ?? null;
     return slug;
   }
 
@@ -198,14 +195,14 @@ export class TwitchService {
             includeRestricted: ["SUB_ONLY_LIVE"],
             recommendationsContext: { platform: "web" },
             sort: "VIEWER_COUNT",
-            systemFilters: ["DROPS_ENABLED"], // align with Python: only show drops-enabled streams
+            systemFilters: ["DROPS_ENABLED"], // only show drops-enabled streams
             tags: [],
             requestID: "COD-CHANNEL-FETCH",
           },
           sortTypeIsRecency: false,
         },
       },
-      "DirectoryPage_Game"
+      "DirectoryPage_Game",
     );
 
     const edges = res?.data?.game?.streams?.edges ?? [];
@@ -225,8 +222,7 @@ export class TwitchService {
         game: gameName,
       }));
 
-    // Additional eligibility check: ensure the channel actually has viewerDropCampaigns
-    // similar to the Python client (AvailableDrops).
+    // Additional eligibility check: ensure the channel actually has viewerDropCampaigns.
     try {
       const eligibleIds = await this.getChannelsWithAvailableDrops(channels.map((c) => c.id));
       if (eligibleIds.size > 0) {
@@ -241,7 +237,8 @@ export class TwitchService {
 
   async claimDrop(payload: { dropInstanceId?: string; dropId?: string; campaignId?: string }) {
     this.debug("claim: start", payload);
-    const claimId = payload.dropInstanceId ?? (await this.buildClaimId(payload.dropId, payload.campaignId));
+    const claimId =
+      payload.dropInstanceId ?? (await this.buildClaimId(payload.dropId, payload.campaignId));
     if (!claimId) {
       this.debug("claim: missing claim id", payload);
       throw new TwitchServiceError("claim.missing_id", "Claim id missing");
@@ -251,7 +248,7 @@ export class TwitchService {
       "a455deea71bdc9015b78eb49f4acfbce8baa7ccbedd28e549bb025bd0f751930",
       {
         input: { dropInstanceID: claimId },
-      }
+      },
     );
     const res = await this.gqlRequest<any>(body, "DropsPage_ClaimDropRewards");
     const status =
@@ -267,7 +264,7 @@ export class TwitchService {
       this.debug("claim: failed", { claimId, status });
       throw new TwitchServiceError(
         "claim.failed",
-        status ? `Claim failed: ${status}` : "Claim failed"
+        status ? `Claim failed: ${status}` : "Claim failed",
       );
     }
     this.debug("claim: success", { claimId, status });
@@ -289,7 +286,8 @@ export class TwitchService {
     }
 
     const SETTINGS_PATTERN = /src="(https:\/\/[\w.]+\/config\/settings\.[0-9a-f]{32}\.js)"/i;
-    const SPADE_PATTERN = /"beacon_?url": ?"(https:\/\/video-edge-[.\w\-/]+\.ts(?:\?allow_stream=true)?)"/i;
+    const SPADE_PATTERN =
+      /"beacon_?url": ?"(https:\/\/video-edge-[.\w\-/]+\.ts(?:\?allow_stream=true)?)"/i;
 
     const fetchText = async (url: string) => {
       const res = await fetch(url, {
@@ -411,11 +409,11 @@ export class TwitchService {
       payloadBody,
     });
 
-    // Keep headers minimal (match Python client)
+    // Keep headers minimal.
     const headers: Record<string, string> = {
       "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
       "User-Agent": TWITCH_WEB_USER_AGENT,
-      // Python client does not explicitly send Client-Id to Spade
+      // Client-Id is intentionally omitted for Spade.
       ...(cookieHeader ? { Cookie: cookieHeader } : {}),
     };
 
@@ -433,10 +431,16 @@ export class TwitchService {
     }
 
     const text = await res.text();
-    this.debug("Watch ping failed", { status: res.status, login, channelId, broadcastId, body: text });
+    this.debug("Watch ping failed", {
+      status: res.status,
+      login,
+      channelId,
+      broadcastId,
+      body: text,
+    });
     throw new TwitchServiceError(
       "watch.ping_failed",
-      text ? `Watch ping failed: ${text}` : `Watch ping failed (${res.status})`
+      text ? `Watch ping failed: ${text}` : `Watch ping failed (${res.status})`,
     );
   }
 
@@ -451,11 +455,11 @@ export class TwitchService {
       return { node: edge as CampaignEdge["node"] };
     };
 
-    // 1) Inventory (in-progress campaigns) — mirrors Python flow
+    // 1) Inventory (in-progress campaigns).
     const inventoryPayload = createPersistedQuery(
       "Inventory",
       "d86775d0ef16a63a33ad52e80eaff963b2d5b72fada7c991504a57496e1d8e4b",
-      { fetchRewardCampaigns: false }
+      { fetchRewardCampaigns: false },
     );
     const inv = await this.gqlRequest<InventoryResponse>(inventoryPayload, "Inventory");
     const inProgressRaw =
@@ -477,7 +481,7 @@ export class TwitchService {
         game: e?.node?.game?.displayName,
         dropCount: e?.node?.timeBasedDrops?.length,
         rawKeys: e ? Object.keys(e) : [],
-      }))
+      })),
     );
     if (inProgress.length > 0 && inProgress[0] && !inProgress[0].node) {
       this.debug("Inventory raw edge[0]", JSON.stringify(inProgress[0], null, 2));
@@ -487,9 +491,12 @@ export class TwitchService {
     const campaignsPayload = createPersistedQuery(
       "ViewerDropsDashboard",
       "5a4da2ab3d5b47c9f9ce864e727b2cb346af1e3ea8b897fe8f704a97ff017619",
-      { fetchRewardCampaigns: false }
+      { fetchRewardCampaigns: false },
     );
-    const campaigns = await this.gqlRequest<CampaignsResponse>(campaignsPayload, "ViewerDropsDashboard");
+    const campaigns = await this.gqlRequest<CampaignsResponse>(
+      campaignsPayload,
+      "ViewerDropsDashboard",
+    );
     const availableRaw = campaigns?.data?.currentUser?.dropCampaigns?.edges ?? [];
     const available = availableRaw.map(normalizeEdge);
     for (const edge of available) {
@@ -506,7 +513,7 @@ export class TwitchService {
         game: e?.node?.game?.displayName,
         dropCount: e?.node?.timeBasedDrops?.length,
         rawKeys: e ? Object.keys(e) : [],
-      }))
+      })),
     );
     if (available.length > 0 && available[0] && !available[0].node) {
       this.debug("Campaign raw edge[0]", JSON.stringify(available[0], null, 2));
@@ -516,7 +523,7 @@ export class TwitchService {
     if (mergedEdges.length === 0) {
       throw new TwitchServiceError(
         "inventory.empty",
-        `No campaigns returned. Campaigns: ${campaignsSummary}; Inventory: ${inventorySummary}`
+        `No campaigns returned. Campaigns: ${campaignsSummary}; Inventory: ${inventorySummary}`,
       );
     }
 
@@ -544,10 +551,14 @@ export class TwitchService {
       const chunk = ids.slice(i, i + chunkSize);
       this.debug("Detail chunk", { idx: i, size: chunk.length });
       const gqlPayload = chunk.map((cid) =>
-        createPersistedQuery("DropCampaignDetails", "039277bf98f3130929262cc7c6efd9c141ca3749cb6dca442fc8ead9a53f77c1", {
-          channelLogin: validate.login, // matches Python's usage (user id/login)
-          dropID: cid,
-        })
+        createPersistedQuery(
+          "DropCampaignDetails",
+          "039277bf98f3130929262cc7c6efd9c141ca3749cb6dca442fc8ead9a53f77c1",
+          {
+            channelLogin: validate.login, // use login as user identifier
+            dropID: cid,
+          },
+        ),
       );
 
       const responses = await this.gqlRequest<any>(gqlPayload, "DropCampaignDetails");
@@ -580,7 +591,7 @@ export class TwitchService {
       "Enriched campaigns",
       merged.length,
       "drop lengths",
-      merged.map((c) => c.timeBasedDrops?.length ?? 0)
+      merged.map((c) => c.timeBasedDrops?.length ?? 0),
     );
 
     return merged;
@@ -597,8 +608,8 @@ export class TwitchService {
         createPersistedQuery(
           "DropsHighlightService_AvailableDrops",
           "9a62a09bce5b53e26e64a671e530bc599cb6aab1e5ba3cbd5d85966d3940716f",
-          { channelID: String(id) }
-        )
+          { channelID: String(id) },
+        ),
       );
       const res = await this.gqlRequest<any>(payload, "DropsHighlightService_AvailableDrops");
       const list = Array.isArray(res) ? res : [res];
@@ -621,7 +632,7 @@ export class TwitchService {
 
   private async gqlRequest<T>(
     body: Record<string, unknown> | Record<string, unknown>[],
-    context: string
+    context: string,
   ): Promise<T> {
     try {
       return await this.client.gqlRequest<T>(body);
@@ -640,7 +651,13 @@ export class TwitchService {
 
 function mapStatus(status: string | undefined, drop?: any): InventoryItem["status"] {
   const s = (status ?? "").toLowerCase();
-  if (s === "claimed" || s === "fulfilled" || s === "ended" || s === "complete" || s === "completed") {
+  if (
+    s === "claimed" ||
+    s === "fulfilled" ||
+    s === "ended" ||
+    s === "complete" ||
+    s === "completed"
+  ) {
     return "claimed";
   }
   if (s === "in_progress" || s === "active" || s === "progress") {
@@ -690,7 +707,7 @@ type InventoryResponse = {
 function createPersistedQuery(
   operationName: string,
   sha: string,
-  variables: Record<string, unknown>
+  variables: Record<string, unknown>,
 ) {
   return {
     operationName,

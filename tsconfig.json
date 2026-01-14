@@ -8,17 +8,11 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "types": [
-      "vite/client"
-    ],
+    "types": ["vite/client"],
     "baseUrl": ".",
     "paths": {
-      "@renderer/*": [
-        "src/renderer/*"
-      ]
+      "@renderer/*": ["src/renderer/*"]
     }
   },
-  "include": [
-    "src/renderer"
-  ]
+  "include": ["src/renderer"]
 }

@@ -24,7 +24,10 @@ export interface ValidateInfo {
 }
 
 export class TwitchAuthError extends Error {
-  constructor(message: string, public status?: number) {
+  constructor(
+    message: string,
+    public status?: number,
+  ) {
     super(message);
     this.name = "TwitchAuthError";
   }
@@ -78,7 +81,7 @@ export class TwitchClient {
   }
 
   private async gqlHeaders(): Promise<HeadersInit> {
-    // Only the web client requires integrity; Android app client works without it (matches Python)
+    // Only the web client requires integrity; Android app client works without it.
     if (this.requireIntegrity) {
       await this.ensureIntegrity();
     }
@@ -102,8 +105,12 @@ export class TwitchClient {
       "Client-Id": TWITCH_CLIENT_ID,
       "Client-Session-Id": this.sessionId,
       "X-Device-Id": this.deviceId,
-      ...(this.requireIntegrity && this.integrityToken ? { "Client-Integrity": this.integrityToken } : {}),
-      ...(this.requireIntegrity && this.clientVersion ? { "Client-Version": this.clientVersion } : {}),
+      ...(this.requireIntegrity && this.integrityToken
+        ? { "Client-Integrity": this.integrityToken }
+        : {}),
+      ...(this.requireIntegrity && this.clientVersion
+        ? { "Client-Version": this.clientVersion }
+        : {}),
       Cookie: baseCookies.join("; "),
       Origin: "https://www.twitch.tv",
       Referer: "https://www.twitch.tv",
@@ -142,7 +149,7 @@ export class TwitchClient {
         throw new Error(
           `GQL errors: ${entry.errors
             .map((e: any) => e.message ?? JSON.stringify(e))
-            .join("; ")} | payload=${JSON.stringify(entry)}`
+            .join("; ")} | payload=${JSON.stringify(entry)}`,
         );
       }
     }
@@ -214,7 +221,10 @@ export class TwitchClient {
     if (resClientVersion) {
       this.clientVersion = resClientVersion;
     }
-    this.log("Integrity ok", { clientVersion: this.clientVersion, tokenPreview: this.integrityToken.slice(0, 8) });
+    this.log("Integrity ok", {
+      clientVersion: this.clientVersion,
+      tokenPreview: this.integrityToken.slice(0, 8),
+    });
   }
 
   private async ensureWebCookies(): Promise<void> {
@@ -268,7 +278,7 @@ export class TwitchClient {
     }
 
     // Ensure device_id/auth-token are present and dedupe by key (last wins).
-    // Keep a small allowlist similar zum Python-Client (keine twilight-/csrf-Cookies).
+    // Keep a small allowlist; exclude twilight/csrf cookies.
     const validate = await this.getValidateInfo();
     const cookieMap = new Map<string, string>();
     const allow = new Set([
@@ -287,7 +297,8 @@ export class TwitchClient {
       if (!allow.has(key)) continue;
       cookieMap.set(key, (v ?? "").trim());
     }
-    const cookieDeviceId = cookieMap.get("device_id") ?? cookieMap.get("unique_id") ?? this.deviceId;
+    const cookieDeviceId =
+      cookieMap.get("device_id") ?? cookieMap.get("unique_id") ?? this.deviceId;
     cookieMap.set("device_id", cookieDeviceId);
     this.deviceId = cookieDeviceId;
 
@@ -314,7 +325,12 @@ export class TwitchClient {
   }
 
   private async ensureIds(): Promise<void> {
-    if (this.deviceId && this.sessionId && this.deviceId.indexOf("-") === -1 && this.sessionId.indexOf("-") === -1) {
+    if (
+      this.deviceId &&
+      this.sessionId &&
+      this.deviceId.indexOf("-") === -1 &&
+      this.sessionId.indexOf("-") === -1
+    ) {
       return;
     }
     const ids = await ensureSessionIds();
@@ -362,7 +378,7 @@ export class TwitchClient {
     try {
       const data = await this.fetchJson<{ data: any[] }>(
         `https://api.twitch.tv/helix/users?id=${validate.userId}`,
-        { headers }
+        { headers },
       );
       const user = data.data?.[0];
       if (user) {

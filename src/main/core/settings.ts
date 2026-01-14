@@ -55,23 +55,38 @@ export async function loadSettings(): Promise<SettingsData> {
       ...parsed,
       priorityGames: Array.isArray(parsed?.priorityGames) ? parsed.priorityGames : [],
       excludeGames: Array.isArray(parsed?.excludeGames) ? parsed.excludeGames : [],
-      obeyPriority: typeof parsed?.obeyPriority === "boolean" ? parsed.obeyPriority : defaultSettings.obeyPriority,
+      obeyPriority:
+        typeof parsed?.obeyPriority === "boolean"
+          ? parsed.obeyPriority
+          : defaultSettings.obeyPriority,
       language: parsed?.language === "en" ? "en" : "de",
-      autoClaim: typeof parsed?.autoClaim === "boolean" ? parsed.autoClaim : defaultSettings.autoClaim,
-      autoSelect: typeof parsed?.autoSelect === "boolean" ? parsed.autoSelect : defaultSettings.autoSelect,
-      autoSwitch: typeof parsed?.autoSwitch === "boolean" ? parsed.autoSwitch : defaultSettings.autoSwitch,
+      autoClaim:
+        typeof parsed?.autoClaim === "boolean" ? parsed.autoClaim : defaultSettings.autoClaim,
+      autoSelect:
+        typeof parsed?.autoSelect === "boolean" ? parsed.autoSelect : defaultSettings.autoSelect,
+      autoSwitch:
+        typeof parsed?.autoSwitch === "boolean" ? parsed.autoSwitch : defaultSettings.autoSwitch,
       refreshMinMs:
-        Number.isFinite(parsed?.refreshMinMs) && parsed.refreshMinMs > 0 ? parsed.refreshMinMs : defaultSettings.refreshMinMs,
+        Number.isFinite(parsed?.refreshMinMs) && parsed.refreshMinMs > 0
+          ? parsed.refreshMinMs
+          : defaultSettings.refreshMinMs,
       refreshMaxMs:
-        Number.isFinite(parsed?.refreshMaxMs) && parsed.refreshMaxMs > 0 ? parsed.refreshMaxMs : defaultSettings.refreshMaxMs,
+        Number.isFinite(parsed?.refreshMaxMs) && parsed.refreshMaxMs > 0
+          ? parsed.refreshMaxMs
+          : defaultSettings.refreshMaxMs,
       demoMode: typeof parsed?.demoMode === "boolean" ? parsed.demoMode : defaultSettings.demoMode,
-      alertsEnabled: typeof parsed?.alertsEnabled === "boolean" ? parsed.alertsEnabled : defaultSettings.alertsEnabled,
+      alertsEnabled:
+        typeof parsed?.alertsEnabled === "boolean"
+          ? parsed.alertsEnabled
+          : defaultSettings.alertsEnabled,
       alertsNotifyWhileFocused:
         typeof parsed?.alertsNotifyWhileFocused === "boolean"
           ? parsed.alertsNotifyWhileFocused
           : defaultSettings.alertsNotifyWhileFocused,
       alertsDropClaimed:
-        typeof parsed?.alertsDropClaimed === "boolean" ? parsed.alertsDropClaimed : defaultSettings.alertsDropClaimed,
+        typeof parsed?.alertsDropClaimed === "boolean"
+          ? parsed.alertsDropClaimed
+          : defaultSettings.alertsDropClaimed,
       alertsDropEndingSoon:
         typeof parsed?.alertsDropEndingSoon === "boolean"
           ? parsed.alertsDropEndingSoon
@@ -81,11 +96,17 @@ export async function loadSettings(): Promise<SettingsData> {
           ? Math.min(60, Math.max(1, parsed.alertsDropEndingMinutes))
           : defaultSettings.alertsDropEndingMinutes,
       alertsWatchError:
-        typeof parsed?.alertsWatchError === "boolean" ? parsed.alertsWatchError : defaultSettings.alertsWatchError,
+        typeof parsed?.alertsWatchError === "boolean"
+          ? parsed.alertsWatchError
+          : defaultSettings.alertsWatchError,
       alertsAutoSwitch:
-        typeof parsed?.alertsAutoSwitch === "boolean" ? parsed.alertsAutoSwitch : defaultSettings.alertsAutoSwitch,
+        typeof parsed?.alertsAutoSwitch === "boolean"
+          ? parsed.alertsAutoSwitch
+          : defaultSettings.alertsAutoSwitch,
       alertsNewDrops:
-        typeof parsed?.alertsNewDrops === "boolean" ? parsed.alertsNewDrops : defaultSettings.alertsNewDrops,
+        typeof parsed?.alertsNewDrops === "boolean"
+          ? parsed.alertsNewDrops
+          : defaultSettings.alertsNewDrops,
     };
   } catch {
     return defaultSettings;
@@ -113,15 +134,20 @@ export async function saveSettings(data: Partial<SettingsData>): Promise<Setting
         ? (data.refreshMaxMs as number)
         : current.refreshMaxMs,
     demoMode: typeof data.demoMode === "boolean" ? data.demoMode : current.demoMode,
-    alertsEnabled: typeof data.alertsEnabled === "boolean" ? data.alertsEnabled : current.alertsEnabled,
+    alertsEnabled:
+      typeof data.alertsEnabled === "boolean" ? data.alertsEnabled : current.alertsEnabled,
     alertsNotifyWhileFocused:
       typeof data.alertsNotifyWhileFocused === "boolean"
         ? data.alertsNotifyWhileFocused
         : current.alertsNotifyWhileFocused,
     alertsDropClaimed:
-      typeof data.alertsDropClaimed === "boolean" ? data.alertsDropClaimed : current.alertsDropClaimed,
+      typeof data.alertsDropClaimed === "boolean"
+        ? data.alertsDropClaimed
+        : current.alertsDropClaimed,
     alertsDropEndingSoon:
-      typeof data.alertsDropEndingSoon === "boolean" ? data.alertsDropEndingSoon : current.alertsDropEndingSoon,
+      typeof data.alertsDropEndingSoon === "boolean"
+        ? data.alertsDropEndingSoon
+        : current.alertsDropEndingSoon,
     alertsDropEndingMinutes:
       Number.isFinite(data.alertsDropEndingMinutes) && (data.alertsDropEndingMinutes as number) > 0
         ? Math.min(60, Math.max(1, data.alertsDropEndingMinutes as number))

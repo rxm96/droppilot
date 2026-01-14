@@ -2,7 +2,7 @@ import type { InventoryItem } from "./types";
 
 export function getCategory(
   item: InventoryItem,
-  isLinked: boolean
+  isLinked: boolean,
 ): "in-progress" | "upcoming" | "finished" | "not-linked" | "expired" | "excluded" {
   const now = Date.now();
   if (!isLinked || item.linked === false) return "not-linked";
@@ -21,7 +21,7 @@ export function getCategory(
 
 export function categoryLabel(
   cat: ReturnType<typeof getCategory>,
-  t?: (key: string) => string
+  t?: (key: string) => string,
 ): string {
   switch (cat) {
     case "in-progress":
@@ -41,7 +41,10 @@ export function categoryLabel(
   }
 }
 
-export function mapStatusLabel(status: InventoryItem["status"], t?: (key: string) => string): string {
+export function mapStatusLabel(
+  status: InventoryItem["status"],
+  t?: (key: string) => string,
+): string {
   switch (status) {
     case "claimed":
       return t ? t("inventory.status.claimed") : "Claimed";
@@ -52,7 +55,11 @@ export function mapStatusLabel(status: InventoryItem["status"], t?: (key: string
   }
 }
 
-export function formatRange(start?: string, end?: string, t?: (key: string, vars?: Record<string, string>) => string): string {
+export function formatRange(
+  start?: string,
+  end?: string,
+  t?: (key: string, vars?: Record<string, string>) => string,
+): string {
   const fmt = (v?: string) => {
     if (!v) return null;
     const d = new Date(v);

@@ -161,7 +161,7 @@ function makeChannel(
   displayName: string,
   title: string,
   viewers: number,
-  color: string
+  color: string,
 ): ChannelEntry {
   return {
     id: `demo-${login}`,
@@ -178,13 +178,41 @@ function makeChannel(
 
 const demoChannelsByGame: Record<string, ChannelEntry[]> = {
   VALORANT: [
-    makeChannel("VALORANT", "agentzero", "AgentZero", "Ranked grind and drop progress", 12800, "#6d28d9"),
-    makeChannel("VALORANT", "spikerush", "SpikeRushTV", "Warmup into custom lobbies", 7200, "#ec4899"),
+    makeChannel(
+      "VALORANT",
+      "agentzero",
+      "AgentZero",
+      "Ranked grind and drop progress",
+      12800,
+      "#6d28d9",
+    ),
+    makeChannel(
+      "VALORANT",
+      "spikerush",
+      "SpikeRushTV",
+      "Warmup into custom lobbies",
+      7200,
+      "#ec4899",
+    ),
     makeChannel("VALORANT", "vct_chill", "VCT_Chill", "Co-stream vibes", 4200, "#0ea5e9"),
   ],
   "Apex Legends": [
-    makeChannel("Apex Legends", "jumpmaster", "JumpMaster", "Hot drops and clutch plays", 9800, "#f97316"),
-    makeChannel("Apex Legends", "lootgoblin", "LootGoblin", "Loot routes and chill comms", 5100, "#14b8a6"),
+    makeChannel(
+      "Apex Legends",
+      "jumpmaster",
+      "JumpMaster",
+      "Hot drops and clutch plays",
+      9800,
+      "#f97316",
+    ),
+    makeChannel(
+      "Apex Legends",
+      "lootgoblin",
+      "LootGoblin",
+      "Loot routes and chill comms",
+      5100,
+      "#14b8a6",
+    ),
     makeChannel("Apex Legends", "arenapod", "ArenaPod", "Ranked trio push", 2600, "#22c55e"),
   ],
   Fortnite: [
@@ -193,7 +221,14 @@ const demoChannelsByGame: Record<string, ChannelEntry[]> = {
     makeChannel("Fortnite", "stormsurge", "StormSurge", "Late game labs", 3100, "#38bdf8"),
   ],
   "Overwatch 2": [
-    makeChannel("Overwatch 2", "payloadpro", "PayloadPro", "Support queue and drops", 5600, "#4f46e5"),
+    makeChannel(
+      "Overwatch 2",
+      "payloadpro",
+      "PayloadPro",
+      "Support queue and drops",
+      5600,
+      "#4f46e5",
+    ),
     makeChannel("Overwatch 2", "ultready", "UltReady", "Scrims and review", 2400, "#16a34a"),
   ],
   Rust: [
@@ -201,7 +236,14 @@ const demoChannelsByGame: Record<string, ChannelEntry[]> = {
     makeChannel("Rust", "rocketraid", "RocketRaid", "Wipe day chaos", 2100, "#ef4444"),
   ],
   "Counter-Strike 2": [
-    makeChannel("Counter-Strike 2", "spraycontrol", "SprayControl", "Aim labs and drops", 8600, "#06b6d4"),
+    makeChannel(
+      "Counter-Strike 2",
+      "spraycontrol",
+      "SprayControl",
+      "Aim labs and drops",
+      8600,
+      "#06b6d4",
+    ),
     makeChannel("Counter-Strike 2", "smokeplay", "SmokePlay", "Utility lineups", 3300, "#a855f7"),
   ],
 };
@@ -222,7 +264,10 @@ export function getDemoChannels(game: string): ChannelEntry[] {
   return buildFallbackChannels(game);
 }
 
-export function buildDemoPriorityPlan(items: InventoryItem[], priorityGames: string[]): PriorityPlan {
+export function buildDemoPriorityPlan(
+  items: InventoryItem[],
+  priorityGames: string[],
+): PriorityPlan {
   const activeItems = items.filter((i) => i.status !== "claimed");
   const availableGames = Array.from(new Set(activeItems.map((i) => i.game)));
   const order: string[] = [];

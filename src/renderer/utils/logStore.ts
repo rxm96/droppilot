@@ -16,7 +16,8 @@ let counter = 0;
 
 const formatArg = (arg: unknown) => {
   if (typeof arg === "string") return arg;
-  if (typeof arg === "number" || typeof arg === "boolean" || typeof arg === "bigint") return String(arg);
+  if (typeof arg === "number" || typeof arg === "boolean" || typeof arg === "bigint")
+    return String(arg);
   if (arg instanceof Error) return `${arg.name}: ${arg.message}`;
   try {
     const serialized = JSON.stringify(arg);

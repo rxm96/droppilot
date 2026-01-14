@@ -13,7 +13,12 @@
   --accent-soft: rgba(136, 208, 255, 0.12);
   --shadow: 0 16px 60px rgba(0, 0, 0, 0.45);
   --debug-panel-height: 460px;
-  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
   background: radial-gradient(160% 140% at 15% 20%, #0e1a33 0%, #060a16 40%, #04070f 100%);
   color: var(--text);
 }
@@ -143,7 +148,8 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: radial-gradient(140% 140% at 20% 10%, rgba(156, 139, 255, 0.08), transparent 45%),
+  background:
+    radial-gradient(140% 140% at 20% 10%, rgba(156, 139, 255, 0.08), transparent 45%),
     radial-gradient(160% 120% at 80% 0%, rgba(136, 208, 255, 0.12), transparent 50%),
     linear-gradient(180deg, rgba(4, 8, 20, 0.95), rgba(5, 9, 18, 0.98));
   color: var(--text);
@@ -209,8 +215,13 @@ body {
   align-items: center;
   justify-content: center;
   padding: 0;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 4px 12px rgba(0, 0, 0, 0.2);
-  transition: transform 0.1s ease, background 0.15s ease, border-color 0.15s ease;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 4px 12px rgba(0, 0, 0, 0.2);
+  transition:
+    transform 0.1s ease,
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .title-btn.tray {
@@ -278,7 +289,8 @@ body {
   padding: 18px 20px;
   border: 1px solid var(--border);
   border-radius: 16px;
-  background: linear-gradient(135deg, rgba(156, 139, 255, 0.12), rgba(136, 208, 255, 0.08)),
+  background:
+    linear-gradient(135deg, rgba(156, 139, 255, 0.12), rgba(136, 208, 255, 0.08)),
     radial-gradient(120% 140% at 10% 20%, rgba(59, 104, 255, 0.12), transparent 60%),
     rgba(10, 16, 28, 0.9);
   box-shadow: var(--shadow);
@@ -454,7 +466,10 @@ button {
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 12px 32px rgba(136, 208, 255, 0.25);
-  transition: transform 0.1s ease, filter 0.15s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.1s ease,
+    filter 0.15s ease,
+    box-shadow 0.2s ease;
 }
 
 button:hover {
@@ -484,7 +499,10 @@ button.ghost.subtle-btn {
   box-shadow: none;
   font-weight: 600;
   padding: 9px 12px;
-  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
 }
 
 button.ghost.subtle-btn:hover {
@@ -521,7 +539,12 @@ button.ghost.danger {
 .skeleton-shine {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04),
+    rgba(255, 255, 255, 0.08),
+    rgba(255, 255, 255, 0.04)
+  );
   background-size: 200% 100%;
   animation: shine 1.4s ease-in-out infinite;
 }
@@ -668,7 +691,11 @@ a,
   grid-template-columns: 36px 1fr;
   gap: 12px;
   align-items: center;
-  transition: border-color 0.15s ease, transform 0.1s ease, background 0.15s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.15s ease,
+    transform 0.1s ease,
+    background 0.15s ease,
+    box-shadow 0.2s ease;
   overflow: hidden;
 }
 
@@ -814,7 +841,10 @@ a,
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
-  transition: transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .inv-card.in-progress {
@@ -1050,7 +1080,11 @@ code {
 .watch-visual {
   border-radius: 12px;
   border: 1px solid var(--border);
-  background: radial-gradient(140% 120% at 20% 20%, rgba(156, 139, 255, 0.1), rgba(136, 208, 255, 0.06));
+  background: radial-gradient(
+    140% 120% at 20% 20%,
+    rgba(156, 139, 255, 0.1),
+    rgba(136, 208, 255, 0.06)
+  );
   min-height: 170px;
   background-size: cover;
   background-position: center;
@@ -1230,7 +1264,22 @@ code {
   gap: 10px;
 }
 
-.channel-tile { position: relative; border: 1px solid var(--border); border-radius: 12px; padding: 12px; background: rgba(12, 18, 32, 0.92); overflow: hidden; display: grid; grid-template-columns: 1fr; gap: 10px; cursor: pointer; transition: transform 0.12s ease, border-color 0.15s ease, box-shadow 0.2s ease; }
+.channel-tile {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(12, 18, 32, 0.92);
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  cursor: pointer;
+  transition:
+    transform 0.12s ease,
+    border-color 0.15s ease,
+    box-shadow 0.2s ease;
+}
 
 .channel-thumb {
   position: absolute;
@@ -1266,7 +1315,15 @@ code {
   align-items: center;
 }
 
-.channel-tile.active { border-color: #4f65ff; box-shadow: 0 10px 26px rgba(79, 101, 255, 0.28); } .channel-tile:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35); border-color: #3d4f7a; }
+.channel-tile.active {
+  border-color: #4f65ff;
+  box-shadow: 0 10px 26px rgba(79, 101, 255, 0.28);
+}
+.channel-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  border-color: #3d4f7a;
+}
 
 .channel-tile .pill.active.small {
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
@@ -1459,5 +1516,3 @@ code {
     align-items: flex-start;
   }
 }
-
-

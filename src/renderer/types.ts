@@ -38,7 +38,14 @@ export type InventoryState =
   | { status: "ready"; items: InventoryItem[] }
   | { status: "error"; message: string; code?: string; items?: InventoryItem[] };
 
-export type FilterKey = "all" | "in-progress" | "upcoming" | "finished" | "not-linked" | "expired" | "excluded";
+export type FilterKey =
+  | "all"
+  | "in-progress"
+  | "upcoming"
+  | "finished"
+  | "not-linked"
+  | "expired"
+  | "excluded";
 
 export type View = "overview" | "inventory" | "control" | "settings" | "debug";
 
@@ -61,9 +68,14 @@ export type PriorityPlan = {
   totalActiveDrops: number;
 };
 
-export type WatchingState =
-  | { id: string; name: string; game: string; login?: string; channelId?: string; streamId?: string }
-  | null;
+export type WatchingState = {
+  id: string;
+  name: string;
+  game: string;
+  login?: string;
+  channelId?: string;
+  streamId?: string;
+} | null;
 
 export type AutoSwitchInfo = {
   at: number;

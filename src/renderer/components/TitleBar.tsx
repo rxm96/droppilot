@@ -25,13 +25,28 @@ export function TitleBar({ title = "DropPilot" }: Props) {
         >
           <span>{t("titlebar.tray")}</span>
         </button>
-        <button type="button" className="title-btn" onClick={() => handle("minimize")} aria-label={t("titlebar.minimize")}>
+        <button
+          type="button"
+          className="title-btn"
+          onClick={() => handle("minimize")}
+          aria-label={t("titlebar.minimize")}
+        >
           <span>&minus;</span>
         </button>
-        <button type="button" className="title-btn" onClick={() => handle("maximize")} aria-label={t("titlebar.maximize")}>
+        <button
+          type="button"
+          className="title-btn"
+          onClick={() => handle("maximize")}
+          aria-label={t("titlebar.maximize")}
+        >
           <span>&#9723;</span>
         </button>
-        <button type="button" className="title-btn close" onClick={() => handle("close")} aria-label={t("titlebar.close")}>
+        <button
+          type="button"
+          className="title-btn close"
+          onClick={() => handle("close")}
+          aria-label={t("titlebar.close")}
+        >
           <span>&#10005;</span>
         </button>
       </div>

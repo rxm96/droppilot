@@ -51,18 +51,25 @@ const api = {
     get: () => ipcRenderer.invoke("stats/get"),
     save: (payload: { totalMinutes?: number; totalClaims?: number; lastReset?: number }) =>
       ipcRenderer.invoke("stats/save", payload),
-    bump: (payload: { minutes?: number; claims?: number; lastDropTitle?: string; lastGame?: string }) =>
-      ipcRenderer.invoke("stats/bump", payload),
+    bump: (payload: {
+      minutes?: number;
+      claims?: number;
+      lastDropTitle?: string;
+      lastGame?: string;
+    }) => ipcRenderer.invoke("stats/bump", payload),
     reset: () => ipcRenderer.invoke("stats/reset"),
   },
   app: {
     windowControl: (action: "minimize" | "maximize" | "restore" | "close" | "hide-to-tray") =>
       ipcRenderer.invoke("app/windowControl", { action }),
-    notify: (payload: { title: string; body?: string }) => ipcRenderer.invoke("app/notify", payload),
+    checkUpdates: () => ipcRenderer.invoke("app/checkUpdates"),
+    notify: (payload: { title: string; body?: string }) =>
+      ipcRenderer.invoke("app/notify", payload),
   },
   logs: {
     onMainLog: (handler: (payload: { scope: string; args: unknown[] }) => void) => {
-      const listener = (_event: unknown, payload: { scope: string; args: unknown[] }) => handler(payload);
+      const listener = (_event: unknown, payload: { scope: string; args: unknown[] }) =>
+        handler(payload);
       ipcRenderer.on("main-log", listener);
       return () => ipcRenderer.removeListener("main-log", listener);
     },

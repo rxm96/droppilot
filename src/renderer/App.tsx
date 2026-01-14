@@ -15,11 +15,23 @@ import { useStats } from "./hooks/useStats";
 import { useTargetDrops } from "./hooks/useTargetDrops";
 import { useWatchPing, WATCH_INTERVAL_MS } from "./hooks/useWatchPing";
 import { I18nProvider } from "./i18n";
-import type { ChannelEntry, FilterKey, PriorityPlan, ProfileState, View, WatchingState } from "./types";
+import type {
+  ChannelEntry,
+  FilterKey,
+  PriorityPlan,
+  ProfileState,
+  View,
+  WatchingState,
+} from "./types";
 import { errorInfoFromIpc } from "./utils/errors";
 import { logDebug, logWarn } from "./utils/logger";
 
 const PAGE_SIZE = 8;
+type UpdateStatus = {
+  state: "idle" | "checking" | "available" | "none" | "error" | "unsupported";
+  message?: string;
+  version?: string;
+};
 
 function App() {
   const { auth, startLogin, startLoginWithCreds, logout } = useAuth();
@@ -29,15 +41,50 @@ function App() {
   const [view, setView] = useState<View>("inventory");
   const [page, setPage] = useState<number>(1);
   const {
-    priorityGames, obeyPriority, language, autoClaim, autoSelect, autoSwitchEnabled,
-    refreshMinMs, refreshMaxMs, demoMode,
-    alertsEnabled, alertsNotifyWhileFocused, alertsDropClaimed, alertsDropEndingSoon, alertsDropEndingMinutes,
-    alertsWatchError, alertsAutoSwitch, alertsNewDrops,
-    savePriorityGames, saveObeyPriority, saveLanguage, saveAutoClaim, saveAutoSelect, saveAutoSwitchEnabled,
-    saveRefreshIntervals, saveDemoMode, saveAlertsEnabled, saveAlertsNotifyWhileFocused, saveAlertsDropClaimed,
-    saveAlertsDropEndingSoon, saveAlertsDropEndingMinutes, saveAlertsWatchError, saveAlertsAutoSwitch, saveAlertsNewDrops,
-    resetAutomation, selectedGame, setSelectedGame, newGame, setNewGame,
-    settingsJson, setSettingsJson, exportSettings, importSettings, settingsInfo, settingsError,
+    priorityGames,
+    obeyPriority,
+    language,
+    autoClaim,
+    autoSelect,
+    autoSwitchEnabled,
+    refreshMinMs,
+    refreshMaxMs,
+    demoMode,
+    alertsEnabled,
+    alertsNotifyWhileFocused,
+    alertsDropClaimed,
+    alertsDropEndingSoon,
+    alertsDropEndingMinutes,
+    alertsWatchError,
+    alertsAutoSwitch,
+    alertsNewDrops,
+    savePriorityGames,
+    saveObeyPriority,
+    saveLanguage,
+    saveAutoClaim,
+    saveAutoSelect,
+    saveAutoSwitchEnabled,
+    saveRefreshIntervals,
+    saveDemoMode,
+    saveAlertsEnabled,
+    saveAlertsNotifyWhileFocused,
+    saveAlertsDropClaimed,
+    saveAlertsDropEndingSoon,
+    saveAlertsDropEndingMinutes,
+    saveAlertsWatchError,
+    saveAlertsAutoSwitch,
+    saveAlertsNewDrops,
+    resetAutomation,
+    selectedGame,
+    setSelectedGame,
+    newGame,
+    setNewGame,
+    settingsJson,
+    setSettingsJson,
+    exportSettings,
+    importSettings,
+    settingsInfo,
+    settingsError,
   } = useSettingsStore();
   const [gameFilter, setGameFilter] = useState<string>("all");
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -47,10 +94,18 @@ function App() {
   const [watching, setWatching] = useState<WatchingState>(null);
   const [autoSelectEnabled, setAutoSelectEnabled] = useState<boolean>(true);
   const [nowTick, setNowTick] = useState(Date.now());
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ state: "idle" });
   const isLinked = auth.status === "ok";
   const isLinkedOrDemo = isLinked || demoMode;
   const allowWatching = isLinkedOrDemo;
-  const isMac = useMemo(() => typeof navigator !== "undefined" && /mac/i.test(navigator.platform), []);
+  const isMac = useMemo(
+    () => typeof navigator !== "undefined" && /mac/i.test(navigator.platform),
+    [],
+  );
+  const isWindows = useMemo(
+    () => typeof navigator !== "undefined" && /win/i.test(navigator.platform),
+    [],
+  );
   const authErrorHandlerRef = useRef<(message?: string) => void>(() => {});
   const forwardAuthError = useCallback((message?: string) => {
     authErrorHandlerRef.current?.(message);
@@ -67,15 +122,23 @@ function App() {
     bumpStats,
   });
   const {
-    inventory, inventoryItems, inventoryRefreshing, inventoryChanges, inventoryFetchedAt,
-    fetchInventory, uniqueGames, claimStatus, setClaimStatus, withCategories,
+    inventory,
+    inventoryItems,
+    inventoryRefreshing,
+    inventoryChanges,
+    inventoryFetchedAt,
+    fetchInventory,
+    uniqueGames,
+    claimStatus,
+    setClaimStatus,
+    withCategories,
   } = useInventory(
     isLinkedOrDemo,
     {
       onClaimed: handleDropClaimed,
       onAuthError: forwardAuthError,
     },
-    { autoClaim, demoMode }
+    { autoClaim, demoMode },
   );
   const inventoryRefresh = useInventoryRefresh({
     watching,
@@ -231,7 +294,7 @@ function App() {
       });
       fetchInventory();
     },
-    [fetchInventory]
+    [fetchInventory],
   );
 
   const stopWatching = useCallback(
@@ -242,7 +305,7 @@ function App() {
         void fetchInventory({ forceLoading: true });
       }
     },
-    [fetchInventory]
+    [fetchInventory],
   );
 
   const handleAuthError = useCallback(
@@ -252,7 +315,7 @@ function App() {
       stopWatching({ skipRefresh: true });
       void logout();
     },
-    [isLinked, stopWatching, logout]
+    [isLinked, stopWatching, logout],
   );
 
   authErrorHandlerRef.current = handleAuthError;
@@ -271,7 +334,7 @@ function App() {
   const currentPage = Math.min(page, totalPages);
   const paginatedItems = useMemo(
     () => filteredItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
-    [filteredItems, currentPage]
+    [filteredItems, currentPage],
   );
 
   const previewPriorityGames =
@@ -311,9 +374,12 @@ function App() {
     if (!watching) return;
     const eta = activeDropEta;
     if (!eta) return;
-    const timeout = window.setTimeout(() => {
-      void fetchInventory({ forceLoading: true });
-    }, Math.max(0, eta + 30_000 - Date.now()));
+    const timeout = window.setTimeout(
+      () => {
+        void fetchInventory({ forceLoading: true });
+      },
+      Math.max(0, eta + 30_000 - Date.now()),
+    );
     return () => window.clearTimeout(timeout);
   }, [watching, activeDropEta, fetchInventory]);
 
@@ -321,14 +387,14 @@ function App() {
     (game: string) =>
       withCategories.some(
         ({ item, category }) =>
-          item.game === game && (category === "in-progress" || category === "upcoming")
+          item.game === game && (category === "in-progress" || category === "upcoming"),
       ),
-    [withCategories]
+    [withCategories],
   );
 
   const priorityOrder = useMemo(
     () => (priorityPlan?.order?.length ? priorityPlan.order : priorityGames),
-    [priorityPlan, priorityGames]
+    [priorityPlan, priorityGames],
   );
 
   useEffect(() => {
@@ -424,25 +490,137 @@ function App() {
     stats,
   });
 
-  const handleStartLoginWithCreds = useCallback(() => startLoginWithCreds(creds), [startLoginWithCreds, creds]);
+  const handleCheckUpdates = useCallback(async () => {
+    if (!window.electronAPI?.app?.checkUpdates) {
+      setUpdateStatus({ state: "error", message: "Update API unavailable" });
+      return;
+    }
+    setUpdateStatus({ state: "checking" });
+    try {
+      const res = await window.electronAPI.app.checkUpdates();
+      if (!res) {
+        setUpdateStatus({ state: "error", message: "No response" });
+        return;
+      }
+      if (!res.ok && res.status === "unsupported") {
+        setUpdateStatus({ state: "unsupported" });
+        return;
+      }
+      if (res.ok && res.status === "available") {
+        setUpdateStatus({ state: "available", version: res.version });
+        return;
+      }
+      if (res.ok && res.status === "none") {
+        setUpdateStatus({ state: "none" });
+        return;
+      }
+      setUpdateStatus({ state: "error", message: res.message || "Unknown error" });
+    } catch (err) {
+      setUpdateStatus({
+        state: "error",
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }, []);
+
+  const handleStartLoginWithCreds = useCallback(
+    () => startLoginWithCreds(creds),
+    [startLoginWithCreds, creds],
+  );
   const handleFilterChange = useCallback((key: FilterKey) => setFilter(key), [setFilter]);
-  const handleSetObeyPriority = useCallback((val: boolean) => { void saveObeyPriority(val); }, [saveObeyPriority]);
-  const handleSetAutoClaim = useCallback((val: boolean) => { void saveAutoClaim(val); }, [saveAutoClaim]);
-  const handleSetAutoSelect = useCallback((val: boolean) => { void saveAutoSelect(val); }, [saveAutoSelect]);
-  const handleSetAutoSwitchEnabled = useCallback((val: boolean) => { void saveAutoSwitchEnabled(val); }, [saveAutoSwitchEnabled]);
-  const handleSetDemoMode = useCallback((val: boolean) => { void saveDemoMode(val); }, [saveDemoMode]);
-  const handleSetAlertsEnabled = useCallback((val: boolean) => { void saveAlertsEnabled(val); }, [saveAlertsEnabled]);
-  const handleSetAlertsNotifyWhileFocused = useCallback((val: boolean) => { void saveAlertsNotifyWhileFocused(val); }, [saveAlertsNotifyWhileFocused]);
-  const handleSetAlertsDropClaimed = useCallback((val: boolean) => { void saveAlertsDropClaimed(val); }, [saveAlertsDropClaimed]);
-  const handleSetAlertsDropEndingSoon = useCallback((val: boolean) => { void saveAlertsDropEndingSoon(val); }, [saveAlertsDropEndingSoon]);
-  const handleSetAlertsDropEndingMinutes = useCallback((val: number) => { void saveAlertsDropEndingMinutes(val); }, [saveAlertsDropEndingMinutes]);
-  const handleSetAlertsWatchError = useCallback((val: boolean) => { void saveAlertsWatchError(val); }, [saveAlertsWatchError]);
-  const handleSetAlertsAutoSwitch = useCallback((val: boolean) => { void saveAlertsAutoSwitch(val); }, [saveAlertsAutoSwitch]);
-  const handleSetAlertsNewDrops = useCallback((val: boolean) => { void saveAlertsNewDrops(val); }, [saveAlertsNewDrops]);
-  const handleSetRefreshIntervals = useCallback((minMs: number, maxMs: number) => { void saveRefreshIntervals(minMs, maxMs); }, [saveRefreshIntervals]);
-  const handleResetAutomation = useCallback(() => { void resetAutomation(); }, [resetAutomation]);
-  const handleFetchInventory = useCallback(() => { void fetchInventory(); }, [fetchInventory]);
-  const handleStopWatching = useCallback(() => { stopWatching(); }, [stopWatching]);
+  const handleSetObeyPriority = useCallback(
+    (val: boolean) => {
+      void saveObeyPriority(val);
+    },
+    [saveObeyPriority],
+  );
+  const handleSetAutoClaim = useCallback(
+    (val: boolean) => {
+      void saveAutoClaim(val);
+    },
+    [saveAutoClaim],
+  );
+  const handleSetAutoSelect = useCallback(
+    (val: boolean) => {
+      void saveAutoSelect(val);
+    },
+    [saveAutoSelect],
+  );
+  const handleSetAutoSwitchEnabled = useCallback(
+    (val: boolean) => {
+      void saveAutoSwitchEnabled(val);
+    },
+    [saveAutoSwitchEnabled],
+  );
+  const handleSetDemoMode = useCallback(
+    (val: boolean) => {
+      void saveDemoMode(val);
+    },
+    [saveDemoMode],
+  );
+  const handleSetAlertsEnabled = useCallback(
+    (val: boolean) => {
+      void saveAlertsEnabled(val);
+    },
+    [saveAlertsEnabled],
+  );
+  const handleSetAlertsNotifyWhileFocused = useCallback(
+    (val: boolean) => {
+      void saveAlertsNotifyWhileFocused(val);
+    },
+    [saveAlertsNotifyWhileFocused],
+  );
+  const handleSetAlertsDropClaimed = useCallback(
+    (val: boolean) => {
+      void saveAlertsDropClaimed(val);
+    },
+    [saveAlertsDropClaimed],
+  );
+  const handleSetAlertsDropEndingSoon = useCallback(
+    (val: boolean) => {
+      void saveAlertsDropEndingSoon(val);
+    },
+    [saveAlertsDropEndingSoon],
+  );
+  const handleSetAlertsDropEndingMinutes = useCallback(
+    (val: number) => {
+      void saveAlertsDropEndingMinutes(val);
+    },
+    [saveAlertsDropEndingMinutes],
+  );
+  const handleSetAlertsWatchError = useCallback(
+    (val: boolean) => {
+      void saveAlertsWatchError(val);
+    },
+    [saveAlertsWatchError],
+  );
+  const handleSetAlertsAutoSwitch = useCallback(
+    (val: boolean) => {
+      void saveAlertsAutoSwitch(val);
+    },
+    [saveAlertsAutoSwitch],
+  );
+  const handleSetAlertsNewDrops = useCallback(
+    (val: boolean) => {
+      void saveAlertsNewDrops(val);
+    },
+    [saveAlertsNewDrops],
+  );
+  const handleSetRefreshIntervals = useCallback(
+    (minMs: number, maxMs: number) => {
+      void saveRefreshIntervals(minMs, maxMs);
+    },
+    [saveRefreshIntervals],
+  );
+  const handleResetAutomation = useCallback(() => {
+    void resetAutomation();
+  }, [resetAutomation]);
+  const handleFetchInventory = useCallback(() => {
+    void fetchInventory();
+  }, [fetchInventory]);
+  const handleStopWatching = useCallback(() => {
+    stopWatching();
+  }, [stopWatching]);
 
   const heroNextWatchIn = watchStats.nextAt
     ? Math.max(0, Math.round((watchStats.nextAt - nowTick) / 1000))
@@ -454,41 +632,123 @@ function App() {
     ? Math.min(1, Math.max(0, 1 - (watchStats.nextAt - nowTick) / WATCH_INTERVAL_MS))
     : undefined;
 
-  const sidebarProps = { view, setView, auth, creds, setCreds, startLoginWithCreds: handleStartLoginWithCreds, startLogin, logout };
+  const sidebarProps = {
+    view,
+    setView,
+    auth,
+    creds,
+    setCreds,
+    startLoginWithCreds: handleStartLoginWithCreds,
+    startLogin,
+    logout,
+  };
   const overviewProps = { profile, isLinked: isLinkedOrDemo, inventory, stats, resetStats, logout };
   const inventoryProps = {
-    inventory, filter, onFilterChange: handleFilterChange, gameFilter, onGameFilterChange: setGameFilter,
-    uniqueGames, paginatedItems, filteredCount: filteredItems.length, currentPage, totalPages, setPage,
-    changes: inventoryChanges, refreshing: inventoryRefreshing, isLinked: isLinkedOrDemo,
+    inventory,
+    filter,
+    onFilterChange: handleFilterChange,
+    gameFilter,
+    onGameFilterChange: setGameFilter,
+    uniqueGames,
+    paginatedItems,
+    filteredCount: filteredItems.length,
+    currentPage,
+    totalPages,
+    setPage,
+    changes: inventoryChanges,
+    refreshing: inventoryRefreshing,
+    isLinked: isLinkedOrDemo,
   };
   const settingsProps = {
-    startLogin, logout, isLinked, uniqueGames, selectedGame, setSelectedGame, newGame, setNewGame,
-    addGame, addGameFromSelect, priorityGames, previewPriorityGames, removeGame,
-    dragIndex, dragOverIndex, setDragIndex, setDragOverIndex, handleDropReorder,
-    obeyPriority, setObeyPriority: handleSetObeyPriority,
-    autoClaim: autoClaim, setAutoClaim: handleSetAutoClaim,
-    autoSelect, setAutoSelect: handleSetAutoSelect,
-    autoSwitchEnabled, setAutoSwitchEnabled: handleSetAutoSwitchEnabled,
-    demoMode, setDemoMode: handleSetDemoMode,
-    alertsEnabled, setAlertsEnabled: handleSetAlertsEnabled,
-    alertsNotifyWhileFocused, setAlertsNotifyWhileFocused: handleSetAlertsNotifyWhileFocused,
-    alertsDropClaimed, setAlertsDropClaimed: handleSetAlertsDropClaimed,
-    alertsDropEndingSoon, setAlertsDropEndingSoon: handleSetAlertsDropEndingSoon,
-    alertsDropEndingMinutes, setAlertsDropEndingMinutes: handleSetAlertsDropEndingMinutes,
-    alertsWatchError, setAlertsWatchError: handleSetAlertsWatchError,
-    alertsAutoSwitch, setAlertsAutoSwitch: handleSetAlertsAutoSwitch,
-    alertsNewDrops, setAlertsNewDrops: handleSetAlertsNewDrops,
-    sendTestAlert: handleTestAlert, refreshMinMs, refreshMaxMs,
+    startLogin,
+    logout,
+    isLinked,
+    uniqueGames,
+    selectedGame,
+    setSelectedGame,
+    newGame,
+    setNewGame,
+    addGame,
+    addGameFromSelect,
+    priorityGames,
+    previewPriorityGames,
+    removeGame,
+    dragIndex,
+    dragOverIndex,
+    setDragIndex,
+    setDragOverIndex,
+    handleDropReorder,
+    obeyPriority,
+    setObeyPriority: handleSetObeyPriority,
+    autoClaim,
+    setAutoClaim: handleSetAutoClaim,
+    autoSelect,
+    setAutoSelect: handleSetAutoSelect,
+    autoSwitchEnabled,
+    setAutoSwitchEnabled: handleSetAutoSwitchEnabled,
+    demoMode,
+    setDemoMode: handleSetDemoMode,
+    alertsEnabled,
+    setAlertsEnabled: handleSetAlertsEnabled,
+    alertsNotifyWhileFocused,
+    setAlertsNotifyWhileFocused: handleSetAlertsNotifyWhileFocused,
+    alertsDropClaimed,
+    setAlertsDropClaimed: handleSetAlertsDropClaimed,
+    alertsDropEndingSoon,
+    setAlertsDropEndingSoon: handleSetAlertsDropEndingSoon,
+    alertsDropEndingMinutes,
+    setAlertsDropEndingMinutes: handleSetAlertsDropEndingMinutes,
+    alertsWatchError,
+    setAlertsWatchError: handleSetAlertsWatchError,
+    alertsAutoSwitch,
+    setAlertsAutoSwitch: handleSetAlertsAutoSwitch,
+    alertsNewDrops,
+    setAlertsNewDrops: handleSetAlertsNewDrops,
+    sendTestAlert: handleTestAlert,
+    refreshMinMs,
+    refreshMaxMs,
     setRefreshIntervals: handleSetRefreshIntervals,
-    resetAutomation: handleResetAutomation, language, setLanguage: saveLanguage,
-    settingsJson, setSettingsJson, exportSettings, importSettings, settingsInfo, settingsError,
+    resetAutomation: handleResetAutomation,
+    language,
+    setLanguage: saveLanguage,
+    settingsJson,
+    setSettingsJson,
+    exportSettings,
+    importSettings,
+    settingsInfo,
+    settingsError,
+    showUpdateCheck: isWindows,
+    updateStatus,
+    checkUpdates: handleCheckUpdates,
   };
   const controlProps = {
-    priorityPlan, priorityGames, targetGame, setActiveTargetGame, targetDrops, targetProgress, totalDrops, claimedDrops,
-    totalEarnedMinutes, totalRequiredMinutes, fetchInventory: handleFetchInventory, refreshPriorityPlan,
-    watching, stopWatching: handleStopWatching, channels, channelsLoading, channelError, startWatching,
-    liveDeltaApplied, activeDropInfo, claimStatus, canWatchTarget, showNoDropsHint, nextWatchIn,
-    lastWatchOk: watchStats.lastOk, watchError: watchStats.lastError, autoSwitchInfo,
+    priorityPlan,
+    priorityGames,
+    targetGame,
+    setActiveTargetGame,
+    targetDrops,
+    targetProgress,
+    totalDrops,
+    claimedDrops,
+    totalEarnedMinutes,
+    totalRequiredMinutes,
+    fetchInventory: handleFetchInventory,
+    refreshPriorityPlan,
+    watching,
+    stopWatching: handleStopWatching,
+    channels,
+    channelsLoading,
+    channelError,
+    startWatching,
+    liveDeltaApplied,
+    activeDropInfo,
+    claimStatus,
+    canWatchTarget,
+    showNoDropsHint,
+    nextWatchIn,
+    lastWatchOk: watchStats.lastOk,
+    watchError: watchStats.lastError,
+    autoSwitchInfo,
   };
 
   return (
