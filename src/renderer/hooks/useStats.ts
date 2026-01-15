@@ -18,7 +18,12 @@ const computeNext = (
   };
 };
 
-export function useStats() {
+type StatsHookOptions = {
+  demoMode?: boolean;
+};
+
+export function useStats(options: StatsHookOptions = {}) {
+  const demoMode = options.demoMode === true;
   const [stats, setStats] = useState<StatsState>({ status: "idle" });
 
   const loadStats = useCallback(async () => {
@@ -42,6 +47,7 @@ export function useStats() {
       lastDropTitle?: string;
       lastGame?: string;
     }) => {
+      if (demoMode) return;
       setStats((prev) => {
         if (prev.status === "ready" && prev.data) {
           return { status: "ready", data: computeNext(prev.data, delta) };
@@ -56,10 +62,11 @@ export function useStats() {
         // ignore
       }
     },
-    [],
+    [demoMode],
   );
 
   const resetStats = useCallback(async () => {
+    if (demoMode) return;
     try {
       const res = await window.electronAPI.stats.reset();
       setStats({ status: "ready", data: res as StatsData });
@@ -69,7 +76,7 @@ export function useStats() {
         message: err instanceof Error ? err.message : "Stats: Reset fehlgeschlagen",
       });
     }
-  }, []);
+  }, [demoMode]);
 
   useEffect(() => {
     void loadStats();

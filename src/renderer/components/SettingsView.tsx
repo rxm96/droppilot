@@ -334,6 +334,25 @@ export function SettingsView({
         <section className="settings-section">
           <div className="settings-row">
             <div>
+              <div className="label">{t("settings.demoModeTitle")}</div>
+              <p className="meta">{t("settings.demoModeHint")}</p>
+            </div>
+          </div>
+          <div className="toggle-row">
+            <label className="toggle">
+              <input
+                type="checkbox"
+                checked={demoMode}
+                onChange={(e) => setDemoMode(e.target.checked)}
+              />
+              <span>{t("settings.demoMode")}</span>
+            </label>
+          </div>
+        </section>
+
+        <section className="settings-section">
+          <div className="settings-row">
+            <div>
               <div className="label">{t("settings.advanced")}</div>
               <p className="meta">{t("settings.advancedHint")}</p>
             </div>
@@ -373,17 +392,6 @@ export function SettingsView({
               <span>{t("settings.autoSwitch")}</span>
             </label>
           </div>
-          <div className="toggle-row">
-            <label className="toggle">
-              <input
-                type="checkbox"
-                checked={demoMode}
-                onChange={(e) => setDemoMode(e.target.checked)}
-              />
-              <span>{t("settings.demoMode")}</span>
-            </label>
-          </div>
-          <p className="meta">{t("settings.demoModeHint")}</p>
           <div className="settings-row">
             <div>
               <div className="label">{t("settings.refreshInterval")}</div>

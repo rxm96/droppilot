@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { AutoSwitchInfo, ChannelEntry, ErrorInfo, View, WatchingState } from "../types";
+import { getDemoChannels } from "../demoData";
 import { logDebug, logInfo, logWarn } from "../utils/logger";
 import { errorInfoFromIpc, errorInfoFromUnknown } from "../utils/errors";
 
@@ -12,6 +13,7 @@ type Params = {
   autoSelectEnabled: boolean;
   autoSwitchEnabled: boolean;
   allowWatching: boolean;
+  demoMode?: boolean;
   onAuthError?: (message?: string) => void;
 };
 
@@ -24,6 +26,7 @@ export function useChannels({
   autoSelectEnabled,
   autoSwitchEnabled,
   allowWatching,
+  demoMode,
   onAuthError,
 }: Params) {
   const [channels, setChannels] = useState<ChannelEntry[]>([]);
@@ -51,6 +54,19 @@ export function useChannels({
     setChannelsLoading(true);
     setChannelError(null);
     try {
+      if (demoMode) {
+        const list = getDemoChannels(gameName);
+        setChannels(list);
+        setFetchedAt(now);
+        setFetchedGame(gameName);
+        const shouldSkipInventory = autoSelectEnabled && !watching;
+        if (shouldSkipInventory) {
+          logDebug("channels: skip inventory fetch (auto-select will fetch after watching is set)");
+        } else {
+          fetchInventory();
+        }
+        return;
+      }
       logInfo("channels: fetch start", { game: gameName, force });
       const res = await window.electronAPI.twitch.channels({ game: gameName });
       if ((res as any)?.error) {
@@ -89,13 +105,23 @@ export function useChannels({
 
   // Fetch when entering control view or target changes (respect cache)
   useEffect(() => {
+    if (demoMode === undefined) return;
+    setChannels([]);
+    setChannelError(null);
+    setChannelsLoading(false);
+    setFetchedAt(null);
+    setFetchedGame("");
+    setAutoSwitch(null);
+  }, [demoMode]);
+
+  useEffect(() => {
     if (!allowWatching) return;
     if (view !== "control") return;
     if (!targetGame) return;
     if (!isFresh(targetGame)) {
       fetchChannels(targetGame, { force: true });
     }
-  }, [view, targetGame, allowWatching]);
+  }, [view, targetGame, allowWatching, demoMode]);
 
   // Auto-refresh every 5m in control view (cache-aware)
   useEffect(() => {
@@ -108,7 +134,7 @@ export function useChannels({
       }
     }, 5 * 60_000);
     return () => window.clearInterval(id);
-  }, [view, targetGame, fetchedAt, fetchedGame, channels.length, allowWatching]);
+  }, [view, targetGame, fetchedAt, fetchedGame, channels.length, allowWatching, demoMode]);
 
   // Auto-select first channel if none selected
   useEffect(() => {
