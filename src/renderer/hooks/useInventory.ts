@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ClaimStatus, InventoryItem, InventoryState } from "../types";
+import { buildDemoInventory } from "../demoData";
 import { getCategory } from "../utils";
 import { logDebug, logError, logInfo, logWarn } from "../utils/logger";
 import { errorInfoFromIpc, errorInfoFromUnknown } from "../utils/errors";
@@ -32,6 +33,7 @@ type InventoryEvents = {
 
 type InventoryOptions = {
   autoClaim?: boolean;
+  demoMode?: boolean;
 };
 
 export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?: InventoryOptions) {
@@ -39,6 +41,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
   const onClaimed = events?.onClaimed ?? NOOP_CLAIM;
   const onAuthError = events?.onAuthError ?? NOOP_AUTH;
   const autoClaimEnabled = opts?.autoClaim !== false;
+  const demoMode = opts?.demoMode === true;
   const [inventory, setInventory] = useState<InventoryState>({ status: "idle" });
   const [inventoryRefreshing, setInventoryRefreshing] = useState(false);
   const [inventoryChanges, setInventoryChanges] = useState<{
@@ -55,6 +58,31 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
   const fetchInventoryRef = useRef<(opts?: FetchInventoryOpts) => Promise<void>>(() =>
     Promise.resolve(),
   );
+  const demoItemsRef = useRef<InventoryItem[] | null>(null);
+  const demoLastAtRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!demoMode && !isLinked) {
+      setInventory({ status: "idle" });
+      setInventoryRefreshing(false);
+      setInventoryChanges({ added: new Set(), updated: new Set() });
+      setInventoryFetchedAt(null);
+      setClaimStatus(null);
+      totalMinutesRef.current = null;
+      claimAttemptsRef.current.clear();
+    }
+  }, [demoMode, isLinked]);
+
+  useEffect(() => {
+    if (!demoMode) {
+      demoItemsRef.current = null;
+      demoLastAtRef.current = null;
+      return;
+    }
+    const now = Date.now();
+    demoItemsRef.current = buildDemoInventory(now);
+    demoLastAtRef.current = now;
+  }, [demoMode]);
 
   const fetchInventory = useCallback(
     async (opts?: FetchInventoryOpts) => {
@@ -70,6 +98,69 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
         setInventory({ status: "loading" });
       } else {
         setInventoryRefreshing(true);
+      }
+      if (demoMode) {
+        const now = Date.now();
+        let nextItems = demoItemsRef.current ?? buildDemoInventory(now);
+        const lastAt = demoLastAtRef.current ?? now;
+        const deltaMinutes = Math.max(0, Math.floor((now - lastAt) / 60_000));
+        if (deltaMinutes > 0) {
+          demoLastAtRef.current = now;
+          nextItems = nextItems.map((item) => {
+            if (item.status !== "progress") return item;
+            const req = Math.max(0, Number(item.requiredMinutes) || 0);
+            const earned = Math.min(
+              req,
+              Math.max(0, Number(item.earnedMinutes) || 0) + deltaMinutes,
+            );
+            const progressDone = req === 0 || earned >= req;
+            const nextStatus = progressDone && autoClaimEnabled ? "claimed" : item.status;
+            if (earned === item.earnedMinutes && nextStatus === item.status) return item;
+            return { ...item, earnedMinutes: earned, status: nextStatus };
+          });
+        }
+        demoItemsRef.current = nextItems;
+        const nextTotalMinutes = nextItems.reduce(
+          (acc: number, item) => acc + Math.max(0, Number(item.earnedMinutes) || 0),
+          0,
+        );
+        if (totalMinutesRef.current !== null) {
+          const deltaMinutes = Math.max(0, nextTotalMinutes - totalMinutesRef.current);
+          if (deltaMinutes > 0) {
+            onMinutesEarned(deltaMinutes);
+          }
+        }
+        totalMinutesRef.current = nextTotalMinutes;
+        const prevMap = new Map(prevItems.map((i: InventoryItem) => [i.id, i]));
+        const added = new Set<string>();
+        const updated = new Set<string>();
+        for (const item of nextItems) {
+          const prev = prevMap.get(item.id);
+          if (!prev) {
+            added.add(item.id);
+          } else if (prev.earnedMinutes !== item.earnedMinutes || prev.status !== item.status) {
+            updated.add(item.id);
+          }
+        }
+        if (autoClaimEnabled) {
+          const claimedNow = nextItems.filter(
+            (item) =>
+              item.status === "claimed" && prevMap.get(item.id)?.status !== "claimed",
+          );
+          for (const claimed of claimedNow) {
+            onClaimed({ title: claimed.title, game: claimed.game });
+            setClaimStatus({
+              kind: "success",
+              message: `Auto-claimed: ${claimed.title}`,
+              at: now,
+            });
+          }
+        }
+        setInventory({ status: "ready", items: nextItems });
+        setInventoryFetchedAt(now);
+        setInventoryChanges({ added, updated });
+        setInventoryRefreshing(false);
+        return;
       }
       try {
         const res = await window.electronAPI.twitch.inventory();
@@ -207,7 +298,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
         setInventoryRefreshing(false);
       }
     },
-    [inventory, onClaimed, onMinutesEarned, onAuthError],
+    [inventory, onClaimed, onMinutesEarned, onAuthError, autoClaimEnabled, demoMode],
   );
 
   fetchInventoryRef.current = fetchInventory;

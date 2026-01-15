@@ -16,9 +16,10 @@ type Params = {
   watching: WatchingState;
   bumpStats: (delta: { minutes?: number; lastGame?: string }) => void;
   forwardAuthError: (message?: string) => void;
+  demoMode?: boolean;
 };
 
-export function useWatchPing({ watching, bumpStats, forwardAuthError }: Params) {
+export function useWatchPing({ watching, bumpStats, forwardAuthError, demoMode }: Params) {
   const [watchStats, setWatchStats] = useState<WatchStats>({
     lastOk: 0,
     lastError: null,
@@ -31,6 +32,24 @@ export function useWatchPing({ watching, bumpStats, forwardAuthError }: Params) 
     const ping = async () => {
       if (cancelled) return;
       try {
+        if (demoMode) {
+          logInfo("watch: ping demo", {
+            channelId: watching.channelId ?? watching.id,
+            login: watching.login ?? watching.name,
+            streamId: watching.streamId,
+          });
+          if (watching.game) {
+            void bumpStats({ minutes: 1, lastGame: watching.game });
+          }
+          if (!cancelled) {
+            setWatchStats(() => ({
+              lastOk: Date.now(),
+              lastError: null,
+              nextAt: Date.now() + WATCH_INTERVAL_MS,
+            }));
+          }
+          return;
+        }
         logInfo("watch: ping start", {
           channelId: watching.channelId ?? watching.id,
           login: watching.login ?? watching.name,
@@ -92,7 +111,7 @@ export function useWatchPing({ watching, bumpStats, forwardAuthError }: Params) 
       cancelled = true;
       if (timeout) window.clearTimeout(timeout);
     };
-  }, [watching, bumpStats, forwardAuthError]);
+  }, [watching, bumpStats, forwardAuthError, demoMode]);
 
   useEffect(() => {
     if (watching) return;

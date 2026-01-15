@@ -16,6 +16,7 @@ import { useStats } from "./hooks/useStats";
 import { useTargetDrops } from "./hooks/useTargetDrops";
 import { useWatchPing, WATCH_INTERVAL_MS } from "./hooks/useWatchPing";
 import { I18nProvider } from "./i18n";
+import { buildDemoPriorityPlan, demoProfile } from "./demoData";
 import type {
   ChannelEntry,
   FilterKey,
@@ -104,6 +105,7 @@ function App() {
   const isLinked = auth.status === "ok";
   const isLinkedOrDemo = isLinked || demoMode;
   const allowWatching = isLinkedOrDemo;
+  const effectiveAuthStatus = demoMode ? "ok" : auth.status;
   const isMac = useMemo(
     () => typeof navigator !== "undefined" && /mac/i.test(navigator.platform),
     [],
@@ -116,7 +118,7 @@ function App() {
   const forwardAuthError = useCallback((message?: string) => {
     authErrorHandlerRef.current?.(message);
   }, []);
-  const { stats, bumpStats, resetStats } = useStats();
+  const { stats, bumpStats, resetStats } = useStats({ demoMode });
   const { notify } = useSmartAlerts({
     enabled: alertsEnabled,
     notifyWhileFocused: alertsNotifyWhileFocused,
@@ -148,12 +150,12 @@ function App() {
   );
   const inventoryRefresh = useInventoryRefresh({
     watching,
-    authStatus: auth.status,
+    authStatus: effectiveAuthStatus,
     refreshMinMs,
     refreshMaxMs,
     fetchInventory,
   });
-  const watchStats = useWatchPing({ watching, bumpStats, forwardAuthError });
+  const watchStats = useWatchPing({ watching, bumpStats, forwardAuthError, demoMode });
 
   useEffect(() => {
     const tick = window.setInterval(() => setNowTick(Date.now()), 1_000);
@@ -218,13 +220,18 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (demoMode) {
+      setProfile(demoProfile);
+      fetchInventory({ forceLoading: true });
+      return;
+    }
     if (auth.status === "ok") {
       fetchProfile();
       fetchInventory({ forceLoading: true });
     } else {
       setProfile({ status: "idle" });
     }
-  }, [auth.status]);
+  }, [auth.status, demoMode]);
 
   useEffect(() => {
     setPage(1);
@@ -247,6 +254,10 @@ function App() {
   }, [watching, fetchInventory]);
 
   const fetchProfile = async () => {
+    if (demoMode) {
+      setProfile(demoProfile);
+      return;
+    }
     setProfile({ status: "loading" });
     const res = await window.electronAPI.twitch.profile();
     if ((res as any)?.error) {
@@ -315,6 +326,10 @@ function App() {
 
   const refreshPriorityPlan = async () => {
     try {
+      if (demoMode) {
+        setPriorityPlan(buildDemoPriorityPlan(inventoryItems, priorityGames));
+        return;
+      }
       const res = await window.electronAPI.twitch.priorityPlan({ priorityGames });
       if ((res as any)?.error) {
         if ((res as any).error === "auth") {
@@ -441,9 +456,18 @@ function App() {
     [withCategories],
   );
 
+  const effectivePriorityPlan = useMemo(() => {
+    if (!demoMode) return priorityPlan;
+    if (inventory.status !== "ready") return priorityPlan;
+    return buildDemoPriorityPlan(inventoryItems, priorityGames);
+  }, [demoMode, inventory.status, inventoryItems, priorityGames, priorityPlan]);
+
   const priorityOrder = useMemo(
-    () => (priorityPlan?.order?.length ? priorityPlan.order : priorityGames),
-    [priorityPlan, priorityGames],
+    () =>
+      effectivePriorityPlan?.order?.length
+        ? effectivePriorityPlan.order
+        : priorityGames,
+    [effectivePriorityPlan, priorityGames],
   );
 
   useEffect(() => {
@@ -822,7 +846,7 @@ function App() {
     installUpdate: handleInstallUpdate,
   };
   const controlProps = {
-    priorityPlan,
+    priorityPlan: effectivePriorityPlan,
     priorityGames,
     targetGame,
     setActiveTargetGame,
