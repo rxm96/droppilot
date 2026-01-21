@@ -5,6 +5,7 @@ type SettingsData = {
   obeyPriority: boolean;
   excludeGames?: string[];
   language?: "de" | "en";
+  autoStart?: boolean;
   autoClaim?: boolean;
   autoSelect?: boolean;
   autoSwitch?: boolean;
@@ -25,6 +26,7 @@ type SettingsHook = {
   priorityGames: string[];
   obeyPriority: boolean;
   language: "de" | "en";
+  autoStart: boolean;
   autoClaim: boolean;
   autoSelect: boolean;
   autoSwitchEnabled: boolean;
@@ -42,6 +44,7 @@ type SettingsHook = {
   savePriorityGames: (list: string[]) => Promise<void>;
   saveObeyPriority: (val: boolean) => Promise<void>;
   saveLanguage: (val: "de" | "en") => Promise<void>;
+  saveAutoStart: (val: boolean) => Promise<void>;
   saveAutoClaim: (val: boolean) => Promise<void>;
   saveAutoSelect: (val: boolean) => Promise<void>;
   saveAutoSwitchEnabled: (val: boolean) => Promise<void>;
@@ -72,6 +75,7 @@ export function useSettingsStore(): SettingsHook {
   const [priorityGames, setPriorityGames] = useState<string[]>([]);
   const [obeyPriority, setObeyPriority] = useState<boolean>(false);
   const [language, setLanguage] = useState<"de" | "en">("de");
+  const [autoStart, setAutoStart] = useState<boolean>(false);
   const [autoClaim, setAutoClaim] = useState<boolean>(true);
   const [autoSelect, setAutoSelect] = useState<boolean>(true);
   const [autoSwitchEnabled, setAutoSwitchEnabled] = useState<boolean>(true);
@@ -98,6 +102,7 @@ export function useSettingsStore(): SettingsHook {
       setPriorityGames(res.priorityGames ?? []);
       setObeyPriority(res.obeyPriority ?? false);
       setLanguage(res.language === "en" ? "en" : "de");
+      setAutoStart(res.autoStart === true);
       setAutoClaim(res.autoClaim !== false);
       setAutoSelect(res.autoSelect !== false);
       setAutoSwitchEnabled(res.autoSwitch !== false);
@@ -137,6 +142,7 @@ export function useSettingsStore(): SettingsHook {
       setPriorityGames(saved.priorityGames ?? []);
       setObeyPriority(saved.obeyPriority ?? false);
       setLanguage(saved.language === "en" ? "en" : "de");
+      setAutoStart(saved.autoStart === true);
       setAutoClaim(saved.autoClaim !== false);
       setAutoSelect(saved.autoSelect !== false);
       setAutoSwitchEnabled(saved.autoSwitch !== false);
@@ -178,6 +184,11 @@ export function useSettingsStore(): SettingsHook {
   const saveLanguage = async (val: "de" | "en") => {
     setLanguage(val);
     await persist({ language: val });
+  };
+
+  const saveAutoStart = async (val: boolean) => {
+    setAutoStart(val);
+    await persist({ autoStart: val });
   };
 
   const saveAutoClaim = async (val: boolean) => {
@@ -295,6 +306,7 @@ export function useSettingsStore(): SettingsHook {
       setPriorityGames(saved.priorityGames ?? []);
       setObeyPriority(saved.obeyPriority ?? false);
       setLanguage(saved.language === "en" ? "en" : "de");
+      setAutoStart(saved.autoStart === true);
       setAutoClaim(saved.autoClaim !== false);
       setAutoSelect(saved.autoSelect !== false);
       setAutoSwitchEnabled(saved.autoSwitch !== false);
@@ -338,6 +350,7 @@ export function useSettingsStore(): SettingsHook {
     priorityGames,
     obeyPriority,
     language,
+    autoStart,
     autoClaim,
     autoSelect,
     autoSwitchEnabled,
@@ -355,6 +368,7 @@ export function useSettingsStore(): SettingsHook {
     savePriorityGames,
     saveObeyPriority,
     saveLanguage,
+    saveAutoStart,
     saveAutoClaim,
     saveAutoSelect,
     saveAutoSwitchEnabled,

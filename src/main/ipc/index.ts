@@ -24,6 +24,7 @@ export function registerIpcHandlers(deps: {
     lastGame?: string;
   }) => Promise<StatsData>;
   resetStats: () => Promise<StatsData>;
+  applyAutoStartSetting?: (enabled: boolean) => void;
 }) {
   const {
     auth,
@@ -36,6 +37,7 @@ export function registerIpcHandlers(deps: {
     saveStats,
     bumpStats,
     resetStats,
+    applyAutoStartSetting,
   } = deps;
 
   ipcMain.handle("auth/login", async (): Promise<AuthResult> => {
@@ -152,7 +154,9 @@ export function registerIpcHandlers(deps: {
   });
 
   ipcMain.handle("settings/save", async (_e, payload: Partial<SettingsData>) => {
-    return saveSettings(payload);
+    const saved = await saveSettings(payload);
+    applyAutoStartSetting?.(saved.autoStart);
+    return saved;
   });
 
   ipcMain.handle("settings/export", async () => {
@@ -160,7 +164,9 @@ export function registerIpcHandlers(deps: {
   });
 
   ipcMain.handle("settings/import", async (_e, payload: Partial<SettingsData>) => {
-    return importSettings(payload);
+    const saved = await importSettings(payload);
+    applyAutoStartSetting?.(saved.autoStart);
+    return saved;
   });
 
   ipcMain.handle("stats/get", async () => {

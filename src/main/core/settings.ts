@@ -7,6 +7,7 @@ export type SettingsData = {
   excludeGames: string[];
   obeyPriority: boolean;
   language: "de" | "en";
+  autoStart: boolean;
   autoClaim: boolean;
   autoSelect: boolean;
   autoSwitch: boolean;
@@ -30,6 +31,7 @@ const defaultSettings: SettingsData = {
   excludeGames: [],
   obeyPriority: false,
   language: "de",
+  autoStart: false,
   autoClaim: true,
   autoSelect: true,
   autoSwitch: true,
@@ -60,6 +62,8 @@ export async function loadSettings(): Promise<SettingsData> {
           ? parsed.obeyPriority
           : defaultSettings.obeyPriority,
       language: parsed?.language === "en" ? "en" : "de",
+      autoStart:
+        typeof parsed?.autoStart === "boolean" ? parsed.autoStart : defaultSettings.autoStart,
       autoClaim:
         typeof parsed?.autoClaim === "boolean" ? parsed.autoClaim : defaultSettings.autoClaim,
       autoSelect:
@@ -122,6 +126,7 @@ export async function saveSettings(data: Partial<SettingsData>): Promise<Setting
     excludeGames: Array.isArray(data.excludeGames) ? data.excludeGames : current.excludeGames,
     obeyPriority: typeof data.obeyPriority === "boolean" ? data.obeyPriority : current.obeyPriority,
     language: data.language === "en" || data.language === "de" ? data.language : current.language,
+    autoStart: typeof data.autoStart === "boolean" ? data.autoStart : current.autoStart,
     autoClaim: typeof data.autoClaim === "boolean" ? data.autoClaim : current.autoClaim,
     autoSelect: typeof data.autoSelect === "boolean" ? data.autoSelect : current.autoSelect,
     autoSwitch: typeof data.autoSwitch === "boolean" ? data.autoSwitch : current.autoSwitch,

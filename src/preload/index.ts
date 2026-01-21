@@ -5,6 +5,7 @@ type SettingsPayload = {
   excludeGames?: string[];
   obeyPriority?: boolean;
   language?: "de" | "en";
+  autoStart?: boolean;
   autoClaim?: boolean;
   autoSelect?: boolean;
   autoSwitch?: boolean;

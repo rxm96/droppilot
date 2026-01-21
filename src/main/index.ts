@@ -22,6 +22,18 @@ if (process.platform === "win32") {
   app.setAppUserModelId("com.droppilot.app");
 }
 
+function applyAutoStartSetting(enabled: boolean) {
+  if (process.platform !== "win32") return;
+  try {
+    app.setLoginItemSettings({
+      openAtLogin: enabled,
+      path: process.execPath,
+    });
+  } catch (err) {
+    console.warn("autostart: apply failed", err);
+  }
+}
+
 function createWindow(): BrowserWindow {
   const isMac = process.platform === "darwin";
   const win = new BrowserWindow({
@@ -173,6 +185,13 @@ app.whenReady().then(() => {
   const win = createWindow();
   createTray(win);
   setupAutoUpdater();
+  void loadSettings()
+    .then((settings) => {
+      applyAutoStartSetting(settings.autoStart);
+    })
+    .catch((err) => {
+      console.warn("autostart: settings load failed", err);
+    });
 
   // Forward TwitchService debug logs into renderer console (DevTools) and main console.
   const forwardLog = (scope: string, ...args: unknown[]) => {
@@ -195,6 +214,7 @@ app.whenReady().then(() => {
     saveStats,
     bumpStats,
     resetStats,
+    applyAutoStartSetting,
   });
 
   app.on("activate", () => {
