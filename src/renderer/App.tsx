@@ -50,6 +50,7 @@ function App() {
     priorityGames,
     obeyPriority,
     language,
+    autoStart,
     autoClaim,
     autoSelect,
     autoSwitchEnabled,
@@ -67,6 +68,7 @@ function App() {
     savePriorityGames,
     saveObeyPriority,
     saveLanguage,
+    saveAutoStart,
     saveAutoClaim,
     saveAutoSelect,
     saveAutoSwitchEnabled,
@@ -656,6 +658,12 @@ function App() {
     },
     [saveObeyPriority],
   );
+  const handleSetAutoStart = useCallback(
+    (val: boolean) => {
+      void saveAutoStart(val);
+    },
+    [saveAutoStart],
+  );
   const handleSetAutoClaim = useCallback(
     (val: boolean) => {
       void saveAutoClaim(val);
@@ -802,6 +810,8 @@ function App() {
     handleDropReorder,
     obeyPriority,
     setObeyPriority: handleSetObeyPriority,
+    autoStart,
+    setAutoStart: handleSetAutoStart,
     autoClaim,
     setAutoClaim: handleSetAutoClaim,
     autoSelect,
@@ -840,6 +850,7 @@ function App() {
     settingsInfo,
     settingsError,
     showUpdateCheck: isWindows,
+    showAutoStart: isWindows,
     updateStatus,
     checkUpdates: handleCheckUpdates,
     downloadUpdate: handleDownloadUpdate,

@@ -23,6 +23,8 @@ type SettingsProps = {
   setObeyPriority: (val: boolean) => void;
   language: "de" | "en";
   setLanguage: (val: "de" | "en") => void;
+  autoStart: boolean;
+  setAutoStart: (val: boolean) => void;
   autoClaim: boolean;
   setAutoClaim: (val: boolean) => void;
   autoSelect: boolean;
@@ -59,6 +61,7 @@ type SettingsProps = {
   settingsInfo?: string | null;
   settingsError?: string | null;
   showUpdateCheck?: boolean;
+  showAutoStart?: boolean;
   checkUpdates?: () => void;
   downloadUpdate?: () => void;
   installUpdate?: () => void;
@@ -96,6 +99,8 @@ export function SettingsView({
   setObeyPriority,
   language,
   setLanguage,
+  autoStart,
+  setAutoStart,
   autoClaim,
   setAutoClaim,
   autoSelect,
@@ -132,6 +137,7 @@ export function SettingsView({
   settingsInfo,
   settingsError,
   showUpdateCheck,
+  showAutoStart,
   checkUpdates,
   downloadUpdate,
   installUpdate,
@@ -207,6 +213,18 @@ export function SettingsView({
               <option value="en">{t("settings.language.en")}</option>
             </select>
           </div>
+          {showAutoStart ? (
+            <div className="toggle-row">
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={autoStart}
+                  onChange={(e) => setAutoStart(e.target.checked)}
+                />
+                <span>{t("settings.autoStart")}</span>
+              </label>
+            </div>
+          ) : null}
           {showUpdateCheck ? (
             <div className="settings-row">
               <div>
