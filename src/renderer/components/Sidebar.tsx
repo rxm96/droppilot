@@ -67,9 +67,6 @@ export function Sidebar({
                   : t("session.loginNeeded")}
             </p>
           </div>
-          <span className={`chip ${isLinked ? "chip-ok" : "chip-warn"}`}>
-            {isLinked ? t("session.linkedChip") : t("session.offlineChip")}
-          </span>
         </div>
         <div className="sidebar-actions">
           {isLinked ? (

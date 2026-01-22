@@ -2,7 +2,6 @@ import { useI18n } from "../i18n";
 
 type SettingsProps = {
   startLogin: () => void;
-  logout: () => void;
   isLinked: boolean;
   uniqueGames: string[];
   selectedGame: string;
@@ -78,7 +77,6 @@ type SettingsProps = {
 
 export function SettingsView({
   startLogin,
-  logout,
   isLinked,
   uniqueGames,
   selectedGame,
@@ -193,11 +191,6 @@ export function SettingsView({
               {!isLinked && (
                 <button type="button" onClick={startLogin}>
                   {t("session.loginBrowser")}
-                </button>
-              )}
-              {isLinked && (
-                <button type="button" className="ghost" onClick={logout}>
-                  {t("session.logout")}
                 </button>
               )}
             </div>

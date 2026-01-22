@@ -791,7 +791,6 @@ function App() {
   };
   const settingsProps = {
     startLogin,
-    logout,
     isLinked,
     uniqueGames,
     selectedGame,
