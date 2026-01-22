@@ -57,9 +57,6 @@ export function Hero({
             <h1>{t("hero.title")}</h1>
           </div>
           <div className="pill-row">
-            <span className="pill">
-              {isLinked ? t("hero.accountLinked") : t("hero.accountNotLinked")}
-            </span>
             {demoMode ? <span className="pill ghost">{t("hero.demoMode")}</span> : null}
           </div>
         </div>
