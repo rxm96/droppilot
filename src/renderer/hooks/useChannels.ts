@@ -103,7 +103,10 @@ export function useChannels({
     }
   };
 
-  // Fetch when entering control view or target changes (respect cache)
+  const shouldTrackChannels =
+    allowWatching && (view === "control" || autoSelectEnabled || watching || autoSwitchEnabled);
+
+  // Reset when switching demo mode
   useEffect(() => {
     if (demoMode === undefined) return;
     setChannels([]);
@@ -114,19 +117,27 @@ export function useChannels({
     setAutoSwitch(null);
   }, [demoMode]);
 
+  // Fetch when control view is active or auto-watch needs channel data (respect cache)
   useEffect(() => {
-    if (!allowWatching) return;
-    if (view !== "control") return;
+    if (!shouldTrackChannels) return;
     if (!targetGame) return;
     if (!isFresh(targetGame)) {
       fetchChannels(targetGame, { force: true });
     }
-  }, [view, targetGame, allowWatching, demoMode]);
+  }, [
+    view,
+    targetGame,
+    allowWatching,
+    demoMode,
+    autoSelectEnabled,
+    autoSwitchEnabled,
+    watching,
+    shouldTrackChannels,
+  ]);
 
-  // Auto-refresh every 5m in control view (cache-aware)
+  // Auto-refresh every 5m while control is active or auto-watching in background (cache-aware)
   useEffect(() => {
-    if (!allowWatching) return;
-    if (view !== "control") return;
+    if (!shouldTrackChannels) return;
     const id = window.setInterval(() => {
       if (!targetGame) return;
       if (!isFresh(targetGame)) {
@@ -134,12 +145,23 @@ export function useChannels({
       }
     }, 5 * 60_000);
     return () => window.clearInterval(id);
-  }, [view, targetGame, fetchedAt, fetchedGame, channels.length, allowWatching, demoMode]);
+  }, [
+    view,
+    targetGame,
+    fetchedAt,
+    fetchedGame,
+    channels.length,
+    allowWatching,
+    demoMode,
+    autoSelectEnabled,
+    autoSwitchEnabled,
+    watching,
+    shouldTrackChannels,
+  ]);
 
   // Auto-select first channel if none selected
   useEffect(() => {
     if (!allowWatching) return;
-    if (view !== "control") return;
     if (!autoSelectEnabled) return;
     if (channels.length && !watching) {
       const first = channels[0];
@@ -153,7 +175,7 @@ export function useChannels({
       });
       fetchInventory();
     }
-  }, [channels, watching, view, targetGame, autoSelectEnabled, allowWatching]);
+  }, [channels, watching, targetGame, autoSelectEnabled, allowWatching]);
 
   // Auto-switch if current channel disappears
   useEffect(() => {
