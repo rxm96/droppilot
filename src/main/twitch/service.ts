@@ -459,7 +459,7 @@ export class TwitchService {
     const inventoryPayload = createPersistedQuery(
       "Inventory",
       "d86775d0ef16a63a33ad52e80eaff963b2d5b72fada7c991504a57496e1d8e4b",
-      { fetchRewardCampaigns: false },
+      { fetchRewardCampaigns: true },
     );
     const inv = await this.gqlRequest<InventoryResponse>(inventoryPayload, "Inventory");
     const inProgressRaw =
@@ -491,7 +491,7 @@ export class TwitchService {
     const campaignsPayload = createPersistedQuery(
       "ViewerDropsDashboard",
       "5a4da2ab3d5b47c9f9ce864e727b2cb346af1e3ea8b897fe8f704a97ff017619",
-      { fetchRewardCampaigns: false },
+      { fetchRewardCampaigns: true },
     );
     const campaigns = await this.gqlRequest<CampaignsResponse>(
       campaignsPayload,
