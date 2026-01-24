@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { translate } from "../i18n";
+import type { Language } from "../i18n";
 import type { AutoSwitchInfo, InventoryItem, InventoryState, WatchingState } from "../types";
 import type { ActiveDropInfo } from "./useTargetDrops";
 import type { WatchStats } from "./useWatchPing";
@@ -18,7 +19,7 @@ type InventoryChanges = {
 };
 
 type Params = {
-  language: string;
+  language: Language;
   notify: NotifyFn;
   alertsNewDrops: boolean;
   alertsWatchError: boolean;

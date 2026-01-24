@@ -1,10 +1,11 @@
+import { Language } from "@renderer/i18n";
 import { contextBridge, ipcRenderer, shell } from "electron";
 
 type SettingsPayload = {
   priorityGames?: string[];
   excludeGames?: string[];
   obeyPriority?: boolean;
-  language?: "de" | "en";
+  language?: Language;
   autoStart?: boolean;
   autoClaim?: boolean;
   autoSelect?: boolean;

@@ -1,10 +1,11 @@
+import { Language } from "@renderer/i18n";
 import { useEffect, useState } from "react";
 
 type SettingsData = {
   priorityGames: string[];
   obeyPriority: boolean;
   excludeGames?: string[];
-  language?: "de" | "en";
+  language?: Language;
   autoStart?: boolean;
   autoClaim?: boolean;
   autoSelect?: boolean;
@@ -25,7 +26,7 @@ type SettingsData = {
 type SettingsHook = {
   priorityGames: string[];
   obeyPriority: boolean;
-  language: "de" | "en";
+  language: Language;
   autoStart: boolean;
   autoClaim: boolean;
   autoSelect: boolean;
@@ -43,7 +44,7 @@ type SettingsHook = {
   alertsNewDrops: boolean;
   savePriorityGames: (list: string[]) => Promise<void>;
   saveObeyPriority: (val: boolean) => Promise<void>;
-  saveLanguage: (val: "de" | "en") => Promise<void>;
+  saveLanguage: (val: Language) => Promise<void>;
   saveAutoStart: (val: boolean) => Promise<void>;
   saveAutoClaim: (val: boolean) => Promise<void>;
   saveAutoSelect: (val: boolean) => Promise<void>;
@@ -74,7 +75,7 @@ type SettingsHook = {
 export function useSettingsStore(): SettingsHook {
   const [priorityGames, setPriorityGames] = useState<string[]>([]);
   const [obeyPriority, setObeyPriority] = useState<boolean>(false);
-  const [language, setLanguage] = useState<"de" | "en">("de");
+  const [language, setLanguage] = useState<Language>("de");
   const [autoStart, setAutoStart] = useState<boolean>(false);
   const [autoClaim, setAutoClaim] = useState<boolean>(true);
   const [autoSelect, setAutoSelect] = useState<boolean>(true);
@@ -181,7 +182,7 @@ export function useSettingsStore(): SettingsHook {
     await persist({ obeyPriority: val, priorityGames });
   };
 
-  const saveLanguage = async (val: "de" | "en") => {
+  const saveLanguage = async (val: Language) => {
     setLanguage(val);
     await persist({ language: val });
   };

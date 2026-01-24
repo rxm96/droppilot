@@ -1,12 +1,13 @@
 import { app } from "electron";
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
+import { Language } from "../../renderer/i18n";
 
 export type SettingsData = {
   priorityGames: string[];
   excludeGames: string[];
   obeyPriority: boolean;
-  language: "de" | "en";
+  language: Language;
   autoStart: boolean;
   autoClaim: boolean;
   autoSelect: boolean;
