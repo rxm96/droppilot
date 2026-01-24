@@ -28,13 +28,14 @@ function applyAutoStartSetting(enabled: boolean) {
     app.setLoginItemSettings({
       openAtLogin: enabled,
       path: process.execPath,
+      args: enabled ? ["--start-in-tray"] : [],
     });
   } catch (err) {
     console.warn("autostart: apply failed", err);
   }
 }
 
-function createWindow(): BrowserWindow {
+function createWindow(startHidden = false): BrowserWindow {
   const isMac = process.platform === "darwin";
   const win = new BrowserWindow({
     width: 1400,
@@ -42,6 +43,7 @@ function createWindow(): BrowserWindow {
     minWidth: 1100,
     minHeight: 760,
     title: "DropPilot",
+    show: !startHidden,
     autoHideMenuBar: !isMac,
     titleBarStyle: isMac ? "default" : "hidden",
     frame: isMac,
@@ -77,6 +79,12 @@ function createWindow(): BrowserWindow {
 
   // default to maximized so the UI uses the available screen space
   win.maximize();
+
+  if (startHidden) {
+    win.once("ready-to-show", () => {
+      win.hide();
+    });
+  }
 
   return win;
 }
@@ -182,7 +190,8 @@ function setupAutoUpdater() {
 }
 
 app.whenReady().then(() => {
-  const win = createWindow();
+  const startHidden = process.argv.includes("--start-in-tray");
+  const win = createWindow(startHidden);
   createTray(win);
   setupAutoUpdater();
   void loadSettings()
