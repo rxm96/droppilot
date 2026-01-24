@@ -5,11 +5,13 @@ export function getCategory(
   isLinked: boolean,
 ): "in-progress" | "upcoming" | "finished" | "not-linked" | "expired" | "excluded" {
   const now = Date.now();
-  if (!isLinked || item.linked === false) return "not-linked";
+  if (!isLinked) return "not-linked";
   if (item.excluded) return "excluded";
   if (item.status === "claimed") return "finished";
   const endsAt = item.endsAt ? Date.parse(item.endsAt) : undefined;
   if (item.campaignStatus === "EXPIRED" || (endsAt && endsAt < now)) return "expired";
+  const earned = Math.max(0, Number(item.earnedMinutes) || 0);
+  if (item.linked === false && item.status === "locked" && earned <= 0) return "not-linked";
   switch (item.status) {
     case "progress":
       return "in-progress";
