@@ -13,6 +13,7 @@ type Params = {
   autoSelectEnabled: boolean;
   autoSwitchEnabled: boolean;
   allowWatching: boolean;
+  canWatchTarget: boolean;
   demoMode?: boolean;
   onAuthError?: (message?: string) => void;
 };
@@ -26,6 +27,7 @@ export function useChannels({
   autoSelectEnabled,
   autoSwitchEnabled,
   allowWatching,
+  canWatchTarget,
   demoMode,
   onAuthError,
 }: Params) {
@@ -163,6 +165,7 @@ export function useChannels({
   useEffect(() => {
     if (!allowWatching) return;
     if (!autoSelectEnabled) return;
+    if (!canWatchTarget) return;
     if (channels.length && !watching) {
       const first = channels[0];
       setWatching({
@@ -175,7 +178,7 @@ export function useChannels({
       });
       fetchInventory();
     }
-  }, [channels, watching, targetGame, autoSelectEnabled, allowWatching]);
+  }, [channels, watching, targetGame, autoSelectEnabled, allowWatching, canWatchTarget]);
 
   // Auto-switch if current channel disappears
   useEffect(() => {

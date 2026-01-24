@@ -516,6 +516,7 @@ function App() {
     autoSwitchEnabled,
     fetchInventory: () => fetchInventory(),
     allowWatching,
+    canWatchTarget,
     demoMode,
     onAuthError: forwardAuthError,
   });

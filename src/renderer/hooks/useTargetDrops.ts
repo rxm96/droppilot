@@ -49,40 +49,58 @@ export function useTargetDrops({
   nowTick,
 }: Params): TargetDropsResult {
   return useMemo(() => {
-    const targetDrops = (() => {
-      if (!targetGame) return [];
-      const now = Date.now();
-      const allForGame = inventoryItems.filter((i) => i.game === targetGame);
-      const activeRelevant = withCategories.filter(
-        ({ item, category }) =>
-          item.game === targetGame && (category === "in-progress" || category === "upcoming"),
+    if (!targetGame) {
+      return {
+        targetDrops: [],
+        totalDrops: 0,
+        claimedDrops: 0,
+        totalRequiredMinutes: 0,
+        totalEarnedMinutes: 0,
+        targetProgress: 0,
+        liveDeltaApplied: 0,
+        activeDropEta: null,
+        activeDropInfo: null,
+        canWatchTarget: false,
+        showNoDropsHint: false,
+      };
+    }
+    const now = Date.now();
+    const allForGame = inventoryItems.filter((i) => i.game === targetGame);
+    const isExpired = (item: InventoryItem) => {
+      const status = (item.campaignStatus ?? "").toUpperCase();
+      const endsAt = item.endsAt ? Date.parse(item.endsAt) : undefined;
+      return status === "EXPIRED" || (endsAt !== undefined && endsAt < now);
+    };
+    const nonExpiredForGame = allForGame.filter((i) => !isExpired(i));
+    const activeRelevant = withCategories.filter(
+      ({ item, category }) =>
+        item.game === targetGame && (category === "in-progress" || category === "upcoming"),
+    );
+    const sortedActive = [...activeRelevant].sort((a, b) => {
+      const endA = a.item.endsAt ? Date.parse(a.item.endsAt) : null;
+      const endB = b.item.endsAt ? Date.parse(b.item.endsAt) : null;
+      const safeEndA = endA && endA > now ? endA : Number.POSITIVE_INFINITY;
+      const safeEndB = endB && endB > now ? endB : Number.POSITIVE_INFINITY;
+      if (safeEndA !== safeEndB) return safeEndA - safeEndB;
+      const startA = a.item.startsAt ? Date.parse(a.item.startsAt) : 0;
+      const startB = b.item.startsAt ? Date.parse(b.item.startsAt) : 0;
+      if (startA !== startB) return startA - startB;
+      const remainingA = Math.max(
+        0,
+        Math.max(0, Number(a.item.requiredMinutes) || 0) -
+          Math.max(0, Number(a.item.earnedMinutes) || 0),
       );
-      const sortedActive = [...activeRelevant].sort((a, b) => {
-        const endA = a.item.endsAt ? Date.parse(a.item.endsAt) : null;
-        const endB = b.item.endsAt ? Date.parse(b.item.endsAt) : null;
-        const safeEndA = endA && endA > now ? endA : Number.POSITIVE_INFINITY;
-        const safeEndB = endB && endB > now ? endB : Number.POSITIVE_INFINITY;
-        if (safeEndA !== safeEndB) return safeEndA - safeEndB;
-        const startA = a.item.startsAt ? Date.parse(a.item.startsAt) : 0;
-        const startB = b.item.startsAt ? Date.parse(b.item.startsAt) : 0;
-        if (startA !== startB) return startA - startB;
-        const remainingA = Math.max(
-          0,
-          Math.max(0, Number(a.item.requiredMinutes) || 0) -
-            Math.max(0, Number(a.item.earnedMinutes) || 0),
-        );
-        const remainingB = Math.max(
-          0,
-          Math.max(0, Number(b.item.requiredMinutes) || 0) -
-            Math.max(0, Number(b.item.earnedMinutes) || 0),
-        );
-        if (remainingA !== remainingB) return remainingA - remainingB;
-        return (a.item.title || "").localeCompare(b.item.title || "");
-      });
-      const sortedActiveItems = sortedActive.map((s) => s.item);
-      const remaining = allForGame.filter((i) => !sortedActiveItems.includes(i));
-      return [...sortedActiveItems, ...remaining];
-    })();
+      const remainingB = Math.max(
+        0,
+        Math.max(0, Number(b.item.requiredMinutes) || 0) -
+          Math.max(0, Number(b.item.earnedMinutes) || 0),
+      );
+      if (remainingA !== remainingB) return remainingA - remainingB;
+      return (a.item.title || "").localeCompare(b.item.title || "");
+    });
+    const sortedActiveItems = sortedActive.map((s) => s.item);
+    const remaining = nonExpiredForGame.filter((i) => !sortedActiveItems.includes(i));
+    const targetDrops = [...sortedActiveItems, ...remaining];
 
     const totalDrops = targetDrops.length;
     const claimedDrops = targetDrops.filter((i) => i.status === "claimed").length;
@@ -115,7 +133,7 @@ export function useTargetDrops({
       liveDeltaMinutesRaw,
       Math.max(0, totalRequiredMinutes - totalEarnedMinutes),
     );
-    const activeDrop = targetDrops.find((d) => d.status !== "claimed") || null;
+    const activeDrop = sortedActiveItems[0] ?? null;
     const activeDropRequired = activeDrop
       ? Math.max(0, Number(activeDrop.requiredMinutes) || 0)
       : 0;
