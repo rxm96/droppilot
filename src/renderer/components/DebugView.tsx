@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "../i18n";
+import { cn } from "../lib/utils";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Input } from "./ui/input";
 import {
   LOG_LIMIT,
   clearLogBuffer,
@@ -40,6 +45,29 @@ const safeStringify = (value: unknown) => {
 
 const formatArgs = (args: unknown[]) =>
   args.map((arg, idx) => `${idx + 1}. ${safeStringify(arg)}`).join("\n");
+
+const LEVEL_STYLES: Record<LogLevel, { badge: string; border: string; text: string }> = {
+  debug: {
+    badge: "border-border bg-muted text-muted-foreground",
+    border: "border-l-border",
+    text: "text-foreground",
+  },
+  info: {
+    badge: "border-border bg-secondary text-secondary-foreground",
+    border: "border-l-border",
+    text: "text-foreground",
+  },
+  warn: {
+    badge: "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+    border: "border-l-amber-500/60",
+    text: "text-amber-700 dark:text-amber-200",
+  },
+  error: {
+    badge: "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300",
+    border: "border-l-red-500/60",
+    text: "text-red-700 dark:text-red-200",
+  },
+};
 
 export function DebugView({ snapshot }: DebugViewProps) {
   const { t, language } = useI18n();
@@ -85,6 +113,7 @@ export function DebugView({ snapshot }: DebugViewProps) {
   }, [logs, autoScroll, paused]);
 
   const snapshotText = useMemo(() => JSON.stringify(snapshot, null, 2), [snapshot]);
+  const snapshotLines = useMemo(() => snapshotText.split("\n"), [snapshotText]);
   const counts = useMemo(() => {
     const byLevel: LevelCounts = { debug: 0, info: 0, warn: 0, error: 0 };
     for (const entry of logs) {
@@ -135,110 +164,132 @@ export function DebugView({ snapshot }: DebugViewProps) {
   };
 
   return (
-    <>
-      <div className="panel-head">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2>{t("debug.title")}</h2>
-          <p className="meta">{t("debug.subtitle")}</p>
+          <h2 className="text-lg font-semibold">{t("debug.title")}</h2>
+          <p className="text-sm text-muted-foreground">{t("debug.subtitle")}</p>
         </div>
+        <Badge variant="muted">
+          {t("debug.total")}: {formatNumber(logs.length)}
+        </Badge>
       </div>
-      <div className="overview-grid">
-        <div className="card wide">
-          <div className="card-header-row">
-            <div className="label">{t("debug.snapshot")}</div>
-            <div className="debug-controls">
-              <span className="pill ghost small">
-                {t("debug.total")}: {formatNumber(logs.length)}
-              </span>
-              <button type="button" className="ghost subtle-btn" onClick={copySnapshot}>
-                {copied ? t("debug.copied") : t("debug.copy")}
-              </button>
-            </div>
-          </div>
-          <pre className="debug-snapshot">{snapshotText}</pre>
-        </div>
-        <div className="card wide">
-          <div className="card-header-row">
-            <div className="label">{t("debug.log")}</div>
-            <div className="debug-controls">
-              <div className="debug-status">
-                <span className={`pill ${paused ? "ghost danger-chip" : "ghost"}`}>
-                  {paused ? t("debug.status.paused") : t("debug.status.live")}
-                </span>
-                <span className="pill ghost">
-                  {autoScroll ? t("debug.status.autoScrollOn") : t("debug.status.autoScrollOff")}
-                </span>
-              </div>
-              <button
-                type="button"
-                className="ghost subtle-btn"
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+        <Card>
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
+            <CardTitle>{t("debug.snapshot")}</CardTitle>
+            <Button variant="outline" size="sm" onClick={copySnapshot}>
+              {copied ? t("debug.copied") : t("debug.copy")}
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <ol className="code-panel" aria-label={t("debug.snapshot")}>
+              {snapshotLines.map((line, index) => (
+                <li key={`${index}`} className="code-line">
+                  {line}
+                </li>
+              ))}
+            </ol>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
+            <CardTitle>{t("debug.log")}</CardTitle>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant={paused ? "outline" : "muted"}>
+                {paused ? t("debug.status.paused") : t("debug.status.live")}
+              </Badge>
+              <Badge variant="outline">
+                {autoScroll ? t("debug.status.autoScrollOn") : t("debug.status.autoScrollOff")}
+              </Badge>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => {
                   clearLogBuffer();
                   setLogs([]);
                 }}
               >
                 {t("debug.clear")}
-              </button>
-              <button type="button" className="ghost subtle-btn" onClick={togglePaused}>
+              </Button>
+              <Button variant="outline" size="sm" onClick={togglePaused}>
                 {paused ? t("debug.resume") : t("debug.pause")}
-              </button>
-              <button
-                type="button"
-                className={`ghost subtle-btn ${autoScroll ? "active" : ""}`}
+              </Button>
+              <Button
+                variant={autoScroll ? "secondary" : "outline"}
+                size="sm"
                 onClick={toggleAutoScroll}
               >
                 {t("debug.autoScroll")}
-              </button>
+              </Button>
             </div>
-          </div>
-          <div className="debug-toolbar">
-            <input
-              type="text"
-              className="debug-search"
-              placeholder={t("debug.search")}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            <div className="debug-levels">
-              {LEVELS.map((level) => (
-                <button
-                  key={level}
-                  type="button"
-                  className={levels[level] ? "pill active" : "pill ghost"}
-                  onClick={() => setLevels((prev) => ({ ...prev, [level]: !prev[level] }))}
-                >
-                  {level} ({formatNumber(counts[level])})
-                </button>
-              ))}
-            </div>
-          </div>
-          <div ref={listRef} className="debug-log-panel">
-            {filtered.length === 0 ? (
-              <p className="meta muted">{t("debug.empty")}</p>
-            ) : (
-              <ul className="debug-log">
-                {filtered.map((entry) => (
-                  <li key={entry.id} className={`debug-log-item ${entry.level}`}>
-                    <div className="debug-log-header">
-                      <span className={`pill ghost small level-${entry.level}`}>{entry.level}</span>
-                      <span className="meta muted">{new Date(entry.at).toLocaleTimeString()}</span>
-                    </div>
-                    <div className="debug-log-message">
-                      {entry.message || t("debug.emptyMessage")}
-                    </div>
-                    {entry.args.length > 0 ? (
-                      <details>
-                        <summary>{t("debug.details")}</summary>
-                        <pre className="debug-log-details">{formatArgs(entry.args)}</pre>
-                      </details>
-                    ) : null}
-                  </li>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="min-w-[180px] flex-1">
+                <Input
+                  type="text"
+                  placeholder={t("debug.search")}
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {LEVELS.map((level) => (
+                  <Button
+                    key={level}
+                    type="button"
+                    size="xs"
+                    variant={levels[level] ? "secondary" : "outline"}
+                    onClick={() => setLevels((prev) => ({ ...prev, [level]: !prev[level] }))}
+                  >
+                    {level} ({formatNumber(counts[level])})
+                  </Button>
                 ))}
-              </ul>
-            )}
-          </div>
-        </div>
+              </div>
+            </div>
+            <div
+              ref={listRef}
+              className="max-h-[460px] overflow-auto rounded-lg border border-border bg-background p-3"
+            >
+              {filtered.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t("debug.empty")}</p>
+              ) : (
+                <ul className="log-timeline">
+                  {filtered.map((entry) => {
+                    const style = LEVEL_STYLES[entry.level];
+                    return (
+                      <li key={entry.id} className={cn("log-item", `level-${entry.level}`)}>
+                        <div className="log-head">
+                          <Badge className={style.badge} variant="outline">
+                            {entry.level}
+                          </Badge>
+                          <span className="log-time">
+                            {new Date(entry.at).toLocaleTimeString()}
+                          </span>
+                        </div>
+                        <div className={cn("log-message", style.text)}>
+                          {entry.message || t("debug.emptyMessage")}
+                        </div>
+                        {entry.args.length > 0 ? (
+                          <details className="log-details-wrap">
+                            <summary className="log-details-summary">
+                              {t("debug.details")}
+                            </summary>
+                            <pre className="log-details">
+                              {formatArgs(entry.args)}
+                            </pre>
+                          </details>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </>
+    </div>
   );
 }

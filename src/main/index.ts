@@ -1,5 +1,6 @@
 import { app, BrowserWindow, shell, Tray, Menu, nativeImage, Notification } from "electron";
 import { autoUpdater } from "electron-updater";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { format } from "node:url";
 import { AuthController } from "./auth";
@@ -91,9 +92,18 @@ function createWindow(startHidden = false): BrowserWindow {
 
 function resolveTrayIcon() {
   // Package icons along with extraResources; fall back to repo icons in dev
-  const devIcon = join(app.getAppPath(), "../icons/icon.png");
   const prodIcon = join(process.resourcesPath, "icons", "icon.png");
-  return nativeImage.createFromPath(app.isPackaged ? prodIcon : devIcon);
+  if (app.isPackaged) {
+    return nativeImage.createFromPath(prodIcon);
+  }
+  const devCandidates = [
+    join(process.cwd(), "icons", "icon.png"),
+    join(app.getAppPath(), "icons", "icon.png"),
+    join(app.getAppPath(), "..", "icons", "icon.png"),
+    join(app.getAppPath(), "..", "..", "icons", "icon.png"),
+  ];
+  const devIcon = devCandidates.find((candidate) => existsSync(candidate)) ?? devCandidates[0];
+  return nativeImage.createFromPath(devIcon);
 }
 
 function createTray(win: BrowserWindow) {

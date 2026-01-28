@@ -50,53 +50,72 @@ export function Hero({
       : null;
 
   return (
-    <header className="app-hero compact">
-      <div className="hero-left">
-        <div className="hero-head">
-          <div>
-            <h1>{t("hero.title")}</h1>
-          </div>
-          <div className="pill-row">
-            {demoMode ? <span className="pill ghost">{t("hero.demoMode")}</span> : null}
-          </div>
-        </div>
-      </div>
-      <div className="hero-kpis">
-        <div className="card kpi-card">
-          <div className="label">{t("hero.activeCampaign")}</div>
-          <div className="kpi-value">{activeGame || t("hero.noTarget")}</div>
-          <div className="kpi-meta">
-            {t("hero.nextPing", { time: nextWatchLabel })}
-            {watchError ? ` | ${t("hero.pingError")}` : ""}
-          </div>
-          {nextWatchPct !== null ? (
-            <div className="progress-bar small hero-timer-bar" aria-hidden="true">
-              <span style={{ width: `${nextWatchPct}%` }} />
-            </div>
+    <header className="rounded-xl border border-border bg-card p-5 text-foreground shadow-sm motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <h1 className="m-0 text-2xl font-semibold tracking-tight">{t("hero.title")}</h1>
+          {demoMode ? (
+            <span className="inline-flex items-center rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">
+              {t("hero.demoMode")}
+            </span>
           ) : null}
         </div>
-        <div className="card kpi-card">
-          <div className="label">{t("hero.drops")}</div>
-          <div className="kpi-value">{dropProgress}</div>
-          <div className="kpi-meta">
-            {t("hero.targetProgress")}: {progressPct}
-          </div>
-        </div>
-        <div className="card kpi-card">
-          <div className="label">{t("hero.account")}</div>
-          {profile.status === "ready" ? (
-            <div className="profile-row small">
-              {profile.avatar && <img src={profile.avatar} alt="" />}
-              <div>
-                <div className="meta">{displayName}</div>
-                {showLoginLine ? <div className="meta muted">@{login}</div> : null}
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="rounded-lg border border-border bg-background p-4 shadow-sm motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("hero.activeCampaign")}
+            </div>
+            <div className="mt-2 text-lg font-semibold text-foreground">
+              {activeGame || t("hero.noTarget")}
+            </div>
+            <div className="mt-2 text-xs text-muted-foreground">
+              {t("hero.nextPing", { time: nextWatchLabel })}
+              {watchError ? ` | ${t("hero.pingError")}` : ""}
+            </div>
+            {nextWatchPct !== null ? (
+              <div className="mt-3 h-1.5 rounded-full bg-muted" aria-hidden="true">
+                <span
+                  className="block h-full rounded-full bg-primary transition-[width] duration-500"
+                  style={{ width: `${nextWatchPct}%` }}
+                />
               </div>
+            ) : null}
+          </div>
+          <div className="rounded-lg border border-border bg-background p-4 shadow-sm motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("hero.drops")}
             </div>
-          ) : (
-            <div className="meta">
-              {profile.status === "loading" ? t("hero.profileLoading") : t("hero.profileIdle")}
+            <div className="mt-2 text-lg font-semibold text-foreground">{dropProgress}</div>
+            <div className="mt-2 text-xs text-muted-foreground">
+              {t("hero.targetProgress")}: {progressPct}
             </div>
-          )}
+          </div>
+          <div className="rounded-lg border border-border bg-background p-4 shadow-sm motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("hero.account")}
+            </div>
+            {profile.status === "ready" ? (
+              <div className="mt-3 flex items-center gap-3">
+                {profile.avatar ? (
+                  <img
+                    src={profile.avatar}
+                    alt=""
+                    className="h-9 w-9 rounded-full border border-border object-cover"
+                  />
+                ) : null}
+                <div>
+                  <div className="text-sm font-medium text-foreground">{displayName}</div>
+                  {showLoginLine ? (
+                    <div className="text-xs text-muted-foreground">@{login}</div>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <div className="mt-2 text-xs text-muted-foreground">
+                {profile.status === "loading" ? t("hero.profileLoading") : t("hero.profileIdle")}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </header>

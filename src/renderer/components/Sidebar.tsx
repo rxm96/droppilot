@@ -28,6 +28,7 @@ export function Sidebar({
     { key: "overview", label: t("nav.overview"), caption: t("nav.overview.caption") },
     { key: "inventory", label: t("nav.inventory"), caption: t("nav.inventory.caption") },
     { key: "control", label: t("nav.control"), caption: t("nav.control.caption") },
+    { key: "priorities", label: t("nav.priorities"), caption: t("nav.priorities.caption") },
     { key: "debug", label: t("nav.debug"), caption: t("nav.debug.caption") },
     { key: "settings", label: t("nav.settings"), caption: t("nav.settings.caption") },
   ];
@@ -41,6 +42,9 @@ export function Sidebar({
     ),
     control: (
       <span className="material-symbols-rounded">tune</span>
+    ),
+    priorities: (
+      <span className="material-symbols-rounded">format_list_numbered</span>
     ),
     settings: (
       <span className="material-symbols-rounded">settings</span>

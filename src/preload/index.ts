@@ -51,7 +51,12 @@ const api = {
   },
   stats: {
     get: () => ipcRenderer.invoke("stats/get"),
-    save: (payload: { totalMinutes?: number; totalClaims?: number; lastReset?: number }) =>
+    save: (payload: {
+      totalMinutes?: number;
+      totalClaims?: number;
+      lastReset?: number;
+      claimsByGame?: Record<string, number>;
+    }) =>
       ipcRenderer.invoke("stats/save", payload),
     bump: (payload: {
       minutes?: number;

@@ -1,8 +1,14 @@
+import type { Dispatch, SetStateAction } from "react";
 import { useI18n } from "../i18n";
+import { cn } from "../lib/utils";
+import type { ThemePreference } from "../theme";
 
 type Props = {
   title?: string;
   version?: string;
+  theme: ThemePreference;
+  setTheme: Dispatch<SetStateAction<ThemePreference>>;
+  resolvedTheme: "light" | "dark";
   updateStatus?: {
     state:
       | "idle"
@@ -25,6 +31,9 @@ type WindowAction = "minimize" | "maximize" | "restore" | "close" | "hide-to-tra
 export function TitleBar({
   title = "DropPilot",
   version,
+  theme,
+  setTheme,
+  resolvedTheme,
   updateStatus,
   onDownloadUpdate,
   onInstallUpdate,
@@ -54,27 +63,41 @@ export function TitleBar({
   const canInstallUpdate = updateState === "downloaded" && typeof onInstallUpdate === "function";
   const updateAction = canDownloadUpdate ? onDownloadUpdate : canInstallUpdate ? onInstallUpdate : undefined;
   const disableUpdateAction = updateState === "downloading" || !updateAction;
+  const themeLabelKey =
+    theme === "system" ? "theme.system" : theme === "light" ? "theme.light" : "theme.dark";
+  const themeLabel = t(themeLabelKey);
+  const themeTitle = `${t("theme.toggle")}: ${themeLabel}`;
+  const themeIcon =
+    theme === "system" ? "brightness_4" : resolvedTheme === "dark" ? "dark_mode" : "light_mode";
+  const cycleTheme = () => {
+    setTheme((current) =>
+      current === "system" ? "light" : current === "light" ? "dark" : "system",
+    );
+  };
 
   return (
-    <div className="titlebar">
-      <div className="titlebar-title">
-        {title}
+    <div className="titlebar app-drag">
+      <div className="titlebar-left">
+        <span className="titlebar-title">{title}</span>
         {version ? <span className="titlebar-version">v{version}</span> : null}
       </div>
       <div className="titlebar-actions">
         {showUpdate ? (
           <button
             type="button"
-            className={`title-btn titlebar-update ${updateState === "downloading" ? "loading" : ""}`}
+            className={cn(
+              "title-btn title-btn-pill titlebar-update",
+              updateState === "downloading" && "cursor-wait opacity-70",
+            )}
             onClick={updateAction}
             disabled={disableUpdateAction}
             aria-label={updateTitle}
             title={updateTitle}
           >
-            <span className="titlebar-update-icon material-symbols-rounded" aria-hidden="true">
+            <span className="material-symbols-rounded" aria-hidden="true">
               system_update_alt
             </span>
-            <span className="titlebar-update-text">
+            <span className="titlebar-btn-text">
               {updateLabel}
               {updateProgress !== null ? ` ${updateProgress}%` : ""}
             </span>
@@ -82,46 +105,59 @@ export function TitleBar({
         ) : null}
         <button
           type="button"
-          className="title-btn tray"
+          className="title-btn title-btn-icon"
+          onClick={cycleTheme}
+          aria-label={themeTitle}
+          title={themeTitle}
+        >
+          <span className="material-symbols-rounded" aria-hidden="true">
+            {themeIcon}
+          </span>
+        </button>
+        <button
+          type="button"
+          className="title-btn title-btn-pill"
           onClick={() => handle("hide-to-tray")}
           aria-label={t("titlebar.tray")}
           title={t("titlebar.tray")}
         >
-          <span className="titlebar-btn-icon material-symbols-rounded" aria-hidden="true">
+          <span className="material-symbols-rounded" aria-hidden="true">
             arrow_downward
           </span>
           <span className="titlebar-btn-text">{t("titlebar.tray")}</span>
         </button>
-        <button
-          type="button"
-          className="title-btn"
-          onClick={() => handle("minimize")}
-          aria-label={t("titlebar.minimize")}
-        >
-          <span className="titlebar-btn-icon material-symbols-rounded" aria-hidden="true">
-            remove
-          </span>
-        </button>
-        <button
-          type="button"
-          className="title-btn"
-          onClick={() => handle("maximize")}
-          aria-label={t("titlebar.maximize")}
-        >
-          <span className="titlebar-btn-icon material-symbols-rounded" aria-hidden="true">
-            crop_square
-          </span>
-        </button>
-        <button
-          type="button"
-          className="title-btn close"
-          onClick={() => handle("close")}
-          aria-label={t("titlebar.close")}
-        >
-          <span className="titlebar-btn-icon material-symbols-rounded" aria-hidden="true">
-            close
-          </span>
-        </button>
+        <div className="titlebar-controls">
+          <button
+            type="button"
+            className="title-btn title-btn-icon"
+            onClick={() => handle("minimize")}
+            aria-label={t("titlebar.minimize")}
+          >
+            <span className="material-symbols-rounded" aria-hidden="true">
+              remove
+            </span>
+          </button>
+          <button
+            type="button"
+            className="title-btn title-btn-icon"
+            onClick={() => handle("maximize")}
+            aria-label={t("titlebar.maximize")}
+          >
+            <span className="material-symbols-rounded" aria-hidden="true">
+              crop_square
+            </span>
+          </button>
+          <button
+            type="button"
+            className="title-btn title-btn-icon title-btn-close"
+            onClick={() => handle("close")}
+            aria-label={t("titlebar.close")}
+          >
+            <span className="material-symbols-rounded" aria-hidden="true">
+              close
+            </span>
+          </button>
+        </div>
       </div>
     </div>
   );
