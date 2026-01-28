@@ -7,6 +7,13 @@ const computeNext = (
 ): StatsData => {
   const minutes = Math.max(0, delta.minutes ?? 0);
   const claims = Math.max(0, delta.claims ?? 0);
+  const nextClaimsByGame = { ...(current.claimsByGame ?? {}) };
+  if (claims > 0 && delta.lastGame) {
+    const key = String(delta.lastGame).trim();
+    if (key) {
+      nextClaimsByGame[key] = Math.max(0, (nextClaimsByGame[key] ?? 0) + claims);
+    }
+  }
   return {
     ...current,
     totalMinutes: Math.max(0, current.totalMinutes + minutes),
@@ -15,6 +22,7 @@ const computeNext = (
     lastClaimAt: claims > 0 ? Date.now() : current.lastClaimAt,
     lastDropTitle: delta.lastDropTitle ?? current.lastDropTitle,
     lastGame: delta.lastGame ?? current.lastGame,
+    claimsByGame: nextClaimsByGame,
   };
 };
 

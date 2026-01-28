@@ -25,6 +25,7 @@ type ControlProps = {
   claimedDrops: number;
   totalEarnedMinutes: number;
   totalRequiredMinutes: number;
+  inventoryRefreshing: boolean;
   fetchInventory: () => void;
   refreshPriorityPlan: () => void;
   watching: WatchingState;
@@ -60,13 +61,8 @@ export function ControlView({
   targetGame,
   setActiveTargetGame,
   targetDrops,
-  targetProgress,
-  totalDrops,
-  claimedDrops,
-  totalEarnedMinutes,
-  totalRequiredMinutes,
+  inventoryRefreshing,
   fetchInventory,
-  refreshPriorityPlan,
   watching,
   stopWatching,
   channels,
@@ -78,7 +74,6 @@ export function ControlView({
   claimStatus,
   canWatchTarget,
   showNoDropsHint,
-  nextWatchIn,
   lastWatchOk,
   watchError,
   autoSwitchInfo,
@@ -236,235 +231,222 @@ export function ControlView({
       : null;
   return (
     <>
-      <div className="panel-head">
+      <div className="panel-head control-head">
         <div>
           <h2>{t("control.title")}</h2>
           <p className="meta">{t("control.subtitle")}</p>
         </div>
-        <div className="status-row">
+        <div className="status-row control-head-actions">
+          <button
+            type="button"
+            className="ghost subtle-btn"
+            onClick={fetchInventory}
+            disabled={inventoryRefreshing}
+          >
+            {inventoryRefreshing ? (
+              <span className="inline-loader">
+                <span className="spinner" />
+                {t("control.refreshing")}
+              </span>
+            ) : (
+              t("control.refresh")
+            )}
+          </button>
+          {claimStatusText ? (
+            <span className={`pill small ${claimStatus?.kind === "error" ? "danger-chip" : ""}`}>
+              {t("control.autoClaim")}: {claimStatusText}
+            </span>
+          ) : null}
           {watchError ? (
             <span className="pill ghost danger-chip">{t("control.pingError")}</span>
           ) : null}
         </div>
       </div>
-      {claimStatus && (
-        <p className={`meta ${claimStatus.kind === "error" ? "error" : ""}`}>
-          {t("control.autoClaim")}: {claimStatusText}
-        </p>
-      )}
-      <div className="card watch-card">
-        <div
-          className="watch-visual"
-          style={
-            activeThumb
-              ? {
-                  backgroundImage: `linear-gradient(120deg, rgba(5,10,22,0.8), rgba(8,12,26,0.8)), url(${activeThumb})`,
-                }
-              : undefined
-          }
-        />
-        <div className="watch-body">
-          <div className="label">{t("control.activeStream")}</div>
-          {watching ? (
-            <>
-              <div className="watch-heading">
-                <div>
-                  <div className="watch-name">
-                    <span>{watching.name}</span>
-                    <span
-                      className="live-dot"
-                      aria-label={t("control.live")}
-                      title={t("control.live")}
-                    />
+      <div className="control-layout">
+        <div className="control-left">
+          <div className="card watch-card">
+            <div
+              className="watch-visual"
+              style={
+                activeThumb
+                  ? {
+                      backgroundImage: `linear-gradient(120deg, rgba(5,10,22,0.8), rgba(8,12,26,0.8)), url(${activeThumb})`,
+                    }
+                  : undefined
+              }
+            />
+            <div className="watch-body">
+              <div className="label">{t("control.activeStream")}</div>
+              {watching ? (
+                <>
+                  <div className="watch-heading">
+                    <div>
+                      <div className="watch-name">
+                        <span>{watching.name}</span>
+                        <span
+                          className="live-dot"
+                          aria-label={t("control.live")}
+                          title={t("control.live")}
+                        />
+                      </div>
+                      <div className="meta">
+                        {watching.game}
+                        {activeLoginMismatch ? `  @${activeLoginMismatch}` : ""}
+                      </div>
+                    </div>
                   </div>
-                  <div className="meta">
-                    {watching.game}
-                    {activeLoginMismatch ? `  @${activeLoginMismatch}` : ""}
-                  </div>
-                </div>
-              </div>
-              <div className="watch-meta">
-                {activeChannel ? (
-                  <span className="pill viewers-chip small">
-                    {activeViewers} {t("control.viewers")}
-                  </span>
-                ) : (
-                  <span className="pill ghost small">Channel-Metadaten fehlen</span>
-                )}
-              </div>
-              <div className="watch-actions">
-                <button type="button" className="ghost danger" onClick={stopWatching}>
-                  {t("control.stop")}
-                </button>
-              </div>
-              {autoSwitchInfo ? (
-                <p className="meta muted">
-                  Auto-Switch ({autoSwitchInfo.reason}): {autoSwitchInfo.from?.name ?? "Unknown"} -
-                  {">"} {autoSwitchInfo.to.name} um{" "}
-                  {new Date(autoSwitchInfo.at).toLocaleTimeString()}
-                </p>
-              ) : null}
-              {watchErrorText ? (
-                <p className="error">
-                  {t("control.pingError")}: {watchErrorText}
-                </p>
-              ) : null}
-            </>
-          ) : (
-            <div className="watch-empty">
-              <p className="meta">{t("control.noChannel")}</p>
-              <p className="meta muted">
-                {showNoDropsHint ? t("control.noDropsHint") : t("control.pickStream")}
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="overview-grid">
-        <div className="card">
-          <div className="card-header-row">
-            <div className="label">{t("control.progress")}</div>
-            <button type="button" className="ghost subtle-btn" onClick={fetchInventory}>
-              {t("control.refresh")}
-            </button>
-          </div>
-          {targetGame ? (
-            <>
-              <p className="meta">
-                {t("control.gameLabel")}: {targetGame}
-              </p>
-              <div className="progress-summary">
-                <div className="stat-pill">
-                  <span className="stat-label">{t("control.dropsLabel")}</span>
-                  <span className="stat-value">
-                    {claimedDrops}/{totalDrops}
-                  </span>
-                </div>
-                <div className="stat-pill">
-                  <span className="stat-label">{t("control.minutesLabel")}</span>
-                  <span className="stat-value">
-                    {Math.round(totalEarnedMinutes + liveDeltaApplied)}/{totalRequiredMinutes}
-                  </span>
-                </div>
-                <div className="stat-pill">
-                  <span className="stat-label">{t("control.progressLabel")}</span>
-                  <span className="stat-value">{Math.round(targetProgress)}%</span>
-                </div>
-                {activeDropInfo ? (
-                  <div className="stat-pill accent">
-                    <span className="stat-label">{t("control.activeDrop")}</span>
-                    <span className="stat-value">
-                      {activeDropInfo.title}
-                      {activeEtaText ? ` | ${t("control.eta", { time: activeEtaText })}` : ""}
-                    </span>
-                  </div>
-                ) : null}
-              </div>
-              {activeDropInfo ? (
-                <div className="active-drop-row">
-                  <div>
-                    <div className="meta">{t("control.currentDrop")}</div>
-                    <div className="active-drop-title">{activeDropInfo.title}</div>
-                  </div>
-                  <div className="pill-row">
-                    <span className="pill ghost small">
-                      {activeDropInfo.remainingMinutes > 0
-                        ? t("control.rest", {
-                            time: formatDuration(activeDropInfo.remainingMinutes * 60_000),
-                          })
-                        : t("control.done")}
-                    </span>
-                    {activeEtaText ? (
-                      <span className="pill ghost small">
-                        {t("control.eta", { time: activeEtaText })}
+                  <div className="watch-meta">
+                    {activeChannel ? (
+                      <span className="pill viewers-chip small">
+                        {activeViewers} {t("control.viewers")}
                       </span>
-                    ) : null}
+                    ) : (
+                      <span className="pill ghost small">Channel-Metadaten fehlen</span>
+                    )}
                   </div>
-                </div>
+                  <div className="watch-actions">
+                    <button type="button" className="ghost danger" onClick={stopWatching}>
+                      {t("control.stop")}
+                    </button>
+                  </div>
+                  {autoSwitchInfo ? (
+                    <p className="meta muted">
+                      Auto-Switch ({autoSwitchInfo.reason}): {autoSwitchInfo.from?.name ?? "Unknown"} -
+                      {">"} {autoSwitchInfo.to.name} um{" "}
+                      {new Date(autoSwitchInfo.at).toLocaleTimeString()}
+                    </p>
+                  ) : null}
+                  {watchErrorText ? (
+                    <p className="error">
+                      {t("control.pingError")}: {watchErrorText}
+                    </p>
+                  ) : null}
+                </>
               ) : (
-                <p className="meta muted" style={{ marginTop: 6 }}>
-                  {showNoDropsHint ? t("control.noDropsHint") : t("control.allDone")}
-                </p>
+                <div className="watch-empty">
+                  <p className="meta">{t("control.noChannel")}</p>
+                  <p className="meta muted">
+                    {showNoDropsHint ? t("control.noDropsHint") : t("control.pickStream")}
+                  </p>
+                </div>
               )}
-              <div className="progress-bar">
-                <span style={{ width: `${targetProgress}%` }} />
-              </div>
-              {targetDrops.length > 0 && (
-                <ul className="drop-grid">
-                  {targetDrops.map((d, idx) => {
-                    const req = Math.max(0, Number(d.requiredMinutes) || 0);
-                    const earned = Math.max(0, Number(d.earnedMinutes) || 0);
-                    const isActive = activeDropInfo?.id === d.id;
-                    const virtualEarned = isActive
-                      ? Math.min(req, earned + liveDeltaApplied)
-                      : Math.min(req, earned);
-                    const pct = req ? Math.min(100, Math.round((virtualEarned / req) * 100)) : 0;
-                    const remainingMs = req ? Math.max(0, req - virtualEarned) * 60_000 : 0;
-                    const statusLabel = mapStatusLabel(d.status, (key) => t(key));
-                    const statusClass =
-                      d.status === "claimed"
-                        ? "claimed"
-                        : d.status === "progress"
-                          ? "progress"
-                          : "locked";
-                    const animate = !firstRenderRef.current && dropChangedIds.has(d.id);
-                    return (
-                      <li
-                        key={d.id}
-                        className={`drop-card ${statusClass} ${isActive ? "active" : ""} ${animate ? "animate-item" : ""}`}
-                        style={animate ? { animationDelay: `${idx * 35}ms` } : undefined}
-                      >
-                        <div className="drop-header">
-                          <div>
-                            <div className="drop-title">{d.title}</div>
-                            <div className="meta muted">
-                              {Math.round(virtualEarned)}/{req} min
-                              {isActive && liveDeltaApplied > 0
-                                ? ` | +${Math.round(liveDeltaApplied)}m live`
-                                : ""}
-                              {isActive && remainingMs > 0
-                                ? ` | ${t("control.eta", { time: formatDuration(remainingMs) })}`
-                                : ""}
-                            </div>
-                          </div>
-                          <span className="pill ghost small">{statusLabel}</span>
-                        </div>
-                        <div className="progress-bar small">
-                          <span style={{ width: `${pct}%` }} />
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
+            </div>
+          </div>
+
+          <div className="card control-drops">
+            <div className="card-header-row">
+              <div className="label">{t("control.progress")}</div>
               {lastWatchOk ? (
-                <p className="meta muted" style={{ marginTop: 8 }}>
+                <div className="meta muted">
                   Last ping: {new Date(lastWatchOk).toLocaleTimeString()}
-                </p>
+                </div>
               ) : null}
-            </>
-          ) : (
-            <p className="meta">{t("control.targetMissing")}</p>
-          )}
+            </div>
+            {targetGame ? (
+              <>
+                {activeDropInfo ? (
+                  <div className="active-drop-row">
+                    <div>
+                      <div className="meta">{t("control.currentDrop")}</div>
+                      <div className="active-drop-title">{activeDropInfo.title}</div>
+                    </div>
+                    <div className="pill-row">
+                      <span className="pill ghost small">
+                        {activeDropInfo.remainingMinutes > 0
+                          ? t("control.rest", {
+                              time: formatDuration(activeDropInfo.remainingMinutes * 60_000),
+                            })
+                          : t("control.done")}
+                      </span>
+                      {activeEtaText ? (
+                        <span className="pill ghost small">{t("control.eta", { time: activeEtaText })}</span>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="meta muted" style={{ marginTop: 6 }}>
+                    {showNoDropsHint ? t("control.noDropsHint") : t("control.allDone")}
+                  </p>
+                )}
+                {targetDrops.length > 0 && (
+                  <ul className="drop-grid">
+                    {targetDrops.map((d, idx) => {
+                      const req = Math.max(0, Number(d.requiredMinutes) || 0);
+                      const earned = Math.max(0, Number(d.earnedMinutes) || 0);
+                      const isActive = activeDropInfo?.id === d.id;
+                      const virtualEarned = isActive
+                        ? Math.min(req, earned + liveDeltaApplied)
+                        : Math.min(req, earned);
+                      const pct = req ? Math.min(100, Math.round((virtualEarned / req) * 100)) : 0;
+                      const remainingMs = req ? Math.max(0, req - virtualEarned) * 60_000 : 0;
+                      const statusLabel = mapStatusLabel(d.status, (key) => t(key));
+                      const statusClass =
+                        d.status === "claimed"
+                          ? "claimed"
+                          : d.status === "progress"
+                            ? "progress"
+                            : "locked";
+                      const animate = !firstRenderRef.current && dropChangedIds.has(d.id);
+                      return (
+                        <li
+                          key={d.id}
+                          className={`drop-card ${statusClass} ${isActive ? "active" : ""} ${animate ? "animate-item" : ""}`}
+                          style={animate ? { animationDelay: `${idx * 35}ms` } : undefined}
+                        >
+                          <div className="drop-header">
+                            <div className="drop-info">
+                              <div className="drop-title">{d.title}</div>
+                              <div className="meta muted drop-meta-line">
+                                <span className="drop-meta-item">
+                                  {Math.round(virtualEarned)}/{req} min
+                                </span>
+                                {isActive && liveDeltaApplied > 0 ? (
+                                  <span className="drop-meta-item">+{Math.round(liveDeltaApplied)}m</span>
+                                ) : null}
+                                {isActive && remainingMs > 0 ? (
+                                  <span className="drop-meta-item">
+                                    ETA {formatDuration(remainingMs)}
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+                            <span className="pill ghost small">{statusLabel}</span>
+                          </div>
+                          <div className="progress-bar small">
+                            <span style={{ width: `${pct}%` }} />
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </>
+            ) : (
+              <p className="meta">{t("control.targetMissing")}</p>
+            )}
+          </div>
         </div>
-        <div className="card">
-          <div className="label">{t("control.targetTitle")}</div>
-          <div className="filters-row" style={{ marginBottom: 8 }}>
-            <select
-              className="select"
-              value={targetGame}
-              onChange={(e) => setActiveTargetGame(e.target.value)}
-            >
-              <option value="">{t("control.noTarget")}</option>
-              {(priorityPlan?.order.length ? priorityPlan.order : priorityGames).map((g) => (
-                <option key={g} value={g}>
-                  {g}
-                </option>
-              ))}
-            </select>
-            <button type="button" onClick={() => setActiveTargetGame("")} className="ghost">
-              {t("control.reset")}
-            </button>
+
+        <div className="card control-target">
+          <div className="control-target-head">
+            <div className="label">{t("control.targetTitle")}</div>
+            <div className="control-target-actions">
+              <select
+                className="select"
+                value={targetGame}
+                onChange={(e) => setActiveTargetGame(e.target.value)}
+              >
+                <option value="">{t("control.noTarget")}</option>
+                {(priorityPlan?.order.length ? priorityPlan.order : priorityGames).map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
+                ))}
+              </select>
+              <button type="button" onClick={() => setActiveTargetGame("")} className="ghost">
+                {t("control.reset")}
+              </button>
+            </div>
           </div>
           {targetGame ? (
             <>
@@ -472,14 +454,12 @@ export function ControlView({
                 {t("control.activeTarget")}: {targetGame}
               </p>
               <p className="meta muted">
-                {t("control.streamsFound")}: {channels.length > 0 ? channels.length : 0} |{" "}
-                {t("control.dropsOpen")}: {totalDrops}
+                {t("control.streamsFound")}: {channels.length > 0 ? channels.length : 0}
               </p>
             </>
           ) : (
             <p className="meta">{t("control.targetMissing")}</p>
           )}
-          {showNoDropsHint ? <p className="meta muted">{t("control.noDropsHint")}</p> : null}
           {canWatchTarget && channelsLoading ? (
             <p className="meta inline-loader">
               <span className="spinner" />
@@ -507,7 +487,7 @@ export function ControlView({
                       : "";
                   const languageTag = c.language ? c.language.toUpperCase() : "";
                   const metaParts = [languageTag, loginLabel].filter(Boolean);
-                  const metaLine = metaParts.join(" • ");
+                  const metaLine = metaParts.join(" â€¢ ");
                   const title = c.title?.trim() ?? "";
                   return (
                     <li
@@ -535,10 +515,7 @@ export function ControlView({
                       }}
                     >
                       {thumb ? (
-                        <div
-                          className="channel-thumb"
-                          style={{ backgroundImage: `url(${thumb})` }}
-                        />
+                        <div className="channel-thumb" style={{ backgroundImage: `url(${thumb})` }} />
                       ) : null}
                       <span className="viewer-badge">{formatViewers(c.viewers)}</span>
                       <div className="channel-content">

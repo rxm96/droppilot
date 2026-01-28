@@ -126,20 +126,28 @@ export function InventoryView({
                 }`}
                 style={animate ? { animationDelay: `${idx * 35}ms` } : undefined}
               >
-                <div>
-                  <div className="meta">{item.game}</div>
-                  <div className="title-row">
-                    <span>{item.title}</span>
-                    <span className="pill ghost">{categoryLabel(category, (key) => t(key))}</span>
+                <div className="inv-card-main">
+                  <div className="inv-card-header">
+                    <div>
+                      <div className="meta">{item.game}</div>
+                      <div className="inv-card-title">{item.title}</div>
+                    </div>
+                    <span className="pill ghost small">
+                      {categoryLabel(category, (key) => t(key))}
+                    </span>
                   </div>
                   <div className="meta">{formatRange(item.startsAt, item.endsAt, t)}</div>
                 </div>
-                <div className="progress-row">
-                  <div className="meta">
-                    {earned}/{req} {t("inventory.minutes")}
+                <div className="inv-card-progress">
+                  <div className="inv-progress-meta">
+                    <span className="meta">
+                      {earned}/{req} {t("inventory.minutes")}
+                    </span>
+                    <span className="pill ghost small">
+                      {mapStatusLabel(item.status, (key) => t(key))}
+                    </span>
                   </div>
-                  <div className="meta">{mapStatusLabel(item.status, (key) => t(key))}</div>
-                  <div className="progress-bar">
+                  <div className="progress-bar small">
                     <span
                       style={{
                         width: `${pct}%`,

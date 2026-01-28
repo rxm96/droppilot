@@ -17,6 +17,7 @@ import { useTargetDrops } from "./hooks/useTargetDrops";
 import { useWatchPing, WATCH_INTERVAL_MS } from "./hooks/useWatchPing";
 import { I18nProvider } from "./i18n";
 import { buildDemoPriorityPlan, demoProfile } from "./demoData";
+import { useTheme } from "./theme";
 import type {
   ChannelEntry,
   FilterKey,
@@ -41,6 +42,7 @@ type UpdateStatus = {
 
 function App() {
   const { auth, startLogin, startLoginWithCreds, logout } = useAuth();
+  const { theme, setTheme, resolvedTheme } = useTheme();
   const [profile, setProfile] = useState<ProfileState>({ status: "idle" });
   const [creds, setCreds] = useState({ username: "", password: "", token: "" });
   const [filter, setFilter] = useState<FilterKey>("all");
@@ -183,7 +185,11 @@ function App() {
     const fetchVersion = async () => {
       const res = await window.electronAPI.app?.getVersion?.();
       if (!cancelled && res?.version) {
-        setAppVersion(String(res.version));
+        const baseVersion = String(res.version);
+        const buildSha = typeof __GIT_SHA__ !== "undefined" ? String(__GIT_SHA__) : "";
+        const versionLabel =
+          buildSha && !baseVersion.includes("+") ? `${baseVersion}+${buildSha}` : baseVersion;
+        setAppVersion(versionLabel);
       }
     };
     void fetchVersion();
@@ -763,17 +769,20 @@ function App() {
     ? Math.min(1, Math.max(0, 1 - (watchStats.nextAt - nowTick) / WATCH_INTERVAL_MS))
     : undefined;
 
-  const sidebarProps = {
+  const navProps = {
     view,
     setView,
+    auth,
+    startLogin,
+    logout,
+  };
+  const authProps = {
     auth,
     creds,
     setCreds,
     startLoginWithCreds: handleStartLoginWithCreds,
-    startLogin,
-    logout,
   };
-  const overviewProps = { profile, isLinked: isLinkedOrDemo, inventory, stats, resetStats, logout };
+  const overviewProps = { inventory, stats, resetStats };
   const inventoryProps = {
     inventory,
     filter,
@@ -790,9 +799,7 @@ function App() {
     refreshing: inventoryRefreshing,
     isLinked: isLinkedOrDemo,
   };
-  const settingsProps = {
-    startLogin,
-    isLinked,
+  const priorityProps = {
     uniqueGames,
     selectedGame,
     setSelectedGame,
@@ -810,6 +817,12 @@ function App() {
     handleDropReorder,
     obeyPriority,
     setObeyPriority: handleSetObeyPriority,
+  };
+  const settingsProps = {
+    startLogin,
+    isLinked,
+    theme,
+    setTheme,
     autoStart,
     setAutoStart: handleSetAutoStart,
     autoClaim,
@@ -867,6 +880,7 @@ function App() {
     claimedDrops,
     totalEarnedMinutes,
     totalRequiredMinutes,
+    inventoryRefreshing,
     fetchInventory: handleFetchInventory,
     refreshPriorityPlan,
     watching,
@@ -892,6 +906,9 @@ function App() {
         {!isMac && (
           <TitleBar
             version={appVersion}
+            theme={theme}
+            setTheme={setTheme}
+            resolvedTheme={resolvedTheme}
             updateStatus={updateStatus}
             onDownloadUpdate={handleDownloadUpdate}
             onInstallUpdate={handleInstallUpdate}
@@ -913,9 +930,11 @@ function App() {
           />
 
           <AppContent
-            sidebarProps={sidebarProps}
+            navProps={navProps}
+            authProps={authProps}
             overviewProps={overviewProps}
             inventoryProps={inventoryProps}
+            priorityProps={priorityProps}
             settingsProps={settingsProps}
             controlProps={controlProps}
             debugSnapshot={debugSnapshot}
