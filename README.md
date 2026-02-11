@@ -43,9 +43,12 @@ npm run preview
 - `npm run dev` - start Vite dev server
 - `npm run build` - build renderer and Electron bundles
 - `npm run preview` - preview the renderer build
-- `npm run release:patch` - bump patch version and push tags
-- `npm run release:minor` - bump minor version and push tags
-- `npm run release:major` - bump major version and push tags
+
+## Releases
+Releases are published on GitHub Releases. You can download the Windows `.exe` installer there.
+
+## Contributing
+See `CONTRIBUTING.md` for local dev and release details.
 
 ## Project structure
 - `src/main` - Electron main process (IPC, settings, app lifecycle)
