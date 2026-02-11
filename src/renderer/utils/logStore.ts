@@ -15,7 +15,7 @@ const MAX_LOGS = LOG_LIMIT;
 const listeners = new Set<(entry: LogEntry) => void>();
 const buffer: LogEntry[] = [];
 let counter = 0;
-let logCollectionEnabled = true;
+let logCollectionEnabled = false;
 
 export function setLogCollectionEnabled(enabled: boolean) {
   logCollectionEnabled = enabled;
