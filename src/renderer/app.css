@@ -890,10 +890,10 @@ a,
 }
 
 .layout {
-  margin-top: 28px;
+  margin-top: 12px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 
@@ -1967,8 +1967,8 @@ code {
 .settings-section > .settings-row + .toggle-row,
 .settings-section > .toggle-row + .settings-row {
   border-top: 1px solid var(--border);
-  padding-top: 10px;
-  margin-top: 6px;
+  padding-top: 12px;
+  margin-top: 0;
 }
 
 .settings-row {
@@ -1983,6 +1983,12 @@ code {
   margin: 0;
 }
 
+.settings-row > .label {
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
+
 .settings-section .label {
   font-size: 11px;
   letter-spacing: 0.18em;
@@ -1995,6 +2001,33 @@ code {
   flex-wrap: wrap;
   align-items: center;
   margin-left: auto;
+}
+
+.settings-row > label.meta {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0;
+}
+
+.settings-actions > label.meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.settings-row > label.meta .input,
+.settings-actions > label.meta .input {
+  flex: 0 0 110px;
+  width: 110px;
+  min-width: 110px;
+  padding: 8px 10px;
 }
 
 .settings-section .input {
@@ -2496,8 +2529,15 @@ code {
   width: 100%;
 }
 
+.toggle span {
+  display: flex;
+  align-items: center;
+  line-height: 1.2;
+}
+
 .toggle input {
   appearance: none;
+  margin: 0;
   width: 36px;
   height: 20px;
   border-radius: 999px;
@@ -2596,7 +2636,7 @@ code {
 
 @media (max-width: 960px) {
   .layout {
-    margin-top: 20px;
+    margin-top: 12px;
   }
   .top-nav-session {
     width: 100%;

@@ -190,9 +190,8 @@ export function SettingsView({
               <select
                 className="select"
                 value={theme}
-                onChange={(e) => setTheme((e.target.value as ThemePreference) || "system")}
+                onChange={(e) => setTheme((e.target.value as ThemePreference) || "light")}
               >
-                <option value="system">{t("theme.system")}</option>
                 <option value="light">{t("theme.light")}</option>
                 <option value="dark">{t("theme.dark")}</option>
               </select>

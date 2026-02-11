@@ -42,7 +42,7 @@ type UpdateStatus = {
 
 function App() {
   const { auth, startLogin, startLoginWithCreds, logout } = useAuth();
-  const { theme, setTheme, resolvedTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const [profile, setProfile] = useState<ProfileState>({ status: "idle" });
   const [creds, setCreds] = useState({ username: "", password: "", token: "" });
   const [filter, setFilter] = useState<FilterKey>("all");
@@ -908,7 +908,6 @@ function App() {
             version={appVersion}
             theme={theme}
             setTheme={setTheme}
-            resolvedTheme={resolvedTheme}
             updateStatus={updateStatus}
             onDownloadUpdate={handleDownloadUpdate}
             onInstallUpdate={handleInstallUpdate}
