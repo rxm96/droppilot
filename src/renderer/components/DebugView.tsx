@@ -148,6 +148,7 @@ export function DebugView({ snapshot }: DebugViewProps) {
     });
     const timer = window.setInterval(flush, 250);
     return () => {
+      flush();
       window.clearInterval(timer);
       unsubscribe();
       pendingRef.current = [];
@@ -157,7 +158,18 @@ export function DebugView({ snapshot }: DebugViewProps) {
   useEffect(() => {
     if (!paused) {
       setLogs(getLogBuffer());
+      return;
     }
+    if (pendingRef.current.length === 0) return;
+    const batch = pendingRef.current;
+    pendingRef.current = [];
+    setLogs((prev) => {
+      const next = [...prev, ...batch];
+      if (next.length > LOG_LIMIT) {
+        next.splice(0, next.length - LOG_LIMIT);
+      }
+      return next;
+    });
   }, [paused]);
 
   useEffect(() => {

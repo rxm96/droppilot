@@ -1,5 +1,5 @@
 import type { ComponentProps, ReactNode } from "react";
-import { Profiler } from "react";
+import { Profiler, useCallback } from "react";
 import { ControlView } from "./ControlView";
 import { DebugView } from "./DebugView";
 import { InventoryView } from "./InventoryView";
@@ -40,14 +40,17 @@ export function AppContent({
 }: AppContentProps) {
   const { t } = useI18n();
   const view = navProps.view;
-  const renderWithPerf = (id: string, node: ReactNode) => {
-    if (!debugEnabled || !isPerfEnabled()) return node;
-    return (
-      <Profiler id={id} onRender={(_, __, actualDuration) => recordRender(id, actualDuration)}>
-        {node}
-      </Profiler>
-    );
-  };
+  const renderWithPerf = useCallback(
+    (id: string, node: ReactNode) => {
+      if (!debugEnabled || !isPerfEnabled()) return node;
+      return (
+        <Profiler id={id} onRender={(_, __, actualDuration) => recordRender(id, actualDuration)}>
+          {node}
+        </Profiler>
+      );
+    },
+    [debugEnabled],
+  );
   const { auth, creds, setCreds, startLoginWithCreds } = authProps;
   return (
     <main className="layout">

@@ -31,7 +31,10 @@ export function Hero({
   const [nowTick, setNowTick] = useState(() => Date.now());
 
   useEffect(() => {
-    if (!nextWatchAt) return;
+    if (!nextWatchAt) {
+      setNowTick(Date.now());
+      return;
+    }
     const timer = window.setInterval(() => setNowTick(Date.now()), 1_000);
     return () => window.clearInterval(timer);
   }, [nextWatchAt]);

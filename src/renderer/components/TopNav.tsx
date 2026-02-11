@@ -14,7 +14,7 @@ type TopNavProps = {
 export function TopNav({ view, setView, auth, startLogin, logout, showDebug }: TopNavProps) {
   const { t } = useI18n();
   const isLinked = auth.status === "ok";
-  const navItems: Array<{ key: View; label: string; caption: string }> = [
+  let navItems: Array<{ key: View; label: string; caption: string }> = [
     { key: "overview", label: t("nav.overview"), caption: t("nav.overview.caption") },
     { key: "inventory", label: t("nav.inventory"), caption: t("nav.inventory.caption") },
     { key: "control", label: t("nav.control"), caption: t("nav.control.caption") },
@@ -24,7 +24,8 @@ export function TopNav({ view, setView, auth, startLogin, logout, showDebug }: T
   if (showDebug) {
     const settingsIndex = navItems.findIndex((item) => item.key === "settings");
     const insertAt = settingsIndex >= 0 ? settingsIndex : navItems.length;
-    navItems.splice(insertAt, 0, { key: "debug", label: t("nav.debug"), caption: t("nav.debug.caption") });
+    const debugItem = { key: "debug", label: t("nav.debug"), caption: t("nav.debug.caption") };
+    navItems = [...navItems.slice(0, insertAt), debugItem, ...navItems.slice(insertAt)];
   }
 
   const icons: Record<View, string> = {
