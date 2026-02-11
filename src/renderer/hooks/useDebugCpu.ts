@@ -15,7 +15,10 @@ export function useDebugCpu({ enabled, intervalMs = 1000 }: Params): CpuSample {
   const [sample, setSample] = useState<CpuSample>({ lastAt: null });
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      setSample({ lastAt: null });
+      return;
+    }
     const read = () => {
       try {
         if (typeof process !== "undefined" && typeof process.getCPUUsage === "function") {
