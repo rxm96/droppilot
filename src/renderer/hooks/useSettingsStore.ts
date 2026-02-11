@@ -13,6 +13,7 @@ type SettingsData = {
   refreshMinMs?: number;
   refreshMaxMs?: number;
   demoMode?: boolean;
+  debugEnabled?: boolean;
   alertsEnabled?: boolean;
   alertsNotifyWhileFocused?: boolean;
   alertsDropClaimed?: boolean;
@@ -34,6 +35,7 @@ type SettingsHook = {
   refreshMinMs: number;
   refreshMaxMs: number;
   demoMode: boolean;
+  debugEnabled: boolean;
   alertsEnabled: boolean;
   alertsNotifyWhileFocused: boolean;
   alertsDropClaimed: boolean;
@@ -51,6 +53,7 @@ type SettingsHook = {
   saveAutoSwitchEnabled: (val: boolean) => Promise<void>;
   saveRefreshIntervals: (minMs: number, maxMs: number) => Promise<void>;
   saveDemoMode: (val: boolean) => Promise<void>;
+  saveDebugEnabled: (val: boolean) => Promise<void>;
   saveAlertsEnabled: (val: boolean) => Promise<void>;
   saveAlertsNotifyWhileFocused: (val: boolean) => Promise<void>;
   saveAlertsDropClaimed: (val: boolean) => Promise<void>;
@@ -83,6 +86,7 @@ export function useSettingsStore(): SettingsHook {
   const [refreshMinMs, setRefreshMinMs] = useState<number>(120_000);
   const [refreshMaxMs, setRefreshMaxMs] = useState<number>(240_000);
   const [demoMode, setDemoMode] = useState<boolean>(false);
+  const [debugEnabled, setDebugEnabled] = useState<boolean>(false);
   const [alertsEnabled, setAlertsEnabled] = useState<boolean>(true);
   const [alertsNotifyWhileFocused, setAlertsNotifyWhileFocused] = useState<boolean>(false);
   const [alertsDropClaimed, setAlertsDropClaimed] = useState<boolean>(true);
@@ -114,6 +118,7 @@ export function useSettingsStore(): SettingsHook {
         Number.isFinite(res.refreshMaxMs) && res.refreshMaxMs ? res.refreshMaxMs : 240_000,
       );
       setDemoMode(res.demoMode === true);
+      setDebugEnabled(res.debugEnabled === true);
       setAlertsEnabled(res.alertsEnabled !== false);
       setAlertsNotifyWhileFocused(res.alertsNotifyWhileFocused === true);
       setAlertsDropClaimed(res.alertsDropClaimed !== false);
@@ -154,6 +159,7 @@ export function useSettingsStore(): SettingsHook {
         Number.isFinite(saved.refreshMaxMs) && saved.refreshMaxMs ? saved.refreshMaxMs : 240_000,
       );
       setDemoMode(saved.demoMode === true);
+      setDebugEnabled(saved.debugEnabled === true);
       setAlertsEnabled(saved.alertsEnabled !== false);
       setAlertsNotifyWhileFocused(saved.alertsNotifyWhileFocused === true);
       setAlertsDropClaimed(saved.alertsDropClaimed !== false);
@@ -220,6 +226,11 @@ export function useSettingsStore(): SettingsHook {
   const saveDemoMode = async (val: boolean) => {
     setDemoMode(val);
     await persist({ demoMode: val });
+  };
+
+  const saveDebugEnabled = async (val: boolean) => {
+    setDebugEnabled(val);
+    await persist({ debugEnabled: val });
   };
 
   const saveAlertsEnabled = async (val: boolean) => {
@@ -358,6 +369,7 @@ export function useSettingsStore(): SettingsHook {
     refreshMinMs,
     refreshMaxMs,
     demoMode,
+    debugEnabled,
     alertsEnabled,
     alertsNotifyWhileFocused,
     alertsDropClaimed,
@@ -375,6 +387,7 @@ export function useSettingsStore(): SettingsHook {
     saveAutoSwitchEnabled,
     saveRefreshIntervals,
     saveDemoMode,
+    saveDebugEnabled,
     saveAlertsEnabled,
     saveAlertsNotifyWhileFocused,
     saveAlertsDropClaimed,

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "../i18n";
 import { cn } from "../lib/utils";
 import { Badge } from "./ui/badge";
@@ -69,6 +69,49 @@ const LEVEL_STYLES: Record<LogLevel, { badge: string; border: string; text: stri
   },
 };
 
+type LogDetailsProps = {
+  args: unknown[];
+  label: string;
+};
+
+const LogDetails = memo(function LogDetails({ args, label }: LogDetailsProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const detailsText = useMemo(() => (isOpen ? formatArgs(args) : ""), [args, isOpen]);
+
+  return (
+    <details
+      className="log-details-wrap"
+      onToggle={(e) => setIsOpen((e.currentTarget as HTMLDetailsElement).open)}
+    >
+      <summary className="log-details-summary">{label}</summary>
+      {isOpen ? <pre className="log-details">{detailsText}</pre> : null}
+    </details>
+  );
+});
+
+type LogRowProps = {
+  entry: LogEntry;
+  emptyMessage: string;
+  detailsLabel: string;
+};
+
+const LogRow = memo(function LogRow({ entry, emptyMessage, detailsLabel }: LogRowProps) {
+  const style = LEVEL_STYLES[entry.level];
+
+  return (
+    <li className={cn("log-item", `level-${entry.level}`)}>
+      <div className="log-head">
+        <Badge className={style.badge} variant="outline">
+          {entry.level}
+        </Badge>
+        <span className="log-time">{entry.timeLabel}</span>
+      </div>
+      <div className={cn("log-message", style.text)}>{entry.message || emptyMessage}</div>
+      {entry.args.length > 0 ? <LogDetails args={entry.args} label={detailsLabel} /> : null}
+    </li>
+  );
+});
+
 export function DebugView({ snapshot }: DebugViewProps) {
   const { t, language } = useI18n();
   const [logs, setLogs] = useState<LogEntry[]>(() => getLogBuffer());
@@ -82,20 +125,33 @@ export function DebugView({ snapshot }: DebugViewProps) {
     warn: true,
     error: true,
   });
+  const deferredQuery = useDeferredValue(query);
   const listRef = useRef<HTMLDivElement | null>(null);
+  const pendingRef = useRef<LogEntry[]>([]);
 
   useEffect(() => {
     if (paused) return;
-    const unsubscribe = subscribeLogs((entry) => {
+    const flush = () => {
+      if (pendingRef.current.length === 0) return;
+      const batch = pendingRef.current;
+      pendingRef.current = [];
       setLogs((prev) => {
-        const next = [...prev, entry];
+        const next = [...prev, ...batch];
         if (next.length > LOG_LIMIT) {
           next.splice(0, next.length - LOG_LIMIT);
         }
         return next;
       });
+    };
+    const unsubscribe = subscribeLogs((entry) => {
+      pendingRef.current.push(entry);
     });
-    return () => unsubscribe();
+    const timer = window.setInterval(flush, 250);
+    return () => {
+      window.clearInterval(timer);
+      unsubscribe();
+      pendingRef.current = [];
+    };
   }, [paused]);
 
   useEffect(() => {
@@ -123,18 +179,19 @@ export function DebugView({ snapshot }: DebugViewProps) {
   }, [logs]);
 
   const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase();
+    const needle = deferredQuery.trim().toLowerCase();
     return logs.filter((entry) => {
       if (!levels[entry.level]) return false;
       if (!needle) return true;
-      return (
-        entry.message.toLowerCase().includes(needle) || entry.level.toLowerCase().includes(needle)
-      );
+      return entry.messageLc.includes(needle) || entry.level.includes(needle);
     });
-  }, [logs, levels, query]);
+  }, [logs, levels, deferredQuery]);
 
-  const formatNumber = (val: number) =>
-    new Intl.NumberFormat(language === "de" ? "de-DE" : "en-US").format(Math.max(0, val ?? 0));
+  const numberFormatter = useMemo(
+    () => new Intl.NumberFormat(language === "de" ? "de-DE" : "en-US"),
+    [language],
+  );
+  const formatNumber = (val: number) => numberFormatter.format(Math.max(0, val ?? 0));
 
   const togglePaused = () => {
     setPaused((prev) => {
@@ -256,34 +313,14 @@ export function DebugView({ snapshot }: DebugViewProps) {
                 <p className="text-sm text-muted-foreground">{t("debug.empty")}</p>
               ) : (
                 <ul className="log-timeline">
-                  {filtered.map((entry) => {
-                    const style = LEVEL_STYLES[entry.level];
-                    return (
-                      <li key={entry.id} className={cn("log-item", `level-${entry.level}`)}>
-                        <div className="log-head">
-                          <Badge className={style.badge} variant="outline">
-                            {entry.level}
-                          </Badge>
-                          <span className="log-time">
-                            {new Date(entry.at).toLocaleTimeString()}
-                          </span>
-                        </div>
-                        <div className={cn("log-message", style.text)}>
-                          {entry.message || t("debug.emptyMessage")}
-                        </div>
-                        {entry.args.length > 0 ? (
-                          <details className="log-details-wrap">
-                            <summary className="log-details-summary">
-                              {t("debug.details")}
-                            </summary>
-                            <pre className="log-details">
-                              {formatArgs(entry.args)}
-                            </pre>
-                          </details>
-                        ) : null}
-                      </li>
-                    );
-                  })}
+                  {filtered.map((entry) => (
+                    <LogRow
+                      key={entry.id}
+                      entry={entry}
+                      emptyMessage={t("debug.emptyMessage")}
+                      detailsLabel={t("debug.details")}
+                    />
+                  ))}
                 </ul>
               )}
             </div>

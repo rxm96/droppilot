@@ -15,6 +15,7 @@ export type SettingsData = {
   refreshMinMs: number;
   refreshMaxMs: number;
   demoMode: boolean;
+  debugEnabled: boolean;
   alertsEnabled: boolean;
   alertsNotifyWhileFocused: boolean;
   alertsDropClaimed: boolean;
@@ -39,6 +40,7 @@ const defaultSettings: SettingsData = {
   refreshMinMs: 120_000,
   refreshMaxMs: 240_000,
   demoMode: false,
+  debugEnabled: false,
   alertsEnabled: true,
   alertsNotifyWhileFocused: false,
   alertsDropClaimed: true,
@@ -80,6 +82,10 @@ export async function loadSettings(): Promise<SettingsData> {
           ? parsed.refreshMaxMs
           : defaultSettings.refreshMaxMs,
       demoMode: typeof parsed?.demoMode === "boolean" ? parsed.demoMode : defaultSettings.demoMode,
+      debugEnabled:
+        typeof parsed?.debugEnabled === "boolean"
+          ? parsed.debugEnabled
+          : defaultSettings.debugEnabled,
       alertsEnabled:
         typeof parsed?.alertsEnabled === "boolean"
           ? parsed.alertsEnabled
@@ -140,6 +146,8 @@ export async function saveSettings(data: Partial<SettingsData>): Promise<Setting
         ? (data.refreshMaxMs as number)
         : current.refreshMaxMs,
     demoMode: typeof data.demoMode === "boolean" ? data.demoMode : current.demoMode,
+    debugEnabled:
+      typeof data.debugEnabled === "boolean" ? data.debugEnabled : current.debugEnabled,
     alertsEnabled:
       typeof data.alertsEnabled === "boolean" ? data.alertsEnabled : current.alertsEnabled,
     alertsNotifyWhileFocused:

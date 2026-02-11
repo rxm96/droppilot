@@ -1,4 +1,5 @@
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
+import { Profiler } from "react";
 import { ControlView } from "./ControlView";
 import { DebugView } from "./DebugView";
 import { InventoryView } from "./InventoryView";
@@ -7,6 +8,7 @@ import { PriorityView } from "./PriorityView";
 import { SettingsView } from "./SettingsView";
 import { TopNav } from "./TopNav";
 import { useI18n } from "../i18n";
+import { isPerfEnabled, recordRender } from "../utils/perfStore";
 
 type AppContentProps = {
   navProps: ComponentProps<typeof TopNav>;
@@ -22,6 +24,7 @@ type AppContentProps = {
   settingsProps: ComponentProps<typeof SettingsView>;
   controlProps: ComponentProps<typeof ControlView>;
   debugSnapshot: Record<string, unknown>;
+  debugEnabled: boolean;
 };
 
 export function AppContent({
@@ -33,9 +36,18 @@ export function AppContent({
   settingsProps,
   controlProps,
   debugSnapshot,
+  debugEnabled,
 }: AppContentProps) {
   const { t } = useI18n();
   const view = navProps.view;
+  const renderWithPerf = (id: string, node: ReactNode) => {
+    if (!debugEnabled || !isPerfEnabled()) return node;
+    return (
+      <Profiler id={id} onRender={(_, __, actualDuration) => recordRender(id, actualDuration)}>
+        {node}
+      </Profiler>
+    );
+  };
   const { auth, creds, setCreds, startLoginWithCreds } = authProps;
   return (
     <main className="layout">
@@ -80,17 +92,17 @@ export function AppContent({
       )}
 
       <section className="panel inventory-panel">
-        {view === "overview" && <OverviewView {...overviewProps} />}
+        {view === "overview" && renderWithPerf("OverviewView", <OverviewView {...overviewProps} />)}
 
-        {view === "inventory" && <InventoryView {...inventoryProps} />}
+        {view === "inventory" && renderWithPerf("InventoryView", <InventoryView {...inventoryProps} />)}
 
-        {view === "priorities" && <PriorityView {...priorityProps} />}
+        {view === "priorities" && renderWithPerf("PriorityView", <PriorityView {...priorityProps} />)}
 
-        {view === "settings" && <SettingsView {...settingsProps} />}
+        {view === "settings" && renderWithPerf("SettingsView", <SettingsView {...settingsProps} />)}
 
-        {view === "control" && <ControlView {...controlProps} />}
+        {view === "control" && renderWithPerf("ControlView", <ControlView {...controlProps} />)}
 
-        {view === "debug" && <DebugView snapshot={debugSnapshot} />}
+        {view === "debug" && renderWithPerf("DebugView", <DebugView snapshot={debugSnapshot} />)}
       </section>
     </main>
   );

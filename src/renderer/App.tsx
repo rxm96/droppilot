@@ -6,6 +6,7 @@ import { UpdateOverlay } from "./components/UpdateOverlay";
 import { useAlertEffects } from "./hooks/useAlertEffects";
 import { useAuth } from "./hooks/useAuth";
 import { useChannels } from "./hooks/useChannels";
+import { useDebugCpu } from "./hooks/useDebugCpu";
 import { useDebugSnapshot } from "./hooks/useDebugSnapshot";
 import { useDropClaimAlerts } from "./hooks/useDropClaimAlerts";
 import { useInventory } from "./hooks/useInventory";
@@ -14,7 +15,7 @@ import { useSettingsStore } from "./hooks/useSettingsStore";
 import { useSmartAlerts } from "./hooks/useSmartAlerts";
 import { useStats } from "./hooks/useStats";
 import { useTargetDrops } from "./hooks/useTargetDrops";
-import { useWatchPing, WATCH_INTERVAL_MS } from "./hooks/useWatchPing";
+import { useWatchPing } from "./hooks/useWatchPing";
 import { I18nProvider } from "./i18n";
 import { buildDemoPriorityPlan, demoProfile } from "./demoData";
 import { useTheme } from "./theme";
@@ -27,7 +28,8 @@ import type {
   WatchingState,
 } from "./types";
 import { errorInfoFromIpc } from "./utils/errors";
-import { logDebug, logWarn } from "./utils/logger";
+import { isVerboseLoggingEnabled, logDebug, logWarn } from "./utils/logger";
+import { setLogCollectionEnabled } from "./utils/logStore";
 
 const PAGE_SIZE = 8;
 type UpdateStatus = {
@@ -59,6 +61,7 @@ function App() {
     refreshMinMs,
     refreshMaxMs,
     demoMode,
+    debugEnabled,
     alertsEnabled,
     alertsNotifyWhileFocused,
     alertsDropClaimed,
@@ -76,6 +79,7 @@ function App() {
     saveAutoSwitchEnabled,
     saveRefreshIntervals,
     saveDemoMode,
+    saveDebugEnabled,
     saveAlertsEnabled,
     saveAlertsNotifyWhileFocused,
     saveAlertsDropClaimed,
@@ -103,7 +107,6 @@ function App() {
   const [activeTargetGame, setActiveTargetGame] = useState<string>("");
   const [watching, setWatching] = useState<WatchingState>(null);
   const [autoSelectEnabled, setAutoSelectEnabled] = useState<boolean>(true);
-  const [nowTick, setNowTick] = useState(Date.now());
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ state: "idle" });
   const [appVersion, setAppVersion] = useState<string>("");
   const isLinked = auth.status === "ok";
@@ -162,16 +165,22 @@ function App() {
   const watchStats = useWatchPing({ watching, bumpStats, forwardAuthError, demoMode });
 
   useEffect(() => {
-    const tick = window.setInterval(() => setNowTick(Date.now()), 1_000);
-    return () => window.clearInterval(tick);
-  }, []);
-
-  useEffect(() => {
     setAutoSelectEnabled(autoSelect);
   }, [autoSelect]);
 
+  useEffect(() => {
+    setLogCollectionEnabled(debugEnabled);
+  }, [debugEnabled]);
+
+  useEffect(() => {
+    if (view === "debug" && !debugEnabled) {
+      setView("overview");
+    }
+  }, [view, debugEnabled]);
+
   // Show forwarded main-process logs (TwitchService etc.) in DevTools console.
   useEffect(() => {
+    if (!isVerboseLoggingEnabled()) return;
     const unsubscribe = window.electronAPI.logs?.onMainLog?.((payload) => {
       logDebug(`[main:${payload.scope}]`, ...(payload.args ?? []));
     });
@@ -427,7 +436,6 @@ function App() {
     totalRequiredMinutes,
     totalEarnedMinutes,
     targetProgress,
-    liveDeltaApplied,
     activeDropEta,
     activeDropInfo,
     canWatchTarget,
@@ -439,7 +447,6 @@ function App() {
     allowWatching,
     watching,
     inventoryFetchedAt,
-    nowTick,
   });
 
   useEffect(() => {
@@ -544,6 +551,9 @@ function App() {
     watching,
   });
 
+  const debugCpu = useDebugCpu({
+    enabled: debugEnabled && view === "debug" && isVerboseLoggingEnabled(),
+  });
   const debugSnapshot = useDebugSnapshot({
     authStatus: auth.status,
     isLinked,
@@ -570,6 +580,7 @@ function App() {
     activeTargetGame,
     priorityOrder,
     stats,
+    cpu: debugCpu,
   });
 
   const handleCheckUpdates = useCallback(async () => {
@@ -759,22 +770,13 @@ function App() {
     stopWatching();
   }, [stopWatching]);
 
-  const heroNextWatchIn = watchStats.nextAt
-    ? Math.max(0, Math.round((watchStats.nextAt - nowTick) / 1000))
-    : undefined;
-  const nextWatchIn = watchStats.nextAt
-    ? Math.max(0, Math.round((watchStats.nextAt - nowTick) / 1000))
-    : 0;
-  const nextWatchProgress = watchStats.nextAt
-    ? Math.min(1, Math.max(0, 1 - (watchStats.nextAt - nowTick) / WATCH_INTERVAL_MS))
-    : undefined;
-
   const navProps = {
     view,
     setView,
     auth,
     startLogin,
     logout,
+    showDebug: debugEnabled,
   };
   const authProps = {
     auth,
@@ -833,6 +835,8 @@ function App() {
     setAutoSwitchEnabled: handleSetAutoSwitchEnabled,
     demoMode,
     setDemoMode: handleSetDemoMode,
+    debugEnabled,
+    setDebugEnabled: saveDebugEnabled,
     alertsEnabled,
     setAlertsEnabled: handleSetAlertsEnabled,
     alertsNotifyWhileFocused,
@@ -881,6 +885,7 @@ function App() {
     totalEarnedMinutes,
     totalRequiredMinutes,
     inventoryRefreshing,
+    inventoryFetchedAt,
     fetchInventory: handleFetchInventory,
     refreshPriorityPlan,
     watching,
@@ -889,12 +894,10 @@ function App() {
     channelsLoading,
     channelError,
     startWatching,
-    liveDeltaApplied,
     activeDropInfo,
     claimStatus,
     canWatchTarget,
     showNoDropsHint,
-    nextWatchIn,
     lastWatchOk: watchStats.lastOk,
     watchError: watchStats.lastError,
     autoSwitchInfo,
@@ -919,8 +922,7 @@ function App() {
             isLinked={isLinkedOrDemo}
             demoMode={demoMode}
             profile={profile}
-            nextWatchIn={heroNextWatchIn}
-            nextWatchProgress={nextWatchProgress}
+            nextWatchAt={watchStats.nextAt || undefined}
             watchError={watchStats.lastError}
             activeGame={targetGame}
             dropsTotal={totalDrops}
@@ -937,6 +939,7 @@ function App() {
             settingsProps={settingsProps}
             controlProps={controlProps}
             debugSnapshot={debugSnapshot}
+            debugEnabled={debugEnabled}
           />
         </div>
       </div>

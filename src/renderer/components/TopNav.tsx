@@ -8,9 +8,10 @@ type TopNavProps = {
   auth: AuthState;
   startLogin: () => void;
   logout: () => void;
+  showDebug: boolean;
 };
 
-export function TopNav({ view, setView, auth, startLogin, logout }: TopNavProps) {
+export function TopNav({ view, setView, auth, startLogin, logout, showDebug }: TopNavProps) {
   const { t } = useI18n();
   const isLinked = auth.status === "ok";
   const navItems: Array<{ key: View; label: string; caption: string }> = [
@@ -18,9 +19,11 @@ export function TopNav({ view, setView, auth, startLogin, logout }: TopNavProps)
     { key: "inventory", label: t("nav.inventory"), caption: t("nav.inventory.caption") },
     { key: "control", label: t("nav.control"), caption: t("nav.control.caption") },
     { key: "priorities", label: t("nav.priorities"), caption: t("nav.priorities.caption") },
-    { key: "debug", label: t("nav.debug"), caption: t("nav.debug.caption") },
     { key: "settings", label: t("nav.settings"), caption: t("nav.settings.caption") },
   ];
+  if (showDebug) {
+    navItems.splice(4, 0, { key: "debug", label: t("nav.debug"), caption: t("nav.debug.caption") });
+  }
 
   const icons: Record<View, string> = {
     overview: "dashboard",
