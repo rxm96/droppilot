@@ -34,7 +34,9 @@ export function Sidebar({
     { key: "settings", label: t("nav.settings"), caption: t("nav.settings.caption") },
   ];
   if (showDebug) {
-    navItems.splice(4, 0, { key: "debug", label: t("nav.debug"), caption: t("nav.debug.caption") });
+    const settingsIndex = navItems.findIndex((item) => item.key === "settings");
+    const insertAt = settingsIndex >= 0 ? settingsIndex : navItems.length;
+    navItems.splice(insertAt, 0, { key: "debug", label: t("nav.debug"), caption: t("nav.debug.caption") });
   }
 
   const icons: Record<View, JSX.Element> = {
