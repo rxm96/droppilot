@@ -18,6 +18,8 @@ type SettingsProps = {
   setAutoSwitchEnabled: (val: boolean) => void;
   demoMode: boolean;
   setDemoMode: (val: boolean) => void;
+  debugEnabled: boolean;
+  setDebugEnabled: (val: boolean) => void;
   alertsEnabled: boolean;
   setAlertsEnabled: (val: boolean) => void;
   alertsNotifyWhileFocused: boolean;
@@ -78,6 +80,8 @@ export function SettingsView({
   setAutoSwitchEnabled,
   demoMode,
   setDemoMode,
+  debugEnabled,
+  setDebugEnabled,
   alertsEnabled,
   setAlertsEnabled,
   alertsNotifyWhileFocused,
@@ -258,6 +262,25 @@ export function SettingsView({
                   onChange={(e) => setDemoMode(e.target.checked)}
                 />
                 <span>{t("settings.demoMode")}</span>
+              </label>
+            </div>
+          </section>
+
+          <section className="settings-section">
+            <div className="settings-row">
+              <div>
+                <div className="label">{t("settings.debugTitle")}</div>
+                <p className="meta">{t("settings.debugHint")}</p>
+              </div>
+            </div>
+            <div className="toggle-row">
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={debugEnabled}
+                  onChange={(e) => setDebugEnabled(e.target.checked)}
+                />
+                <span>{t("settings.debugToggle")}</span>
               </label>
             </div>
           </section>

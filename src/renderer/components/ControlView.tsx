@@ -26,6 +26,7 @@ type ControlProps = {
   totalEarnedMinutes: number;
   totalRequiredMinutes: number;
   inventoryRefreshing: boolean;
+  inventoryFetchedAt: number | null;
   fetchInventory: () => void;
   refreshPriorityPlan: () => void;
   watching: WatchingState;
@@ -34,7 +35,6 @@ type ControlProps = {
   channelsLoading: boolean;
   channelError: ErrorInfo | null;
   startWatching: (ch: ChannelEntry) => void;
-  liveDeltaApplied: number;
   activeDropInfo: {
     id: string;
     title: string;
@@ -49,7 +49,6 @@ type ControlProps = {
   claimStatus: ClaimStatus | null;
   canWatchTarget: boolean;
   showNoDropsHint: boolean;
-  nextWatchIn: number;
   lastWatchOk?: number;
   watchError?: ErrorInfo | null;
   autoSwitchInfo?: AutoSwitchInfo | null;
@@ -61,7 +60,10 @@ export function ControlView({
   targetGame,
   setActiveTargetGame,
   targetDrops,
+  totalEarnedMinutes,
+  totalRequiredMinutes,
   inventoryRefreshing,
+  inventoryFetchedAt,
   fetchInventory,
   watching,
   stopWatching,
@@ -69,7 +71,6 @@ export function ControlView({
   channelsLoading,
   channelError,
   startWatching,
-  liveDeltaApplied,
   activeDropInfo,
   claimStatus,
   canWatchTarget,
@@ -200,6 +201,47 @@ export function ControlView({
     }
     return `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
   };
+  const [progressNow, setProgressNow] = useState(() => Date.now());
+  const shouldTickProgress = Boolean(
+    watching &&
+      inventoryFetchedAt &&
+      activeDropInfo &&
+      activeDropInfo.requiredMinutes > activeDropInfo.earnedMinutes,
+  );
+  useEffect(() => {
+    if (!shouldTickProgress) return;
+    setProgressNow(Date.now());
+    const timer = window.setInterval(() => setProgressNow(Date.now()), 1_000);
+    return () => window.clearInterval(timer);
+  }, [shouldTickProgress, activeDropInfo?.id, inventoryFetchedAt]);
+  const liveProgress = useMemo(() => {
+    if (!activeDropInfo || !watching || !inventoryFetchedAt) {
+      return {
+        liveDeltaApplied: 0,
+        activeRemainingMinutes: activeDropInfo?.remainingMinutes ?? 0,
+        activeEta: activeDropInfo?.eta ?? null,
+      };
+    }
+    const totalRemainingMinutes = Math.max(0, totalRequiredMinutes - totalEarnedMinutes);
+    const liveDeltaMinutesRaw = Math.max(0, (progressNow - inventoryFetchedAt) / 60_000);
+    const liveDeltaMinutes = Math.min(liveDeltaMinutesRaw, totalRemainingMinutes);
+    const activeRemainingBase = Math.max(0, activeDropInfo.requiredMinutes - activeDropInfo.earnedMinutes);
+    const liveDeltaApplied = Math.min(liveDeltaMinutes, activeRemainingBase);
+    const activeVirtualEarned = Math.min(
+      activeDropInfo.requiredMinutes,
+      activeDropInfo.earnedMinutes + liveDeltaApplied,
+    );
+    const activeRemainingMinutes = Math.max(0, activeDropInfo.requiredMinutes - activeVirtualEarned);
+    const activeEta = activeRemainingMinutes > 0 ? progressNow + activeRemainingMinutes * 60_000 : null;
+    return { liveDeltaApplied, activeRemainingMinutes, activeEta };
+  }, [
+    activeDropInfo,
+    inventoryFetchedAt,
+    progressNow,
+    totalEarnedMinutes,
+    totalRequiredMinutes,
+    watching,
+  ]);
   const formatNumber = (val: number) =>
     new Intl.NumberFormat(language === "de" ? "de-DE" : "en-US").format(Math.max(0, val ?? 0));
   const formatViewers = (val: number) => {
@@ -212,9 +254,7 @@ export function ControlView({
       return formatNumber(val);
     }
   };
-  const activeEtaText = activeDropInfo?.eta
-    ? new Date(activeDropInfo.eta).toLocaleTimeString()
-    : null;
+  const activeEtaText = liveProgress.activeEta ? new Date(liveProgress.activeEta).toLocaleTimeString() : null;
   const activeChannel =
     watching && channels.length
       ? channels.find((c) => c.id === watching.id || c.login === watching.login)
@@ -352,9 +392,9 @@ export function ControlView({
                     </div>
                     <div className="pill-row">
                       <span className="pill ghost small">
-                        {activeDropInfo.remainingMinutes > 0
+                        {liveProgress.activeRemainingMinutes > 0
                           ? t("control.rest", {
-                              time: formatDuration(activeDropInfo.remainingMinutes * 60_000),
+                              time: formatDuration(liveProgress.activeRemainingMinutes * 60_000),
                             })
                           : t("control.done")}
                       </span>
@@ -375,7 +415,7 @@ export function ControlView({
                       const earned = Math.max(0, Number(d.earnedMinutes) || 0);
                       const isActive = activeDropInfo?.id === d.id;
                       const virtualEarned = isActive
-                        ? Math.min(req, earned + liveDeltaApplied)
+                        ? Math.min(req, earned + liveProgress.liveDeltaApplied)
                         : Math.min(req, earned);
                       const pct = req ? Math.min(100, Math.round((virtualEarned / req) * 100)) : 0;
                       const remainingMs = req ? Math.max(0, req - virtualEarned) * 60_000 : 0;
@@ -400,8 +440,10 @@ export function ControlView({
                                 <span className="drop-meta-item">
                                   {Math.round(virtualEarned)}/{req} min
                                 </span>
-                                {isActive && liveDeltaApplied > 0 ? (
-                                  <span className="drop-meta-item">+{Math.round(liveDeltaApplied)}m</span>
+                                {isActive && liveProgress.liveDeltaApplied > 0 ? (
+                                  <span className="drop-meta-item">
+                                    +{Math.round(liveProgress.liveDeltaApplied)}m
+                                  </span>
                                 ) : null}
                                 {isActive && remainingMs > 0 ? (
                                   <span className="drop-meta-item">

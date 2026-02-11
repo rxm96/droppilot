@@ -10,6 +10,8 @@ import type {
 import type { InventoryRefreshState } from "./useInventoryRefresh";
 import type { WatchStats } from "./useWatchPing";
 import type { ActiveDropInfo } from "./useTargetDrops";
+import { getPerfSnapshot } from "../utils/perfStore";
+import type { CpuSample } from "./useDebugCpu";
 
 type Params = {
   authStatus: AuthState["status"];
@@ -37,6 +39,7 @@ type Params = {
   activeTargetGame: string;
   priorityOrder: string[];
   stats: StatsState;
+  cpu: CpuSample;
 };
 
 export function useDebugSnapshot({
@@ -65,6 +68,7 @@ export function useDebugSnapshot({
   activeTargetGame,
   priorityOrder,
   stats,
+  cpu,
 }: Params) {
   return useMemo(
     () => ({
@@ -111,6 +115,8 @@ export function useDebugSnapshot({
         activeTargetGame,
         order: priorityOrder,
       },
+      cpu,
+      perf: getPerfSnapshot(),
       stats: stats.status === "ready" ? stats.data : { status: stats.status },
     }),
     [
@@ -139,6 +145,7 @@ export function useDebugSnapshot({
       refreshMinMs,
       stats,
       targetGame,
+      cpu,
       watchStats.lastError,
       watchStats.lastOk,
       watchStats.nextAt,

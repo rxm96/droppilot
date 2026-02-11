@@ -12,12 +12,26 @@ import { loadStats, saveStats, bumpStats, resetStats } from "./core/stats";
 
 const isDev = !app.isPackaged;
 const devServerUrl = process.env.VITE_DEV_SERVER_URL ?? "http://localhost:5173";
+const debugLogsOptIn =
+  process.argv.includes("--debug-logs") || process.env.DROPPILOT_DEBUG_LOGS === "1";
+const verboseLogsEnabled = isDev || debugLogsOptIn;
 const auth = new AuthController();
 const twitchService = new TwitchService(loadSession);
 let tray: Tray | null = null;
 let updateTimer: NodeJS.Timeout | null = null;
 const UPDATE_INTERVAL_MS = 60 * 60 * 1000;
 let lastUpdateNotice: string | null = null;
+
+function withDebugLogsQuery(url: string): string {
+  if (!verboseLogsEnabled) return url;
+  try {
+    const parsed = new URL(url);
+    parsed.searchParams.set("debugLogs", "1");
+    return parsed.toString();
+  } catch {
+    return `${url}${url.includes("?") ? "&" : "?"}debugLogs=1`;
+  }
+}
 
 if (process.platform === "win32") {
   app.setAppUserModelId("com.droppilot.app");
@@ -54,23 +68,23 @@ function createWindow(startHidden = false): BrowserWindow {
       preload: join(__dirname, "../preload/preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
-      devTools: true,
+      devTools: verboseLogsEnabled,
       backgroundThrottling: false,
+      spellcheck: false,
     },
   });
 
   if (isDev) {
     // Use Vite dev server during development (fallback to default port)
-    win.loadURL(devServerUrl);
+    win.loadURL(withDebugLogsQuery(devServerUrl));
     win.webContents.openDevTools();
   } else {
-    win.loadURL(
-      format({
-        pathname: join(__dirname, "../../dist/renderer/index.html"),
-        protocol: "file:",
-        slashes: true,
-      }),
-    );
+    const rendererUrl = format({
+      pathname: join(__dirname, "../../dist/renderer/index.html"),
+      protocol: "file:",
+      slashes: true,
+    });
+    win.loadURL(withDebugLogsQuery(rendererUrl));
   }
 
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -202,6 +216,9 @@ function setupAutoUpdater() {
 app.whenReady().then(() => {
   const startHidden = process.argv.includes("--start-in-tray");
   const win = createWindow(startHidden);
+  if (!isDev && debugLogsOptIn) {
+    console.log("[DropPilot] Verbose logging enabled (prod opt-in).");
+  }
   createTray(win);
   setupAutoUpdater();
   void loadSettings()
@@ -212,15 +229,20 @@ app.whenReady().then(() => {
       console.warn("autostart: settings load failed", err);
     });
 
-  // Forward TwitchService debug logs into renderer console (DevTools) and main console.
-  const forwardLog = (scope: string, ...args: unknown[]) => {
-    console.log(`[${scope}]`, ...args);
-    if (!win.isDestroyed()) {
-      win.webContents.send("main-log", { scope, args });
-    }
-  };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (twitchService as any).debug = (...args: unknown[]) => forwardLog("TwitchService", ...args);
+  // Forward noisy Twitch logs only in development or explicit prod opt-in.
+  if (verboseLogsEnabled) {
+    const forwardLog = (scope: string, ...args: unknown[]) => {
+      console.log(`[${scope}]`, ...args);
+      if (!win.isDestroyed()) {
+        win.webContents.send("main-log", { scope, args });
+      }
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (twitchService as any).debug = (...args: unknown[]) => forwardLog("TwitchService", ...args);
+  } else {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (twitchService as any).debug = () => {};
+  }
 
   registerIpcHandlers({
     auth,

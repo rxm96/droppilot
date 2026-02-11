@@ -3,8 +3,10 @@ export type LogLevel = "debug" | "info" | "warn" | "error";
 export type LogEntry = {
   id: number;
   at: number;
+  timeLabel: string;
   level: LogLevel;
   message: string;
+  messageLc: string;
   args: unknown[];
 };
 
@@ -13,6 +15,18 @@ const MAX_LOGS = LOG_LIMIT;
 const listeners = new Set<(entry: LogEntry) => void>();
 const buffer: LogEntry[] = [];
 let counter = 0;
+let logCollectionEnabled = false;
+
+export function setLogCollectionEnabled(enabled: boolean) {
+  logCollectionEnabled = enabled;
+  if (!enabled) {
+    buffer.length = 0;
+  }
+}
+
+export function isLogCollectionEnabled() {
+  return logCollectionEnabled;
+}
 
 const formatArg = (arg: unknown) => {
   if (typeof arg === "string") return arg;
@@ -30,11 +44,26 @@ const formatArg = (arg: unknown) => {
 const formatMessage = (args: unknown[]) => args.map(formatArg).join(" ");
 
 export function pushLog(level: LogLevel, args: unknown[]): LogEntry {
+  if (!logCollectionEnabled) {
+    return {
+      id: -1,
+      at: 0,
+      timeLabel: "",
+      level,
+      message: "",
+      messageLc: "",
+      args,
+    };
+  }
+  const at = Date.now();
+  const message = formatMessage(args);
   const entry: LogEntry = {
     id: counter++,
-    at: Date.now(),
+    at,
+    timeLabel: new Date(at).toLocaleTimeString(),
     level,
-    message: formatMessage(args),
+    message,
+    messageLc: message.toLowerCase(),
     args,
   };
   buffer.push(entry);

@@ -1,13 +1,14 @@
 import type { ErrorInfo, ProfileState } from "../types";
 import { formatRemaining } from "../utils";
 import { useI18n } from "../i18n";
+import { useEffect, useState } from "react";
+import { WATCH_INTERVAL_MS } from "../hooks/useWatchPing";
 
 type HeroProps = {
   isLinked: boolean;
   demoMode?: boolean;
   profile: ProfileState;
-  nextWatchIn?: number;
-  nextWatchProgress?: number;
+  nextWatchAt?: number;
   watchError?: ErrorInfo | null;
   activeGame?: string;
   dropsTotal?: number;
@@ -19,8 +20,7 @@ export function Hero({
   isLinked,
   demoMode,
   profile,
-  nextWatchIn,
-  nextWatchProgress,
+  nextWatchAt,
   watchError,
   activeGame,
   dropsTotal,
@@ -28,6 +28,17 @@ export function Hero({
   targetProgress,
 }: HeroProps) {
   const { t } = useI18n();
+  const [nowTick, setNowTick] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!nextWatchAt) {
+      setNowTick(Date.now());
+      return;
+    }
+    const timer = window.setInterval(() => setNowTick(Date.now()), 1_000);
+    return () => window.clearInterval(timer);
+  }, [nextWatchAt]);
+
   const dropProgress =
     typeof dropsTotal === "number" && typeof dropsClaimed === "number"
       ? `${dropsClaimed}/${dropsTotal}`
@@ -43,10 +54,12 @@ export function Hero({
   const login = profile.status === "ready" ? profile.login : "";
 
   const progressPct = typeof targetProgress === "number" ? `${Math.round(targetProgress)}%` : "--";
+  const nextWatchIn =
+    typeof nextWatchAt === "number" ? Math.max(0, Math.round((nextWatchAt - nowTick) / 1000)) : null;
   const nextWatchLabel = typeof nextWatchIn === "number" ? formatRemaining(nextWatchIn) : "--";
   const nextWatchPct =
-    typeof nextWatchProgress === "number"
-      ? Math.min(100, Math.max(0, Math.round(nextWatchProgress * 100)))
+    typeof nextWatchAt === "number"
+      ? Math.min(100, Math.max(0, Math.round((1 - (nextWatchAt - nowTick) / WATCH_INTERVAL_MS) * 100)))
       : null;
 
   return (

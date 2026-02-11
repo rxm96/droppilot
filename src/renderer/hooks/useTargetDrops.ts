@@ -36,7 +36,6 @@ type Params = {
   allowWatching: boolean;
   watching: WatchingState;
   inventoryFetchedAt: number | null;
-  nowTick: number;
 };
 
 export function useTargetDrops({
@@ -46,7 +45,6 @@ export function useTargetDrops({
   allowWatching,
   watching,
   inventoryFetchedAt,
-  nowTick,
 }: Params): TargetDropsResult {
   return useMemo(() => {
     if (!targetGame) {
@@ -128,7 +126,7 @@ export function useTargetDrops({
       0,
     );
     const liveDeltaMinutesRaw =
-      watching && inventoryFetchedAt ? Math.max(0, (nowTick - inventoryFetchedAt) / 60000) : 0;
+      watching && inventoryFetchedAt ? Math.max(0, (now - inventoryFetchedAt) / 60000) : 0;
     const liveDeltaMinutes = Math.min(
       liveDeltaMinutesRaw,
       Math.max(0, totalRequiredMinutes - totalEarnedMinutes),
@@ -154,7 +152,7 @@ export function useTargetDrops({
       ? Math.max(0, activeDropRequired - activeDropVirtualEarned)
       : 0;
     const activeDropEta =
-      activeDropRemainingMinutes > 0 ? nowTick + activeDropRemainingMinutes * 60_000 : null;
+      activeDropRemainingMinutes > 0 ? now + activeDropRemainingMinutes * 60_000 : null;
     const activeDropInfo = activeDrop
       ? {
           id: activeDrop.id,
@@ -186,7 +184,6 @@ export function useTargetDrops({
     allowWatching,
     inventoryFetchedAt,
     inventoryItems,
-    nowTick,
     targetGame,
     watching,
     withCategories,
