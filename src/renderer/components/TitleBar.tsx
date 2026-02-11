@@ -8,7 +8,6 @@ type Props = {
   version?: string;
   theme: ThemePreference;
   setTheme: Dispatch<SetStateAction<ThemePreference>>;
-  resolvedTheme: "light" | "dark";
   updateStatus?: {
     state:
       | "idle"
@@ -33,7 +32,6 @@ export function TitleBar({
   version,
   theme,
   setTheme,
-  resolvedTheme,
   updateStatus,
   onDownloadUpdate,
   onInstallUpdate,
@@ -66,7 +64,7 @@ export function TitleBar({
   const themeLabelKey = theme === "light" ? "theme.light" : "theme.dark";
   const themeLabel = t(themeLabelKey);
   const themeTitle = `${t("theme.toggle")}: ${themeLabel}`;
-  const themeIcon = resolvedTheme === "dark" ? "dark_mode" : "light_mode";
+  const themeIcon = theme === "dark" ? "dark_mode" : "light_mode";
   const cycleTheme = () => {
     setTheme((current) => (current === "light" ? "dark" : "light"));
   };

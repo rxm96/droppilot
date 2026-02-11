@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 export type ThemePreference = "light" | "dark";
 
@@ -48,11 +48,8 @@ export function useTheme() {
     setStoredTheme(theme);
   }, [theme]);
 
-  const resolvedTheme = useMemo(() => theme, [theme]);
-
   return {
     theme,
     setTheme,
-    resolvedTheme,
   };
 }
