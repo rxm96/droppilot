@@ -2527,7 +2527,6 @@ code {
   font-size: 13px;
   color: var(--foreground);
   width: 100%;
-  pointer-events: none;
 }
 
 .toggle span {
@@ -2538,7 +2537,6 @@ code {
 
 .toggle input {
   appearance: none;
-  pointer-events: auto;
   margin: 0;
   width: 36px;
   height: 20px;
