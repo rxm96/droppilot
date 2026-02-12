@@ -96,6 +96,11 @@ export function usePriorityOrchestration({
     [effectivePriorityPlan, priorityGames, fallbackOrder],
   );
 
+  const bestActionableGame = useMemo(
+    () => priorityOrder.find((game) => hasActionable(game)) ?? "",
+    [priorityOrder, hasActionable],
+  );
+
   useEffect(() => {
     if (inventoryStatus !== "idle") return;
     setPriorityPlan(null);
@@ -109,38 +114,29 @@ export function usePriorityOrchestration({
 
   useEffect(() => {
     if (inventoryStatus !== "ready") return;
-    const hasAnyActionable = priorityOrder.some((g) => hasActionable(g));
-    if (hasAnyActionable) return;
+    if (bestActionableGame) return;
     if (!watching) {
       setActiveTargetGame("");
       return;
     }
     setActiveTargetGame("");
     stopWatching();
-  }, [inventoryStatus, priorityOrder, hasActionable, stopWatching, watching]);
+  }, [inventoryStatus, bestActionableGame, stopWatching, watching]);
 
   useEffect(() => {
-    if (activeTargetGame) return;
     if (inventoryStatus !== "ready") return;
-    if (!priorityOrder.length) return;
-    const firstActionable = priorityOrder.find((g) => hasActionable(g));
-    if (!firstActionable) return;
-    setActiveTargetGame(firstActionable);
-  }, [activeTargetGame, hasActionable, inventoryStatus, priorityOrder]);
-
-  useEffect(() => {
-    if (!obeyPriority) return;
-    if (inventoryStatus !== "ready") return;
-    if (!priorityOrder.length) return;
-
-    const best = priorityOrder.find((g) => hasActionable(g));
-    if (!best) return;
+    if (!bestActionableGame) return;
 
     const currentHasDrops = activeTargetGame ? hasActionable(activeTargetGame) : false;
-    if (!activeTargetGame || !currentHasDrops || best !== activeTargetGame) {
-      setActiveTargetGame(best);
+    if (!activeTargetGame || !currentHasDrops) {
+      setActiveTargetGame(bestActionableGame);
+      return;
     }
-  }, [priorityOrder, hasActionable, obeyPriority, activeTargetGame, inventoryStatus]);
+    if (!obeyPriority) return;
+    if (bestActionableGame !== activeTargetGame) {
+      setActiveTargetGame(bestActionableGame);
+    }
+  }, [activeTargetGame, hasActionable, inventoryStatus, bestActionableGame, obeyPriority]);
 
   return {
     activeTargetGame,
