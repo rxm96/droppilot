@@ -72,13 +72,37 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const { data } = await github.rest.repos.generateReleaseNotes({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag_name: context.ref.replace("refs/tags/", ""),
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const tag = context.ref.replace("refs/tags/", "");
+            const isPrereleaseTag = /-(test|rc|beta|alpha)(?:[.-]\d+)?$/i.test(tag);
+
+            let previousTagName;
+            if (isPrereleaseTag) {
+              const releases = await github.paginate(github.rest.repos.listReleases, {
+                owner,
+                repo,
+                per_page: 100,
+              });
+              const stable = releases.find((release) => !release.draft && !release.prerelease);
+              if (stable?.tag_name) {
+                previousTagName = stable.tag_name;
+              }
+            }
+
+            const params = {
+              owner,
+              repo,
+              tag_name: tag,
               target_commitish: context.sha,
-            });
-            core.setOutput("notes", data.body ?? "");
+              ...(previousTagName ? { previous_tag_name: previousTagName } : {}),
+            };
+            const { data } = await github.rest.repos.generateReleaseNotes(params);
+            const body = (data.body ?? "").trim();
+            const onlyFullChangelog =
+              /^full\s+changelog\b[:\s-]*/i.test(body.replace(/^#+\s*/g, ""));
+            core.setOutput("notes", onlyFullChangelog ? "" : body);
+            core.setOutput("base_tag", previousTagName ?? "");
 
       - name: Generate user-friendly notes with GitHub Models
         id: user_notes
@@ -91,9 +115,10 @@ jobs:
             Return only markdown bullet points (3 to 6 bullets).
             Keep language simple and useful for non-technical users.
             Do not mention file paths, commits, pull requests, or internal implementation details.
-            Focus on user-visible features, fixes, and stability improvements.
+            Focus on concrete user-visible features and fixes.
+            Avoid vague wording like "improved stability" unless no concrete details exist.
             If no user-visible changes are present, return exactly:
-            - Internal maintenance and stability improvements.
+            - No major user-facing changes in this prerelease.
 
             Technical changelog:
             ${{ steps.generated_notes.outputs.notes }}
@@ -103,11 +128,11 @@ jobs:
           cat <<'EOF' > release_body.md
           ## What's new for users
 
-          ${{ steps.user_notes.outputs.response || '- Internal maintenance and stability improvements.' }}
+          ${{ steps.user_notes.outputs.response || '- No major user-facing changes in this prerelease.' }}
 
           ## Full changelog
 
-          ${{ steps.generated_notes.outputs.notes }}
+          ${{ steps.generated_notes.outputs.notes || format('Compared against {0}. No detailed changelog entries were generated for this tag range.', steps.generated_notes.outputs.base_tag || 'the previous release') }}
           EOF
 
       - name: Resolve release visibility
