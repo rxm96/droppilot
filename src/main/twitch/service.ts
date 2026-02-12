@@ -59,6 +59,10 @@ export class TwitchService {
 
   async getInventory(): Promise<InventoryItem[]> {
     const { edges, summary } = await this.fetchCampaignEdges();
+    if (edges.length === 0) {
+      this.debug("Inventory empty (no active campaigns)", { summary });
+      return [];
+    }
     const detailed = await this.enrichCampaigns(edges);
     const items: InventoryItem[] = [];
     let dropsCount = 0;
@@ -140,11 +144,8 @@ export class TwitchService {
     }
 
     if (items.length === 0) {
-      this.debug("No drops built", { summary, dropsCount });
-      throw new TwitchServiceError(
-        TWITCH_ERROR_CODES.INVENTORY_EMPTY,
-        `No drops found. ${summary} dropsCount=${dropsCount}`,
-      );
+      this.debug("Inventory empty (no claimable/progress drops)", { summary, dropsCount });
+      return [];
     }
 
     this.debug("Built inventory items", items.length);
@@ -539,10 +540,14 @@ export class TwitchService {
 
     const mergedEdges = Array.from(campaignsById.values());
     if (mergedEdges.length === 0) {
-      throw new TwitchServiceError(
-        TWITCH_ERROR_CODES.INVENTORY_EMPTY,
-        `No campaigns returned. Campaigns: ${campaignsSummary}; Inventory: ${inventorySummary}`,
-      );
+      this.debug("No campaigns returned", {
+        campaignsSummary,
+        inventorySummary,
+      });
+      return {
+        edges: [],
+        summary: `Campaigns(${campaignsSummary}); Inventory(${inventorySummary}); totalEdges=0`,
+      };
     }
 
     return {
