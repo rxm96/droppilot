@@ -14,6 +14,7 @@ import {
   type LogEntry,
   type LogLevel,
 } from "../utils/logStore";
+import { resetPerfStore } from "../utils/perfStore";
 
 type DebugViewProps = {
   snapshot: Record<string, unknown>;
@@ -276,6 +277,7 @@ export function DebugView({ snapshot }: DebugViewProps) {
                 size="sm"
                 onClick={() => {
                   clearLogBuffer();
+                  resetPerfStore();
                   setLogs([]);
                 }}
               >

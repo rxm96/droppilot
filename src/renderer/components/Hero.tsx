@@ -55,11 +55,16 @@ export function Hero({
 
   const progressPct = typeof targetProgress === "number" ? `${Math.round(targetProgress)}%` : "--";
   const nextWatchIn =
-    typeof nextWatchAt === "number" ? Math.max(0, Math.round((nextWatchAt - nowTick) / 1000)) : null;
+    typeof nextWatchAt === "number"
+      ? Math.max(0, Math.round((nextWatchAt - nowTick) / 1000))
+      : null;
   const nextWatchLabel = typeof nextWatchIn === "number" ? formatRemaining(nextWatchIn) : "--";
   const nextWatchPct =
     typeof nextWatchAt === "number"
-      ? Math.min(100, Math.max(0, Math.round((1 - (nextWatchAt - nowTick) / WATCH_INTERVAL_MS) * 100)))
+      ? Math.min(
+          100,
+          Math.max(0, Math.round((1 - (nextWatchAt - nowTick) / WATCH_INTERVAL_MS) * 100)),
+        )
       : null;
 
   return (

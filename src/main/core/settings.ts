@@ -146,8 +146,7 @@ export async function saveSettings(data: Partial<SettingsData>): Promise<Setting
         ? (data.refreshMaxMs as number)
         : current.refreshMaxMs,
     demoMode: typeof data.demoMode === "boolean" ? data.demoMode : current.demoMode,
-    debugEnabled:
-      typeof data.debugEnabled === "boolean" ? data.debugEnabled : current.debugEnabled,
+    debugEnabled: typeof data.debugEnabled === "boolean" ? data.debugEnabled : current.debugEnabled,
     alertsEnabled:
       typeof data.alertsEnabled === "boolean" ? data.alertsEnabled : current.alertsEnabled,
     alertsNotifyWhileFocused:

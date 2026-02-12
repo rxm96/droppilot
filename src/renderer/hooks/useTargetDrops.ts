@@ -180,12 +180,5 @@ export function useTargetDrops({
       canWatchTarget,
       showNoDropsHint,
     };
-  }, [
-    allowWatching,
-    inventoryFetchedAt,
-    inventoryItems,
-    targetGame,
-    watching,
-    withCategories,
-  ]);
+  }, [allowWatching, inventoryFetchedAt, inventoryItems, targetGame, watching, withCategories]);
 }

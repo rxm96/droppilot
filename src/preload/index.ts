@@ -56,8 +56,7 @@ const api = {
       totalClaims?: number;
       lastReset?: number;
       claimsByGame?: Record<string, number>;
-    }) =>
-      ipcRenderer.invoke("stats/save", payload),
+    }) => ipcRenderer.invoke("stats/save", payload),
     bump: (payload: {
       minutes?: number;
       claims?: number;

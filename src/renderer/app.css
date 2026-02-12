@@ -64,11 +64,7 @@
   --progress-track: var(--muted);
   --progress-fill: linear-gradient(135deg, var(--accent), var(--accent-2));
   --debug-panel-height: 460px;
-  font-family:
-    "Space Grotesk",
-    "Segoe UI",
-    system-ui,
-    sans-serif;
+  font-family: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
   color: var(--foreground);
 }
 
@@ -389,7 +385,11 @@ body {
   font-family: "Material Symbols Rounded";
   font-weight: normal;
   font-style: normal;
-  font-variation-settings: "FILL" 0, "wght" 500, "GRAD" 0, "opsz" 24;
+  font-variation-settings:
+    "FILL" 0,
+    "wght" 500,
+    "GRAD" 0,
+    "opsz" 24;
   line-height: 1;
   letter-spacing: normal;
   text-transform: none;
@@ -436,9 +436,7 @@ body {
   padding: 26px 28px;
   border-radius: 20px;
   border: 1px solid var(--border-strong);
-  background:
-    linear-gradient(160deg, rgba(12, 18, 34, 0.96), rgba(8, 12, 24, 0.98)),
-    var(--panel);
+  background: linear-gradient(160deg, rgba(12, 18, 34, 0.96), rgba(8, 12, 24, 0.98)), var(--panel);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
 }
 
@@ -446,6 +444,33 @@ body {
   margin: 0;
   font-size: 26px;
   letter-spacing: -0.3px;
+}
+
+.update-overlay-notes {
+  width: 100%;
+  max-height: 220px;
+  overflow: auto;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(6, 10, 20, 0.68);
+}
+
+.update-overlay-notes-title {
+  margin: 0 0 6px 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-foreground);
+}
+
+.update-overlay-notes-body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text);
+  white-space: pre-wrap;
 }
 
 .update-overlay-orbit {
@@ -645,9 +670,7 @@ body {
   position: relative;
   overflow: hidden;
   border: 1px solid rgba(136, 208, 255, 0.18);
-  background:
-    linear-gradient(180deg, rgba(12, 18, 34, 0.9), rgba(10, 15, 28, 0.95)),
-    var(--panel);
+  background: linear-gradient(180deg, rgba(12, 18, 34, 0.9), rgba(10, 15, 28, 0.95)), var(--panel);
   box-shadow:
     0 12px 24px rgba(0, 0, 0, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
@@ -657,11 +680,7 @@ body {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(
-    120% 100% at 0% 0%,
-    rgba(136, 208, 255, 0.18),
-    transparent 60%
-  );
+  background: radial-gradient(120% 100% at 0% 0%, rgba(136, 208, 255, 0.18), transparent 60%);
   opacity: 0.4;
   pointer-events: none;
 }
@@ -895,8 +914,6 @@ a,
   flex-direction: column;
   gap: 12px;
 }
-
-
 
 .chip {
   display: inline-flex;
@@ -1517,8 +1534,7 @@ code {
   border: 1px solid var(--border);
   background:
     radial-gradient(120% 140% at 10% 10%, var(--spotlight-grad-1), transparent 60%),
-    linear-gradient(135deg, var(--spotlight-grad-2), transparent 65%),
-    var(--panel-strong);
+    linear-gradient(135deg, var(--spotlight-grad-2), transparent 65%), var(--panel-strong);
   box-shadow: var(--shadow);
   display: grid;
   grid-template-columns: minmax(0, 1fr);

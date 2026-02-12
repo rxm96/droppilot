@@ -53,7 +53,15 @@ type SettingsProps = {
   downloadUpdate?: () => void;
   installUpdate?: () => void;
   updateStatus?: {
-    state: "idle" | "checking" | "available" | "downloading" | "downloaded" | "none" | "error" | "unsupported";
+    state:
+      | "idle"
+      | "checking"
+      | "available"
+      | "downloading"
+      | "downloaded"
+      | "none"
+      | "error"
+      | "unsupported";
     message?: string;
     version?: string;
     progress?: number;
@@ -117,6 +125,11 @@ export function SettingsView({
   updateStatus,
 }: SettingsProps) {
   const { t } = useI18n();
+  const resolveUiText = (text?: string | null) => {
+    if (!text) return null;
+    const translated = t(text);
+    return translated !== text ? translated : text;
+  };
   const formatBytes = (bytes?: number) => {
     if (!bytes || bytes <= 0) return "0 MB";
     const mb = bytes / (1024 * 1024);
@@ -147,12 +160,14 @@ export function SettingsView({
         return t("settings.updateUnsupported");
       case "error":
         return updateStatus.message
-          ? `${t("settings.updateError")}: ${updateStatus.message}`
+          ? `${t("settings.updateError")}: ${resolveUiText(updateStatus.message)}`
           : t("settings.updateError");
       default:
         return null;
     }
   })();
+  const settingsInfoText = resolveUiText(settingsInfo);
+  const settingsErrorText = resolveUiText(settingsError);
   return (
     <>
       <div className="settings-head">
@@ -502,8 +517,8 @@ export function SettingsView({
                 {t("settings.import")}
               </button>
             </div>
-            {settingsInfo ? <p className="meta">{settingsInfo}</p> : null}
-            {settingsError ? <p className="error">{settingsError}</p> : null}
+            {settingsInfoText ? <p className="meta">{settingsInfoText}</p> : null}
+            {settingsErrorText ? <p className="error">{settingsErrorText}</p> : null}
           </section>
         </div>
       </div>

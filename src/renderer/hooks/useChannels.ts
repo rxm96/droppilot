@@ -1,15 +1,23 @@
 import { useEffect, useState } from "react";
 import type { AutoSwitchInfo, ChannelEntry, ErrorInfo, View, WatchingState } from "../types";
 import { getDemoChannels } from "../demoData";
-import { logDebug, logInfo, logWarn } from "../utils/logger";
 import { errorInfoFromIpc, errorInfoFromUnknown } from "../utils/errors";
+import {
+  isArrayOf,
+  isChannelEntry,
+  isIpcAuthErrorResponse,
+  isIpcErrorResponse,
+} from "../utils/ipc";
+import { logDebug, logInfo, logWarn } from "../utils/logger";
+import { RENDERER_ERROR_CODES } from "../../shared/errorCodes";
 
 type Params = {
   targetGame: string;
   view: View;
   watching: WatchingState;
-  setWatching: (next: WatchingState) => void;
+  setWatchingFromChannel: (channel: ChannelEntry) => void;
   fetchInventory: () => void;
+  inventoryFetchedAt: number | null;
   autoSelectEnabled: boolean;
   autoSwitchEnabled: boolean;
   allowWatching: boolean;
@@ -22,8 +30,9 @@ export function useChannels({
   targetGame,
   view,
   watching,
-  setWatching,
+  setWatchingFromChannel,
   fetchInventory,
+  inventoryFetchedAt,
   autoSelectEnabled,
   autoSwitchEnabled,
   allowWatching,
@@ -31,6 +40,7 @@ export function useChannels({
   demoMode,
   onAuthError,
 }: Params) {
+  const RECENT_INVENTORY_WINDOW_MS = 30_000;
   const [channels, setChannels] = useState<ChannelEntry[]>([]);
   const [channelError, setChannelError] = useState<ErrorInfo | null>(null);
   const [channelsLoading, setChannelsLoading] = useState<boolean>(false);
@@ -43,6 +53,8 @@ export function useChannels({
     fetchedGame === game &&
     now - fetchedAt < 5 * 60_000 &&
     channels.length > 0;
+  const hasRecentInventory = (now = Date.now()) =>
+    inventoryFetchedAt !== null && now - inventoryFetchedAt < RECENT_INVENTORY_WINDOW_MS;
 
   const fetchChannels = async (gameName: string, { force }: { force?: boolean } = {}) => {
     if (!allowWatching) return;
@@ -61,44 +73,63 @@ export function useChannels({
         setChannels(list);
         setFetchedAt(now);
         setFetchedGame(gameName);
-        const shouldSkipInventory = autoSelectEnabled && !watching;
+        const shouldSkipInventory = (autoSelectEnabled && !watching) || hasRecentInventory(now);
         if (shouldSkipInventory) {
-          logDebug("channels: skip inventory fetch (auto-select will fetch after watching is set)");
+          logDebug("channels: skip inventory fetch (recent or auto-select)");
         } else {
           fetchInventory();
         }
         return;
       }
       logInfo("channels: fetch start", { game: gameName, force });
-      const res = await window.electronAPI.twitch.channels({ game: gameName });
-      if ((res as any)?.error) {
-        if ((res as any).error === "auth") {
-          onAuthError?.((res as any).message);
+      const res: unknown = await window.electronAPI.twitch.channels({ game: gameName });
+      if (isIpcErrorResponse(res)) {
+        if (isIpcAuthErrorResponse(res)) {
+          onAuthError?.(res.message);
           setChannels([]);
           setChannelError(null);
           logWarn("channels: auth error", res);
           return;
         }
-        setChannelError(errorInfoFromIpc(res as any, "Channel-Fehler"));
+        setChannelError(
+          errorInfoFromIpc(res, {
+            code: RENDERER_ERROR_CODES.CHANNELS_FETCH_FAILED,
+            message: "Unable to load channels",
+          }),
+        );
         setChannels([]);
         logWarn("channels: fetch error", res);
         return;
       }
-      const list = (res as ChannelEntry[]) ?? [];
+      if (!isArrayOf(res, isChannelEntry)) {
+        setChannelError({
+          code: RENDERER_ERROR_CODES.CHANNELS_INVALID_RESPONSE,
+          message: "Invalid channels response",
+        });
+        setChannels([]);
+        logWarn("channels: invalid response", res);
+        return;
+      }
+      const list = res;
       logInfo("channels: fetch success", { game: gameName, count: list.length });
       logDebug("channels: sample", list.slice(0, 3));
       setChannels(list);
       setFetchedAt(now);
       setFetchedGame(gameName);
-      const shouldSkipInventory = autoSelectEnabled && !watching;
+      const shouldSkipInventory = (autoSelectEnabled && !watching) || hasRecentInventory(now);
       if (shouldSkipInventory) {
-        logDebug("channels: skip inventory fetch (auto-select will fetch after watching is set)");
+        logDebug("channels: skip inventory fetch (recent or auto-select)");
       } else {
         // Nach Channel-Fetch auch Inventar neu laden, damit Drop-Progress aktuell bleibt.
         fetchInventory();
       }
     } catch (err) {
-      setChannelError(errorInfoFromUnknown(err, "Channel-Fehler"));
+      setChannelError(
+        errorInfoFromUnknown(err, {
+          code: RENDERER_ERROR_CODES.CHANNELS_FETCH_FAILED,
+          message: "Unable to load channels",
+        }),
+      );
       setChannels([]);
     } finally {
       setChannelsLoading(false);
@@ -168,17 +199,24 @@ export function useChannels({
     if (!canWatchTarget) return;
     if (channels.length && !watching) {
       const first = channels[0];
-      setWatching({
-        id: first.id,
-        name: first.displayName,
-        game: first.game,
-        login: first.login,
-        channelId: first.id,
-        streamId: first.streamId,
-      });
-      fetchInventory();
+      setWatchingFromChannel(first);
+      if (hasRecentInventory()) {
+        logDebug("channels: skip inventory fetch (recent inventory)");
+      } else {
+        fetchInventory();
+      }
     }
-  }, [channels, watching, targetGame, autoSelectEnabled, allowWatching, canWatchTarget]);
+  }, [
+    channels,
+    watching,
+    targetGame,
+    autoSelectEnabled,
+    allowWatching,
+    canWatchTarget,
+    inventoryFetchedAt,
+    setWatchingFromChannel,
+    fetchInventory,
+  ]);
 
   // Auto-switch if current channel disappears
   useEffect(() => {
@@ -189,14 +227,7 @@ export function useChannels({
     const stillThere = channels.some((c) => c.id === watching.id);
     if (!stillThere) {
       const first = channels[0];
-      setWatching({
-        id: first.id,
-        name: first.displayName,
-        game: first.game,
-        login: first.login,
-        channelId: first.id,
-        streamId: first.streamId,
-      });
+      setWatchingFromChannel(first);
       setAutoSwitch({
         at: Date.now(),
         reason: "offline",
@@ -205,7 +236,15 @@ export function useChannels({
       });
       fetchInventory();
     }
-  }, [channels, watching, autoSelectEnabled, allowWatching, autoSwitchEnabled]);
+  }, [
+    channels,
+    watching,
+    autoSelectEnabled,
+    allowWatching,
+    autoSwitchEnabled,
+    setWatchingFromChannel,
+    fetchInventory,
+  ]);
 
   useEffect(() => {
     if (allowWatching) return;

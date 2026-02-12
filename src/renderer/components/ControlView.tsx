@@ -204,9 +204,9 @@ export function ControlView({
   const [progressNow, setProgressNow] = useState(() => Date.now());
   const shouldTickProgress = Boolean(
     watching &&
-      inventoryFetchedAt &&
-      activeDropInfo &&
-      activeDropInfo.requiredMinutes > activeDropInfo.earnedMinutes,
+    inventoryFetchedAt &&
+    activeDropInfo &&
+    activeDropInfo.requiredMinutes > activeDropInfo.earnedMinutes,
   );
   useEffect(() => {
     if (!shouldTickProgress) return;
@@ -225,14 +225,21 @@ export function ControlView({
     const totalRemainingMinutes = Math.max(0, totalRequiredMinutes - totalEarnedMinutes);
     const liveDeltaMinutesRaw = Math.max(0, (progressNow - inventoryFetchedAt) / 60_000);
     const liveDeltaMinutes = Math.min(liveDeltaMinutesRaw, totalRemainingMinutes);
-    const activeRemainingBase = Math.max(0, activeDropInfo.requiredMinutes - activeDropInfo.earnedMinutes);
+    const activeRemainingBase = Math.max(
+      0,
+      activeDropInfo.requiredMinutes - activeDropInfo.earnedMinutes,
+    );
     const liveDeltaApplied = Math.min(liveDeltaMinutes, activeRemainingBase);
     const activeVirtualEarned = Math.min(
       activeDropInfo.requiredMinutes,
       activeDropInfo.earnedMinutes + liveDeltaApplied,
     );
-    const activeRemainingMinutes = Math.max(0, activeDropInfo.requiredMinutes - activeVirtualEarned);
-    const activeEta = activeRemainingMinutes > 0 ? progressNow + activeRemainingMinutes * 60_000 : null;
+    const activeRemainingMinutes = Math.max(
+      0,
+      activeDropInfo.requiredMinutes - activeVirtualEarned,
+    );
+    const activeEta =
+      activeRemainingMinutes > 0 ? progressNow + activeRemainingMinutes * 60_000 : null;
     return { liveDeltaApplied, activeRemainingMinutes, activeEta };
   }, [
     activeDropInfo,
@@ -254,7 +261,9 @@ export function ControlView({
       return formatNumber(val);
     }
   };
-  const activeEtaText = liveProgress.activeEta ? new Date(liveProgress.activeEta).toLocaleTimeString() : null;
+  const activeEtaText = liveProgress.activeEta
+    ? new Date(liveProgress.activeEta).toLocaleTimeString()
+    : null;
   const activeChannel =
     watching && channels.length
       ? channels.find((c) => c.id === watching.id || c.login === watching.login)
@@ -351,8 +360,8 @@ export function ControlView({
                   </div>
                   {autoSwitchInfo ? (
                     <p className="meta muted">
-                      Auto-Switch ({autoSwitchInfo.reason}): {autoSwitchInfo.from?.name ?? "Unknown"} -
-                      {">"} {autoSwitchInfo.to.name} um{" "}
+                      Auto-Switch ({autoSwitchInfo.reason}):{" "}
+                      {autoSwitchInfo.from?.name ?? "Unknown"} -{">"} {autoSwitchInfo.to.name} um{" "}
                       {new Date(autoSwitchInfo.at).toLocaleTimeString()}
                     </p>
                   ) : null}
@@ -399,7 +408,9 @@ export function ControlView({
                           : t("control.done")}
                       </span>
                       {activeEtaText ? (
-                        <span className="pill ghost small">{t("control.eta", { time: activeEtaText })}</span>
+                        <span className="pill ghost small">
+                          {t("control.eta", { time: activeEtaText })}
+                        </span>
                       ) : null}
                     </div>
                   </div>
@@ -557,7 +568,10 @@ export function ControlView({
                       }}
                     >
                       {thumb ? (
-                        <div className="channel-thumb" style={{ backgroundImage: `url(${thumb})` }} />
+                        <div
+                          className="channel-thumb"
+                          style={{ backgroundImage: `url(${thumb})` }}
+                        />
                       ) : null}
                       <span className="viewer-badge">{formatViewers(c.viewers)}</span>
                       <div className="channel-content">

@@ -44,80 +44,48 @@ export function useInventoryRefresh({
   }, [authStatus]);
 
   useEffect(() => {
-    if (!watching) return;
-    let cancelled = false;
-    let timeout: number | undefined;
-    const minDelay = Math.max(MIN_REFRESH_MS, refreshMinMs);
-    const maxDelay = Math.max(minDelay, refreshMaxMs);
-    const withJitter = () =>
-      minDelay + Math.floor(Math.random() * Math.max(1, maxDelay - minDelay));
-    const scheduleNext = (delayMs: number) => {
-      const nextAt = Date.now() + delayMs;
-      setInventoryRefresh((prev) => ({
-        mode: "watching",
-        lastRun: prev.lastRun,
-        nextAt,
-      }));
-      logDebug("heartbeat: inventory refresh scheduled", { mode: "watching", delayMs, nextAt });
-      timeout = window.setTimeout(() => {
-        void tick();
-      }, delayMs);
-    };
-    const tick = async () => {
-      if (cancelled) return;
-      const startedAt = Date.now();
-      setInventoryRefresh((prev) => ({
-        mode: "watching",
-        lastRun: startedAt,
-        nextAt: prev.nextAt,
-      }));
-      logInfo("heartbeat: inventory refresh run", { mode: "watching", at: startedAt });
-      await fetchInventoryRef.current();
-      if (cancelled) return;
-      scheduleNext(withJitter());
-    };
-    scheduleNext(minDelay);
-    return () => {
-      cancelled = true;
-      if (timeout) window.clearTimeout(timeout);
-    };
-  }, [watching, refreshMinMs, refreshMaxMs]);
+    const mode: InventoryRefreshState["mode"] = watching
+      ? "watching"
+      : authStatus === "ok"
+        ? "idle"
+        : null;
+    if (!mode) return;
 
-  useEffect(() => {
-    if (watching) return;
-    if (authStatus !== "ok") return;
     let cancelled = false;
+    let timeout: number | undefined;
     const minDelay = Math.max(MIN_REFRESH_MS, refreshMinMs);
     const maxDelay = Math.max(minDelay, refreshMaxMs);
     const withJitter = () =>
       minDelay + Math.floor(Math.random() * Math.max(1, maxDelay - minDelay));
-    let timeout: number | undefined;
+
     const scheduleNext = (delayMs: number) => {
       const nextAt = Date.now() + delayMs;
       setInventoryRefresh((prev) => ({
-        mode: "idle",
+        mode,
         lastRun: prev.lastRun,
         nextAt,
       }));
-      logDebug("heartbeat: inventory refresh scheduled", { mode: "idle", delayMs, nextAt });
+      logDebug("heartbeat: inventory refresh scheduled", { mode, delayMs, nextAt });
       timeout = window.setTimeout(() => {
         void run();
       }, delayMs);
     };
+
     const run = async () => {
       if (cancelled) return;
       const startedAt = Date.now();
       setInventoryRefresh((prev) => ({
-        mode: "idle",
+        mode,
         lastRun: startedAt,
         nextAt: prev.nextAt,
       }));
-      logInfo("heartbeat: inventory refresh run", { mode: "idle", at: startedAt });
+      logInfo("heartbeat: inventory refresh run", { mode, at: startedAt });
       await fetchInventoryRef.current();
       if (!cancelled) {
         scheduleNext(withJitter());
       }
     };
+
     scheduleNext(minDelay);
     return () => {
       cancelled = true;

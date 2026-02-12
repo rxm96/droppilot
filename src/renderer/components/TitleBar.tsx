@@ -59,7 +59,11 @@ export function TitleBar({
       : updateLabel;
   const canDownloadUpdate = updateState === "available" && typeof onDownloadUpdate === "function";
   const canInstallUpdate = updateState === "downloaded" && typeof onInstallUpdate === "function";
-  const updateAction = canDownloadUpdate ? onDownloadUpdate : canInstallUpdate ? onInstallUpdate : undefined;
+  const updateAction = canDownloadUpdate
+    ? onDownloadUpdate
+    : canInstallUpdate
+      ? onInstallUpdate
+      : undefined;
   const disableUpdateAction = updateState === "downloading" || !updateAction;
   const themeLabelKey = theme === "light" ? "theme.light" : "theme.dark";
   const themeLabel = t(themeLabelKey);

@@ -99,7 +99,7 @@ export type StatsState =
   | { status: "idle" }
   | { status: "loading" }
   | { status: "ready"; data: StatsData }
-  | { status: "error"; message: string };
+  | { status: "error"; message: string; code?: string };
 
 export type ClaimStatus = {
   kind: "success" | "error";

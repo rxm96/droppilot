@@ -67,7 +67,9 @@ export async function saveStats(data: Partial<StatsData>): Promise<StatsData> {
     totalClaims: Math.max(0, Number(data.totalClaims ?? current.totalClaims) || 0),
     lastReset: typeof data.lastReset === "number" ? data.lastReset : current.lastReset,
     claimsByGame:
-      data.claimsByGame !== undefined ? normalizeClaimsByGame(data.claimsByGame) : current.claimsByGame,
+      data.claimsByGame !== undefined
+        ? normalizeClaimsByGame(data.claimsByGame)
+        : current.claimsByGame,
   };
   return writeStats(next);
 }

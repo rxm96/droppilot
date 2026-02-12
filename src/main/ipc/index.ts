@@ -8,6 +8,56 @@ import type { StatsData } from "../core/stats";
 import type { PriorityPlan } from "../twitch/channels";
 import { TwitchServiceError } from "../twitch/errors";
 
+function extractReleaseNoteText(entry: unknown): string {
+  if (typeof entry === "string") return entry;
+  if (!entry || typeof entry !== "object") return "";
+  const record = entry as Record<string, unknown>;
+  if (typeof record.note === "string") return record.note;
+  if (typeof record.body === "string") return record.body;
+  if (typeof record.releaseNotes === "string") return record.releaseNotes;
+  return "";
+}
+
+function extractUserFacingSection(text: string): string {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const start = lines.findIndex((line) =>
+    /^##\s+what'?s new for users\s*$/i.test(line.trim()),
+  );
+  if (start < 0) return text.trim();
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i += 1) {
+    if (/^##\s+/.test(lines[i].trim())) {
+      end = i;
+      break;
+    }
+  }
+  return lines
+    .slice(start + 1, end)
+    .join("\n")
+    .trim();
+}
+
+function normalizeReleaseNotes(value: unknown): string | undefined {
+  const raw = Array.isArray(value)
+    ? value
+        .map((entry) => extractReleaseNoteText(entry))
+        .filter((entry) => entry.trim().length > 0)
+        .join("\n\n")
+    : extractReleaseNoteText(value);
+  if (!raw) return undefined;
+  const text = raw
+    .replace(/<br\s*\/?\s*>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<li>/gi, "- ")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  const userFacing = extractUserFacingSection(text);
+  return userFacing.length > 0 ? userFacing : undefined;
+}
+
 export function registerIpcHandlers(deps: {
   auth: AuthController;
   twitch: TwitchService;
@@ -236,8 +286,9 @@ export function registerIpcHandlers(deps: {
       autoUpdater.autoDownload = false;
       const result = await autoUpdater.checkForUpdates();
       const version = result?.updateInfo?.version;
+      const releaseNotes = normalizeReleaseNotes(result?.updateInfo?.releaseNotes);
       if (version && version !== app.getVersion()) {
-        return { ok: true, status: "available", version };
+        return { ok: true, status: "available", version, releaseNotes };
       }
       return { ok: true, status: "none" };
     } catch (err) {
