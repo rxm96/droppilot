@@ -13,6 +13,7 @@ type UpdateStatus = {
     | "unsupported";
   message?: string;
   version?: string;
+  releaseNotes?: string;
   progress?: number;
   transferred?: number;
   total?: number;
@@ -29,11 +30,25 @@ export function UpdateOverlay({ updateStatus, onInstallUpdate }: Props) {
   const resolvedStatus: UpdateStatus = updateStatus ?? { state: "idle" };
   const statusState = resolvedStatus.state;
   const forcePreview = false;
+  const previewVersion = "2.1.0";
+  const previewReleaseNotes = [
+    "- Improved update flow stability and error handling",
+    "- Added release notes in the update overlay",
+    "- Hardened drag-and-drop reorder edge cases",
+    "- Reduced unnecessary priority-plan IPC refreshes",
+  ].join("\n");
   const needsPreview =
     forcePreview && statusState !== "downloading" && statusState !== "downloaded";
   const effectiveState = needsPreview ? "downloaded" : statusState;
   const isDownloading = effectiveState === "downloading";
   const isReady = effectiveState === "downloaded";
+  const effectiveVersion = resolvedStatus.version ?? (needsPreview ? previewVersion : undefined);
+  const releaseNotes = (() => {
+    const provided =
+      typeof resolvedStatus.releaseNotes === "string" ? resolvedStatus.releaseNotes.trim() : "";
+    if (provided) return provided;
+    return needsPreview ? previewReleaseNotes : "";
+  })();
 
   const progressPct = Math.min(100, Math.max(0, Math.round(resolvedStatus.progress ?? 0)));
   const showProgress = isDownloading && Number.isFinite(progressPct);
@@ -50,6 +65,9 @@ export function UpdateOverlay({ updateStatus, onInstallUpdate }: Props) {
         total: formatBytes(resolvedStatus.total),
       })
     : t("settings.updateDownloaded");
+  const releaseNotesTitle = effectiveVersion
+    ? t("updateOverlay.whatsNewVersion", { version: effectiveVersion })
+    : t("updateOverlay.whatsNew");
 
   useEffect(() => {
     if (!isDownloading && !isReady) return;
@@ -78,6 +96,12 @@ export function UpdateOverlay({ updateStatus, onInstallUpdate }: Props) {
           {isDownloading ? t("titlebar.updateDownloading") : t("titlebar.updateReady")}
         </h2>
         <p className="meta">{subtitle}</p>
+        {releaseNotes ? (
+          <section className="update-overlay-notes" aria-label={releaseNotesTitle}>
+            <h3 className="update-overlay-notes-title">{releaseNotesTitle}</h3>
+            <p className="update-overlay-notes-body">{releaseNotes}</p>
+          </section>
+        ) : null}
         {showProgress ? (
           <div className="progress-bar" aria-hidden="true">
             <span style={{ width: `${progressPct}%` }} />

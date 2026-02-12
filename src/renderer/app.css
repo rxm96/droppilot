@@ -446,6 +446,33 @@ body {
   letter-spacing: -0.3px;
 }
 
+.update-overlay-notes {
+  width: 100%;
+  max-height: 220px;
+  overflow: auto;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(6, 10, 20, 0.68);
+}
+
+.update-overlay-notes-title {
+  margin: 0 0 6px 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-foreground);
+}
+
+.update-overlay-notes-body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
 .update-overlay-orbit {
   position: relative;
   width: 96px;

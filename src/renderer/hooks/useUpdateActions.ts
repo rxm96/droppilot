@@ -12,7 +12,11 @@ export function useUpdateActions({ setUpdateStatus }: Params) {
       setUpdateStatus({ state: "error", message: "error.update.check_api_unavailable" });
       return;
     }
-    setUpdateStatus({ state: "checking" });
+    setUpdateStatus((prev) => ({
+      state: "checking",
+      version: prev.version,
+      releaseNotes: prev.releaseNotes,
+    }));
     try {
       const res = await window.electronAPI.app.checkUpdates();
       if (!res) {
@@ -24,7 +28,14 @@ export function useUpdateActions({ setUpdateStatus }: Params) {
         return;
       }
       if (res.ok && res.status === "available") {
-        setUpdateStatus({ state: "available", version: res.version });
+        setUpdateStatus({
+          state: "available",
+          version: typeof res.version === "string" ? res.version : undefined,
+          releaseNotes:
+            typeof (res as { releaseNotes?: unknown }).releaseNotes === "string"
+              ? (res as { releaseNotes?: string }).releaseNotes
+              : undefined,
+        });
         return;
       }
       if (res.ok && res.status === "none") {
@@ -45,7 +56,12 @@ export function useUpdateActions({ setUpdateStatus }: Params) {
       setUpdateStatus({ state: "error", message: "error.update.download_api_unavailable" });
       return;
     }
-    setUpdateStatus({ state: "downloading", progress: 0 });
+    setUpdateStatus((prev) => ({
+      state: "downloading",
+      version: prev.version,
+      releaseNotes: prev.releaseNotes,
+      progress: 0,
+    }));
     try {
       const res = await window.electronAPI.app.downloadUpdate();
       if (!res) {

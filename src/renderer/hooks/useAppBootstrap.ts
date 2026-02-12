@@ -21,6 +21,7 @@ export type AppUpdateStatus = {
     | "unsupported";
   message?: string;
   version?: string;
+  releaseNotes?: string;
   progress?: number;
   transferred?: number;
   total?: number;
@@ -162,25 +163,40 @@ export function useAppBootstrap({
   useEffect(() => {
     const unsubscribe = window.electronAPI.app?.onUpdateStatus?.((payload) => {
       const status = payload?.status;
+      const payloadVersion = typeof payload?.version === "string" ? payload.version : undefined;
+      const payloadReleaseNotes =
+        typeof payload?.releaseNotes === "string" ? payload.releaseNotes : undefined;
       if (status === "available") {
-        setUpdateStatus({ state: "available", version: payload.version as string | undefined });
+        setUpdateStatus({
+          state: "available",
+          version: payloadVersion,
+          releaseNotes: payloadReleaseNotes,
+        });
       } else if (status === "none") {
         setUpdateStatus({ state: "none" });
       } else if (status === "downloading") {
-        setUpdateStatus({
+        setUpdateStatus((prev) => ({
           state: "downloading",
+          version: payloadVersion ?? prev.version,
+          releaseNotes: payloadReleaseNotes ?? prev.releaseNotes,
           progress: Number(payload.percent ?? 0),
           transferred: Number(payload.transferred ?? 0),
           total: Number(payload.total ?? 0),
           bytesPerSecond: Number(payload.bytesPerSecond ?? 0),
-        });
+        }));
       } else if (status === "downloaded") {
-        setUpdateStatus({ state: "downloaded" });
+        setUpdateStatus((prev) => ({
+          state: "downloaded",
+          version: payloadVersion ?? prev.version,
+          releaseNotes: payloadReleaseNotes ?? prev.releaseNotes,
+        }));
       } else if (status === "error") {
-        setUpdateStatus({
+        setUpdateStatus((prev) => ({
           state: "error",
+          version: prev.version,
+          releaseNotes: prev.releaseNotes,
           message: payload.message ? String(payload.message) : "error.update.unknown",
-        });
+        }));
       }
     });
     return () => {
