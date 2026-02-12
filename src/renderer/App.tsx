@@ -149,7 +149,7 @@ function App() {
   });
   const watchStats = useWatchPing({ watching, bumpStats, forwardAuthError, demoMode });
 
-  const { profile, appVersion, updateStatus, setUpdateStatus } = useAppBootstrap({
+  const { profile, appVersion, updateStatus, setUpdateStatus, trackerStatus } = useAppBootstrap({
     authStatus: auth.status,
     demoMode,
     debugEnabled,
@@ -293,20 +293,23 @@ function App() {
     return () => window.clearTimeout(timeout);
   }, [watching, activeDropEta, fetchInventory]);
 
-  const { channels, channelError, channelsLoading, autoSwitch } = useChannels({
-    targetGame,
-    view,
-    watching,
-    setWatchingFromChannel,
-    autoSelectEnabled,
-    autoSwitchEnabled,
-    fetchInventory: () => fetchInventory(),
-    inventoryFetchedAt,
-    allowWatching,
-    canWatchTarget,
-    demoMode,
-    onAuthError: forwardAuthError,
-  });
+  const { channels, channelDiff, channelError, channelsLoading, channelsRefreshing, autoSwitch } =
+    useChannels({
+      targetGame,
+      view,
+      watching,
+      setWatchingFromChannel,
+      clearWatching,
+      autoSelectEnabled,
+      autoSwitchEnabled,
+      fetchInventory: () => fetchInventory(),
+      inventoryFetchedAt,
+      allowWatching,
+      canWatchTarget,
+      trackerMode: trackerStatus?.mode,
+      demoMode,
+      onAuthError: forwardAuthError,
+    });
 
   const { autoSwitchInfo } = useAlertEffects({
     language,
@@ -342,6 +345,8 @@ function App() {
     inventoryRefresh,
     channelsCount: channels.length,
     channelsLoading,
+    channelsRefreshing,
+    channelDiff,
     channelError,
     autoClaim,
     autoSelectEnabled,
@@ -355,6 +360,7 @@ function App() {
     priorityOrder,
     stats,
     cpu: debugCpu,
+    trackerStatus,
   });
 
   const navProps = {
@@ -479,6 +485,8 @@ function App() {
     stopWatching: actions.handleStopWatching,
     channels,
     channelsLoading,
+    channelsRefreshing,
+    channelDiff,
     channelError,
     startWatching: actions.startWatching,
     activeDropInfo,
