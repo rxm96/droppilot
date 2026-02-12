@@ -2,6 +2,7 @@ import { demoProfile } from "../demoData";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AuthState, ProfileState, View, WatchingState } from "../types";
 import { errorInfoFromIpc } from "../utils/errors";
+import { isIpcAuthErrorResponse, isIpcErrorResponse, isTwitchProfile } from "../utils/ipc";
 import { isVerboseLoggingEnabled, logDebug } from "../utils/logger";
 import { setLogCollectionEnabled } from "../utils/logStore";
 
@@ -57,30 +58,29 @@ export function useAppBootstrap({
       return;
     }
     setProfile({ status: "loading" });
-    const res = await window.electronAPI.twitch.profile();
-    if ((res as any)?.error) {
-      if ((res as any).error === "auth") {
-        forwardAuthError((res as any).message);
+    const res: unknown = await window.electronAPI.twitch.profile();
+    if (isIpcErrorResponse(res)) {
+      if (isIpcAuthErrorResponse(res)) {
+        forwardAuthError(res.message);
         return;
       }
-      const errInfo = errorInfoFromIpc(res as any, "Konnte Profil nicht laden");
+      const errInfo = errorInfoFromIpc(res, "Unable to load profile");
       setProfile({
         status: "error",
-        message: errInfo.message ?? "Konnte Profil nicht laden",
+        message: errInfo.message ?? "Unable to load profile",
         code: errInfo.code,
       });
       return;
     }
-    if (!res) {
-      setProfile({ status: "error", message: "Leere Antwort" });
+    if (!isTwitchProfile(res)) {
+      setProfile({ status: "error", message: "Profile response was empty" });
       return;
     }
-    const data = res as any;
     setProfile({
       status: "ready",
-      displayName: data.displayName,
-      login: data.login,
-      avatar: data.profileImageUrl,
+      displayName: res.displayName,
+      login: res.login,
+      avatar: res.profileImageUrl,
     });
   }, [demoMode, forwardAuthError]);
 

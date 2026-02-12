@@ -4,6 +4,13 @@ import { buildDemoInventory } from "../demoData";
 import { getCategory } from "../utils";
 import { logDebug, logError, logInfo, logWarn } from "../utils/logger";
 import { errorInfoFromIpc, errorInfoFromUnknown } from "../utils/errors";
+import {
+  isArrayOf,
+  isInventoryItem,
+  isIpcAuthErrorResponse,
+  isIpcErrorResponse,
+  isIpcOkFalseResponse,
+} from "../utils/ipc";
 
 type InventoryHook = {
   inventory: InventoryState;
@@ -163,34 +170,34 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
         return;
       }
       try {
-        const res = await window.electronAPI.twitch.inventory();
+        const res: unknown = await window.electronAPI.twitch.inventory();
         logDebug("inventory: fetch response", res);
-        if ((res as any)?.error) {
-          if ((res as any).error === "auth") {
+        if (isIpcErrorResponse(res)) {
+          if (isIpcAuthErrorResponse(res)) {
             logWarn("inventory: auth error", res);
-            onAuthError((res as any).message);
+            onAuthError(res.message);
             setInventory({ status: "idle" });
             return;
           }
-          const errInfo = errorInfoFromIpc(res as any, "Konnte Inventory nicht laden");
+          const errInfo = errorInfoFromIpc(res, "Unable to load inventory");
           setInventory({
             status: "error",
-            message: errInfo.message ?? "Konnte Inventory nicht laden",
+            message: errInfo.message ?? "Unable to load inventory",
             code: errInfo.code,
             items: hadItems ? prevItems : undefined,
           });
           logWarn("inventory: fetch error", res);
           return;
         }
-        if (!Array.isArray(res)) {
+        if (!isArrayOf(res, isInventoryItem)) {
           setInventory({
             status: "error",
-            message: "Inventory: leere Antwort",
+            message: "Inventory response was empty",
             items: hadItems ? prevItems : undefined,
           });
           return;
         }
-        const nextItems = res as InventoryItem[];
+        const nextItems = res;
         const nextTotalMinutes = nextItems.reduce(
           (acc: number, item) => acc + Math.max(0, Number(item.earnedMinutes) || 0),
           0,
@@ -239,21 +246,21 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
             if (now - last < CLAIM_RETRY_MS) continue;
             claimAttemptsRef.current.set(drop.id, now);
             try {
-              const claimRes = await window.electronAPI.twitch.claimDrop({
+              const claimRes: unknown = await window.electronAPI.twitch.claimDrop({
                 dropInstanceId: drop.dropInstanceId,
                 dropId: drop.id,
                 campaignId: drop.campaignId,
               });
-              if ((claimRes as any)?.error) {
-                if ((claimRes as any).error === "auth") {
+              if (isIpcErrorResponse(claimRes)) {
+                if (isIpcAuthErrorResponse(claimRes)) {
                   logWarn("inventory: claim auth error", claimRes);
-                  onAuthError((claimRes as any).message);
+                  onAuthError(claimRes.message);
                   return;
                 }
-                throw errorInfoFromIpc(claimRes as any, "Claim fehlgeschlagen");
+                throw errorInfoFromIpc(claimRes, "Drop claim failed");
               }
-              if ((claimRes as any)?.ok === false) {
-                throw errorInfoFromIpc(claimRes as any, "Claim fehlgeschlagen");
+              if (isIpcOkFalseResponse(claimRes)) {
+                throw errorInfoFromIpc(claimRes, "Drop claim failed");
               }
               onClaimed({ title: drop.title, game: drop.game });
               logInfo("inventory: auto-claimed", {
@@ -272,7 +279,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
               }
             } catch (err) {
               logWarn("inventory: claim error", { title: drop.title, err });
-              const errInfo = errorInfoFromUnknown(err, "Claim fehlgeschlagen");
+              const errInfo = errorInfoFromUnknown(err, "Drop claim failed");
               setClaimStatus({
                 kind: "error",
                 message: errInfo.message,
@@ -287,10 +294,10 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
         void maybeAutoClaim(nextItems);
       } catch (err) {
         logError("inventory: fetch failed", err);
-        const errInfo = errorInfoFromUnknown(err, "Inventory: Fehler");
+        const errInfo = errorInfoFromUnknown(err, "Inventory request failed");
         setInventory({
           status: "error",
-          message: errInfo.message ?? "Inventory: Fehler",
+          message: errInfo.message ?? "Inventory request failed",
           code: errInfo.code,
           items: hadItems ? prevItems : undefined,
         });

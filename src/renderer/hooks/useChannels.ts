@@ -1,8 +1,14 @@
 import { useEffect, useState } from "react";
 import type { AutoSwitchInfo, ChannelEntry, ErrorInfo, View, WatchingState } from "../types";
 import { getDemoChannels } from "../demoData";
-import { logDebug, logInfo, logWarn } from "../utils/logger";
 import { errorInfoFromIpc, errorInfoFromUnknown } from "../utils/errors";
+import {
+  isArrayOf,
+  isChannelEntry,
+  isIpcAuthErrorResponse,
+  isIpcErrorResponse,
+} from "../utils/ipc";
+import { logDebug, logInfo, logWarn } from "../utils/logger";
 
 type Params = {
   targetGame: string;
@@ -70,21 +76,27 @@ export function useChannels({
         return;
       }
       logInfo("channels: fetch start", { game: gameName, force });
-      const res = await window.electronAPI.twitch.channels({ game: gameName });
-      if ((res as any)?.error) {
-        if ((res as any).error === "auth") {
-          onAuthError?.((res as any).message);
+      const res: unknown = await window.electronAPI.twitch.channels({ game: gameName });
+      if (isIpcErrorResponse(res)) {
+        if (isIpcAuthErrorResponse(res)) {
+          onAuthError?.(res.message);
           setChannels([]);
           setChannelError(null);
           logWarn("channels: auth error", res);
           return;
         }
-        setChannelError(errorInfoFromIpc(res as any, "Channel-Fehler"));
+        setChannelError(errorInfoFromIpc(res, "Unable to load channels"));
         setChannels([]);
         logWarn("channels: fetch error", res);
         return;
       }
-      const list = (res as ChannelEntry[]) ?? [];
+      if (!isArrayOf(res, isChannelEntry)) {
+        setChannelError({ message: "Invalid channels response" });
+        setChannels([]);
+        logWarn("channels: invalid response", res);
+        return;
+      }
+      const list = res;
       logInfo("channels: fetch success", { game: gameName, count: list.length });
       logDebug("channels: sample", list.slice(0, 3));
       setChannels(list);
@@ -98,7 +110,7 @@ export function useChannels({
         fetchInventory();
       }
     } catch (err) {
-      setChannelError(errorInfoFromUnknown(err, "Channel-Fehler"));
+      setChannelError(errorInfoFromUnknown(err, "Unable to load channels"));
       setChannels([]);
     } finally {
       setChannelsLoading(false);

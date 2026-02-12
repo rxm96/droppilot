@@ -1,6 +1,7 @@
 import { buildDemoPriorityPlan } from "../demoData";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { InventoryItem, InventoryState, PriorityPlan, WatchingState } from "../types";
+import { isIpcAuthErrorResponse, isIpcErrorResponse, isPriorityPlan } from "../utils/ipc";
 
 type WithCategory = { item: InventoryItem; category: string };
 
@@ -36,16 +37,20 @@ export function usePriorityOrchestration({
         setPriorityPlan(buildDemoPriorityPlan(inventoryItems, priorityGames));
         return;
       }
-      const res = await window.electronAPI.twitch.priorityPlan({ priorityGames });
-      if ((res as any)?.error) {
-        if ((res as any).error === "auth") {
-          forwardAuthError((res as any).message);
+      const res: unknown = await window.electronAPI.twitch.priorityPlan({ priorityGames });
+      if (isIpcErrorResponse(res)) {
+        if (isIpcAuthErrorResponse(res)) {
+          forwardAuthError(res.message);
           return;
         }
         console.error("priority plan error", res);
         return;
       }
-      setPriorityPlan(res as PriorityPlan);
+      if (!isPriorityPlan(res)) {
+        console.error("priority plan invalid response", res);
+        return;
+      }
+      setPriorityPlan(res);
     } catch (err) {
       console.error("priority plan failed", err);
     }

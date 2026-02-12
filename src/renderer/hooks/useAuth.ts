@@ -40,7 +40,7 @@ export function useAuth(): AuthHook {
     } catch (err) {
       setAuth({
         status: "error",
-        message: err instanceof Error ? err.message : "Login abgebrochen",
+        message: err instanceof Error ? err.message : "Login was cancelled",
       });
     }
   };
@@ -63,7 +63,7 @@ export function useAuth(): AuthHook {
     } catch (err) {
       setAuth({
         status: "error",
-        message: err instanceof Error ? err.message : "Login abgebrochen",
+        message: err instanceof Error ? err.message : "Login was cancelled",
       });
     }
   };

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { StatsData, StatsState } from "../types";
+import { isIpcErrorResponse, isStatsData } from "../utils/ipc";
 
 const computeNext = (
   current: StatsData,
@@ -37,14 +38,18 @@ export function useStats(options: StatsHookOptions = {}) {
   const loadStats = useCallback(async () => {
     setStats((prev) => (prev.status === "ready" ? prev : { status: "loading" }));
     try {
-      const res = await window.electronAPI.stats.get();
-      if ((res as any)?.error) {
-        setStats({ status: "error", message: (res as any).message ?? "Konnte Stats nicht laden" });
+      const res: unknown = await window.electronAPI.stats.get();
+      if (isIpcErrorResponse(res)) {
+        setStats({ status: "error", message: res.message ?? "Unable to load stats" });
         return;
       }
-      setStats({ status: "ready", data: res as StatsData });
+      if (!isStatsData(res)) {
+        setStats({ status: "error", message: "Invalid stats response" });
+        return;
+      }
+      setStats({ status: "ready", data: res });
     } catch (err) {
-      setStats({ status: "error", message: err instanceof Error ? err.message : "Stats: Fehler" });
+      setStats({ status: "error", message: err instanceof Error ? err.message : "Stats request failed" });
     }
   }, []);
 
@@ -63,9 +68,9 @@ export function useStats(options: StatsHookOptions = {}) {
         return prev;
       });
       try {
-        const res = await window.electronAPI.stats.bump(delta);
-        if ((res as any)?.error) return;
-        setStats({ status: "ready", data: res as StatsData });
+        const res: unknown = await window.electronAPI.stats.bump(delta);
+        if (!isStatsData(res)) return;
+        setStats({ status: "ready", data: res });
       } catch {
         // ignore
       }
@@ -76,12 +81,16 @@ export function useStats(options: StatsHookOptions = {}) {
   const resetStats = useCallback(async () => {
     if (demoMode) return;
     try {
-      const res = await window.electronAPI.stats.reset();
-      setStats({ status: "ready", data: res as StatsData });
+      const res: unknown = await window.electronAPI.stats.reset();
+      if (!isStatsData(res)) {
+        setStats({ status: "error", message: "Failed to reset stats" });
+        return;
+      }
+      setStats({ status: "ready", data: res });
     } catch (err) {
       setStats({
         status: "error",
-        message: err instanceof Error ? err.message : "Stats: Reset fehlgeschlagen",
+        message: err instanceof Error ? err.message : "Failed to reset stats",
       });
     }
   }, [demoMode]);

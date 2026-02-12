@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ErrorInfo, WatchingState } from "../types";
 import { errorInfoFromIpc, errorInfoFromUnknown } from "../utils/errors";
+import { isIpcAuthErrorResponse, isIpcErrorResponse, isIpcOkFalseResponse } from "../utils/ipc";
 import { logInfo, logWarn } from "../utils/logger";
 
 export const WATCH_INTERVAL_MS = 59_000;
@@ -61,15 +62,15 @@ export function useWatchPing({ watching, bumpStats, forwardAuthError, demoMode }
           streamId: watching.streamId,
         });
         if (cancelled) return;
-        if ((res as any)?.error) {
-          if ((res as any).error === "auth") {
-            forwardAuthError((res as any).message);
+        if (isIpcErrorResponse(res)) {
+          if (isIpcAuthErrorResponse(res)) {
+            forwardAuthError(res.message);
             return;
           }
-          throw errorInfoFromIpc(res as any, "Watch-Ping fehlgeschlagen");
+          throw errorInfoFromIpc(res, "Watch ping failed");
         }
-        if ((res as any)?.ok === false) {
-          throw errorInfoFromIpc(res as any, "Watch-Ping fehlgeschlagen");
+        if (isIpcOkFalseResponse(res)) {
+          throw errorInfoFromIpc(res, "Watch ping failed");
         }
         logInfo("watch: ping ok", {
           channelId: watching.channelId ?? watching.id,
@@ -89,7 +90,7 @@ export function useWatchPing({ watching, bumpStats, forwardAuthError, demoMode }
         }
       } catch (err) {
         if (!cancelled) {
-          const errInfo = errorInfoFromUnknown(err, "Watch-Ping fehlgeschlagen");
+          const errInfo = errorInfoFromUnknown(err, "Watch ping failed");
           logWarn("watch: ping error", err);
           setWatchStats((prev) => ({
             lastOk: prev.lastOk,

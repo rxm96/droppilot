@@ -134,7 +134,7 @@ export function useSettingsStore(): SettingsHook {
       setSettingsJson(JSON.stringify(res, null, 2));
     } catch (err) {
       console.error("settings load failed", err);
-      setSettingsError(err instanceof Error ? err.message : "Settings laden fehlgeschlagen");
+      setSettingsError(err instanceof Error ? err.message : "Failed to load settings");
     }
   };
 
@@ -174,7 +174,7 @@ export function useSettingsStore(): SettingsHook {
       setAlertsNewDrops(saved.alertsNewDrops !== false);
       setSettingsJson(JSON.stringify(saved, null, 2));
     } catch (err) {
-      setSettingsError(err instanceof Error ? err.message : "Settings speichern fehlgeschlagen");
+      setSettingsError(err instanceof Error ? err.message : "Failed to save settings");
     }
   };
 
@@ -307,7 +307,7 @@ export function useSettingsStore(): SettingsHook {
         }
       }
     } catch (err) {
-      setSettingsError(err instanceof Error ? err.message : "Export fehlgeschlagen");
+      setSettingsError(err instanceof Error ? err.message : "Failed to export settings");
     }
   };
 
@@ -345,7 +345,7 @@ export function useSettingsStore(): SettingsHook {
       setSettingsInfo("Settings importiert.");
       setSettingsError(null);
     } catch (err) {
-      setSettingsError(err instanceof Error ? err.message : "Import fehlgeschlagen");
+      setSettingsError(err instanceof Error ? err.message : "Failed to import settings");
     }
   };
 
