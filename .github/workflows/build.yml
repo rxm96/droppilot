@@ -143,14 +143,14 @@ jobs:
               ).slice(0, 30);
 
               const inferArea = (file) => {
-                if (/priority|target/i.test(file)) return "watch priority and auto-target behavior";
-                if (/inventory/i.test(file)) return "inventory refresh and drop progress";
-                if (/channel/i.test(file)) return "channel selection and switching";
-                if (/update|overlay/i.test(file)) return "update flow and release information";
-                if (/auth|session/i.test(file)) return "login/session reliability";
-                if (/settings|theme|i18n/i.test(file)) return "settings and user preferences";
+                if (/priority|target/i.test(file)) return "priority-targeting";
+                if (/inventory/i.test(file)) return "inventory";
+                if (/channel/i.test(file)) return "channels";
+                if (/update|overlay/i.test(file)) return "updates";
+                if (/auth|session/i.test(file)) return "auth-session";
+                if (/settings|theme|i18n/i.test(file)) return "settings";
                 if (/build\.yml|workflow|package\.json/i.test(file))
-                  return "release/build pipeline and update delivery";
+                  return "release-pipeline";
                 return null;
               };
               const inferredAreas = Array.from(
@@ -177,7 +177,7 @@ jobs:
                 "Changed files:",
                 filesSection,
                 "",
-                "Inferred user-impact areas:",
+                "Inferred feature tags:",
                 areaSection,
               ].join("\n");
 
@@ -205,6 +205,7 @@ jobs:
             - Every bullet must be directly supported by the changelog/context below; if not, omit it.
             - Prefer outcomes ("Auto-watch now picks ...") over implementation details.
             - Use changed files only to infer user-facing feature areas; never show file names in output.
+            - Inferred feature tags are hints only and are not sufficient evidence for a bullet on their own.
             - Do not use hype or guarantees (forbidden examples: "never miss", "always", "ensuring", "guaranteed").
             - Do not mention "streaming sessions" unless that phrase is explicitly present in the inputs.
             - Do not claim performance/stability improvements unless explicitly evidenced in the inputs.
