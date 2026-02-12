@@ -20,13 +20,24 @@ function extractReleaseNoteText(entry: unknown): string {
 
 function extractUserFacingSection(text: string): string {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const start = lines.findIndex((line) =>
-    /^##\s+what'?s new for users\s*$/i.test(line.trim()),
-  );
-  if (start < 0) return text.trim();
+  const userHeadingRe = /^(?:#{1,6}\s*)?what'?s new for users\s*$/i;
+  const anyHeadingRe = /^#{1,6}\s+\S/;
+  const fullChangelogRe = /^(?:#{1,6}\s*)?full\s+changelog\b[:\s-]*.*$/i;
+  const start = lines.findIndex((line) => userHeadingRe.test(line.trim()));
+  if (start < 0) {
+    return lines
+      .filter((line) => !fullChangelogRe.test(line.trim()))
+      .join("\n")
+      .trim();
+  }
   let end = lines.length;
   for (let i = start + 1; i < lines.length; i += 1) {
-    if (/^##\s+/.test(lines[i].trim())) {
+    const trimmed = lines[i].trim();
+    if (fullChangelogRe.test(trimmed)) {
+      end = i;
+      break;
+    }
+    if (anyHeadingRe.test(trimmed) && !userHeadingRe.test(trimmed)) {
       end = i;
       break;
     }
