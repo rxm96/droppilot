@@ -71,13 +71,39 @@ export function usePriorityOrchestration({
     return buildDemoPriorityPlan(inventoryItems, priorityGames);
   }, [demoMode, inventoryItems, inventoryStatus, priorityGames, priorityPlan]);
 
+  const fallbackOrder = useMemo(() => {
+    const seen = new Set<string>();
+    const order: string[] = [];
+    for (const { item, category } of withCategories) {
+      if (category !== "in-progress" && category !== "upcoming") continue;
+      const game = item.game;
+      if (!game || seen.has(game)) continue;
+      seen.add(game);
+      order.push(game);
+    }
+    return order;
+  }, [withCategories]);
+
   const priorityOrder = useMemo(
     () =>
       effectivePriorityPlan?.order?.length
         ? effectivePriorityPlan.order
-        : priorityGames,
-    [effectivePriorityPlan, priorityGames],
+        : priorityGames.length
+          ? priorityGames
+          : fallbackOrder,
+    [effectivePriorityPlan, priorityGames, fallbackOrder],
   );
+
+  useEffect(() => {
+    if (inventoryStatus !== "idle") return;
+    setPriorityPlan(null);
+    setActiveTargetGame("");
+  }, [inventoryStatus]);
+
+  useEffect(() => {
+    if (inventoryStatus !== "ready") return;
+    void refreshPriorityPlan();
+  }, [inventoryStatus, refreshPriorityPlan]);
 
   useEffect(() => {
     if (inventoryStatus !== "ready") return;

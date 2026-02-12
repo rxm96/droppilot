@@ -298,6 +298,7 @@ function App() {
     autoSelectEnabled,
     autoSwitchEnabled,
     fetchInventory: () => fetchInventory(),
+    inventoryFetchedAt,
     allowWatching,
     canWatchTarget,
     demoMode,

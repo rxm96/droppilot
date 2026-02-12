@@ -17,6 +17,7 @@ type Params = {
   watching: WatchingState;
   setWatchingFromChannel: (channel: ChannelEntry) => void;
   fetchInventory: () => void;
+  inventoryFetchedAt: number | null;
   autoSelectEnabled: boolean;
   autoSwitchEnabled: boolean;
   allowWatching: boolean;
@@ -31,6 +32,7 @@ export function useChannels({
   watching,
   setWatchingFromChannel,
   fetchInventory,
+  inventoryFetchedAt,
   autoSelectEnabled,
   autoSwitchEnabled,
   allowWatching,
@@ -38,6 +40,7 @@ export function useChannels({
   demoMode,
   onAuthError,
 }: Params) {
+  const RECENT_INVENTORY_WINDOW_MS = 30_000;
   const [channels, setChannels] = useState<ChannelEntry[]>([]);
   const [channelError, setChannelError] = useState<ErrorInfo | null>(null);
   const [channelsLoading, setChannelsLoading] = useState<boolean>(false);
@@ -50,6 +53,8 @@ export function useChannels({
     fetchedGame === game &&
     now - fetchedAt < 5 * 60_000 &&
     channels.length > 0;
+  const hasRecentInventory = (now = Date.now()) =>
+    inventoryFetchedAt !== null && now - inventoryFetchedAt < RECENT_INVENTORY_WINDOW_MS;
 
   const fetchChannels = async (gameName: string, { force }: { force?: boolean } = {}) => {
     if (!allowWatching) return;
@@ -68,9 +73,9 @@ export function useChannels({
         setChannels(list);
         setFetchedAt(now);
         setFetchedGame(gameName);
-        const shouldSkipInventory = autoSelectEnabled && !watching;
+        const shouldSkipInventory = (autoSelectEnabled && !watching) || hasRecentInventory(now);
         if (shouldSkipInventory) {
-          logDebug("channels: skip inventory fetch (auto-select will fetch after watching is set)");
+          logDebug("channels: skip inventory fetch (recent or auto-select)");
         } else {
           fetchInventory();
         }
@@ -111,9 +116,9 @@ export function useChannels({
       setChannels(list);
       setFetchedAt(now);
       setFetchedGame(gameName);
-      const shouldSkipInventory = autoSelectEnabled && !watching;
+      const shouldSkipInventory = (autoSelectEnabled && !watching) || hasRecentInventory(now);
       if (shouldSkipInventory) {
-        logDebug("channels: skip inventory fetch (auto-select will fetch after watching is set)");
+        logDebug("channels: skip inventory fetch (recent or auto-select)");
       } else {
         // Nach Channel-Fetch auch Inventar neu laden, damit Drop-Progress aktuell bleibt.
         fetchInventory();
@@ -195,7 +200,11 @@ export function useChannels({
     if (channels.length && !watching) {
       const first = channels[0];
       setWatchingFromChannel(first);
-      fetchInventory();
+      if (hasRecentInventory()) {
+        logDebug("channels: skip inventory fetch (recent inventory)");
+      } else {
+        fetchInventory();
+      }
     }
   }, [
     channels,
@@ -204,6 +213,7 @@ export function useChannels({
     autoSelectEnabled,
     allowWatching,
     canWatchTarget,
+    inventoryFetchedAt,
     setWatchingFromChannel,
     fetchInventory,
   ]);

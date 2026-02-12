@@ -94,7 +94,7 @@ export function useAppBootstrap({
 
   useEffect(() => {
     setAutoSelectEnabled(autoSelect);
-  }, [autoSelect, setAutoSelectEnabled]);
+  }, [authStatus, autoSelect, demoMode, setAutoSelectEnabled]);
 
   useEffect(() => {
     setLogCollectionEnabled(debugEnabled);
