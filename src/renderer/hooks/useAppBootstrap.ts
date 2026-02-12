@@ -5,6 +5,7 @@ import { errorInfoFromIpc } from "../utils/errors";
 import { isIpcAuthErrorResponse, isIpcErrorResponse, isTwitchProfile } from "../utils/ipc";
 import { isVerboseLoggingEnabled, logDebug } from "../utils/logger";
 import { setLogCollectionEnabled } from "../utils/logStore";
+import { RENDERER_ERROR_CODES, TWITCH_ERROR_CODES } from "../../shared/errorCodes";
 
 type FetchInventory = (opts?: { forceLoading?: boolean }) => Promise<void>;
 
@@ -65,7 +66,7 @@ export function useAppBootstrap({
         return;
       }
       const errInfo = errorInfoFromIpc(res, {
-        code: "profile.fetch_failed",
+        code: TWITCH_ERROR_CODES.PROFILE_FETCH_FAILED,
         message: "Unable to load profile",
       });
       setProfile({
@@ -78,7 +79,7 @@ export function useAppBootstrap({
     if (!isTwitchProfile(res)) {
       setProfile({
         status: "error",
-        code: "profile.invalid_response",
+        code: RENDERER_ERROR_CODES.PROFILE_INVALID_RESPONSE,
         message: "Profile response was invalid",
       });
       return;

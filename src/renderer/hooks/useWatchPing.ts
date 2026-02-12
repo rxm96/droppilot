@@ -3,6 +3,7 @@ import type { ErrorInfo, WatchingState } from "../types";
 import { errorInfoFromIpc, errorInfoFromUnknown } from "../utils/errors";
 import { isIpcAuthErrorResponse, isIpcErrorResponse, isIpcOkFalseResponse } from "../utils/ipc";
 import { logInfo, logWarn } from "../utils/logger";
+import { TWITCH_ERROR_CODES } from "../../shared/errorCodes";
 
 export const WATCH_INTERVAL_MS = 59_000;
 const WATCH_JITTER_MS = 8_000;
@@ -68,13 +69,13 @@ export function useWatchPing({ watching, bumpStats, forwardAuthError, demoMode }
             return;
           }
           throw errorInfoFromIpc(res, {
-            code: "watch.ping_failed",
+            code: TWITCH_ERROR_CODES.WATCH_PING_FAILED,
             message: "Watch ping failed",
           });
         }
         if (isIpcOkFalseResponse(res)) {
           throw errorInfoFromIpc(res, {
-            code: "watch.ping_failed",
+            code: TWITCH_ERROR_CODES.WATCH_PING_FAILED,
             message: "Watch ping failed",
           });
         }
@@ -97,7 +98,7 @@ export function useWatchPing({ watching, bumpStats, forwardAuthError, demoMode }
       } catch (err) {
         if (!cancelled) {
           const errInfo = errorInfoFromUnknown(err, {
-            code: "watch.ping_failed",
+            code: TWITCH_ERROR_CODES.WATCH_PING_FAILED,
             message: "Watch ping failed",
           });
           logWarn("watch: ping error", err);

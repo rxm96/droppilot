@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { StatsData, StatsState } from "../types";
 import { isIpcErrorResponse, isStatsData } from "../utils/ipc";
 import { errorInfoFromIpc, errorInfoFromUnknown } from "../utils/errors";
+import { RENDERER_ERROR_CODES } from "../../shared/errorCodes";
 
 const computeNext = (
   current: StatsData,
@@ -42,7 +43,7 @@ export function useStats(options: StatsHookOptions = {}) {
       const res: unknown = await window.electronAPI.stats.get();
       if (isIpcErrorResponse(res)) {
         const errInfo = errorInfoFromIpc(res, {
-          code: "stats.load_failed",
+          code: RENDERER_ERROR_CODES.STATS_LOAD_FAILED,
           message: "Unable to load stats",
         });
         setStats({
@@ -56,14 +57,14 @@ export function useStats(options: StatsHookOptions = {}) {
         setStats({
           status: "error",
           message: "Invalid stats response",
-          code: "stats.invalid_response",
+          code: RENDERER_ERROR_CODES.STATS_INVALID_RESPONSE,
         });
         return;
       }
       setStats({ status: "ready", data: res });
     } catch (err) {
       const errInfo = errorInfoFromUnknown(err, {
-        code: "stats.load_failed",
+        code: RENDERER_ERROR_CODES.STATS_LOAD_FAILED,
         message: "Stats request failed",
       });
       setStats({
@@ -107,14 +108,14 @@ export function useStats(options: StatsHookOptions = {}) {
         setStats({
           status: "error",
           message: "Failed to reset stats",
-          code: "stats.reset_failed",
+          code: RENDERER_ERROR_CODES.STATS_RESET_FAILED,
         });
         return;
       }
       setStats({ status: "ready", data: res });
     } catch (err) {
       const errInfo = errorInfoFromUnknown(err, {
-        code: "stats.reset_failed",
+        code: RENDERER_ERROR_CODES.STATS_RESET_FAILED,
         message: "Failed to reset stats",
       });
       setStats({

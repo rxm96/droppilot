@@ -11,6 +11,7 @@ import {
   isIpcErrorResponse,
   isIpcOkFalseResponse,
 } from "../utils/ipc";
+import { RENDERER_ERROR_CODES, TWITCH_ERROR_CODES } from "../../shared/errorCodes";
 
 type InventoryHook = {
   inventory: InventoryState;
@@ -180,7 +181,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
             return;
           }
           const errInfo = errorInfoFromIpc(res, {
-            code: "inventory.fetch_failed",
+            code: RENDERER_ERROR_CODES.INVENTORY_FETCH_FAILED,
             message: "Unable to load inventory",
           });
           setInventory({
@@ -195,7 +196,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
         if (!isArrayOf(res, isInventoryItem)) {
           setInventory({
             status: "error",
-            code: "inventory.invalid_response",
+            code: RENDERER_ERROR_CODES.INVENTORY_INVALID_RESPONSE,
             message: "Inventory response was invalid",
             items: hadItems ? prevItems : undefined,
           });
@@ -262,13 +263,13 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
                   return;
                 }
                 throw errorInfoFromIpc(claimRes, {
-                  code: "claim.failed",
+                  code: TWITCH_ERROR_CODES.CLAIM_FAILED,
                   message: "Drop claim failed",
                 });
               }
               if (isIpcOkFalseResponse(claimRes)) {
                 throw errorInfoFromIpc(claimRes, {
-                  code: "claim.failed",
+                  code: TWITCH_ERROR_CODES.CLAIM_FAILED,
                   message: "Drop claim failed",
                 });
               }
@@ -290,7 +291,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
             } catch (err) {
               logWarn("inventory: claim error", { title: drop.title, err });
               const errInfo = errorInfoFromUnknown(err, {
-                code: "claim.failed",
+                code: TWITCH_ERROR_CODES.CLAIM_FAILED,
                 message: "Drop claim failed",
               });
               setClaimStatus({
@@ -308,7 +309,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
       } catch (err) {
         logError("inventory: fetch failed", err);
         const errInfo = errorInfoFromUnknown(err, {
-          code: "inventory.fetch_failed",
+          code: RENDERER_ERROR_CODES.INVENTORY_FETCH_FAILED,
           message: "Inventory request failed",
         });
         setInventory({

@@ -3,6 +3,7 @@ import { TWITCH_CLIENT_ID, TWITCH_WEB_USER_AGENT } from "../config";
 import { TwitchClient, TwitchAuthError, type TwitchUser } from "./client";
 import { buildPriorityPlan, type PriorityPlan } from "./channels";
 import { TwitchServiceError } from "./errors";
+import { TWITCH_ERROR_CODES } from "../../shared/errorCodes";
 
 export interface InventoryItem {
   id: string;
@@ -48,7 +49,11 @@ export class TwitchService {
       if (this.isAuthError(err)) {
         throw err;
       }
-      throw new TwitchServiceError("profile.fetch_failed", "Profile fetch failed", err);
+      throw new TwitchServiceError(
+        TWITCH_ERROR_CODES.PROFILE_FETCH_FAILED,
+        "Profile fetch failed",
+        err,
+      );
     }
   }
 
@@ -137,7 +142,7 @@ export class TwitchService {
     if (items.length === 0) {
       this.debug("No drops built", { summary, dropsCount });
       throw new TwitchServiceError(
-        "inventory.empty",
+        TWITCH_ERROR_CODES.INVENTORY_EMPTY,
         `No drops found. ${summary} dropsCount=${dropsCount}`,
       );
     }
@@ -173,7 +178,10 @@ export class TwitchService {
   async getChannelsForGame(gameName: string): Promise<ChannelInfo[]> {
     const slug = await this.resolveGameSlug(gameName);
     if (!slug) {
-      throw new TwitchServiceError("game.slug_missing", `Game slug missing for ${gameName}`);
+      throw new TwitchServiceError(
+        TWITCH_ERROR_CODES.GAME_SLUG_MISSING,
+        `Game slug missing for ${gameName}`,
+      );
     }
     const res = await this.gqlRequest<any>(
       {
@@ -241,7 +249,7 @@ export class TwitchService {
       payload.dropInstanceId ?? (await this.buildClaimId(payload.dropId, payload.campaignId));
     if (!claimId) {
       this.debug("claim: missing claim id", payload);
-      throw new TwitchServiceError("claim.missing_id", "Claim id missing");
+      throw new TwitchServiceError(TWITCH_ERROR_CODES.CLAIM_MISSING_ID, "Claim id missing");
     }
     const body = createPersistedQuery(
       "DropsPage_ClaimDropRewards",
@@ -263,7 +271,7 @@ export class TwitchService {
     if (!ok) {
       this.debug("claim: failed", { claimId, status });
       throw new TwitchServiceError(
-        "claim.failed",
+        TWITCH_ERROR_CODES.CLAIM_FAILED,
         status ? `Claim failed: ${status}` : "Claim failed",
       );
     }
@@ -297,7 +305,10 @@ export class TwitchService {
         },
       });
       if (!res.ok) {
-        throw new TwitchServiceError("spade.fetch_failed", `Spade fetch failed (${res.status})`);
+        throw new TwitchServiceError(
+          TWITCH_ERROR_CODES.SPADE_FETCH_FAILED,
+          `Spade fetch failed (${res.status})`,
+        );
       }
       return await res.text();
     };
@@ -309,19 +320,19 @@ export class TwitchService {
       if (err instanceof TwitchServiceError) {
         throw err;
       }
-      throw new TwitchServiceError("spade.fetch_failed", "Spade fetch failed", err);
+      throw new TwitchServiceError(TWITCH_ERROR_CODES.SPADE_FETCH_FAILED, "Spade fetch failed", err);
     }
 
     let match = html.match(SPADE_PATTERN);
     if (!match) {
       const settingsMatch = html.match(SETTINGS_PATTERN);
       if (!settingsMatch) {
-        throw new TwitchServiceError("spade.url_missing", "Spade URL missing");
+        throw new TwitchServiceError(TWITCH_ERROR_CODES.SPADE_URL_MISSING, "Spade URL missing");
       }
       const settingsJs = await fetchText(settingsMatch[1]);
       match = settingsJs.match(SPADE_PATTERN);
       if (!match) {
-        throw new TwitchServiceError("spade.url_missing", "Spade URL missing");
+        throw new TwitchServiceError(TWITCH_ERROR_CODES.SPADE_URL_MISSING, "Spade URL missing");
       }
     }
 
@@ -359,12 +370,12 @@ export class TwitchService {
   async sendWatchPing(payload: { channelId: string; login: string; streamId?: string }) {
     const login = payload.login?.trim();
     if (!login) {
-      throw new TwitchServiceError("watch.missing_login", "Watch login missing");
+      throw new TwitchServiceError(TWITCH_ERROR_CODES.WATCH_MISSING_LOGIN, "Watch login missing");
     }
 
     const streamInfo = await this.fetchStreamInfo(login);
     if (!streamInfo) {
-      throw new TwitchServiceError("watch.offline", "Watch stream offline");
+      throw new TwitchServiceError(TWITCH_ERROR_CODES.WATCH_OFFLINE, "Watch stream offline");
     }
 
     const spadeUrl = await this.resolveSpadeUrl(login);
@@ -375,7 +386,7 @@ export class TwitchService {
     const channelId = streamInfo.channelId ?? payload.channelId;
 
     if (!broadcastId || !channelId) {
-      throw new TwitchServiceError("watch.missing_ids", "Watch identifiers missing");
+      throw new TwitchServiceError(TWITCH_ERROR_CODES.WATCH_MISSING_IDS, "Watch identifiers missing");
     }
 
     const payloadBody = [
@@ -439,7 +450,7 @@ export class TwitchService {
       body: text,
     });
     throw new TwitchServiceError(
-      "watch.ping_failed",
+      TWITCH_ERROR_CODES.WATCH_PING_FAILED,
       text ? `Watch ping failed: ${text}` : `Watch ping failed (${res.status})`,
     );
   }
@@ -522,7 +533,7 @@ export class TwitchService {
     const mergedEdges = Array.from(campaignsById.values());
     if (mergedEdges.length === 0) {
       throw new TwitchServiceError(
-        "inventory.empty",
+        TWITCH_ERROR_CODES.INVENTORY_EMPTY,
         `No campaigns returned. Campaigns: ${campaignsSummary}; Inventory: ${inventorySummary}`,
       );
     }
@@ -644,7 +655,7 @@ export class TwitchService {
         throw err;
       }
       const message = err instanceof Error ? err.message : String(err);
-      throw new TwitchServiceError("gql.failed", `GQL failed (${context}): ${message}`, err);
+      throw new TwitchServiceError(TWITCH_ERROR_CODES.GQL_FAILED, `GQL failed (${context}): ${message}`, err);
     }
   }
 }

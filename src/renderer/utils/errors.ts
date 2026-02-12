@@ -1,7 +1,9 @@
 import type { ErrorInfo } from "../types";
+import type { AppErrorCode } from "../../shared/errorCodes";
+import { toErrorKey } from "../../shared/errorCodes";
 
 type TFunc = (key: string, vars?: Record<string, string | number>) => string;
-type ErrorFallback = string | { code?: string; message: string };
+type ErrorFallback = string | { code?: AppErrorCode; message: string };
 
 type IpcErrorPayload = {
   error?: string;
@@ -63,7 +65,7 @@ export function resolveErrorMessage(
 ): string {
   if (!error) return t(fallbackKey);
   if (error.code) {
-    const key = error.code.startsWith("error.") ? error.code : `error.${error.code}`;
+    const key = error.code.startsWith("error.") ? error.code : toErrorKey(error.code);
     const translated = t(key);
     if (translated !== key) {
       return translated;

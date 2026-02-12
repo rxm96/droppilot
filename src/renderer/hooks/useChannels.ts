@@ -9,6 +9,7 @@ import {
   isIpcErrorResponse,
 } from "../utils/ipc";
 import { logDebug, logInfo, logWarn } from "../utils/logger";
+import { RENDERER_ERROR_CODES } from "../../shared/errorCodes";
 
 type Params = {
   targetGame: string;
@@ -87,7 +88,7 @@ export function useChannels({
         }
         setChannelError(
           errorInfoFromIpc(res, {
-            code: "channels.fetch_failed",
+            code: RENDERER_ERROR_CODES.CHANNELS_FETCH_FAILED,
             message: "Unable to load channels",
           }),
         );
@@ -97,7 +98,7 @@ export function useChannels({
       }
       if (!isArrayOf(res, isChannelEntry)) {
         setChannelError({
-          code: "channels.invalid_response",
+          code: RENDERER_ERROR_CODES.CHANNELS_INVALID_RESPONSE,
           message: "Invalid channels response",
         });
         setChannels([]);
@@ -120,7 +121,7 @@ export function useChannels({
     } catch (err) {
       setChannelError(
         errorInfoFromUnknown(err, {
-          code: "channels.fetch_failed",
+          code: RENDERER_ERROR_CODES.CHANNELS_FETCH_FAILED,
           message: "Unable to load channels",
         }),
       );
