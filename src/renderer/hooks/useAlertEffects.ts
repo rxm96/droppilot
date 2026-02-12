@@ -4,6 +4,7 @@ import type { Language } from "../i18n";
 import type { AutoSwitchInfo, InventoryItem, InventoryState, WatchingState } from "../types";
 import type { ActiveDropInfo } from "./useTargetDrops";
 import type { WatchStats } from "./useWatchPing";
+import { resolveErrorMessage } from "../utils/errors";
 
 type NotifyFn = (payload: {
   key: string;
@@ -92,7 +93,8 @@ export function useAlertEffects({
   useEffect(() => {
     if (!alertsWatchError) return;
     if (!watchStats.lastError) return;
-    const message = watchStats.lastError.message ?? translate(language, "error.unknown");
+    const t = (key: string, vars?: Record<string, string | number>) => translate(language, key, vars);
+    const message = resolveErrorMessage(t, watchStats.lastError);
     notify({
       key: `watch-error:${watchStats.lastError.code ?? message}`,
       title: translate(language, "alerts.title.watchError"),

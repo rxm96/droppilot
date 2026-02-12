@@ -1,6 +1,7 @@
 import type { ErrorInfo } from "../types";
 
 type TFunc = (key: string, vars?: Record<string, string | number>) => string;
+type ErrorFallback = string | { code?: string; message: string };
 
 type IpcErrorPayload = {
   error?: string;
@@ -8,34 +9,51 @@ type IpcErrorPayload = {
   message?: string;
 };
 
+function normalizeFallback(fallback: ErrorFallback): { code?: string; message: string } {
+  return typeof fallback === "string" ? { message: fallback } : fallback;
+}
+
 export function errorInfoFromIpc(
   res: IpcErrorPayload | null | undefined,
-  fallbackMessage: string,
+  fallback: ErrorFallback,
 ): ErrorInfo {
+  const normalized = normalizeFallback(fallback);
   if (!res || typeof res !== "object") {
-    return { message: fallbackMessage };
+    return { code: normalized.code, message: normalized.message };
   }
-  const code = typeof res.code === "string" ? res.code : undefined;
+  const code =
+    typeof res.code === "string" && res.code.length > 0
+      ? res.code
+      : normalized.code;
   const message =
-    typeof res.message === "string" && res.message.length > 0 ? res.message : fallbackMessage;
+    typeof res.message === "string" && res.message.length > 0
+      ? res.message
+      : normalized.message;
   return { code, message };
 }
 
-export function errorInfoFromUnknown(err: unknown, fallbackMessage: string): ErrorInfo {
+export function errorInfoFromUnknown(err: unknown, fallback: ErrorFallback): ErrorInfo {
+  const normalized = normalizeFallback(fallback);
   if (err && typeof err === "object") {
     const maybeCode = (err as { code?: unknown }).code;
     const maybeMessage = (err as { message?: unknown }).message;
     if (typeof maybeCode === "string" || typeof maybeMessage === "string") {
       return {
-        code: typeof maybeCode === "string" ? maybeCode : undefined,
-        message: typeof maybeMessage === "string" ? maybeMessage : fallbackMessage,
+        code:
+          typeof maybeCode === "string" && maybeCode.length > 0
+            ? maybeCode
+            : normalized.code,
+        message:
+          typeof maybeMessage === "string" && maybeMessage.length > 0
+            ? maybeMessage
+            : normalized.message,
       };
     }
   }
   if (err instanceof Error) {
-    return { message: err.message };
+    return { code: normalized.code, message: err.message };
   }
-  return { message: fallbackMessage };
+  return { code: normalized.code, message: normalized.message };
 }
 
 export function resolveErrorMessage(
@@ -45,12 +63,18 @@ export function resolveErrorMessage(
 ): string {
   if (!error) return t(fallbackKey);
   if (error.code) {
-    const key = `error.${error.code}`;
+    const key = error.code.startsWith("error.") ? error.code : `error.${error.code}`;
     const translated = t(key);
     if (translated !== key) {
       return translated;
     }
   }
-  if (error.message) return error.message;
+  if (error.message) {
+    const translated = t(error.message);
+    if (translated !== error.message) {
+      return translated;
+    }
+    return error.message;
+  }
   return t(fallbackKey);
 }

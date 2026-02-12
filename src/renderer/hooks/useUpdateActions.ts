@@ -9,14 +9,14 @@ type Params = {
 export function useUpdateActions({ setUpdateStatus }: Params) {
   const handleCheckUpdates = useCallback(async () => {
     if (!window.electronAPI?.app?.checkUpdates) {
-      setUpdateStatus({ state: "error", message: "Update API unavailable" });
+      setUpdateStatus({ state: "error", message: "error.update.check_api_unavailable" });
       return;
     }
     setUpdateStatus({ state: "checking" });
     try {
       const res = await window.electronAPI.app.checkUpdates();
       if (!res) {
-        setUpdateStatus({ state: "error", message: "No response" });
+        setUpdateStatus({ state: "error", message: "error.update.no_response" });
         return;
       }
       if (!res.ok && res.status === "unsupported") {
@@ -31,7 +31,7 @@ export function useUpdateActions({ setUpdateStatus }: Params) {
         setUpdateStatus({ state: "none" });
         return;
       }
-      setUpdateStatus({ state: "error", message: res.message || "Unknown error" });
+      setUpdateStatus({ state: "error", message: res.message || "error.update.unknown" });
     } catch (err) {
       setUpdateStatus({
         state: "error",
@@ -42,14 +42,14 @@ export function useUpdateActions({ setUpdateStatus }: Params) {
 
   const handleDownloadUpdate = useCallback(async () => {
     if (!window.electronAPI?.app?.downloadUpdate) {
-      setUpdateStatus({ state: "error", message: "Download API unavailable" });
+      setUpdateStatus({ state: "error", message: "error.update.download_api_unavailable" });
       return;
     }
     setUpdateStatus({ state: "downloading", progress: 0 });
     try {
       const res = await window.electronAPI.app.downloadUpdate();
       if (!res) {
-        setUpdateStatus({ state: "error", message: "No response" });
+        setUpdateStatus({ state: "error", message: "error.update.no_response" });
         return;
       }
       if (!res.ok && res.status === "unsupported") {
@@ -57,7 +57,7 @@ export function useUpdateActions({ setUpdateStatus }: Params) {
         return;
       }
       if (!res.ok) {
-        setUpdateStatus({ state: "error", message: res.message || "Download failed" });
+        setUpdateStatus({ state: "error", message: res.message || "error.update.download_failed" });
       }
     } catch (err) {
       setUpdateStatus({
@@ -69,7 +69,7 @@ export function useUpdateActions({ setUpdateStatus }: Params) {
 
   const handleInstallUpdate = useCallback(async () => {
     if (!window.electronAPI?.app?.installUpdate) {
-      setUpdateStatus({ state: "error", message: "Install API unavailable" });
+      setUpdateStatus({ state: "error", message: "error.update.install_api_unavailable" });
       return;
     }
     try {
@@ -79,7 +79,7 @@ export function useUpdateActions({ setUpdateStatus }: Params) {
         return;
       }
       if (res && !res.ok) {
-        setUpdateStatus({ state: "error", message: res.message || "Install failed" });
+        setUpdateStatus({ state: "error", message: res.message || "error.update.install_failed" });
       }
     } catch (err) {
       setUpdateStatus({

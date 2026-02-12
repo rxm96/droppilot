@@ -64,7 +64,10 @@ export function useAppBootstrap({
         forwardAuthError(res.message);
         return;
       }
-      const errInfo = errorInfoFromIpc(res, "Unable to load profile");
+      const errInfo = errorInfoFromIpc(res, {
+        code: "profile.fetch_failed",
+        message: "Unable to load profile",
+      });
       setProfile({
         status: "error",
         message: errInfo.message ?? "Unable to load profile",
@@ -73,7 +76,11 @@ export function useAppBootstrap({
       return;
     }
     if (!isTwitchProfile(res)) {
-      setProfile({ status: "error", message: "Profile response was empty" });
+      setProfile({
+        status: "error",
+        code: "profile.invalid_response",
+        message: "Profile response was invalid",
+      });
       return;
     }
     setProfile({
@@ -147,7 +154,7 @@ export function useAppBootstrap({
       } else if (status === "error") {
         setUpdateStatus({
           state: "error",
-          message: payload.message ? String(payload.message) : "Update error",
+          message: payload.message ? String(payload.message) : "error.update.unknown",
         });
       }
     });

@@ -85,13 +85,21 @@ export function useChannels({
           logWarn("channels: auth error", res);
           return;
         }
-        setChannelError(errorInfoFromIpc(res, "Unable to load channels"));
+        setChannelError(
+          errorInfoFromIpc(res, {
+            code: "channels.fetch_failed",
+            message: "Unable to load channels",
+          }),
+        );
         setChannels([]);
         logWarn("channels: fetch error", res);
         return;
       }
       if (!isArrayOf(res, isChannelEntry)) {
-        setChannelError({ message: "Invalid channels response" });
+        setChannelError({
+          code: "channels.invalid_response",
+          message: "Invalid channels response",
+        });
         setChannels([]);
         logWarn("channels: invalid response", res);
         return;
@@ -110,7 +118,12 @@ export function useChannels({
         fetchInventory();
       }
     } catch (err) {
-      setChannelError(errorInfoFromUnknown(err, "Unable to load channels"));
+      setChannelError(
+        errorInfoFromUnknown(err, {
+          code: "channels.fetch_failed",
+          message: "Unable to load channels",
+        }),
+      );
       setChannels([]);
     } finally {
       setChannelsLoading(false);

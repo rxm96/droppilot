@@ -179,7 +179,10 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
             setInventory({ status: "idle" });
             return;
           }
-          const errInfo = errorInfoFromIpc(res, "Unable to load inventory");
+          const errInfo = errorInfoFromIpc(res, {
+            code: "inventory.fetch_failed",
+            message: "Unable to load inventory",
+          });
           setInventory({
             status: "error",
             message: errInfo.message ?? "Unable to load inventory",
@@ -192,7 +195,8 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
         if (!isArrayOf(res, isInventoryItem)) {
           setInventory({
             status: "error",
-            message: "Inventory response was empty",
+            code: "inventory.invalid_response",
+            message: "Inventory response was invalid",
             items: hadItems ? prevItems : undefined,
           });
           return;
@@ -257,10 +261,16 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
                   onAuthError(claimRes.message);
                   return;
                 }
-                throw errorInfoFromIpc(claimRes, "Drop claim failed");
+                throw errorInfoFromIpc(claimRes, {
+                  code: "claim.failed",
+                  message: "Drop claim failed",
+                });
               }
               if (isIpcOkFalseResponse(claimRes)) {
-                throw errorInfoFromIpc(claimRes, "Drop claim failed");
+                throw errorInfoFromIpc(claimRes, {
+                  code: "claim.failed",
+                  message: "Drop claim failed",
+                });
               }
               onClaimed({ title: drop.title, game: drop.game });
               logInfo("inventory: auto-claimed", {
@@ -279,7 +289,10 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
               }
             } catch (err) {
               logWarn("inventory: claim error", { title: drop.title, err });
-              const errInfo = errorInfoFromUnknown(err, "Drop claim failed");
+              const errInfo = errorInfoFromUnknown(err, {
+                code: "claim.failed",
+                message: "Drop claim failed",
+              });
               setClaimStatus({
                 kind: "error",
                 message: errInfo.message,
@@ -294,7 +307,10 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
         void maybeAutoClaim(nextItems);
       } catch (err) {
         logError("inventory: fetch failed", err);
-        const errInfo = errorInfoFromUnknown(err, "Inventory request failed");
+        const errInfo = errorInfoFromUnknown(err, {
+          code: "inventory.fetch_failed",
+          message: "Inventory request failed",
+        });
         setInventory({
           status: "error",
           message: errInfo.message ?? "Inventory request failed",

@@ -75,6 +75,13 @@ type SettingsHook = {
   settingsError: string | null;
 };
 
+const toErrorMessage = (err: unknown, fallbackKey: string): string => {
+  if (err instanceof Error && err.message) {
+    return err.message;
+  }
+  return fallbackKey;
+};
+
 export function useSettingsStore(): SettingsHook {
   const [priorityGames, setPriorityGames] = useState<string[]>([]);
   const [obeyPriority, setObeyPriority] = useState<boolean>(false);
@@ -134,7 +141,7 @@ export function useSettingsStore(): SettingsHook {
       setSettingsJson(JSON.stringify(res, null, 2));
     } catch (err) {
       console.error("settings load failed", err);
-      setSettingsError(err instanceof Error ? err.message : "Failed to load settings");
+      setSettingsError(toErrorMessage(err, "error.settings.load_failed"));
     }
   };
 
@@ -174,7 +181,7 @@ export function useSettingsStore(): SettingsHook {
       setAlertsNewDrops(saved.alertsNewDrops !== false);
       setSettingsJson(JSON.stringify(saved, null, 2));
     } catch (err) {
-      setSettingsError(err instanceof Error ? err.message : "Failed to save settings");
+      setSettingsError(toErrorMessage(err, "error.settings.save_failed"));
     }
   };
 
@@ -297,7 +304,7 @@ export function useSettingsStore(): SettingsHook {
       const res = await window.electronAPI.settings.export();
       const json = JSON.stringify(res, null, 2);
       setSettingsJson(json);
-      setSettingsInfo("Settings exportiert.");
+      setSettingsInfo("settings.info.exported");
       setSettingsError(null);
       if (navigator?.clipboard?.writeText) {
         try {
@@ -307,7 +314,7 @@ export function useSettingsStore(): SettingsHook {
         }
       }
     } catch (err) {
-      setSettingsError(err instanceof Error ? err.message : "Failed to export settings");
+      setSettingsError(toErrorMessage(err, "error.settings.export_failed"));
     }
   };
 
@@ -342,10 +349,10 @@ export function useSettingsStore(): SettingsHook {
       setAlertsAutoSwitch(saved.alertsAutoSwitch !== false);
       setAlertsNewDrops(saved.alertsNewDrops !== false);
       setSettingsJson(JSON.stringify(saved, null, 2));
-      setSettingsInfo("Settings importiert.");
+      setSettingsInfo("settings.info.imported");
       setSettingsError(null);
     } catch (err) {
-      setSettingsError(err instanceof Error ? err.message : "Failed to import settings");
+      setSettingsError(toErrorMessage(err, "error.settings.import_failed"));
     }
   };
 

@@ -1,5 +1,6 @@
 import type { InventoryState, StatsState } from "../types";
 import { useI18n } from "../i18n";
+import { resolveErrorMessage } from "../utils/errors";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +25,10 @@ export function OverviewView({
   resetStats,
 }: OverviewProps) {
   const { t, language } = useI18n();
+  const statsErrorText =
+    stats.status === "error"
+      ? resolveErrorMessage(t, { code: stats.code, message: stats.message })
+      : null;
   const items =
     inventory.status === "ready"
       ? inventory.items
@@ -112,7 +117,7 @@ export function OverviewView({
             ) : stats.status === "loading" ? (
               <p className="meta">{t("overview.loading")}</p>
             ) : stats.status === "error" ? (
-              <p className="error">{stats.message}</p>
+              <p className="error">{statsErrorText}</p>
             ) : (
               <p className="meta">{t("overview.empty")}</p>
             )}
@@ -165,7 +170,7 @@ export function OverviewView({
           {stats.status === "loading" ? (
             <p className="meta">{t("overview.loading")}</p>
           ) : stats.status === "error" ? (
-            <p className="error">{stats.message}</p>
+            <p className="error">{statsErrorText}</p>
           ) : topGameEntries.length === 0 ? (
             <p className="meta">{t("overview.noGameClaims")}</p>
           ) : (

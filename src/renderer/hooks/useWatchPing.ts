@@ -67,10 +67,16 @@ export function useWatchPing({ watching, bumpStats, forwardAuthError, demoMode }
             forwardAuthError(res.message);
             return;
           }
-          throw errorInfoFromIpc(res, "Watch ping failed");
+          throw errorInfoFromIpc(res, {
+            code: "watch.ping_failed",
+            message: "Watch ping failed",
+          });
         }
         if (isIpcOkFalseResponse(res)) {
-          throw errorInfoFromIpc(res, "Watch ping failed");
+          throw errorInfoFromIpc(res, {
+            code: "watch.ping_failed",
+            message: "Watch ping failed",
+          });
         }
         logInfo("watch: ping ok", {
           channelId: watching.channelId ?? watching.id,
@@ -90,7 +96,10 @@ export function useWatchPing({ watching, bumpStats, forwardAuthError, demoMode }
         }
       } catch (err) {
         if (!cancelled) {
-          const errInfo = errorInfoFromUnknown(err, "Watch ping failed");
+          const errInfo = errorInfoFromUnknown(err, {
+            code: "watch.ping_failed",
+            message: "Watch ping failed",
+          });
           logWarn("watch: ping error", err);
           setWatchStats((prev) => ({
             lastOk: prev.lastOk,

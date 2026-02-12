@@ -23,12 +23,42 @@ type PerfSnapshot = {
 
 const stats = new Map<string, RenderStat>();
 let version = 0;
+const PERF_ENTRY_TTL_MS = 20 * 60_000;
+const PERF_MAX_ENTRIES = 120;
 
 export const isPerfEnabled = () => isVerboseLoggingEnabled();
 
+const pruneStats = (now: number) => {
+  const before = stats.size;
+
+  for (const [id, stat] of stats) {
+    if (now - stat.lastAt > PERF_ENTRY_TTL_MS) {
+      stats.delete(id);
+    }
+  }
+
+  if (stats.size > PERF_MAX_ENTRIES) {
+    const overflow = stats.size - PERF_MAX_ENTRIES;
+    const oldestFirst = Array.from(stats.values()).sort((a, b) => a.lastAt - b.lastAt);
+    for (let i = 0; i < overflow; i += 1) {
+      const candidate = oldestFirst[i];
+      if (candidate) {
+        stats.delete(candidate.id);
+      }
+    }
+  }
+
+  if (stats.size !== before) {
+    version += 1;
+  }
+};
+
 export const recordRender = (id: string, durationMs: number) => {
   if (!isPerfEnabled()) return;
+  if (!id) return;
+  if (!Number.isFinite(durationMs) || durationMs < 0) return;
   const now = Date.now();
+  pruneStats(now);
   const current = stats.get(id);
   if (!current) {
     stats.set(id, {
@@ -50,6 +80,7 @@ export const recordRender = (id: string, durationMs: number) => {
 };
 
 export const getPerfSnapshot = (): PerfSnapshot => {
+  pruneStats(Date.now());
   const items = Array.from(stats.values())
     .map((stat) => ({
       id: stat.id,
@@ -61,4 +92,10 @@ export const getPerfSnapshot = (): PerfSnapshot => {
     }))
     .sort((a, b) => b.avgMs - a.avgMs);
   return { version, items };
+};
+
+export const resetPerfStore = () => {
+  if (stats.size === 0) return;
+  stats.clear();
+  version += 1;
 };

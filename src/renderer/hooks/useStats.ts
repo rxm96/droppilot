@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { StatsData, StatsState } from "../types";
 import { isIpcErrorResponse, isStatsData } from "../utils/ipc";
+import { errorInfoFromIpc, errorInfoFromUnknown } from "../utils/errors";
 
 const computeNext = (
   current: StatsData,
@@ -40,16 +41,36 @@ export function useStats(options: StatsHookOptions = {}) {
     try {
       const res: unknown = await window.electronAPI.stats.get();
       if (isIpcErrorResponse(res)) {
-        setStats({ status: "error", message: res.message ?? "Unable to load stats" });
+        const errInfo = errorInfoFromIpc(res, {
+          code: "stats.load_failed",
+          message: "Unable to load stats",
+        });
+        setStats({
+          status: "error",
+          message: errInfo.message ?? "Unable to load stats",
+          code: errInfo.code,
+        });
         return;
       }
       if (!isStatsData(res)) {
-        setStats({ status: "error", message: "Invalid stats response" });
+        setStats({
+          status: "error",
+          message: "Invalid stats response",
+          code: "stats.invalid_response",
+        });
         return;
       }
       setStats({ status: "ready", data: res });
     } catch (err) {
-      setStats({ status: "error", message: err instanceof Error ? err.message : "Stats request failed" });
+      const errInfo = errorInfoFromUnknown(err, {
+        code: "stats.load_failed",
+        message: "Stats request failed",
+      });
+      setStats({
+        status: "error",
+        message: errInfo.message ?? "Stats request failed",
+        code: errInfo.code,
+      });
     }
   }, []);
 
@@ -83,14 +104,23 @@ export function useStats(options: StatsHookOptions = {}) {
     try {
       const res: unknown = await window.electronAPI.stats.reset();
       if (!isStatsData(res)) {
-        setStats({ status: "error", message: "Failed to reset stats" });
+        setStats({
+          status: "error",
+          message: "Failed to reset stats",
+          code: "stats.reset_failed",
+        });
         return;
       }
       setStats({ status: "ready", data: res });
     } catch (err) {
+      const errInfo = errorInfoFromUnknown(err, {
+        code: "stats.reset_failed",
+        message: "Failed to reset stats",
+      });
       setStats({
         status: "error",
-        message: err instanceof Error ? err.message : "Failed to reset stats",
+        message: errInfo.message ?? "Failed to reset stats",
+        code: errInfo.code,
       });
     }
   }, [demoMode]);
