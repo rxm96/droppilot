@@ -171,7 +171,8 @@ const translations: Translations = {
     "overview.stats": "Stats",
     "overview.reset": "Reset",
     "overview.resetConfirmTitle": "Reset stats?",
-    "overview.resetConfirmDesc": "This clears all stats and claimed-by-game history. This can't be undone.",
+    "overview.resetConfirmDesc":
+      "This clears all stats and claimed-by-game history. This can't be undone.",
     "overview.resetCancel": "Cancel",
     "overview.resetConfirmAction": "Reset stats",
     "overview.totalMinutes": "Total minutes",

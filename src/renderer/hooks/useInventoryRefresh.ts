@@ -44,7 +44,11 @@ export function useInventoryRefresh({
   }, [authStatus]);
 
   useEffect(() => {
-    const mode: InventoryRefreshState["mode"] = watching ? "watching" : authStatus === "ok" ? "idle" : null;
+    const mode: InventoryRefreshState["mode"] = watching
+      ? "watching"
+      : authStatus === "ok"
+        ? "idle"
+        : null;
     if (!mode) return;
 
     let cancelled = false;

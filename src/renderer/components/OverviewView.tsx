@@ -19,11 +19,7 @@ type OverviewProps = {
   resetStats: () => void;
 };
 
-export function OverviewView({
-  inventory,
-  stats,
-  resetStats,
-}: OverviewProps) {
+export function OverviewView({ inventory, stats, resetStats }: OverviewProps) {
   const { t, language } = useI18n();
   const statsErrorText =
     stats.status === "error"
@@ -33,7 +29,7 @@ export function OverviewView({
     inventory.status === "ready"
       ? inventory.items
       : inventory.status === "error"
-        ? inventory.items ?? []
+        ? (inventory.items ?? [])
         : [];
   const totalDrops = items.length;
   const claimedDrops = items.filter((i) => i.status === "claimed").length;
@@ -42,9 +38,12 @@ export function OverviewView({
   const upcomingDrops = items.filter((i) => i.status === "locked" && !i.excluded).length;
   const statsData = stats.status === "ready" ? stats.data : null;
   const topGameEntries = statsData?.claimsByGame
-    ? Object.entries(statsData.claimsByGame).sort((a, b) => b[1] - a[1]).slice(0, 6)
+    ? Object.entries(statsData.claimsByGame)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 6)
     : [];
-  const maxGameClaims = topGameEntries.length > 0 ? Math.max(...topGameEntries.map((e) => e[1])) : 0;
+  const maxGameClaims =
+    topGameEntries.length > 0 ? Math.max(...topGameEntries.map((e) => e[1])) : 0;
   const formatNumber = (val: number) =>
     new Intl.NumberFormat(language === "de" ? "de-DE" : "en-US").format(
       Math.max(0, Math.round(val)),
@@ -95,7 +94,9 @@ export function OverviewView({
                     <span className="overview-kpi-label">{t("overview.totalMinutes")}</span>
                   </div>
                   <div className="overview-kpi">
-                    <span className="overview-kpi-value">{formatNumber(statsData.totalClaims)}</span>
+                    <span className="overview-kpi-value">
+                      {formatNumber(statsData.totalClaims)}
+                    </span>
                     <span className="overview-kpi-label">{t("overview.claims")}</span>
                   </div>
                   <div className="overview-kpi">

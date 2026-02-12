@@ -23,14 +23,9 @@ export function errorInfoFromIpc(
   if (!res || typeof res !== "object") {
     return { code: normalized.code, message: normalized.message };
   }
-  const code =
-    typeof res.code === "string" && res.code.length > 0
-      ? res.code
-      : normalized.code;
+  const code = typeof res.code === "string" && res.code.length > 0 ? res.code : normalized.code;
   const message =
-    typeof res.message === "string" && res.message.length > 0
-      ? res.message
-      : normalized.message;
+    typeof res.message === "string" && res.message.length > 0 ? res.message : normalized.message;
   return { code, message };
 }
 
@@ -41,10 +36,7 @@ export function errorInfoFromUnknown(err: unknown, fallback: ErrorFallback): Err
     const maybeMessage = (err as { message?: unknown }).message;
     if (typeof maybeCode === "string" || typeof maybeMessage === "string") {
       return {
-        code:
-          typeof maybeCode === "string" && maybeCode.length > 0
-            ? maybeCode
-            : normalized.code,
+        code: typeof maybeCode === "string" && maybeCode.length > 0 ? maybeCode : normalized.code,
         message:
           typeof maybeMessage === "string" && maybeMessage.length > 0
             ? maybeMessage

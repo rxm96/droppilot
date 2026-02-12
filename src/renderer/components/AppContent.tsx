@@ -97,9 +97,11 @@ export function AppContent({
       <section className="panel inventory-panel">
         {view === "overview" && renderWithPerf("OverviewView", <OverviewView {...overviewProps} />)}
 
-        {view === "inventory" && renderWithPerf("InventoryView", <InventoryView {...inventoryProps} />)}
+        {view === "inventory" &&
+          renderWithPerf("InventoryView", <InventoryView {...inventoryProps} />)}
 
-        {view === "priorities" && renderWithPerf("PriorityView", <PriorityView {...priorityProps} />)}
+        {view === "priorities" &&
+          renderWithPerf("PriorityView", <PriorityView {...priorityProps} />)}
 
         {view === "settings" && renderWithPerf("SettingsView", <SettingsView {...settingsProps} />)}
 

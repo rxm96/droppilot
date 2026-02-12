@@ -2,7 +2,15 @@ import React, { useEffect } from "react";
 import { useI18n } from "../i18n";
 
 type UpdateStatus = {
-  state: "idle" | "checking" | "available" | "downloading" | "downloaded" | "none" | "error" | "unsupported";
+  state:
+    | "idle"
+    | "checking"
+    | "available"
+    | "downloading"
+    | "downloaded"
+    | "none"
+    | "error"
+    | "unsupported";
   message?: string;
   version?: string;
   progress?: number;
@@ -29,8 +37,7 @@ export function UpdateOverlay({ updateStatus, onInstallUpdate }: Props) {
 
   const progressPct = Math.min(100, Math.max(0, Math.round(resolvedStatus.progress ?? 0)));
   const showProgress = isDownloading && Number.isFinite(progressPct);
-  const canInstall =
-    resolvedStatus.state === "downloaded" && typeof onInstallUpdate === "function";
+  const canInstall = resolvedStatus.state === "downloaded" && typeof onInstallUpdate === "function";
   const formatBytes = (bytes?: number) => {
     if (!bytes || bytes <= 0) return "0 MB";
     const mb = bytes / (1024 * 1024);

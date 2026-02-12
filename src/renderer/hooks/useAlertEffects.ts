@@ -93,7 +93,8 @@ export function useAlertEffects({
   useEffect(() => {
     if (!alertsWatchError) return;
     if (!watchStats.lastError) return;
-    const t = (key: string, vars?: Record<string, string | number>) => translate(language, key, vars);
+    const t = (key: string, vars?: Record<string, string | number>) =>
+      translate(language, key, vars);
     const message = resolveErrorMessage(t, watchStats.lastError);
     notify({
       key: `watch-error:${watchStats.lastError.code ?? message}`,

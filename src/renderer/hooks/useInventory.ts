@@ -98,7 +98,9 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
   const fetchInventory = useCallback(
     async (opts?: FetchInventoryOpts) => {
       if (fetchInFlightRef.current) {
-        const queuedForce = Boolean(pendingFetchOptsRef.current?.forceLoading || opts?.forceLoading);
+        const queuedForce = Boolean(
+          pendingFetchOptsRef.current?.forceLoading || opts?.forceLoading,
+        );
         pendingFetchOptsRef.current = queuedForce ? { forceLoading: true } : {};
         logDebug("inventory: fetch queued (in flight)", { forceLoading: queuedForce });
         return;
@@ -163,8 +165,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
           }
           if (autoClaimEnabled) {
             const claimedNow = nextItems.filter(
-              (item) =>
-                item.status === "claimed" && prevMap.get(item.id)?.status !== "claimed",
+              (item) => item.status === "claimed" && prevMap.get(item.id)?.status !== "claimed",
             );
             for (const claimed of claimedNow) {
               onClaimed({ title: claimed.title, game: claimed.game });
@@ -297,7 +298,10 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
                 });
                 if (!scheduledRefresh) {
                   scheduledRefresh = true;
-                  window.setTimeout(() => fetchInventoryRef.current?.({ forceLoading: true }), 1200);
+                  window.setTimeout(
+                    () => fetchInventoryRef.current?.({ forceLoading: true }),
+                    1200,
+                  );
                 }
               } catch (err) {
                 logWarn("inventory: claim error", { title: drop.title, err });
@@ -337,7 +341,9 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
         const queued = pendingFetchOptsRef.current;
         if (queued) {
           pendingFetchOptsRef.current = null;
-          logDebug("inventory: running queued fetch", { forceLoading: queued.forceLoading === true });
+          logDebug("inventory: running queued fetch", {
+            forceLoading: queued.forceLoading === true,
+          });
           void fetchInventoryRef.current(queued);
         }
       }

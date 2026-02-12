@@ -41,24 +41,12 @@ export function Sidebar({
   }
 
   const icons: Record<View, JSX.Element> = {
-    overview: (
-      <span className="material-symbols-rounded">dashboard</span>
-    ),
-    inventory: (
-      <span className="material-symbols-rounded">inventory_2</span>
-    ),
-    control: (
-      <span className="material-symbols-rounded">tune</span>
-    ),
-    priorities: (
-      <span className="material-symbols-rounded">format_list_numbered</span>
-    ),
-    settings: (
-      <span className="material-symbols-rounded">settings</span>
-    ),
-    debug: (
-      <span className="material-symbols-rounded">bug_report</span>
-    ),
+    overview: <span className="material-symbols-rounded">dashboard</span>,
+    inventory: <span className="material-symbols-rounded">inventory_2</span>,
+    control: <span className="material-symbols-rounded">tune</span>,
+    priorities: <span className="material-symbols-rounded">format_list_numbered</span>,
+    settings: <span className="material-symbols-rounded">settings</span>,
+    debug: <span className="material-symbols-rounded">bug_report</span>,
   };
 
   return (

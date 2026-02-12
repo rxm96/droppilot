@@ -109,9 +109,7 @@ export function PriorityView({
         <section className="priority-panel priority-panel-list">
           <div className="label">{t("settings.priorityGames")}</div>
           <p className="meta">{t("settings.drag")}</p>
-          {priorityGames.length === 0 ? (
-            <p className="meta">{t("settings.noneEntries")}</p>
-          ) : null}
+          {priorityGames.length === 0 ? <p className="meta">{t("settings.noneEntries")}</p> : null}
           {previewPriorityGames.length > 0 && (
             <ul className="priority-list">
               {previewPriorityGames.map((g, idx) => (

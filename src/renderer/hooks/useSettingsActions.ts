@@ -40,10 +40,7 @@ export function useSettingsActions({
   saveRefreshIntervals,
   resetAutomation,
 }: Params) {
-  const handleFilterChange = useCallback(
-    (key: FilterKey) => setFilter(key),
-    [setFilter],
-  );
+  const handleFilterChange = useCallback((key: FilterKey) => setFilter(key), [setFilter]);
 
   const handleSetObeyPriority = useCallback(
     (val: boolean) => {

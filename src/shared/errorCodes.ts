@@ -40,4 +40,3 @@ export type AppErrorCode = ValueOf<typeof APP_ERROR_CODES>;
 export function toErrorKey(code: string): string {
   return `error.${code}`;
 }
-

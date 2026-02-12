@@ -32,10 +32,8 @@ const isFiniteNumber = (value: unknown): value is number =>
 const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === "string");
 
-export const isArrayOf = <T>(
-  value: unknown,
-  guard: (item: unknown) => item is T,
-): value is T[] => Array.isArray(value) && value.every((item) => guard(item));
+export const isArrayOf = <T>(value: unknown, guard: (item: unknown) => item is T): value is T[] =>
+  Array.isArray(value) && value.every((item) => guard(item));
 
 export const isIpcErrorResponse = (value: unknown): value is IpcErrorResponse =>
   isRecord(value) && isString(value.error);
@@ -98,4 +96,3 @@ export const isStatsData = (value: unknown): value is StatsData => {
   const claimsByGame = value.claimsByGame as UnknownRecord;
   return Object.values(claimsByGame).every((entry) => isFiniteNumber(entry));
 };
-

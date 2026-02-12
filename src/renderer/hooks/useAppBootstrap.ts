@@ -10,7 +10,15 @@ import { RENDERER_ERROR_CODES, TWITCH_ERROR_CODES } from "../../shared/errorCode
 type FetchInventory = (opts?: { forceLoading?: boolean }) => Promise<void>;
 
 export type AppUpdateStatus = {
-  state: "idle" | "checking" | "available" | "downloading" | "downloaded" | "none" | "error" | "unsupported";
+  state:
+    | "idle"
+    | "checking"
+    | "available"
+    | "downloading"
+    | "downloaded"
+    | "none"
+    | "error"
+    | "unsupported";
   message?: string;
   version?: string;
   progress?: number;

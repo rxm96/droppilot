@@ -53,7 +53,15 @@ type SettingsProps = {
   downloadUpdate?: () => void;
   installUpdate?: () => void;
   updateStatus?: {
-    state: "idle" | "checking" | "available" | "downloading" | "downloaded" | "none" | "error" | "unsupported";
+    state:
+      | "idle"
+      | "checking"
+      | "available"
+      | "downloading"
+      | "downloaded"
+      | "none"
+      | "error"
+      | "unsupported";
     message?: string;
     version?: string;
     progress?: number;

@@ -320,7 +320,11 @@ export class TwitchService {
       if (err instanceof TwitchServiceError) {
         throw err;
       }
-      throw new TwitchServiceError(TWITCH_ERROR_CODES.SPADE_FETCH_FAILED, "Spade fetch failed", err);
+      throw new TwitchServiceError(
+        TWITCH_ERROR_CODES.SPADE_FETCH_FAILED,
+        "Spade fetch failed",
+        err,
+      );
     }
 
     let match = html.match(SPADE_PATTERN);
@@ -386,7 +390,10 @@ export class TwitchService {
     const channelId = streamInfo.channelId ?? payload.channelId;
 
     if (!broadcastId || !channelId) {
-      throw new TwitchServiceError(TWITCH_ERROR_CODES.WATCH_MISSING_IDS, "Watch identifiers missing");
+      throw new TwitchServiceError(
+        TWITCH_ERROR_CODES.WATCH_MISSING_IDS,
+        "Watch identifiers missing",
+      );
     }
 
     const payloadBody = [
@@ -655,7 +662,11 @@ export class TwitchService {
         throw err;
       }
       const message = err instanceof Error ? err.message : String(err);
-      throw new TwitchServiceError(TWITCH_ERROR_CODES.GQL_FAILED, `GQL failed (${context}): ${message}`, err);
+      throw new TwitchServiceError(
+        TWITCH_ERROR_CODES.GQL_FAILED,
+        `GQL failed (${context}): ${message}`,
+        err,
+      );
     }
   }
 }
