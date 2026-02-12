@@ -6,7 +6,7 @@ import { format } from "node:url";
 import { AuthController } from "./auth";
 import { loadSession, clearSession } from "./core/storage";
 import { TwitchService } from "./twitch/service";
-import { PollingChannelTracker } from "./twitch/tracker";
+import { createChannelTracker, normalizeTrackerMode } from "./twitch/tracker";
 import { registerIpcHandlers } from "./ipc";
 import { loadSettings, saveSettings } from "./core/settings";
 import { loadStats, saveStats, bumpStats, resetStats } from "./core/stats";
@@ -16,9 +16,10 @@ const devServerUrl = process.env.VITE_DEV_SERVER_URL ?? "http://localhost:5173";
 const debugLogsOptIn =
   process.argv.includes("--debug-logs") || process.env.DROPPILOT_DEBUG_LOGS === "1";
 const verboseLogsEnabled = isDev || debugLogsOptIn;
+const trackerMode = normalizeTrackerMode(process.env.DROPPILOT_TRACKER_MODE);
 const auth = new AuthController();
 const twitchService = new TwitchService(loadSession);
-const channelTracker = new PollingChannelTracker(twitchService);
+const channelTracker = createChannelTracker(twitchService, trackerMode);
 let tray: Tray | null = null;
 let updateTimer: NodeJS.Timeout | null = null;
 const UPDATE_INTERVAL_MS = 60 * 60 * 1000;
@@ -293,6 +294,14 @@ app.whenReady().then(() => {
   if (!isDev && debugLogsOptIn) {
     console.log("[DropPilot] Verbose logging enabled (prod opt-in).");
   }
+  const effectiveTrackerMode = channelTracker.mode;
+  if (effectiveTrackerMode !== trackerMode) {
+    console.log(
+      `[DropPilot] Channel tracker mode: ${effectiveTrackerMode} (requested: ${trackerMode})`,
+    );
+  } else {
+    console.log(`[DropPilot] Channel tracker mode: ${effectiveTrackerMode}`);
+  }
   createTray(win);
   setupAutoUpdater();
   void loadSettings()
@@ -348,6 +357,9 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
+  if (typeof channelTracker.dispose === "function") {
+    channelTracker.dispose();
+  }
   if (updateTimer) {
     clearInterval(updateTimer);
     updateTimer = null;

@@ -24,7 +24,7 @@ export default defineConfig({
           build: {
             outDir: "dist-electron/main",
             rollupOptions: {
-              external: ["electron-updater"],
+              external: ["electron-updater", "ws"],
             },
           },
         },
