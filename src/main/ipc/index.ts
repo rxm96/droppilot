@@ -7,6 +7,7 @@ import { exportSettings, importSettings, type SettingsData } from "../core/setti
 import type { StatsData } from "../core/stats";
 import type { PriorityPlan } from "../twitch/channels";
 import { TwitchServiceError } from "../twitch/errors";
+import type { ChannelTracker } from "../twitch/tracker";
 
 function extractReleaseNoteText(entry: unknown): string {
   if (typeof entry === "string") return entry;
@@ -75,6 +76,7 @@ function normalizeReleaseNotes(value: unknown): string | undefined {
 export function registerIpcHandlers(deps: {
   auth: AuthController;
   twitch: TwitchService;
+  channelTracker: ChannelTracker;
   loadSession: () => Promise<SessionData | null>;
   clearSession: () => Promise<void>;
   loadSettings: () => Promise<SettingsData>;
@@ -93,6 +95,7 @@ export function registerIpcHandlers(deps: {
   const {
     auth,
     twitch,
+    channelTracker,
     loadSession,
     clearSession,
     loadSettings,
@@ -167,7 +170,7 @@ export function registerIpcHandlers(deps: {
 
   ipcMain.handle("twitch/channels", async (_e, payload: { game: string }) => {
     try {
-      return await twitch.getChannelsForGame(payload.game);
+      return await channelTracker.getChannelsForGame(payload.game);
     } catch (err) {
       if (twitch.isAuthError(err)) {
         return { error: "auth", message: (err as Error).message, status: (err as any).status };

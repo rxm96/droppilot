@@ -6,6 +6,7 @@ import { format } from "node:url";
 import { AuthController } from "./auth";
 import { loadSession, clearSession } from "./core/storage";
 import { TwitchService } from "./twitch/service";
+import { PollingChannelTracker } from "./twitch/tracker";
 import { registerIpcHandlers } from "./ipc";
 import { loadSettings, saveSettings } from "./core/settings";
 import { loadStats, saveStats, bumpStats, resetStats } from "./core/stats";
@@ -17,6 +18,7 @@ const debugLogsOptIn =
 const verboseLogsEnabled = isDev || debugLogsOptIn;
 const auth = new AuthController();
 const twitchService = new TwitchService(loadSession);
+const channelTracker = new PollingChannelTracker(twitchService);
 let tray: Tray | null = null;
 let updateTimer: NodeJS.Timeout | null = null;
 const UPDATE_INTERVAL_MS = 60 * 60 * 1000;
@@ -319,6 +321,7 @@ app.whenReady().then(() => {
   registerIpcHandlers({
     auth,
     twitch: twitchService,
+    channelTracker,
     loadSession,
     clearSession,
     loadSettings,
