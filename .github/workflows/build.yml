@@ -103,6 +103,89 @@ jobs:
               /^full\s+changelog\b[:\s-]*/i.test(body.replace(/^#+\s*/g, ""));
             core.setOutput("notes", onlyFullChangelog ? "" : body);
             core.setOutput("base_tag", previousTagName ?? "");
+            core.setOutput("tag", tag);
+            core.setOutput("is_prerelease", String(isPrereleaseTag));
+
+      - name: Gather additional release context
+        id: release_context
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const tag = context.ref.replace("refs/tags/", "");
+            const base = `${{ steps.generated_notes.outputs.base_tag }}`.trim();
+
+            if (!base) {
+              core.setOutput("context", "No previous tag available for commit comparison.");
+              return;
+            }
+
+            try {
+              const { data } = await github.rest.repos.compareCommitsWithBasehead({
+                owner,
+                repo,
+                basehead: `${base}...${tag}`,
+                per_page: 100,
+              });
+
+              const commitSummaries = Array.from(
+                new Set(
+                  (data.commits ?? [])
+                    .map((commit) => String(commit.commit?.message ?? "").split("\n")[0].trim())
+                    .filter((line) => line.length > 0)
+                    .filter((line) => !/^chore\(release\):\s*v/i.test(line)),
+                ),
+              ).slice(0, 20);
+
+              const changedFiles = Array.from(
+                new Set((data.files ?? []).map((file) => file.filename).filter(Boolean)),
+              ).slice(0, 30);
+
+              const inferArea = (file) => {
+                if (/priority|target/i.test(file)) return "watch priority and auto-target behavior";
+                if (/inventory/i.test(file)) return "inventory refresh and drop progress";
+                if (/channel/i.test(file)) return "channel selection and switching";
+                if (/update|overlay/i.test(file)) return "update flow and release information";
+                if (/auth|session/i.test(file)) return "login/session reliability";
+                if (/settings|theme|i18n/i.test(file)) return "settings and user preferences";
+                if (/build\.yml|workflow|package\.json/i.test(file))
+                  return "release/build pipeline and update delivery";
+                return null;
+              };
+              const inferredAreas = Array.from(
+                new Set(changedFiles.map((file) => inferArea(file)).filter(Boolean)),
+              ).slice(0, 8);
+
+              const commitSection = commitSummaries.length
+                ? commitSummaries.map((line) => `- ${line}`).join("\n")
+                : "- (no commit summaries found)";
+              const filesSection = changedFiles.length
+                ? changedFiles.map((line) => `- ${line}`).join("\n")
+                : "- (no changed files listed)";
+              const areaSection = inferredAreas.length
+                ? inferredAreas.map((line) => `- ${line}`).join("\n")
+                : "- (no feature areas inferred)";
+
+              const contextBlock = [
+                `Base tag: ${base}`,
+                `Target tag: ${tag}`,
+                "",
+                "Commit summaries:",
+                commitSection,
+                "",
+                "Changed files:",
+                filesSection,
+                "",
+                "Inferred user-impact areas:",
+                areaSection,
+              ].join("\n");
+
+              core.setOutput("context", contextBlock);
+            } catch (error) {
+              core.warning(`Failed to collect compare context: ${error}`);
+              core.setOutput("context", `Base tag: ${base}\nTarget tag: ${tag}\n- Comparison lookup failed.`);
+            }
 
       - name: Generate user-friendly notes with GitHub Models
         id: user_notes
@@ -111,17 +194,28 @@ jobs:
         with:
           model: openai/gpt-4o-mini
           prompt: |
-            You rewrite technical changelog entries into user-facing release notes.
-            Return only markdown bullet points (3 to 6 bullets).
-            Keep language simple and useful for non-technical users.
-            Do not mention file paths, commits, pull requests, or internal implementation details.
-            Focus on concrete user-visible features and fixes.
-            Avoid vague wording like "improved stability" unless no concrete details exist.
-            If no user-visible changes are present, return exactly:
-            - No major user-facing changes in this release.
+            You are writing user-facing release notes for DropPilot (a Twitch Drops automation desktop app).
+            Audience: non-technical end users.
 
-            Technical changelog:
+            Output rules:
+            - Return only markdown bullet points (3 to 6 bullets).
+            - Use plain, concrete language focused on user-visible changes.
+            - Do not mention file paths, commits, pull requests, CI, refactoring, or architecture.
+            - Do not invent behavior that is not supported by the provided context.
+            - Prefer outcomes ("Auto-watch now picks ...") over implementation details.
+            - Use changed files only to infer user-facing feature areas; never show file names in output.
+            - If evidence is mostly technical/internal, return exactly this single bullet:
+            - Internal maintenance and stability improvements.
+
+            Release metadata:
+            - Version tag: ${{ steps.generated_notes.outputs.tag }}
+            - Pre-release: ${{ steps.generated_notes.outputs.is_prerelease }}
+
+            Technical changelog (GitHub-generated):
             ${{ steps.generated_notes.outputs.notes }}
+
+            Additional context from git comparison:
+            ${{ steps.release_context.outputs.context }}
 
       - name: Build release body
         run: |
