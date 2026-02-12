@@ -34,24 +34,27 @@ function extractReleaseNoteText(entry: unknown): string {
 
 function extractUserFacingSection(text: string): string {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const normalizeLine = (line: string) => line.replace(/[’`]/g, "'").trim();
   const userHeadingRe = /^(?:#{1,6}\s*)?what'?s new for users\s*$/i;
-  const anyHeadingRe = /^#{1,6}\s+\S/;
-  const fullChangelogRe = /^(?:#{1,6}\s*)?full\s+changelog\b[:\s-]*.*$/i;
-  const start = lines.findIndex((line) => userHeadingRe.test(line.trim()));
+  const markdownHeadingRe = /^#{1,6}\s+\S/;
+  const changelogHeadingRe =
+    /^(?:#{1,6}\s*)?(full\s+changelog|what'?s changed|changelog)\b[:\s-]*.*$/i;
+  const isUserHeading = (line: string) => userHeadingRe.test(normalizeLine(line));
+  const isMarkdownHeading = (line: string) => markdownHeadingRe.test(normalizeLine(line));
+  const isChangelogHeading = (line: string) => changelogHeadingRe.test(normalizeLine(line));
+  const start = lines.findIndex((line) => isUserHeading(line));
   if (start < 0) {
-    return lines
-      .filter((line) => !fullChangelogRe.test(line.trim()))
-      .join("\n")
-      .trim();
+    const changelogStart = lines.findIndex((line) => isChangelogHeading(line));
+    const fallbackLines = changelogStart >= 0 ? lines.slice(0, changelogStart) : lines;
+    return fallbackLines.join("\n").trim();
   }
   let end = lines.length;
   for (let i = start + 1; i < lines.length; i += 1) {
-    const trimmed = lines[i].trim();
-    if (fullChangelogRe.test(trimmed)) {
+    if (isChangelogHeading(lines[i])) {
       end = i;
       break;
     }
-    if (anyHeadingRe.test(trimmed) && !userHeadingRe.test(trimmed)) {
+    if (isMarkdownHeading(lines[i]) && !isUserHeading(lines[i])) {
       end = i;
       break;
     }
