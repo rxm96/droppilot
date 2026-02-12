@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  models: read
 
 jobs:
   build:
@@ -66,9 +67,70 @@ jobs:
           path: artifacts
           merge-multiple: true
 
+      - name: Generate technical release notes
+        id: generated_notes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data } = await github.rest.repos.generateReleaseNotes({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: context.ref.replace("refs/tags/", ""),
+              target_commitish: context.sha,
+            });
+            core.setOutput("notes", data.body ?? "");
+
+      - name: Generate user-friendly notes with GitHub Models
+        id: user_notes
+        uses: actions/ai-inference@v1
+        continue-on-error: true
+        with:
+          model: openai/gpt-4o-mini
+          prompt: |
+            You rewrite technical changelog entries into user-facing release notes.
+            Return only markdown bullet points (3 to 6 bullets).
+            Keep language simple and useful for non-technical users.
+            Do not mention file paths, commits, pull requests, or internal implementation details.
+            Focus on user-visible features, fixes, and stability improvements.
+            If no user-visible changes are present, return exactly:
+            - Internal maintenance and stability improvements.
+
+            Technical changelog:
+            ${{ steps.generated_notes.outputs.notes }}
+
+      - name: Build release body
+        run: |
+          cat <<'EOF' > release_body.md
+          ## What's new for users
+
+          ${{ steps.user_notes.outputs.response || '- Internal maintenance and stability improvements.' }}
+
+          ## Full changelog
+
+          ${{ steps.generated_notes.outputs.notes }}
+          EOF
+
+      - name: Resolve release visibility
+        id: release_visibility
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if [[ "$TAG" == *"-test"* ]]; then
+            echo "draft=true" >> "$GITHUB_OUTPUT"
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          elif [[ "$TAG" == *"-rc"* || "$TAG" == *"-beta"* || "$TAG" == *"-alpha"* ]]; then
+            echo "draft=false" >> "$GITHUB_OUTPUT"
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "draft=false" >> "$GITHUB_OUTPUT"
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          body_path: release_body.md
+          draft: ${{ steps.release_visibility.outputs.draft }}
+          prerelease: ${{ steps.release_visibility.outputs.prerelease }}
           files: |
             artifacts/*.exe
             artifacts/*.blockmap
