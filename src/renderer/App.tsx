@@ -229,11 +229,14 @@ function App() {
   );
 
   const previewPriorityGames =
-    dragIndex !== null && dragOverIndex !== null && dragIndex !== dragOverIndex
+    dragIndex !== null && dragOverIndex !== null && priorityGames.length > 0
       ? (() => {
           const clone = [...priorityGames];
+          if (dragIndex < 0 || dragIndex >= clone.length) return priorityGames;
           const [item] = clone.splice(dragIndex, 1);
-          clone.splice(dragOverIndex, 0, item);
+          if (item === undefined) return priorityGames;
+          const clampedTargetIndex = Math.max(0, Math.min(dragOverIndex, clone.length));
+          clone.splice(clampedTargetIndex, 0, item);
           return clone;
         })()
       : priorityGames;

@@ -22,7 +22,7 @@ export type TwitchProfile = {
 };
 
 const isRecord = (value: unknown): value is UnknownRecord =>
-  typeof value === "object" && value !== null;
+  typeof value === "object" && value !== null && !Array.isArray(value);
 
 const isString = (value: unknown): value is string => typeof value === "string";
 

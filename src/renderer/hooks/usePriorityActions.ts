@@ -49,8 +49,21 @@ export function usePriorityActions({
         return;
       }
       const updated = [...priorityGames];
+      // Ensure dragIndex is within bounds of the current list before splicing.
+      if (dragIndex < 0 || dragIndex >= updated.length) {
+        setDragIndex(null);
+        setDragOverIndex(null);
+        return;
+      }
       const [item] = updated.splice(dragIndex, 1);
-      updated.splice(targetIndex, 0, item);
+      if (item === undefined) {
+        setDragIndex(null);
+        setDragOverIndex(null);
+        return;
+      }
+      // Clamp targetIndex after removal so insertion is always in a valid range.
+      const clampedTargetIndex = Math.max(0, Math.min(targetIndex, updated.length));
+      updated.splice(clampedTargetIndex, 0, item);
       setDragIndex(null);
       setDragOverIndex(null);
       void savePriorityGames(updated);

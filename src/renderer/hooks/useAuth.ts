@@ -1,6 +1,22 @@
 import { useEffect, useState } from "react";
 import type { AuthState } from "../types";
 
+const AUTH_LOGIN_CANCELLED_KEY = "error.auth.login_cancelled";
+const AUTH_LOGIN_FAILED_KEY = "error.auth.login_failed";
+
+function toAuthErrorMessage(err: unknown): string {
+  if (err instanceof Error) {
+    const message = err.message?.trim();
+    if (!message) return AUTH_LOGIN_FAILED_KEY;
+    const normalized = message.toLowerCase();
+    if (normalized === "login was cancelled" || normalized === "login was canceled") {
+      return AUTH_LOGIN_CANCELLED_KEY;
+    }
+    return message;
+  }
+  return AUTH_LOGIN_CANCELLED_KEY;
+}
+
 type AuthHook = {
   auth: AuthState;
   startLogin: () => Promise<void>;
@@ -40,7 +56,7 @@ export function useAuth(): AuthHook {
     } catch (err) {
       setAuth({
         status: "error",
-        message: err instanceof Error ? err.message : "Login was cancelled",
+        message: toAuthErrorMessage(err),
       });
     }
   };
@@ -63,7 +79,7 @@ export function useAuth(): AuthHook {
     } catch (err) {
       setAuth({
         status: "error",
-        message: err instanceof Error ? err.message : "Login was cancelled",
+        message: toAuthErrorMessage(err),
       });
     }
   };
