@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type {
   AuthState,
+  ChannelTrackerStatus,
   ErrorInfo,
   InventoryState,
   ProfileState,
@@ -40,6 +41,7 @@ type Params = {
   priorityOrder: string[];
   stats: StatsState;
   cpu: CpuSample;
+  trackerStatus: ChannelTrackerStatus | null;
 };
 
 export function useDebugSnapshot({
@@ -69,6 +71,7 @@ export function useDebugSnapshot({
   priorityOrder,
   stats,
   cpu,
+  trackerStatus,
 }: Params) {
   return useMemo(
     () => ({
@@ -95,6 +98,7 @@ export function useDebugSnapshot({
         loading: channelsLoading,
         error: channelError ? { code: channelError.code, message: channelError.message } : null,
       },
+      tracker: trackerStatus,
       automation: {
         autoClaim,
         autoSelectEnabled,
@@ -145,6 +149,7 @@ export function useDebugSnapshot({
       refreshMinMs,
       stats,
       targetGame,
+      trackerStatus,
       cpu,
       watchStats.lastError,
       watchStats.lastOk,

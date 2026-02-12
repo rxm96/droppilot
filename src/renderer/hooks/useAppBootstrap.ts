@@ -1,8 +1,13 @@
 import { demoProfile } from "../demoData";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AuthState, ProfileState, View, WatchingState } from "../types";
+import type { AuthState, ChannelTrackerStatus, ProfileState, View, WatchingState } from "../types";
 import { errorInfoFromIpc, errorInfoFromUnknown } from "../utils/errors";
-import { isIpcAuthErrorResponse, isIpcErrorResponse, isTwitchProfile } from "../utils/ipc";
+import {
+  isChannelTrackerStatus,
+  isIpcAuthErrorResponse,
+  isIpcErrorResponse,
+  isTwitchProfile,
+} from "../utils/ipc";
 import { isVerboseLoggingEnabled, logDebug } from "../utils/logger";
 import { setLogCollectionEnabled } from "../utils/logStore";
 import { RENDERER_ERROR_CODES, TWITCH_ERROR_CODES } from "../../shared/errorCodes";
@@ -56,6 +61,7 @@ export function useAppBootstrap({
   const [profile, setProfile] = useState<ProfileState>({ status: "idle" });
   const [updateStatus, setUpdateStatus] = useState<AppUpdateStatus>({ state: "idle" });
   const [appVersion, setAppVersion] = useState<string>("");
+  const [trackerStatus, setTrackerStatus] = useState<ChannelTrackerStatus | null>(null);
   const fetchInventoryRef = useRef(fetchInventory);
 
   useEffect(() => {
@@ -137,6 +143,37 @@ export function useAppBootstrap({
       if (typeof unsubscribe === "function") unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    let disposed = false;
+    const pollTrackerStatus = async () => {
+      try {
+        const res: unknown = await window.electronAPI.twitch.trackerStatus();
+        if (disposed) return;
+        if (isIpcErrorResponse(res)) {
+          if (isIpcAuthErrorResponse(res)) {
+            forwardAuthError(res.message);
+            return;
+          }
+          return;
+        }
+        if (!isChannelTrackerStatus(res)) return;
+        setTrackerStatus(res);
+      } catch (err) {
+        if (!disposed) {
+          logDebug("twitch: trackerStatus failed", err);
+        }
+      }
+    };
+    void pollTrackerStatus();
+    const id = window.setInterval(() => {
+      void pollTrackerStatus();
+    }, 15_000);
+    return () => {
+      disposed = true;
+      window.clearInterval(id);
+    };
+  }, [forwardAuthError]);
 
   useEffect(() => {
     let cancelled = false;
@@ -233,5 +270,6 @@ export function useAppBootstrap({
     appVersion,
     updateStatus,
     setUpdateStatus,
+    trackerStatus,
   };
 }

@@ -7,7 +7,7 @@ import { exportSettings, importSettings, type SettingsData } from "../core/setti
 import type { StatsData } from "../core/stats";
 import type { PriorityPlan } from "../twitch/channels";
 import { TwitchServiceError } from "../twitch/errors";
-import type { ChannelTracker } from "../twitch/tracker";
+import type { ChannelTracker, ChannelTrackerDiffEvent } from "../twitch/tracker";
 
 function extractReleaseNoteText(entry: unknown): string {
   if (typeof entry === "string") return entry;
@@ -107,6 +107,18 @@ export function registerIpcHandlers(deps: {
     applyAutoStartSetting,
   } = deps;
 
+  const broadcastChannelsDiff = (payload: ChannelTrackerDiffEvent) => {
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed()) {
+        win.webContents.send("twitch/channelsDiff", payload);
+      }
+    }
+  };
+  const unsubscribeChannelsDiff = channelTracker.onDiff(broadcastChannelsDiff);
+  app.once("before-quit", () => {
+    unsubscribeChannelsDiff();
+  });
+
   ipcMain.handle("auth/login", async (): Promise<AuthResult> => {
     return auth.login();
   });
@@ -180,6 +192,10 @@ export function registerIpcHandlers(deps: {
       }
       return { error: "unknown", message: err instanceof Error ? err.message : String(err) };
     }
+  });
+
+  ipcMain.handle("twitch/trackerStatus", async () => {
+    return channelTracker.getStatus();
   });
 
   ipcMain.handle(
