@@ -202,8 +202,12 @@ jobs:
             - Use plain, concrete language focused on user-visible changes.
             - Do not mention file paths, commits, pull requests, CI, refactoring, or architecture.
             - Do not invent behavior that is not supported by the provided context.
+            - Every bullet must be directly supported by the changelog/context below; if not, omit it.
             - Prefer outcomes ("Auto-watch now picks ...") over implementation details.
             - Use changed files only to infer user-facing feature areas; never show file names in output.
+            - Do not use hype or guarantees (forbidden examples: "never miss", "always", "ensuring", "guaranteed").
+            - Do not mention "streaming sessions" unless that phrase is explicitly present in the inputs.
+            - Do not claim performance/stability improvements unless explicitly evidenced in the inputs.
             - If evidence is mostly technical/internal, return exactly this single bullet:
             - Internal maintenance and stability improvements.
 
