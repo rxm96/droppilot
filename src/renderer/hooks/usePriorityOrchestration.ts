@@ -31,12 +31,12 @@ export function usePriorityOrchestration({
   const [priorityPlan, setPriorityPlan] = useState<PriorityPlan | null>(null);
   const [activeTargetGame, setActiveTargetGame] = useState<string>("");
 
-  const refreshPriorityPlan = useCallback(async () => {
+  const refreshDemoPriorityPlan = useCallback(async () => {
+    setPriorityPlan(buildDemoPriorityPlan(inventoryItems, priorityGames));
+  }, [inventoryItems, priorityGames]);
+
+  const refreshLivePriorityPlan = useCallback(async () => {
     try {
-      if (demoMode) {
-        setPriorityPlan(buildDemoPriorityPlan(inventoryItems, priorityGames));
-        return;
-      }
       const res: unknown = await window.electronAPI.twitch.priorityPlan({ priorityGames });
       if (isIpcErrorResponse(res)) {
         if (isIpcAuthErrorResponse(res)) {
@@ -54,7 +54,9 @@ export function usePriorityOrchestration({
     } catch (err) {
       console.error("priority plan failed", err);
     }
-  }, [demoMode, forwardAuthError, inventoryItems, priorityGames]);
+  }, [forwardAuthError, priorityGames]);
+
+  const refreshPriorityPlan = demoMode ? refreshDemoPriorityPlan : refreshLivePriorityPlan;
 
   const hasActionable = useCallback(
     (game: string) =>
