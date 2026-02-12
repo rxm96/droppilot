@@ -1,7 +1,7 @@
 import { demoProfile } from "../demoData";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AuthState, ProfileState, View, WatchingState } from "../types";
-import { errorInfoFromIpc } from "../utils/errors";
+import { errorInfoFromIpc, errorInfoFromUnknown } from "../utils/errors";
 import { isIpcAuthErrorResponse, isIpcErrorResponse, isTwitchProfile } from "../utils/ipc";
 import { isVerboseLoggingEnabled, logDebug } from "../utils/logger";
 import { setLogCollectionEnabled } from "../utils/logStore";
@@ -67,13 +67,40 @@ export function useAppBootstrap({
       return;
     }
     setProfile({ status: "loading" });
-    const res: unknown = await window.electronAPI.twitch.profile();
-    if (isIpcErrorResponse(res)) {
-      if (isIpcAuthErrorResponse(res)) {
-        forwardAuthError(res.message);
+    try {
+      const res: unknown = await window.electronAPI.twitch.profile();
+      if (isIpcErrorResponse(res)) {
+        if (isIpcAuthErrorResponse(res)) {
+          forwardAuthError(res.message);
+          return;
+        }
+        const errInfo = errorInfoFromIpc(res, {
+          code: TWITCH_ERROR_CODES.PROFILE_FETCH_FAILED,
+          message: "Unable to load profile",
+        });
+        setProfile({
+          status: "error",
+          message: errInfo.message ?? "Unable to load profile",
+          code: errInfo.code,
+        });
         return;
       }
-      const errInfo = errorInfoFromIpc(res, {
+      if (!isTwitchProfile(res)) {
+        setProfile({
+          status: "error",
+          code: RENDERER_ERROR_CODES.PROFILE_INVALID_RESPONSE,
+          message: "Profile response was invalid",
+        });
+        return;
+      }
+      setProfile({
+        status: "ready",
+        displayName: res.displayName,
+        login: res.login,
+        avatar: res.profileImageUrl,
+      });
+    } catch (err) {
+      const errInfo = errorInfoFromUnknown(err, {
         code: TWITCH_ERROR_CODES.PROFILE_FETCH_FAILED,
         message: "Unable to load profile",
       });
@@ -82,22 +109,7 @@ export function useAppBootstrap({
         message: errInfo.message ?? "Unable to load profile",
         code: errInfo.code,
       });
-      return;
     }
-    if (!isTwitchProfile(res)) {
-      setProfile({
-        status: "error",
-        code: RENDERER_ERROR_CODES.PROFILE_INVALID_RESPONSE,
-        message: "Profile response was invalid",
-      });
-      return;
-    }
-    setProfile({
-      status: "ready",
-      displayName: res.displayName,
-      login: res.login,
-      avatar: res.profileImageUrl,
-    });
   }, [demoMode, forwardAuthError]);
 
   useEffect(() => {
@@ -128,13 +140,17 @@ export function useAppBootstrap({
   useEffect(() => {
     let cancelled = false;
     const fetchVersion = async () => {
-      const res = await window.electronAPI.app?.getVersion?.();
-      if (!cancelled && res?.version) {
-        const baseVersion = String(res.version);
-        const buildSha = typeof __GIT_SHA__ !== "undefined" ? String(__GIT_SHA__) : "";
-        const versionLabel =
-          buildSha && !baseVersion.includes("+") ? `${baseVersion}+${buildSha}` : baseVersion;
-        setAppVersion(versionLabel);
+      try {
+        const res = await window.electronAPI.app?.getVersion?.();
+        if (!cancelled && res?.version) {
+          const baseVersion = String(res.version);
+          const buildSha = typeof __GIT_SHA__ !== "undefined" ? String(__GIT_SHA__) : "";
+          const versionLabel =
+            buildSha && !baseVersion.includes("+") ? `${baseVersion}+${buildSha}` : baseVersion;
+          setAppVersion(versionLabel);
+        }
+      } catch (err) {
+        logDebug("app: getVersion failed", err);
       }
     };
     void fetchVersion();
