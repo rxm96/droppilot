@@ -118,7 +118,7 @@ jobs:
             Focus on concrete user-visible features and fixes.
             Avoid vague wording like "improved stability" unless no concrete details exist.
             If no user-visible changes are present, return exactly:
-            - No major user-facing changes in this prerelease.
+            - No major user-facing changes in this release.
 
             Technical changelog:
             ${{ steps.generated_notes.outputs.notes }}
@@ -128,7 +128,7 @@ jobs:
           cat <<'EOF' > release_body.md
           ## What's new for users
 
-          ${{ steps.user_notes.outputs.response || '- No major user-facing changes in this prerelease.' }}
+          ${{ steps.user_notes.outputs.response || '- No major user-facing changes in this release.' }}
 
           ## Full changelog
 

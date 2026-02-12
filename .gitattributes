@@ -1,0 +1,20 @@
+* text=auto
+
+# Keep GitHub workflow/config files stable across Windows/macOS/Linux.
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Typical source/config files: normalize to LF.
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.md text eol=lf
+
+# Windows script files should stay CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
