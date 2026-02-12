@@ -8,7 +8,7 @@ type Params = {
   targetGame: string;
   view: View;
   watching: WatchingState;
-  setWatching: (next: WatchingState) => void;
+  setWatchingFromChannel: (channel: ChannelEntry) => void;
   fetchInventory: () => void;
   autoSelectEnabled: boolean;
   autoSwitchEnabled: boolean;
@@ -22,7 +22,7 @@ export function useChannels({
   targetGame,
   view,
   watching,
-  setWatching,
+  setWatchingFromChannel,
   fetchInventory,
   autoSelectEnabled,
   autoSwitchEnabled,
@@ -168,17 +168,19 @@ export function useChannels({
     if (!canWatchTarget) return;
     if (channels.length && !watching) {
       const first = channels[0];
-      setWatching({
-        id: first.id,
-        name: first.displayName,
-        game: first.game,
-        login: first.login,
-        channelId: first.id,
-        streamId: first.streamId,
-      });
+      setWatchingFromChannel(first);
       fetchInventory();
     }
-  }, [channels, watching, targetGame, autoSelectEnabled, allowWatching, canWatchTarget]);
+  }, [
+    channels,
+    watching,
+    targetGame,
+    autoSelectEnabled,
+    allowWatching,
+    canWatchTarget,
+    setWatchingFromChannel,
+    fetchInventory,
+  ]);
 
   // Auto-switch if current channel disappears
   useEffect(() => {
@@ -189,14 +191,7 @@ export function useChannels({
     const stillThere = channels.some((c) => c.id === watching.id);
     if (!stillThere) {
       const first = channels[0];
-      setWatching({
-        id: first.id,
-        name: first.displayName,
-        game: first.game,
-        login: first.login,
-        channelId: first.id,
-        streamId: first.streamId,
-      });
+      setWatchingFromChannel(first);
       setAutoSwitch({
         at: Date.now(),
         reason: "offline",
@@ -205,7 +200,15 @@ export function useChannels({
       });
       fetchInventory();
     }
-  }, [channels, watching, autoSelectEnabled, allowWatching, autoSwitchEnabled]);
+  }, [
+    channels,
+    watching,
+    autoSelectEnabled,
+    allowWatching,
+    autoSwitchEnabled,
+    setWatchingFromChannel,
+    fetchInventory,
+  ]);
 
   useEffect(() => {
     if (allowWatching) return;

@@ -4,6 +4,8 @@ import { Hero } from "./components/Hero";
 import { TitleBar } from "./components/TitleBar";
 import { UpdateOverlay } from "./components/UpdateOverlay";
 import { useAlertEffects } from "./hooks/useAlertEffects";
+import { useAppActions } from "./hooks/useAppActions";
+import { useAppBootstrap } from "./hooks/useAppBootstrap";
 import { useAuth } from "./hooks/useAuth";
 import { useChannels } from "./hooks/useChannels";
 import { useDebugCpu } from "./hooks/useDebugCpu";
@@ -11,41 +13,23 @@ import { useDebugSnapshot } from "./hooks/useDebugSnapshot";
 import { useDropClaimAlerts } from "./hooks/useDropClaimAlerts";
 import { useInventory } from "./hooks/useInventory";
 import { useInventoryRefresh } from "./hooks/useInventoryRefresh";
+import { usePriorityOrchestration } from "./hooks/usePriorityOrchestration";
 import { useSettingsStore } from "./hooks/useSettingsStore";
 import { useSmartAlerts } from "./hooks/useSmartAlerts";
 import { useStats } from "./hooks/useStats";
 import { useTargetDrops } from "./hooks/useTargetDrops";
 import { useWatchPing } from "./hooks/useWatchPing";
+import { useWatchingController } from "./hooks/useWatchingController";
 import { I18nProvider } from "./i18n";
-import { buildDemoPriorityPlan, demoProfile } from "./demoData";
 import { useTheme } from "./theme";
-import type {
-  ChannelEntry,
-  FilterKey,
-  PriorityPlan,
-  ProfileState,
-  View,
-  WatchingState,
-} from "./types";
-import { errorInfoFromIpc } from "./utils/errors";
-import { isVerboseLoggingEnabled, logDebug, logWarn } from "./utils/logger";
-import { setLogCollectionEnabled } from "./utils/logStore";
+import type { FilterKey, View } from "./types";
+import { isVerboseLoggingEnabled } from "./utils/logger";
 
 const PAGE_SIZE = 8;
-type UpdateStatus = {
-  state: "idle" | "checking" | "available" | "downloading" | "downloaded" | "none" | "error" | "unsupported";
-  message?: string;
-  version?: string;
-  progress?: number;
-  transferred?: number;
-  total?: number;
-  bytesPerSecond?: number;
-};
 
 function App() {
   const { auth, startLogin, startLoginWithCreds, logout } = useAuth();
   const { theme, setTheme } = useTheme();
-  const [profile, setProfile] = useState<ProfileState>({ status: "idle" });
   const [creds, setCreds] = useState({ username: "", password: "", token: "" });
   const [filter, setFilter] = useState<FilterKey>("all");
   const [view, setView] = useState<View>("inventory");
@@ -103,12 +87,9 @@ function App() {
   const [gameFilter, setGameFilter] = useState<string>("all");
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const [priorityPlan, setPriorityPlan] = useState<PriorityPlan | null>(null);
-  const [activeTargetGame, setActiveTargetGame] = useState<string>("");
-  const [watching, setWatching] = useState<WatchingState>(null);
+  const { watching, setWatchingFromChannel, clearWatching } = useWatchingController();
   const [autoSelectEnabled, setAutoSelectEnabled] = useState<boolean>(true);
-  const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ state: "idle" });
-  const [appVersion, setAppVersion] = useState<string>("");
+
   const isLinked = auth.status === "ok";
   const isLinkedOrDemo = isLinked || demoMode;
   const allowWatching = isLinkedOrDemo;
@@ -121,10 +102,12 @@ function App() {
     () => typeof navigator !== "undefined" && /win/i.test(navigator.platform),
     [],
   );
+
   const authErrorHandlerRef = useRef<(message?: string) => void>(() => {});
   const forwardAuthError = useCallback((message?: string) => {
     authErrorHandlerRef.current?.(message);
   }, []);
+
   const { stats, bumpStats, resetStats } = useStats({ demoMode });
   const { notify } = useSmartAlerts({
     enabled: alertsEnabled,
@@ -136,6 +119,7 @@ function App() {
     notify,
     bumpStats,
   });
+
   const {
     inventory,
     inventoryItems,
@@ -155,6 +139,7 @@ function App() {
     },
     { autoClaim, demoMode },
   );
+
   const inventoryRefresh = useInventoryRefresh({
     watching,
     authStatus: effectiveAuthStatus,
@@ -164,91 +149,57 @@ function App() {
   });
   const watchStats = useWatchPing({ watching, bumpStats, forwardAuthError, demoMode });
 
-  useEffect(() => {
-    setAutoSelectEnabled(autoSelect);
-  }, [autoSelect]);
+  const { profile, appVersion, updateStatus, setUpdateStatus } = useAppBootstrap({
+    authStatus: auth.status,
+    demoMode,
+    debugEnabled,
+    autoSelect,
+    view,
+    setView,
+    setAutoSelectEnabled,
+    watching,
+    fetchInventory,
+    forwardAuthError,
+  });
 
-  useEffect(() => {
-    setLogCollectionEnabled(debugEnabled);
-  }, [debugEnabled]);
+  const actions = useAppActions({
+    creds,
+    startLoginWithCreds,
+    newGame,
+    setNewGame,
+    selectedGame,
+    priorityGames,
+    dragIndex,
+    setDragIndex,
+    setDragOverIndex,
+    savePriorityGames,
+    saveObeyPriority,
+    saveAutoStart,
+    saveAutoClaim,
+    saveAutoSelect,
+    saveAutoSwitchEnabled,
+    saveDemoMode,
+    saveAlertsEnabled,
+    saveAlertsNotifyWhileFocused,
+    saveAlertsDropClaimed,
+    saveAlertsDropEndingSoon,
+    saveAlertsDropEndingMinutes,
+    saveAlertsWatchError,
+    saveAlertsAutoSwitch,
+    saveAlertsNewDrops,
+    saveRefreshIntervals,
+    resetAutomation,
+    setWatchingFromChannel,
+    clearWatching,
+    setAutoSelectEnabled,
+    fetchInventory,
+    isLinked,
+    logout,
+    setUpdateStatus,
+    setFilter,
+  });
 
-  useEffect(() => {
-    if (view === "debug" && !debugEnabled) {
-      setView("overview");
-    }
-  }, [view, debugEnabled]);
-
-  // Show forwarded main-process logs (TwitchService etc.) in DevTools console.
-  useEffect(() => {
-    if (!isVerboseLoggingEnabled()) return;
-    const unsubscribe = window.electronAPI.logs?.onMainLog?.((payload) => {
-      logDebug(`[main:${payload.scope}]`, ...(payload.args ?? []));
-    });
-    return () => {
-      if (typeof unsubscribe === "function") unsubscribe();
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    const fetchVersion = async () => {
-      const res = await window.electronAPI.app?.getVersion?.();
-      if (!cancelled && res?.version) {
-        const baseVersion = String(res.version);
-        const buildSha = typeof __GIT_SHA__ !== "undefined" ? String(__GIT_SHA__) : "";
-        const versionLabel =
-          buildSha && !baseVersion.includes("+") ? `${baseVersion}+${buildSha}` : baseVersion;
-        setAppVersion(versionLabel);
-      }
-    };
-    void fetchVersion();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = window.electronAPI.app?.onUpdateStatus?.((payload) => {
-      const status = payload?.status;
-      if (status === "available") {
-        setUpdateStatus({ state: "available", version: payload.version as string | undefined });
-      } else if (status === "none") {
-        setUpdateStatus({ state: "none" });
-      } else if (status === "downloading") {
-        setUpdateStatus({
-          state: "downloading",
-          progress: Number(payload.percent ?? 0),
-          transferred: Number(payload.transferred ?? 0),
-          total: Number(payload.total ?? 0),
-          bytesPerSecond: Number(payload.bytesPerSecond ?? 0),
-        });
-      } else if (status === "downloaded") {
-        setUpdateStatus({ state: "downloaded" });
-      } else if (status === "error") {
-        setUpdateStatus({
-          state: "error",
-          message: payload.message ? String(payload.message) : "Update error",
-        });
-      }
-    });
-    return () => {
-      if (typeof unsubscribe === "function") unsubscribe();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (demoMode) {
-      setProfile(demoProfile);
-      fetchInventory({ forceLoading: true });
-      return;
-    }
-    if (auth.status === "ok") {
-      fetchProfile();
-      fetchInventory({ forceLoading: true });
-    } else {
-      setProfile({ status: "idle" });
-    }
-  }, [auth.status, demoMode]);
+  authErrorHandlerRef.current = actions.handleAuthError;
 
   useEffect(() => {
     setPage(1);
@@ -259,147 +210,6 @@ function App() {
     const id = window.setTimeout(() => setClaimStatus(null), 8000);
     return () => window.clearTimeout(id);
   }, [claimStatus, setClaimStatus]);
-
-  useEffect(() => {
-    const onUnload = () => {
-      if (watching) {
-        void fetchInventory({ forceLoading: true });
-      }
-    };
-    window.addEventListener("beforeunload", onUnload);
-    return () => window.removeEventListener("beforeunload", onUnload);
-  }, [watching, fetchInventory]);
-
-  const fetchProfile = async () => {
-    if (demoMode) {
-      setProfile(demoProfile);
-      return;
-    }
-    setProfile({ status: "loading" });
-    const res = await window.electronAPI.twitch.profile();
-    if ((res as any)?.error) {
-      if ((res as any).error === "auth") {
-        forwardAuthError((res as any).message);
-        return;
-      }
-      const errInfo = errorInfoFromIpc(res as any, "Konnte Profil nicht laden");
-      setProfile({
-        status: "error",
-        message: errInfo.message ?? "Konnte Profil nicht laden",
-        code: errInfo.code,
-      });
-      return;
-    }
-    if (!res) {
-      setProfile({ status: "error", message: "Leere Antwort" });
-      return;
-    }
-    const data = res as any;
-    setProfile({
-      status: "ready",
-      displayName: data.displayName,
-      login: data.login,
-      avatar: data.profileImageUrl,
-    });
-  };
-
-  const addGame = () => {
-    const name = newGame.trim();
-    if (!name) return;
-    if (priorityGames.includes(name)) {
-      setNewGame("");
-      return;
-    }
-    const updated = [...priorityGames, name];
-    setNewGame("");
-    void savePriorityGames(updated);
-  };
-
-  const removeGame = (name: string) => {
-    const updated = priorityGames.filter((g) => g !== name);
-    void savePriorityGames(updated);
-  };
-
-  const handleDropReorder = (targetIndex: number) => {
-    if (dragIndex === null || dragIndex === targetIndex) {
-      setDragIndex(null);
-      setDragOverIndex(null);
-      return;
-    }
-    const updated = [...priorityGames];
-    const [item] = updated.splice(dragIndex, 1);
-    updated.splice(targetIndex, 0, item);
-    setDragIndex(null);
-    setDragOverIndex(null);
-    void savePriorityGames(updated);
-  };
-
-  const addGameFromSelect = () => {
-    const name = selectedGame.trim();
-    if (!name) return;
-    if (priorityGames.includes(name)) return;
-    void savePriorityGames([...priorityGames, name]);
-  };
-
-  const refreshPriorityPlan = async () => {
-    try {
-      if (demoMode) {
-        setPriorityPlan(buildDemoPriorityPlan(inventoryItems, priorityGames));
-        return;
-      }
-      const res = await window.electronAPI.twitch.priorityPlan({ priorityGames });
-      if ((res as any)?.error) {
-        if ((res as any).error === "auth") {
-          forwardAuthError((res as any).message);
-          return;
-        }
-        console.error("priority plan error", res);
-        return;
-      }
-      setPriorityPlan(res as PriorityPlan);
-    } catch (err) {
-      console.error("priority plan failed", err);
-    }
-  };
-
-  const startWatching = useCallback(
-    (ch: ChannelEntry) => {
-      setAutoSelectEnabled(true);
-      setWatching({
-        id: ch.id,
-        name: ch.displayName,
-        game: ch.game,
-        login: ch.login,
-        channelId: ch.id,
-        streamId: ch.streamId,
-      });
-      fetchInventory();
-    },
-    [fetchInventory],
-  );
-
-  const stopWatching = useCallback(
-    (opts?: { skipRefresh?: boolean }) => {
-      setAutoSelectEnabled(false);
-      setWatching(null);
-      if (!opts?.skipRefresh) {
-        void fetchInventory({ forceLoading: true });
-      }
-    },
-    [fetchInventory],
-  );
-
-  const handleAuthError = useCallback(
-    (message?: string) => {
-      if (!isLinked) return;
-      logWarn("auth: invalid", { message });
-      stopWatching({ skipRefresh: true });
-      void logout();
-    },
-    [isLinked, stopWatching, logout],
-  );
-
-  authErrorHandlerRef.current = handleAuthError;
 
   const filteredItems = useMemo(() => {
     return withCategories
@@ -427,6 +237,24 @@ function App() {
           return clone;
         })()
       : priorityGames;
+
+  const {
+    activeTargetGame,
+    setActiveTargetGame,
+    effectivePriorityPlan,
+    priorityOrder,
+    refreshPriorityPlan,
+  } = usePriorityOrchestration({
+    demoMode,
+    inventoryStatus: inventory.status,
+    inventoryItems,
+    withCategories,
+    priorityGames,
+    obeyPriority,
+    watching,
+    stopWatching: actions.stopWatching,
+    forwardAuthError,
+  });
 
   const targetGame = activeTargetGame || "";
   const {
@@ -462,69 +290,11 @@ function App() {
     return () => window.clearTimeout(timeout);
   }, [watching, activeDropEta, fetchInventory]);
 
-  const hasActionable = useCallback(
-    (game: string) =>
-      withCategories.some(
-        ({ item, category }) =>
-          item.game === game && (category === "in-progress" || category === "upcoming"),
-      ),
-    [withCategories],
-  );
-
-  const effectivePriorityPlan = useMemo(() => {
-    if (!demoMode) return priorityPlan;
-    if (inventory.status !== "ready") return priorityPlan;
-    return buildDemoPriorityPlan(inventoryItems, priorityGames);
-  }, [demoMode, inventory.status, inventoryItems, priorityGames, priorityPlan]);
-
-  const priorityOrder = useMemo(
-    () =>
-      effectivePriorityPlan?.order?.length
-        ? effectivePriorityPlan.order
-        : priorityGames,
-    [effectivePriorityPlan, priorityGames],
-  );
-
-  useEffect(() => {
-    if (inventory.status !== "ready") return;
-    const hasAnyActionable = priorityOrder.some((g) => hasActionable(g));
-    if (hasAnyActionable) return;
-    if (!watching) {
-      setActiveTargetGame("");
-      return;
-    }
-    setActiveTargetGame("");
-    stopWatching();
-  }, [inventory.status, priorityOrder, hasActionable, stopWatching, watching]);
-
-  useEffect(() => {
-    if (activeTargetGame) return;
-    if (inventory.status !== "ready") return;
-    if (!priorityOrder.length) return;
-    const firstActionable = priorityOrder.find((g) => hasActionable(g));
-    if (!firstActionable) return;
-    setActiveTargetGame(firstActionable);
-  }, [activeTargetGame, inventory.status, priorityOrder, hasActionable]);
-
-  useEffect(() => {
-    if (!obeyPriority) return;
-    if (inventory.status !== "ready") return;
-    if (!priorityOrder.length) return;
-
-    const best = priorityOrder.find((g) => hasActionable(g));
-    if (!best) return;
-
-    const currentHasDrops = activeTargetGame ? hasActionable(activeTargetGame) : false;
-    if (!activeTargetGame || !currentHasDrops || best !== activeTargetGame) {
-      setActiveTargetGame(best);
-    }
-  }, [priorityOrder, hasActionable, obeyPriority, activeTargetGame, inventory.status]);
-
   const { channels, channelError, channelsLoading, autoSwitch } = useChannels({
     targetGame,
     view,
     watching,
-    setWatching,
+    setWatchingFromChannel,
     autoSelectEnabled,
     autoSwitchEnabled,
     fetchInventory: () => fetchInventory(),
@@ -583,193 +353,6 @@ function App() {
     cpu: debugCpu,
   });
 
-  const handleCheckUpdates = useCallback(async () => {
-    if (!window.electronAPI?.app?.checkUpdates) {
-      setUpdateStatus({ state: "error", message: "Update API unavailable" });
-      return;
-    }
-    setUpdateStatus({ state: "checking" });
-    try {
-      const res = await window.electronAPI.app.checkUpdates();
-      if (!res) {
-        setUpdateStatus({ state: "error", message: "No response" });
-        return;
-      }
-      if (!res.ok && res.status === "unsupported") {
-        setUpdateStatus({ state: "unsupported" });
-        return;
-      }
-      if (res.ok && res.status === "available") {
-        setUpdateStatus({ state: "available", version: res.version });
-        return;
-      }
-      if (res.ok && res.status === "none") {
-        setUpdateStatus({ state: "none" });
-        return;
-      }
-      setUpdateStatus({ state: "error", message: res.message || "Unknown error" });
-    } catch (err) {
-      setUpdateStatus({
-        state: "error",
-        message: err instanceof Error ? err.message : String(err),
-      });
-    }
-  }, []);
-
-  const handleDownloadUpdate = useCallback(async () => {
-    if (!window.electronAPI?.app?.downloadUpdate) {
-      setUpdateStatus({ state: "error", message: "Download API unavailable" });
-      return;
-    }
-    setUpdateStatus({ state: "downloading", progress: 0 });
-    try {
-      const res = await window.electronAPI.app.downloadUpdate();
-      if (!res) {
-        setUpdateStatus({ state: "error", message: "No response" });
-        return;
-      }
-      if (!res.ok && res.status === "unsupported") {
-        setUpdateStatus({ state: "unsupported" });
-        return;
-      }
-      if (!res.ok) {
-        setUpdateStatus({ state: "error", message: res.message || "Download failed" });
-      }
-    } catch (err) {
-      setUpdateStatus({
-        state: "error",
-        message: err instanceof Error ? err.message : String(err),
-      });
-    }
-  }, []);
-
-  const handleInstallUpdate = useCallback(async () => {
-    if (!window.electronAPI?.app?.installUpdate) {
-      setUpdateStatus({ state: "error", message: "Install API unavailable" });
-      return;
-    }
-    try {
-      const res = await window.electronAPI.app.installUpdate();
-      if (res && !res.ok && res.status === "unsupported") {
-        setUpdateStatus({ state: "unsupported" });
-        return;
-      }
-      if (res && !res.ok) {
-        setUpdateStatus({ state: "error", message: res.message || "Install failed" });
-      }
-    } catch (err) {
-      setUpdateStatus({
-        state: "error",
-        message: err instanceof Error ? err.message : String(err),
-      });
-    }
-  }, []);
-
-  const handleStartLoginWithCreds = useCallback(
-    () => startLoginWithCreds(creds),
-    [startLoginWithCreds, creds],
-  );
-  const handleFilterChange = useCallback((key: FilterKey) => setFilter(key), [setFilter]);
-  const handleSetObeyPriority = useCallback(
-    (val: boolean) => {
-      void saveObeyPriority(val);
-    },
-    [saveObeyPriority],
-  );
-  const handleSetAutoStart = useCallback(
-    (val: boolean) => {
-      void saveAutoStart(val);
-    },
-    [saveAutoStart],
-  );
-  const handleSetAutoClaim = useCallback(
-    (val: boolean) => {
-      void saveAutoClaim(val);
-    },
-    [saveAutoClaim],
-  );
-  const handleSetAutoSelect = useCallback(
-    (val: boolean) => {
-      void saveAutoSelect(val);
-    },
-    [saveAutoSelect],
-  );
-  const handleSetAutoSwitchEnabled = useCallback(
-    (val: boolean) => {
-      void saveAutoSwitchEnabled(val);
-    },
-    [saveAutoSwitchEnabled],
-  );
-  const handleSetDemoMode = useCallback(
-    (val: boolean) => {
-      void saveDemoMode(val);
-    },
-    [saveDemoMode],
-  );
-  const handleSetAlertsEnabled = useCallback(
-    (val: boolean) => {
-      void saveAlertsEnabled(val);
-    },
-    [saveAlertsEnabled],
-  );
-  const handleSetAlertsNotifyWhileFocused = useCallback(
-    (val: boolean) => {
-      void saveAlertsNotifyWhileFocused(val);
-    },
-    [saveAlertsNotifyWhileFocused],
-  );
-  const handleSetAlertsDropClaimed = useCallback(
-    (val: boolean) => {
-      void saveAlertsDropClaimed(val);
-    },
-    [saveAlertsDropClaimed],
-  );
-  const handleSetAlertsDropEndingSoon = useCallback(
-    (val: boolean) => {
-      void saveAlertsDropEndingSoon(val);
-    },
-    [saveAlertsDropEndingSoon],
-  );
-  const handleSetAlertsDropEndingMinutes = useCallback(
-    (val: number) => {
-      void saveAlertsDropEndingMinutes(val);
-    },
-    [saveAlertsDropEndingMinutes],
-  );
-  const handleSetAlertsWatchError = useCallback(
-    (val: boolean) => {
-      void saveAlertsWatchError(val);
-    },
-    [saveAlertsWatchError],
-  );
-  const handleSetAlertsAutoSwitch = useCallback(
-    (val: boolean) => {
-      void saveAlertsAutoSwitch(val);
-    },
-    [saveAlertsAutoSwitch],
-  );
-  const handleSetAlertsNewDrops = useCallback(
-    (val: boolean) => {
-      void saveAlertsNewDrops(val);
-    },
-    [saveAlertsNewDrops],
-  );
-  const handleSetRefreshIntervals = useCallback(
-    (minMs: number, maxMs: number) => {
-      void saveRefreshIntervals(minMs, maxMs);
-    },
-    [saveRefreshIntervals],
-  );
-  const handleResetAutomation = useCallback(() => {
-    void resetAutomation();
-  }, [resetAutomation]);
-  const handleFetchInventory = useCallback(() => {
-    void fetchInventory();
-  }, [fetchInventory]);
-  const handleStopWatching = useCallback(() => {
-    stopWatching();
-  }, [stopWatching]);
-
   const navProps = {
     view,
     setView,
@@ -782,13 +365,13 @@ function App() {
     auth,
     creds,
     setCreds,
-    startLoginWithCreds: handleStartLoginWithCreds,
+    startLoginWithCreds: actions.handleStartLoginWithCreds,
   };
   const overviewProps = { inventory, stats, resetStats };
   const inventoryProps = {
     inventory,
     filter,
-    onFilterChange: handleFilterChange,
+    onFilterChange: actions.handleFilterChange,
     gameFilter,
     onGameFilterChange: setGameFilter,
     uniqueGames,
@@ -807,18 +390,18 @@ function App() {
     setSelectedGame,
     newGame,
     setNewGame,
-    addGame,
-    addGameFromSelect,
+    addGame: actions.addGame,
+    addGameFromSelect: actions.addGameFromSelect,
     priorityGames,
     previewPriorityGames,
-    removeGame,
+    removeGame: actions.removeGame,
     dragIndex,
     dragOverIndex,
     setDragIndex,
     setDragOverIndex,
-    handleDropReorder,
+    handleDropReorder: actions.handleDropReorder,
     obeyPriority,
-    setObeyPriority: handleSetObeyPriority,
+    setObeyPriority: actions.handleSetObeyPriority,
   };
   const settingsProps = {
     startLogin,
@@ -826,38 +409,38 @@ function App() {
     theme,
     setTheme,
     autoStart,
-    setAutoStart: handleSetAutoStart,
+    setAutoStart: actions.handleSetAutoStart,
     autoClaim,
-    setAutoClaim: handleSetAutoClaim,
+    setAutoClaim: actions.handleSetAutoClaim,
     autoSelect,
-    setAutoSelect: handleSetAutoSelect,
+    setAutoSelect: actions.handleSetAutoSelect,
     autoSwitchEnabled,
-    setAutoSwitchEnabled: handleSetAutoSwitchEnabled,
+    setAutoSwitchEnabled: actions.handleSetAutoSwitchEnabled,
     demoMode,
-    setDemoMode: handleSetDemoMode,
+    setDemoMode: actions.handleSetDemoMode,
     debugEnabled,
     setDebugEnabled: saveDebugEnabled,
     alertsEnabled,
-    setAlertsEnabled: handleSetAlertsEnabled,
+    setAlertsEnabled: actions.handleSetAlertsEnabled,
     alertsNotifyWhileFocused,
-    setAlertsNotifyWhileFocused: handleSetAlertsNotifyWhileFocused,
+    setAlertsNotifyWhileFocused: actions.handleSetAlertsNotifyWhileFocused,
     alertsDropClaimed,
-    setAlertsDropClaimed: handleSetAlertsDropClaimed,
+    setAlertsDropClaimed: actions.handleSetAlertsDropClaimed,
     alertsDropEndingSoon,
-    setAlertsDropEndingSoon: handleSetAlertsDropEndingSoon,
+    setAlertsDropEndingSoon: actions.handleSetAlertsDropEndingSoon,
     alertsDropEndingMinutes,
-    setAlertsDropEndingMinutes: handleSetAlertsDropEndingMinutes,
+    setAlertsDropEndingMinutes: actions.handleSetAlertsDropEndingMinutes,
     alertsWatchError,
-    setAlertsWatchError: handleSetAlertsWatchError,
+    setAlertsWatchError: actions.handleSetAlertsWatchError,
     alertsAutoSwitch,
-    setAlertsAutoSwitch: handleSetAlertsAutoSwitch,
+    setAlertsAutoSwitch: actions.handleSetAlertsAutoSwitch,
     alertsNewDrops,
-    setAlertsNewDrops: handleSetAlertsNewDrops,
+    setAlertsNewDrops: actions.handleSetAlertsNewDrops,
     sendTestAlert: handleTestAlert,
     refreshMinMs,
     refreshMaxMs,
-    setRefreshIntervals: handleSetRefreshIntervals,
-    resetAutomation: handleResetAutomation,
+    setRefreshIntervals: actions.handleSetRefreshIntervals,
+    resetAutomation: actions.handleResetAutomation,
     language,
     setLanguage: saveLanguage,
     settingsJson,
@@ -869,9 +452,9 @@ function App() {
     showUpdateCheck: isWindows,
     showAutoStart: isWindows,
     updateStatus,
-    checkUpdates: handleCheckUpdates,
-    downloadUpdate: handleDownloadUpdate,
-    installUpdate: handleInstallUpdate,
+    checkUpdates: actions.handleCheckUpdates,
+    downloadUpdate: actions.handleDownloadUpdate,
+    installUpdate: actions.handleInstallUpdate,
   };
   const controlProps = {
     priorityPlan: effectivePriorityPlan,
@@ -886,14 +469,14 @@ function App() {
     totalRequiredMinutes,
     inventoryRefreshing,
     inventoryFetchedAt,
-    fetchInventory: handleFetchInventory,
+    fetchInventory: actions.handleFetchInventory,
     refreshPriorityPlan,
     watching,
-    stopWatching: handleStopWatching,
+    stopWatching: actions.handleStopWatching,
     channels,
     channelsLoading,
     channelError,
-    startWatching,
+    startWatching: actions.startWatching,
     activeDropInfo,
     claimStatus,
     canWatchTarget,
@@ -912,11 +495,11 @@ function App() {
             theme={theme}
             setTheme={setTheme}
             updateStatus={updateStatus}
-            onDownloadUpdate={handleDownloadUpdate}
-            onInstallUpdate={handleInstallUpdate}
+            onDownloadUpdate={actions.handleDownloadUpdate}
+            onInstallUpdate={actions.handleInstallUpdate}
           />
         )}
-        <UpdateOverlay updateStatus={updateStatus} onInstallUpdate={handleInstallUpdate} />
+        <UpdateOverlay updateStatus={updateStatus} onInstallUpdate={actions.handleInstallUpdate} />
         <div className="app-shell">
           <Hero
             isLinked={isLinkedOrDemo}
