@@ -1,5 +1,6 @@
 import type {
   AutoSwitchInfo,
+  ChannelDiff,
   ChannelEntry,
   ClaimStatus,
   ErrorInfo,
@@ -33,6 +34,8 @@ type ControlProps = {
   stopWatching: () => void;
   channels: ChannelEntry[];
   channelsLoading: boolean;
+  channelsRefreshing: boolean;
+  channelDiff: ChannelDiff | null;
   channelError: ErrorInfo | null;
   startWatching: (ch: ChannelEntry) => void;
   activeDropInfo: {
@@ -69,6 +72,8 @@ export function ControlView({
   stopWatching,
   channels,
   channelsLoading,
+  channelsRefreshing,
+  channelDiff,
   channelError,
   startWatching,
   activeDropInfo,
@@ -81,9 +86,10 @@ export function ControlView({
 }: ControlProps) {
   const { t, language } = useI18n();
   const prevDropsRef = useRef<Map<string, { earned: number; status: string }>>(new Map());
-  const prevChannelsRef = useRef<Map<string, { viewers: number; title: string }>>(new Map());
+  const prevChannelsRef = useRef<Map<string, ChannelEntry>>(new Map());
   const firstRenderRef = useRef(true);
   const [exitingChannels, setExitingChannels] = useState<ChannelEntry[]>([]);
+  const [viewerPulseSeq, setViewerPulseSeq] = useState<Record<string, number>>({});
   const watchErrorText = watchError ? resolveErrorMessage(t, watchError) : null;
   const channelErrorText = channelError ? resolveErrorMessage(t, channelError) : null;
   const claimErrorText =
@@ -110,16 +116,34 @@ export function ControlView({
   }, [targetDrops]);
 
   const channelChangedIds = useMemo(() => {
-    const prev = prevChannelsRef.current;
-    if (prev.size === 0) return new Set<string>();
-    const changed = new Set<string>();
-    for (const c of channels) {
-      if (!prev.has(c.id)) {
-        changed.add(c.id);
+    if (!channelDiff) return new Set<string>();
+    const changed = new Set<string>(channelDiff.addedIds);
+    const viewerOnlyIds = new Set(Object.keys(channelDiff.viewerDeltaById));
+    const titleChanged = new Set(channelDiff.titleChangedIds);
+    for (const id of channelDiff.updatedIds) {
+      if (titleChanged.has(id) || !viewerOnlyIds.has(id)) {
+        changed.add(id);
       }
     }
+    for (const id of titleChanged) {
+      changed.add(id);
+    }
     return changed;
-  }, [channels]);
+  }, [channelDiff]);
+  const viewerDeltaById = channelDiff?.viewerDeltaById ?? {};
+
+  useEffect(() => {
+    if (!channelDiff) return;
+    const entries = Object.entries(channelDiff.viewerDeltaById).filter(([, delta]) => Boolean(delta));
+    if (entries.length === 0) return;
+    setViewerPulseSeq((prev) => {
+      const next = { ...prev };
+      for (const [id] of entries) {
+        next[id] = (next[id] ?? 0) + 1;
+      }
+      return next;
+    });
+  }, [channelDiff]);
 
   useEffect(() => {
     const next = new Map<string, { earned: number; status: string }>();
@@ -133,9 +157,9 @@ export function ControlView({
   }, [targetDrops]);
 
   useEffect(() => {
-    const next = new Map<string, { viewers: number; title: string }>();
+    const next = new Map<string, ChannelEntry>();
     for (const c of channels) {
-      next.set(c.id, { viewers: c.viewers, title: c.title || "" });
+      next.set(c.id, c);
     }
     // detect removed channels
     const removedIds: string[] = [];
@@ -143,11 +167,14 @@ export function ControlView({
       if (!next.has(id)) removedIds.push(id);
     }
     if (removedIds.length > 0) {
+      const removedChannels: ChannelEntry[] = [];
+      for (const id of removedIds) {
+        const prev = prevChannelsRef.current.get(id);
+        if (prev) removedChannels.push(prev);
+      }
       setExitingChannels((prev) => {
         const existing = new Set(prev.map((c) => c.id));
-        const toAdd = channelsFromMap(prevChannelsRef.current).filter(
-          (c) => removedIds.includes(c.id) && !existing.has(c.id),
-        );
+        const toAdd = removedChannels.filter((c) => !existing.has(c.id));
         return [...prev, ...toAdd];
       });
       // cleanup after animation
@@ -174,23 +201,6 @@ export function ControlView({
     return merged;
   }, [channels, exitingChannels]);
 
-  function channelsFromMap(
-    source: Map<string, { viewers: number; title: string }>,
-  ): ChannelEntry[] {
-    const entries: ChannelEntry[] = [];
-    for (const [id, data] of source) {
-      entries.push({
-        id,
-        login: "",
-        displayName: "",
-        streamId: undefined,
-        title: data.title,
-        viewers: data.viewers,
-        game: "",
-      });
-    }
-    return entries;
-  }
   const formatDuration = (ms: number) => {
     const totalSeconds = Math.max(0, Math.round(ms / 1000));
     const hours = Math.floor(totalSeconds / 3600);
@@ -278,6 +288,11 @@ export function ControlView({
     activeChannel.login.toLowerCase() !== watching.name.toLowerCase()
       ? activeChannel.login
       : null;
+  const channelGridStateClass = channelsLoading
+    ? "loading"
+    : channelsRefreshing
+      ? "refreshing"
+      : "";
   return (
     <>
       <div className="panel-head control-head">
@@ -513,25 +528,29 @@ export function ControlView({
           ) : (
             <p className="meta">{t("control.targetMissing")}</p>
           )}
-          {canWatchTarget && channelsLoading ? (
+          {targetGame && channelsLoading ? (
             <p className="meta inline-loader">
               <span className="spinner" />
               {t("control.channelsLoading")}
             </p>
           ) : null}
-          {canWatchTarget && channelErrorText && (
+          {targetGame && channelErrorText && (
             <p className="error">
               {t("control.channelError")}: {channelErrorText}
             </p>
           )}
-          <div className={`channel-grid-wrapper ${channelsLoading ? "loading" : ""}`}>
-            {canWatchTarget && channels.length > 0 ? (
+          <div className={`channel-grid-wrapper ${channelGridStateClass}`}>
+            {targetGame && channels.length > 0 ? (
               <ul className="channel-grid">
                 {combinedChannels.map((c, idx) => {
                   const thumb = c.thumbnail
                     ? c.thumbnail.replace("{width}", "320").replace("{height}", "180")
                     : null;
                   const isActive = watching?.id === c.id;
+                  const viewerDelta = c.exiting ? 0 : (viewerDeltaById[c.id] ?? 0);
+                  const viewerPulse = viewerPulseSeq[c.id] ?? 0;
+                  const viewerMainClass =
+                    viewerDelta > 0 ? "up" : viewerDelta < 0 ? "down" : "";
                   const loginLabel =
                     c.login &&
                     c.displayName &&
@@ -557,10 +576,15 @@ export function ControlView({
                           ? { animationDelay: `${idx * 30}ms` }
                           : undefined
                       }
-                      onClick={() => startWatching(c)}
+                      onClick={() => {
+                        if (!canWatchTarget) return;
+                        startWatching(c);
+                      }}
                       role="button"
-                      tabIndex={0}
+                      tabIndex={canWatchTarget ? 0 : -1}
+                      aria-disabled={!canWatchTarget}
                       onKeyDown={(evt) => {
+                        if (!canWatchTarget) return;
                         if (evt.key === "Enter" || evt.key === " ") {
                           evt.preventDefault();
                           startWatching(c);
@@ -573,7 +597,14 @@ export function ControlView({
                           style={{ backgroundImage: `url(${thumb})` }}
                         />
                       ) : null}
-                      <span className="viewer-badge">{formatViewers(c.viewers)}</span>
+                      <span className="viewer-badge">
+                        <span
+                          key={`${c.id}-${viewerPulse}`}
+                          className={`viewer-main ${viewerMainClass} ${viewerPulse > 0 ? "pulse" : ""}`}
+                        >
+                          {formatViewers(c.viewers)}
+                        </span>
+                      </span>
                       <div className="channel-content">
                         <div className="channel-header">
                           <div>
@@ -589,10 +620,10 @@ export function ControlView({
                 })}
               </ul>
             ) : null}
-            {!channelsLoading && !channelError && canWatchTarget && channels.length === 0 ? (
+            {!channelsLoading && !channelError && targetGame && channels.length === 0 ? (
               <div className="channel-empty">{t("control.channelsEmpty")}</div>
             ) : null}
-            {channelsLoading && canWatchTarget ? (
+            {channelsLoading && targetGame ? (
               <div className="channel-skeleton-overlay">
                 <ul className="channel-grid">
                   {CHANNEL_SKELETON.map((sk) => (
