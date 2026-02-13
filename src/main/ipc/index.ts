@@ -8,6 +8,7 @@ import type { StatsData } from "../core/stats";
 import type { PriorityPlan } from "../twitch/channels";
 import { TwitchServiceError } from "../twitch/errors";
 import type { ChannelTracker, ChannelTrackerDiffEvent } from "../twitch/tracker";
+import type { UserPubSub, UserPubSubEvent } from "../twitch/userPubSub";
 
 function extractReleaseNoteText(entry: unknown): string {
   if (typeof entry === "string") return entry;
@@ -77,6 +78,7 @@ export function registerIpcHandlers(deps: {
   auth: AuthController;
   twitch: TwitchService;
   channelTracker: ChannelTracker;
+  userPubSub?: UserPubSub;
   loadSession: () => Promise<SessionData | null>;
   clearSession: () => Promise<void>;
   loadSettings: () => Promise<SettingsData>;
@@ -96,6 +98,7 @@ export function registerIpcHandlers(deps: {
     auth,
     twitch,
     channelTracker,
+    userPubSub,
     loadSession,
     clearSession,
     loadSettings,
@@ -115,16 +118,32 @@ export function registerIpcHandlers(deps: {
     }
   };
   const unsubscribeChannelsDiff = channelTracker.onDiff(broadcastChannelsDiff);
+  const broadcastUserPubSubEvent = (payload: UserPubSubEvent) => {
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed()) {
+        win.webContents.send("twitch/userPubSubEvent", payload);
+      }
+    }
+  };
+  const unsubscribeUserPubSub =
+    userPubSub?.onEvent((payload) => {
+      broadcastUserPubSubEvent(payload);
+    }) ?? null;
   app.once("before-quit", () => {
     unsubscribeChannelsDiff();
+    if (unsubscribeUserPubSub) unsubscribeUserPubSub();
   });
 
   ipcMain.handle("auth/login", async (): Promise<AuthResult> => {
-    return auth.login();
+    const result = await auth.login();
+    userPubSub?.notifySessionChanged();
+    return result;
   });
 
   ipcMain.handle("auth/loginCredentials", async (_e, payload): Promise<AuthResult> => {
-    return auth.loginWithCredentials(payload);
+    const result = await auth.loginWithCredentials(payload);
+    userPubSub?.notifySessionChanged();
+    return result;
   });
 
   ipcMain.handle("auth/session", async () => {
@@ -133,6 +152,7 @@ export function registerIpcHandlers(deps: {
 
   ipcMain.handle("auth/logout", async () => {
     await clearSession();
+    userPubSub?.notifySessionChanged();
     return true;
   });
 
@@ -197,6 +217,47 @@ export function registerIpcHandlers(deps: {
   ipcMain.handle("twitch/trackerStatus", async () => {
     return channelTracker.getStatus();
   });
+
+  ipcMain.handle("twitch/userPubSubStatus", async () => {
+    return userPubSub?.getStatus() ?? null;
+  });
+
+  ipcMain.handle(
+    "twitch/debugEmitUserPubSubEvent",
+    async (
+      _e,
+      payload: {
+        kind: "drop-progress" | "drop-claim" | "notification";
+        messageType?: string;
+        dropId?: string;
+        dropInstanceId?: string;
+        currentProgressMin?: number;
+        requiredProgressMin?: number;
+        notificationType?: string;
+      },
+    ) => {
+      if (!userPubSub) {
+        return { ok: false, message: "UserPubSub unavailable" };
+      }
+      if (app.isPackaged && process.env.DROPPILOT_DEBUG_PUBSUB !== "1") {
+        return { ok: false, message: "Debug PubSub emit disabled" };
+      }
+      const kind = payload?.kind;
+      if (kind !== "drop-progress" && kind !== "drop-claim" && kind !== "notification") {
+        return { ok: false, message: "Invalid debug event kind" };
+      }
+      const event = userPubSub.emitDebugEvent({
+        kind,
+        messageType: payload.messageType,
+        dropId: payload.dropId,
+        dropInstanceId: payload.dropInstanceId,
+        currentProgressMin: payload.currentProgressMin,
+        requiredProgressMin: payload.requiredProgressMin,
+        notificationType: payload.notificationType,
+      });
+      return { ok: true, event };
+    },
+  );
 
   ipcMain.handle(
     "twitch/watch",

@@ -7,6 +7,7 @@ import { AuthController } from "./auth";
 import { loadSession, clearSession } from "./core/storage";
 import { TwitchService } from "./twitch/service";
 import { createChannelTracker, normalizeTrackerMode } from "./twitch/tracker";
+import { UserPubSub } from "./twitch/userPubSub";
 import { registerIpcHandlers } from "./ipc";
 import { loadSettings, saveSettings } from "./core/settings";
 import { loadStats, saveStats, bumpStats, resetStats } from "./core/stats";
@@ -20,6 +21,7 @@ const trackerMode = normalizeTrackerMode(process.env.DROPPILOT_TRACKER_MODE);
 const auth = new AuthController();
 const twitchService = new TwitchService(loadSession);
 const channelTracker = createChannelTracker(twitchService, trackerMode);
+const userPubSub = new UserPubSub(loadSession);
 let tray: Tray | null = null;
 let updateTimer: NodeJS.Timeout | null = null;
 const UPDATE_INTERVAL_MS = 60 * 60 * 1000;
@@ -304,6 +306,7 @@ app.whenReady().then(() => {
   }
   createTray(win);
   setupAutoUpdater();
+  userPubSub.start();
   void loadSettings()
     .then((settings) => {
       applyAutoStartSetting(settings.autoStart);
@@ -331,6 +334,7 @@ app.whenReady().then(() => {
     auth,
     twitch: twitchService,
     channelTracker,
+    userPubSub,
     loadSession,
     clearSession,
     loadSettings,
@@ -360,6 +364,7 @@ app.on("before-quit", () => {
   if (typeof channelTracker.dispose === "function") {
     channelTracker.dispose();
   }
+  userPubSub.dispose();
   if (updateTimer) {
     clearInterval(updateTimer);
     updateTimer = null;

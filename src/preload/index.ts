@@ -53,6 +53,28 @@ type ChannelsDiffPayload = {
   }>;
 };
 
+type UserPubSubEventPayload = {
+  kind: "drop-progress" | "drop-claim" | "notification";
+  at: number;
+  topic: string;
+  messageType: string;
+  dropId?: string;
+  dropInstanceId?: string;
+  currentProgressMin?: number;
+  requiredProgressMin?: number;
+  notificationType?: string;
+};
+
+type DebugUserPubSubEmitPayload = {
+  kind: "drop-progress" | "drop-claim" | "notification";
+  messageType?: string;
+  dropId?: string;
+  dropInstanceId?: string;
+  currentProgressMin?: number;
+  requiredProgressMin?: number;
+  notificationType?: string;
+};
+
 const api = {
   openExternal: (url: string) => shell.openExternal(url),
   auth: {
@@ -69,6 +91,9 @@ const api = {
       ipcRenderer.invoke("twitch/priorityPlan", payload),
     channels: (payload: { game: string }) => ipcRenderer.invoke("twitch/channels", payload),
     trackerStatus: () => ipcRenderer.invoke("twitch/trackerStatus"),
+    userPubSubStatus: () => ipcRenderer.invoke("twitch/userPubSubStatus"),
+    debugEmitUserPubSubEvent: (payload: DebugUserPubSubEmitPayload) =>
+      ipcRenderer.invoke("twitch/debugEmitUserPubSubEvent", payload),
     watch: (payload: { channelId: string; login: string; streamId?: string }) =>
       ipcRenderer.invoke("twitch/watch", payload),
     claimDrop: (payload: { dropInstanceId?: string; dropId?: string; campaignId?: string }) =>
@@ -77,6 +102,11 @@ const api = {
       const listener = (_event: unknown, payload: ChannelsDiffPayload) => handler(payload);
       ipcRenderer.on("twitch/channelsDiff", listener);
       return () => ipcRenderer.removeListener("twitch/channelsDiff", listener);
+    },
+    onUserPubSubEvent: (handler: (payload: UserPubSubEventPayload) => void) => {
+      const listener = (_event: unknown, payload: UserPubSubEventPayload) => handler(payload);
+      ipcRenderer.on("twitch/userPubSubEvent", listener);
+      return () => ipcRenderer.removeListener("twitch/userPubSubEvent", listener);
     },
   },
   settings: {
