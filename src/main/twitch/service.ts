@@ -14,6 +14,7 @@ export interface InventoryItem {
   status: "locked" | "progress" | "claimed";
   linked?: boolean;
   campaignStatus?: string;
+  campaignName?: string;
   startsAt?: string;
   endsAt?: string;
   excluded?: boolean;
@@ -79,6 +80,7 @@ export class TwitchService {
       const game = campaign.game?.displayName ?? "Unknown game";
       const linked = (campaign as any)?.self?.isAccountConnected ?? false;
       const campaignStatus = (campaign as any)?.status as string | undefined;
+      const campaignName = (campaign as any)?.name as string | undefined;
       const startsAt = (campaign as any)?.startAt as string | undefined;
       const endsAt = (campaign as any)?.endAt as string | undefined;
       // Some campaigns expose allow.isEnabled === false even though the user can earn progress.
@@ -133,6 +135,7 @@ export class TwitchService {
           status,
           linked,
           campaignStatus,
+          campaignName,
           startsAt,
           endsAt,
           excluded: allowDisabled && watched <= 0 && !isClaimed,

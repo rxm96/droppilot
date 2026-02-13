@@ -98,7 +98,30 @@ export function useTargetDrops({
     });
     const sortedActiveItems = sortedActive.map((s) => s.item);
     const remaining = nonExpiredForGame.filter((i) => !sortedActiveItems.includes(i));
-    const targetDrops = [...sortedActiveItems, ...remaining];
+    const compareByCampaignAndDrop = (a: InventoryItem, b: InventoryItem) => {
+      const campaignLabelA =
+        a.campaignName?.trim().toLocaleLowerCase() ||
+        a.campaignId?.trim().toLocaleLowerCase() ||
+        `drop-${a.id}`;
+      const campaignLabelB =
+        b.campaignName?.trim().toLocaleLowerCase() ||
+        b.campaignId?.trim().toLocaleLowerCase() ||
+        `drop-${b.id}`;
+      if (campaignLabelA !== campaignLabelB) {
+        return campaignLabelA.localeCompare(campaignLabelB);
+      }
+      const requiredA = Math.max(0, Number(a.requiredMinutes) || 0);
+      const requiredB = Math.max(0, Number(b.requiredMinutes) || 0);
+      if (requiredA !== requiredB) return requiredA - requiredB;
+      const earnedA = Math.max(0, Number(a.earnedMinutes) || 0);
+      const earnedB = Math.max(0, Number(b.earnedMinutes) || 0);
+      if (earnedA !== earnedB) return earnedA - earnedB;
+      return (a.title || "").localeCompare(b.title || "");
+    };
+    const targetDrops = [
+      ...[...sortedActiveItems].sort(compareByCampaignAndDrop),
+      ...[...remaining].sort(compareByCampaignAndDrop),
+    ];
 
     const totalDrops = targetDrops.length;
     const claimedDrops = targetDrops.filter((i) => i.status === "claimed").length;

@@ -24,6 +24,7 @@ export type InventoryItem = {
   status: "locked" | "progress" | "claimed";
   linked?: boolean;
   campaignStatus?: string;
+  campaignName?: string;
   startsAt?: string;
   endsAt?: string;
   excluded?: boolean;

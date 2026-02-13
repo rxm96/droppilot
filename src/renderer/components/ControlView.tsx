@@ -308,41 +308,75 @@ export function ControlView({
   const liveProgress = useMemo(() => {
     if (!activeDropInfo || !watching || !inventoryFetchedAt) {
       return {
-        liveDeltaApplied: 0,
         activeRemainingMinutes: activeDropInfo?.remainingMinutes ?? 0,
         activeEta: activeDropInfo?.eta ?? null,
       };
     }
-    const totalRemainingMinutes = Math.max(0, totalRequiredMinutes - totalEarnedMinutes);
-    const liveDeltaMinutesRaw = Math.max(0, (progressNow - inventoryFetchedAt) / 60_000);
-    const liveDeltaMinutes = Math.min(liveDeltaMinutesRaw, totalRemainingMinutes);
-    const activeRemainingBase = Math.max(
-      0,
-      activeDropInfo.requiredMinutes - activeDropInfo.earnedMinutes,
-    );
-    const liveDeltaApplied = Math.min(liveDeltaMinutes, activeRemainingBase);
-    const activeVirtualEarned = Math.min(
-      activeDropInfo.requiredMinutes,
-      activeDropInfo.earnedMinutes + liveDeltaApplied,
-    );
-    const activeRemainingMinutes = Math.max(
-      0,
-      activeDropInfo.requiredMinutes - activeVirtualEarned,
-    );
+    const activeRemainingBase = Math.max(0, activeDropInfo.requiredMinutes - activeDropInfo.earnedMinutes);
+    const elapsedMinutesRaw = Math.max(0, (progressNow - inventoryFetchedAt) / 60_000);
+    const elapsedApplied = Math.min(elapsedMinutesRaw, activeRemainingBase);
+    const activeRemainingMinutes = Math.max(0, activeRemainingBase - elapsedApplied);
     const activeEta =
       activeRemainingMinutes > 0 ? progressNow + activeRemainingMinutes * 60_000 : null;
-    return { liveDeltaApplied, activeRemainingMinutes, activeEta };
-  }, [
-    activeDropInfo,
-    inventoryFetchedAt,
-    progressNow,
-    totalEarnedMinutes,
-    totalRequiredMinutes,
-    watching,
-  ]);
+    return { activeRemainingMinutes, activeEta };
+  }, [activeDropInfo, inventoryFetchedAt, progressNow, watching]);
   const formatNumber = (val: number) =>
     new Intl.NumberFormat(language === "de" ? "de-DE" : "en-US").format(Math.max(0, val ?? 0));
   const formatViewers = (val: number) => formatNumber(val);
+  const formatCampaignId = (value?: string) => {
+    const normalized = value?.trim();
+    if (!normalized) return null;
+    if (normalized.length <= 12) return normalized;
+    return `${normalized.slice(0, 6)}...${normalized.slice(-4)}`;
+  };
+  const campaignGroups = useMemo(() => {
+    type CampaignGroup = {
+      key: string;
+      title: string;
+      tooltip?: string;
+      items: InventoryItem[];
+      active: boolean;
+    };
+    const groups: CampaignGroup[] = [];
+    const indexByKey = new Map<string, number>();
+    for (const drop of targetDrops) {
+      const campaignName = drop.campaignName?.trim();
+      const campaignId = drop.campaignId?.trim();
+      const key = campaignId
+        ? `id:${campaignId}`
+        : campaignName
+          ? `name:${campaignName.toLowerCase()}`
+          : `drop:${drop.id}`;
+      const isActiveInGroup = activeDropInfo?.campaignId
+        ? campaignId === activeDropInfo.campaignId
+        : activeDropInfo?.id === drop.id;
+      const existingIndex = indexByKey.get(key);
+      if (existingIndex !== undefined) {
+        groups[existingIndex].items.push(drop);
+        if (isActiveInGroup) groups[existingIndex].active = true;
+        continue;
+      }
+      const fallbackId = formatCampaignId(campaignId);
+      const title = campaignName
+        ? campaignName
+        : fallbackId
+          ? t("control.campaignFallback", { id: fallbackId })
+          : t("control.campaignUnknown");
+      const tooltip =
+        campaignName && campaignId
+          ? `${campaignName} (${campaignId})`
+          : campaignName || campaignId || undefined;
+      indexByKey.set(key, groups.length);
+      groups.push({
+        key,
+        title,
+        tooltip,
+        items: [drop],
+        active: Boolean(isActiveInGroup),
+      });
+    }
+    return groups;
+  }, [activeDropInfo?.campaignId, activeDropInfo?.id, targetDrops, t]);
   const activeEtaText = liveProgress.activeEta
     ? new Date(liveProgress.activeEta).toLocaleTimeString()
     : null;
@@ -594,59 +628,65 @@ export function ControlView({
                     {showNoDropsHint ? t("control.noDropsHint") : t("control.allDone")}
                   </p>
                 )}
-                {targetDrops.length > 0 && (
-                  <ul className="drop-grid">
-                    {targetDrops.map((d, idx) => {
-                      const req = Math.max(0, Number(d.requiredMinutes) || 0);
-                      const earned = Math.max(0, Number(d.earnedMinutes) || 0);
-                      const isActive = activeDropInfo?.id === d.id;
-                      const virtualEarned = isActive
-                        ? Math.min(req, earned + liveProgress.liveDeltaApplied)
-                        : Math.min(req, earned);
-                      const pct = req ? Math.min(100, Math.round((virtualEarned / req) * 100)) : 0;
-                      const remainingMs = req ? Math.max(0, req - virtualEarned) * 60_000 : 0;
-                      const statusLabel = mapStatusLabel(d.status, (key) => t(key));
-                      const statusClass =
-                        d.status === "claimed"
-                          ? "claimed"
-                          : d.status === "progress"
-                            ? "progress"
-                            : "locked";
-                      const animate = !firstRenderRef.current && dropChangedIds.has(d.id);
-                      return (
-                        <li
-                          key={d.id}
-                          className={`drop-card ${statusClass} ${isActive ? "active" : ""} ${animate ? "animate-item" : ""}`}
-                          style={animate ? { animationDelay: `${idx * 35}ms` } : undefined}
-                        >
-                          <div className="drop-header">
-                            <div className="drop-info">
-                              <div className="drop-title">{d.title}</div>
-                              <div className="meta muted drop-meta-line">
-                                <span className="drop-meta-item">
-                                  {Math.round(virtualEarned)}/{req} min
-                                </span>
-                                {isActive && liveProgress.liveDeltaApplied > 0 ? (
-                                  <span className="drop-meta-item">
-                                    +{Math.round(liveProgress.liveDeltaApplied)}m
-                                  </span>
-                                ) : null}
-                                {isActive && remainingMs > 0 ? (
-                                  <span className="drop-meta-item">
-                                    ETA {formatDuration(remainingMs)}
-                                  </span>
-                                ) : null}
-                              </div>
-                            </div>
-                            <span className="pill ghost small">{statusLabel}</span>
+                {campaignGroups.length > 0 && (
+                  <div className="drop-campaigns">
+                    {campaignGroups.map((group, groupIdx) => (
+                      <section
+                        key={group.key}
+                        className={`drop-campaign-group ${group.active ? "active" : ""}`}
+                      >
+                        <div className="drop-campaign-head">
+                          <div className="drop-campaign-title" title={group.tooltip}>
+                            {group.title}
                           </div>
-                          <div className="progress-bar small">
-                            <span style={{ width: `${pct}%` }} />
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                          <span className="pill ghost small">
+                            {t("control.campaignDrops", { count: group.items.length })}
+                          </span>
+                        </div>
+                        <ul className="drop-grid">
+                          {group.items.map((d, idx) => {
+                            const req = Math.max(0, Number(d.requiredMinutes) || 0);
+                            const earned = Math.max(0, Number(d.earnedMinutes) || 0);
+                            const isActive = activeDropInfo?.id === d.id;
+                            const earnedDisplay = Math.min(req, earned);
+                            const pct = req ? Math.min(100, Math.round((earnedDisplay / req) * 100)) : 0;
+                            const statusLabel = mapStatusLabel(d.status, (key) => t(key));
+                            const statusClass =
+                              d.status === "claimed"
+                                ? "claimed"
+                                : d.status === "progress"
+                                  ? "progress"
+                                  : "locked";
+                            const animate = !firstRenderRef.current && dropChangedIds.has(d.id);
+                            return (
+                              <li
+                                key={d.id}
+                                className={`drop-card ${statusClass} ${isActive ? "active" : ""} ${animate ? "animate-item" : ""}`}
+                                style={
+                                  animate
+                                    ? { animationDelay: `${(groupIdx * 8 + idx) * 30}ms` }
+                                    : undefined
+                                }
+                              >
+                                <div className="drop-header">
+                                  <div className="drop-title">{d.title}</div>
+                                  <span className="pill ghost small">{statusLabel}</span>
+                                </div>
+                                <div className="meta muted drop-meta-line">
+                                  <span className="drop-meta-item">
+                                    {earnedDisplay}/{req} min
+                                  </span>
+                                </div>
+                                <div className="progress-bar small">
+                                  <span style={{ width: `${pct}%` }} />
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </section>
+                    ))}
+                  </div>
                 )}
               </>
             ) : (
