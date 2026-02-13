@@ -14,6 +14,10 @@ const gitSha = (() => {
 
 export default defineConfig({
   root: "src/renderer",
+  server: {
+    port: 5173,
+    strictPort: true,
+  },
   plugins: [
     react(),
     renderer(),
