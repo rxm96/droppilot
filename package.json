@@ -10,6 +10,8 @@
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "lint": "echo \"Add linter\"",
     "release:patch": "npm version patch -m \"chore(release): v%s\" && git push --follow-tags",
     "release:minor": "npm version minor -m \"chore(release): v%s\" && git push --follow-tags",
@@ -76,6 +78,7 @@
     "typescript": "^5.3.3",
     "vite": "^5.0.10",
     "vite-plugin-electron": "^0.15.5",
-    "vite-plugin-electron-renderer": "^0.14.5"
+    "vite-plugin-electron-renderer": "^0.14.5",
+    "vitest": "^4.0.18"
   }
 }
