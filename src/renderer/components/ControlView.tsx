@@ -2,6 +2,7 @@ import type {
   AutoSwitchInfo,
   ChannelDiff,
   ChannelEntry,
+  ChannelTrackerStatus,
   ClaimStatus,
   ErrorInfo,
   PriorityPlan,
@@ -13,7 +14,20 @@ import { useI18n } from "../i18n";
 import { useMemo, useRef, useEffect, useState } from "react";
 import { resolveErrorMessage } from "../utils/errors";
 
-const CHANNEL_SKELETON = Array.from({ length: 6 }, (_, idx) => ({ key: `sk-${idx}` }));
+const CHANNEL_SKELETON = Array.from({ length: 4 }, (_, idx) => ({ key: `sk-${idx}` }));
+type ChannelDensity = "comfortable" | "balanced" | "compact";
+
+const resolveChannelDensity = (count: number, current: ChannelDensity): ChannelDensity => {
+  if (current === "comfortable") {
+    return count >= 10 ? "balanced" : "comfortable";
+  }
+  if (current === "compact") {
+    return count <= 14 ? "balanced" : "compact";
+  }
+  if (count <= 6) return "comfortable";
+  if (count >= 18) return "compact";
+  return "balanced";
+};
 
 type ControlProps = {
   priorityPlan: PriorityPlan | null;
@@ -55,6 +69,7 @@ type ControlProps = {
   lastWatchOk?: number;
   watchError?: ErrorInfo | null;
   autoSwitchInfo?: AutoSwitchInfo | null;
+  trackerStatus?: ChannelTrackerStatus | null;
 };
 
 export function ControlView({
@@ -83,13 +98,23 @@ export function ControlView({
   lastWatchOk,
   watchError,
   autoSwitchInfo,
+  trackerStatus,
 }: ControlProps) {
   const { t, language } = useI18n();
   const prevDropsRef = useRef<Map<string, { earned: number; status: string }>>(new Map());
   const prevChannelsRef = useRef<Map<string, ChannelEntry>>(new Map());
   const firstRenderRef = useRef(true);
+  const wasSwitchingRef = useRef(false);
+  const didInitDensityRef = useRef(false);
+  const densityApplyTimerRef = useRef<number | null>(null);
+  const densitySettleTimerRef = useRef<number | null>(null);
+  const viewerAnimFrameRef = useRef<number | null>(null);
   const [exitingChannels, setExitingChannels] = useState<ChannelEntry[]>([]);
-  const [viewerPulseSeq, setViewerPulseSeq] = useState<Record<string, number>>({});
+  const [animatedViewersById, setAnimatedViewersById] = useState<Record<string, number>>({});
+  const [channelDensityClass, setChannelDensityClass] = useState<ChannelDensity>(() =>
+    resolveChannelDensity(channels.length, "balanced"),
+  );
+  const [isDensityTransitioning, setIsDensityTransitioning] = useState(false);
   const watchErrorText = watchError ? resolveErrorMessage(t, watchError) : null;
   const channelErrorText = channelError ? resolveErrorMessage(t, channelError) : null;
   const claimErrorText =
@@ -130,20 +155,63 @@ export function ControlView({
     }
     return changed;
   }, [channelDiff]);
-  const viewerDeltaById = channelDiff?.viewerDeltaById ?? {};
+  useEffect(() => {
+    setAnimatedViewersById((prev) => {
+      const next: Record<string, number> = {};
+      for (const channel of channels) {
+        next[channel.id] = prev[channel.id] ?? channel.viewers;
+      }
+      return next;
+    });
+  }, [channels]);
 
   useEffect(() => {
     if (!channelDiff) return;
     const entries = Object.entries(channelDiff.viewerDeltaById).filter(([, delta]) => Boolean(delta));
     if (entries.length === 0) return;
-    setViewerPulseSeq((prev) => {
-      const next = { ...prev };
-      for (const [id] of entries) {
-        next[id] = (next[id] ?? 0) + 1;
+    const starts = new Map<string, number>();
+    const targets = new Map<string, number>();
+    const channelById = new Map(channels.map((channel) => [channel.id, channel]));
+    for (const [id, delta] of entries) {
+      const channel = channelById.get(id);
+      if (!channel) continue;
+      const target = Math.max(0, channel.viewers);
+      const start = Math.max(0, target - delta);
+      starts.set(id, start);
+      targets.set(id, target);
+    }
+    if (targets.size === 0) return;
+    if (viewerAnimFrameRef.current !== null) {
+      window.cancelAnimationFrame(viewerAnimFrameRef.current);
+      viewerAnimFrameRef.current = null;
+    }
+    const durationMs = 440;
+    const startedAt = performance.now();
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / durationMs);
+      const eased = 1 - (1 - progress) ** 3;
+      setAnimatedViewersById((prev) => {
+        const next = { ...prev };
+        for (const [id, target] of targets) {
+          const start = starts.get(id) ?? target;
+          next[id] = Math.round(start + (target - start) * eased);
+        }
+        return next;
+      });
+      if (progress < 1) {
+        viewerAnimFrameRef.current = window.requestAnimationFrame(tick);
+      } else {
+        viewerAnimFrameRef.current = null;
       }
-      return next;
-    });
-  }, [channelDiff]);
+    };
+    viewerAnimFrameRef.current = window.requestAnimationFrame(tick);
+    return () => {
+      if (viewerAnimFrameRef.current !== null) {
+        window.cancelAnimationFrame(viewerAnimFrameRef.current);
+        viewerAnimFrameRef.current = null;
+      }
+    };
+  }, [channelDiff, channels]);
 
   useEffect(() => {
     const next = new Map<string, { earned: number; status: string }>();
@@ -160,6 +228,19 @@ export function ControlView({
     const next = new Map<string, ChannelEntry>();
     for (const c of channels) {
       next.set(c.id, c);
+    }
+    const prevFirst = prevChannelsRef.current.values().next().value as ChannelEntry | undefined;
+    const nextFirst = channels[0];
+    const gameSwitched =
+      Boolean(prevFirst?.game) && Boolean(nextFirst?.game) && prevFirst?.game !== nextFirst?.game;
+    if (gameSwitched) {
+      // Hard game switches should not animate all previous channels as "exiting".
+      setExitingChannels([]);
+      prevChannelsRef.current = next;
+      if (firstRenderRef.current) {
+        firstRenderRef.current = false;
+      }
+      return;
     }
     // detect removed channels
     const removedIds: string[] = [];
@@ -261,16 +342,7 @@ export function ControlView({
   ]);
   const formatNumber = (val: number) =>
     new Intl.NumberFormat(language === "de" ? "de-DE" : "en-US").format(Math.max(0, val ?? 0));
-  const formatViewers = (val: number) => {
-    try {
-      return new Intl.NumberFormat(language === "de" ? "de-DE" : "en-US", {
-        notation: "compact",
-        maximumFractionDigits: 1,
-      }).format(Math.max(0, val ?? 0));
-    } catch {
-      return formatNumber(val);
-    }
-  };
+  const formatViewers = (val: number) => formatNumber(val);
   const activeEtaText = liveProgress.activeEta
     ? new Date(liveProgress.activeEta).toLocaleTimeString()
     : null;
@@ -281,18 +353,106 @@ export function ControlView({
   const activeThumb = activeChannel?.thumbnail
     ? activeChannel.thumbnail.replace("{width}", "640").replace("{height}", "360")
     : null;
-  const activeViewers = activeChannel ? formatViewers(activeChannel.viewers) : null;
+  const activeViewerCount = activeChannel
+    ? (animatedViewersById[activeChannel.id] ?? activeChannel.viewers)
+    : null;
+  const activeViewers = activeViewerCount !== null ? formatViewers(activeViewerCount) : null;
   const activeLoginMismatch =
     activeChannel?.login &&
     watching?.name &&
     activeChannel.login.toLowerCase() !== watching.name.toLowerCase()
       ? activeChannel.login
       : null;
-  const channelGridStateClass = channelsLoading
-    ? "loading"
-    : channelsRefreshing
-      ? "refreshing"
-      : "";
+  const visibleGame = channels[0]?.game ?? "";
+  const isGameSwitchLoading =
+    Boolean(targetGame) && channelsLoading && channels.length > 0 && visibleGame !== targetGame;
+  const channelGridStateClass = isGameSwitchLoading
+    ? "switching"
+    : channelsLoading
+      ? "loading"
+      : channelsRefreshing
+        ? "refreshing"
+        : "";
+  const showChannelSkeleton = Boolean(targetGame) && channelsLoading && channels.length === 0;
+  const visibleChannelCount = Math.max(channels.length, combinedChannels.length);
+  useEffect(() => {
+    const clearTimers = () => {
+      if (densityApplyTimerRef.current !== null) {
+        window.clearTimeout(densityApplyTimerRef.current);
+        densityApplyTimerRef.current = null;
+      }
+      if (densitySettleTimerRef.current !== null) {
+        window.clearTimeout(densitySettleTimerRef.current);
+        densitySettleTimerRef.current = null;
+      }
+    };
+    if (isGameSwitchLoading) {
+      wasSwitchingRef.current = true;
+      clearTimers();
+      setIsDensityTransitioning(false);
+      return clearTimers;
+    }
+    const nextDensity = resolveChannelDensity(visibleChannelCount, channelDensityClass);
+    if (!didInitDensityRef.current) {
+      didInitDensityRef.current = true;
+      clearTimers();
+      if (nextDensity !== channelDensityClass) {
+        setChannelDensityClass(nextDensity);
+      }
+      setIsDensityTransitioning(false);
+      wasSwitchingRef.current = false;
+      return clearTimers;
+    }
+    if (nextDensity === channelDensityClass) {
+      if (wasSwitchingRef.current) {
+        wasSwitchingRef.current = false;
+      }
+      return clearTimers;
+    }
+    if (wasSwitchingRef.current) {
+      clearTimers();
+      setChannelDensityClass(nextDensity);
+      setIsDensityTransitioning(false);
+      wasSwitchingRef.current = false;
+      return clearTimers;
+    }
+    clearTimers();
+    setIsDensityTransitioning(true);
+    densityApplyTimerRef.current = window.setTimeout(() => {
+      setChannelDensityClass(nextDensity);
+      densityApplyTimerRef.current = null;
+    }, 70);
+    densitySettleTimerRef.current = window.setTimeout(() => {
+      setIsDensityTransitioning(false);
+      densitySettleTimerRef.current = null;
+    }, 230);
+    return clearTimers;
+  }, [visibleChannelCount, channelDensityClass, isGameSwitchLoading]);
+
+  useEffect(() => {
+    return () => {
+      if (viewerAnimFrameRef.current !== null) {
+        window.cancelAnimationFrame(viewerAnimFrameRef.current);
+        viewerAnimFrameRef.current = null;
+      }
+      if (densityApplyTimerRef.current !== null) {
+        window.clearTimeout(densityApplyTimerRef.current);
+        densityApplyTimerRef.current = null;
+      }
+      if (densitySettleTimerRef.current !== null) {
+        window.clearTimeout(densitySettleTimerRef.current);
+        densitySettleTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  const channelGridClass = `channel-grid channel-grid-${channelDensityClass}${
+    isDensityTransitioning && !isGameSwitchLoading ? " is-density-transitioning" : ""
+  }`;
+  const trackerFallbackRemainingMs =
+    trackerStatus?.fallbackActive && trackerStatus.fallbackUntil
+      ? Math.max(0, trackerStatus.fallbackUntil - Date.now())
+      : null;
   return (
     <>
       <div className="panel-head control-head">
@@ -524,6 +684,27 @@ export function ControlView({
               <p className="meta muted">
                 {t("control.streamsFound")}: {channels.length > 0 ? channels.length : 0}
               </p>
+              {trackerStatus ? (
+                <div className="status-row control-tracker-row">
+                  {trackerStatus.connectionState &&
+                  (trackerStatus.connectionState !== "connected" || trackerStatus.fallbackActive) ? (
+                    <span className="pill ghost small">
+                      {t("control.trackerConnection")}:{" "}
+                      {t(`control.trackerConn.${trackerStatus.connectionState}`)}
+                    </span>
+                  ) : null}
+                  {trackerStatus.fallbackActive ? (
+                    <span className="pill small danger-chip">
+                      {t("control.trackerFallback", {
+                        time:
+                          trackerFallbackRemainingMs !== null
+                            ? formatDuration(trackerFallbackRemainingMs)
+                            : "n/a",
+                      })}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
             </>
           ) : (
             <p className="meta">{t("control.targetMissing")}</p>
@@ -541,16 +722,15 @@ export function ControlView({
           )}
           <div className={`channel-grid-wrapper ${channelGridStateClass}`}>
             {targetGame && channels.length > 0 ? (
-              <ul className="channel-grid">
+              <ul className={channelGridClass}>
                 {combinedChannels.map((c, idx) => {
                   const thumb = c.thumbnail
                     ? c.thumbnail.replace("{width}", "320").replace("{height}", "180")
                     : null;
                   const isActive = watching?.id === c.id;
-                  const viewerDelta = c.exiting ? 0 : (viewerDeltaById[c.id] ?? 0);
-                  const viewerPulse = viewerPulseSeq[c.id] ?? 0;
-                  const viewerMainClass =
-                    viewerDelta > 0 ? "up" : viewerDelta < 0 ? "down" : "";
+                  const animatedViewerCount = c.exiting
+                    ? c.viewers
+                    : (animatedViewersById[c.id] ?? c.viewers);
                   const loginLabel =
                     c.login &&
                     c.displayName &&
@@ -598,21 +778,18 @@ export function ControlView({
                         />
                       ) : null}
                       <span className="viewer-badge">
-                        <span
-                          key={`${c.id}-${viewerPulse}`}
-                          className={`viewer-main ${viewerMainClass} ${viewerPulse > 0 ? "pulse" : ""}`}
-                        >
-                          {formatViewers(c.viewers)}
+                        <span className="viewer-main">
+                          {formatViewers(animatedViewerCount)}
                         </span>
                       </span>
                       <div className="channel-content">
                         <div className="channel-header">
                           <div>
-                            <div className="meta">{c.game}</div>
-                            <div className="channel-name">{c.displayName}</div>
+                            <div className="meta ellipsis">{c.game}</div>
+                            <div className="channel-name ellipsis">{c.displayName}</div>
                           </div>
                         </div>
-                        {metaLine ? <div className="meta muted">{metaLine}</div> : null}
+                        {metaLine ? <div className="meta muted ellipsis">{metaLine}</div> : null}
                         {title ? <div className="meta muted ellipsis">{title}</div> : null}
                       </div>
                     </li>
@@ -623,27 +800,19 @@ export function ControlView({
             {!channelsLoading && !channelError && targetGame && channels.length === 0 ? (
               <div className="channel-empty">{t("control.channelsEmpty")}</div>
             ) : null}
-            {channelsLoading && targetGame ? (
-              <div className="channel-skeleton-overlay">
-                <ul className="channel-grid">
-                  {CHANNEL_SKELETON.map((sk) => (
-                    <li key={sk.key} className="channel-tile skeleton-tile">
-                      <div className="channel-thumb skeleton-thumb skeleton-shine" />
-                      <div className="channel-content">
-                        <div className="channel-header">
-                          <div>
-                            <div className="skeleton-line tiny" />
-                            <div className="skeleton-line medium" />
-                          </div>
-                          <div className="skeleton-chip" />
-                        </div>
-                        <div className="skeleton-line short" />
-                        <div className="skeleton-line" />
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            {showChannelSkeleton ? (
+              <ul className={`${channelGridClass} channel-grid-skeleton`} aria-hidden="true">
+                {CHANNEL_SKELETON.map((sk) => (
+                  <li key={sk.key} className="channel-tile skeleton-tile">
+                    <div className="skeleton-head">
+                      <div className="skeleton-line tiny" />
+                      <div className="skeleton-chip" />
+                    </div>
+                    <div className="skeleton-line medium" />
+                    <div className="skeleton-line short" />
+                  </li>
+                ))}
+              </ul>
             ) : null}
           </div>
         </div>

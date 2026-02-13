@@ -496,6 +496,7 @@ function App() {
     lastWatchOk: watchStats.lastOk,
     watchError: watchStats.lastError,
     autoSwitchInfo,
+    trackerStatus,
   };
 
   return (
