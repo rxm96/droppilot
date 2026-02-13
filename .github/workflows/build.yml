@@ -200,6 +200,11 @@ jobs:
             You are writing user-facing release notes for DropPilot (a Twitch Drops automation desktop app).
             Audience: non-technical end users.
 
+            Product context (must be respected):
+            - DropPilot is a background app for Twitch Drops tracking and claiming.
+            - The app does not provide in-app video playback.
+            - Avoid wording that implies users actively watch streams inside the app.
+
             Output rules:
             - Return only markdown bullet points (3 to 6 bullets).
             - Use plain, concrete language focused on user-visible changes.
@@ -210,7 +215,9 @@ jobs:
             - Use changed files only to infer user-facing feature areas; never show file names in output.
             - Inferred feature tags are hints only and are not sufficient evidence for a bullet on their own.
             - Do not use hype or guarantees (forbidden examples: "never miss", "always", "ensuring", "guaranteed").
+            - Do not use vague quality claims (forbidden examples: "more smoothly", "enhancing your viewing experience", "improved reliability", "better performance") unless explicitly evidenced in the inputs.
             - Do not mention "streaming sessions" unless that phrase is explicitly present in the inputs.
+            - Do not use wording that implies in-app viewing/video playback (forbidden examples: "viewing experience", "watch streams in the app", "watching got smoother").
             - Do not claim performance/stability improvements unless explicitly evidenced in the inputs.
             - If evidence is mostly technical/internal, return exactly this single bullet:
             - Internal maintenance and stability improvements.
@@ -225,12 +232,58 @@ jobs:
             Additional context from git comparison:
             ${{ steps.release_context.outputs.context }}
 
+      - name: Validate generated user notes
+        id: validated_user_notes
+        uses: actions/github-script@v7
+        env:
+          RAW_USER_NOTES: ${{ steps.user_notes.outputs.response }}
+        with:
+          script: |
+            const fallback = "- Internal maintenance and stability improvements.";
+            const raw = String(process.env.RAW_USER_NOTES ?? "").trim();
+
+            if (!raw) {
+              core.warning("No model output for user notes; using fallback.");
+              core.setOutput("notes", fallback);
+              return;
+            }
+
+            const lines = raw
+              .split(/\r?\n/)
+              .map((line) => line.trim())
+              .filter((line) => line.length > 0);
+            const bullets = lines.filter((line) => line.startsWith("- "));
+
+            const bannedPatterns = [
+              /\bmore smoothly\b/i,
+              /\benhancing your viewing experience\b/i,
+              /\bviewing experience\b/i,
+              /\bwatch streams? in the app\b/i,
+              /\bwatching got smoother\b/i,
+              /\bvideo playback\b/i,
+              /\bbetter (performance|reliability|stability|experience)\b/i,
+              /\bimproved (performance|reliability|stability|experience)\b/i,
+              /\bseamless(ly)?\b/i,
+            ];
+            const hasBanned = bullets.some((line) =>
+              bannedPatterns.some((pattern) => pattern.test(line)),
+            );
+
+            const validCount = bullets.length >= 1 && bullets.length <= 6;
+            if (!validCount || hasBanned) {
+              core.warning("Generated notes were invalid or too vague; using fallback.");
+              core.setOutput("notes", fallback);
+              return;
+            }
+
+            core.setOutput("notes", bullets.join("\n"));
+
       - name: Build release body
         run: |
           cat <<'EOF' > release_body.md
           ## What's new for users
 
-          ${{ steps.user_notes.outputs.response || '- No major user-facing changes in this release.' }}
+          ${{ steps.validated_user_notes.outputs.notes || '- No major user-facing changes in this release.' }}
 
           ## Full changelog
 
