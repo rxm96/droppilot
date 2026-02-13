@@ -88,6 +88,7 @@ export const isChannelTrackerStatus = (value: unknown): value is ChannelTrackerS
     value.subscriptions === undefined || isFiniteNumber(value.subscriptions);
   const validDesiredSubscriptions =
     value.desiredSubscriptions === undefined || isFiniteNumber(value.desiredSubscriptions);
+  const validTopicLimit = value.topicLimit === undefined || isFiniteNumber(value.topicLimit);
   const validReconnectAttempts =
     value.reconnectAttempts === undefined || isFiniteNumber(value.reconnectAttempts);
   const validEffectiveMode = isTrackerEffectiveMode(value.effectiveMode);
@@ -108,6 +109,7 @@ export const isChannelTrackerStatus = (value: unknown): value is ChannelTrackerS
     isFiniteNumber(value.failures) &&
     validSubscriptions &&
     validDesiredSubscriptions &&
+    validTopicLimit &&
     validReconnectAttempts &&
     validFallbackActive &&
     validFallbackUntil

@@ -103,6 +103,7 @@ export type ChannelTrackerStatus = {
   connectionState?: ChannelTrackerConnectionState;
   subscriptions?: number;
   desiredSubscriptions?: number;
+  topicLimit?: number;
   reconnectAttempts?: number;
   fallbackActive?: boolean;
   fallbackUntil?: number | null;

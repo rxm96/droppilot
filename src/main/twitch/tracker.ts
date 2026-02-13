@@ -18,6 +18,7 @@ export type ChannelTrackerStatus = {
   connectionState?: ChannelTrackerConnectionState;
   subscriptions?: number;
   desiredSubscriptions?: number;
+  topicLimit?: number;
   reconnectAttempts?: number;
   fallbackActive?: boolean;
   fallbackUntil?: number | null;
@@ -129,17 +130,35 @@ export class PollingChannelTracker implements ChannelTracker {
 
 const PUBSUB_URL = "wss://pubsub-edge.twitch.tv/v1";
 const TOPIC_PREFIX = "video-playback-by-id.";
-const LISTEN_BATCH_SIZE = 50;
+const WS_TOPICS_LIMIT = 50;
+const LISTEN_BATCH_SIZE = WS_TOPICS_LIMIT;
+const MAX_WS_SOCKETS = 8;
+const MAX_TRACKED_TOPICS_LIMIT = WS_TOPICS_LIMIT * MAX_WS_SOCKETS;
+const DEFAULT_MAX_TRACKED_TOPICS = 199;
+const DEFAULT_OFFLINE_UNSUBSCRIBE_GRACE_MS = 3 * 60_000;
+const TOPIC_CAP_WARN_INTERVAL_MS = 60_000;
 
 type WsTrackerOptions = {
   mode?: "ws" | "hybrid";
   wsUrl?: string;
   pingIntervalMs?: number;
   maxTrackedTopics?: number;
+  maxSockets?: number;
   refreshMs?: number;
   fallbackPollRefreshMs?: number;
   fallbackAfterReconnectAttempts?: number;
   fallbackCooldownMs?: number;
+  offlineUnsubscribeGraceMs?: number;
+};
+
+type WsShard = {
+  id: number;
+  ws: NodeWebSocket | null;
+  connectionState: ChannelTrackerConnectionState;
+  reconnectTimer: NodeJS.Timeout | null;
+  pingTimer: NodeJS.Timeout | null;
+  reconnectAttempts: number;
+  subscribedChannelIds: Set<string>;
 };
 
 type PubSubEnvelope = {
@@ -247,29 +266,31 @@ export class WsChannelTracker implements ChannelTracker {
   private lastErrorMessage: string | undefined;
   private requests = 0;
   private failures = 0;
-  private ws: NodeWebSocket | null = null;
-  private connectionState: ChannelTrackerConnectionState = "disconnected";
-  private reconnectTimer: NodeJS.Timeout | null = null;
-  private pingTimer: NodeJS.Timeout | null = null;
   private fallbackTimer: NodeJS.Timeout | null = null;
-  private reconnectAttempts = 0;
   private disposed = false;
   private wsFallbackUntil: number | null = null;
   private desiredChannelIds = new Set<string>();
-  private subscribedChannelIds = new Set<string>();
+  private desiredChannelIdsByShard = new Map<number, Set<string>>();
+  private channelShardById = new Map<string, number>();
   private gameChannels = new Map<string, ChannelInfo[]>();
   private gameRefreshedAt = new Map<string, number>();
   private gameChannelIds = new Map<string, Set<string>>();
   private channelDetails = new Map<string, ChannelInfo>();
   private channelToGames = new Map<string, Set<string>>();
+  private offlineSinceByChannelId = new Map<string, number>();
+  private offlinePruneTimers = new Map<string, NodeJS.Timeout>();
   private readonly diffListeners = new Set<ChannelTrackerDiffListener>();
   private readonly wsUrl: string;
   private readonly pingIntervalMs: number;
+  private readonly maxSockets: number;
   private readonly maxTrackedTopics: number;
   private readonly refreshMs: number;
   private readonly fallbackPollRefreshMs: number;
   private readonly fallbackAfterReconnectAttempts: number;
   private readonly fallbackCooldownMs: number;
+  private readonly offlineUnsubscribeGraceMs: number;
+  private readonly shards: WsShard[];
+  private lastTopicCapWarnAt: number | null = null;
 
   constructor(
     private readonly twitch: TwitchService,
@@ -278,7 +299,19 @@ export class WsChannelTracker implements ChannelTracker {
     this.mode = opts.mode ?? "ws";
     this.wsUrl = opts.wsUrl ?? PUBSUB_URL;
     this.pingIntervalMs = Math.max(30_000, opts.pingIntervalMs ?? 4 * 60_000);
-    this.maxTrackedTopics = Math.max(1, opts.maxTrackedTopics ?? 180);
+    this.maxSockets = Math.min(MAX_WS_SOCKETS, Math.max(1, opts.maxSockets ?? MAX_WS_SOCKETS));
+    const requestedMaxTrackedTopics = Math.max(
+      1,
+      opts.maxTrackedTopics ?? DEFAULT_MAX_TRACKED_TOPICS,
+    );
+    const hardTopicCap = Math.min(MAX_TRACKED_TOPICS_LIMIT, this.maxSockets * WS_TOPICS_LIMIT);
+    this.maxTrackedTopics = Math.min(requestedMaxTrackedTopics, hardTopicCap);
+    if (requestedMaxTrackedTopics > this.maxTrackedTopics) {
+      console.warn(
+        `[DropPilot] WS topic cap limited to ${this.maxTrackedTopics} in shard mode ` +
+          `(requested: ${requestedMaxTrackedTopics})`,
+      );
+    }
     this.refreshMs = Math.max(10_000, opts.refreshMs ?? 90_000);
     this.fallbackPollRefreshMs = Math.max(5_000, opts.fallbackPollRefreshMs ?? 25_000);
     this.fallbackAfterReconnectAttempts = Math.max(
@@ -286,6 +319,11 @@ export class WsChannelTracker implements ChannelTracker {
       opts.fallbackAfterReconnectAttempts ?? 8,
     );
     this.fallbackCooldownMs = Math.max(30_000, opts.fallbackCooldownMs ?? 30 * 60_000);
+    this.offlineUnsubscribeGraceMs = Math.max(
+      5_000,
+      opts.offlineUnsubscribeGraceMs ?? DEFAULT_OFFLINE_UNSUBSCRIBE_GRACE_MS,
+    );
+    this.shards = Array.from({ length: this.maxSockets }, (_, idx) => this.createShard(idx));
   }
 
   async getChannelsForGame(gameName: string): Promise<ChannelInfo[]> {
@@ -328,6 +366,31 @@ export class WsChannelTracker implements ChannelTracker {
     }
   }
 
+  private getAggregateConnectionState(): ChannelTrackerConnectionState {
+    const states = this.shards.map((shard) => shard.connectionState);
+    if (states.some((state) => state === "connected")) return "connected";
+    if (states.some((state) => state === "connecting")) return "connecting";
+    return "disconnected";
+  }
+
+  private getTotalSubscribedChannels(): number {
+    let total = 0;
+    for (const shard of this.shards) {
+      total += shard.subscribedChannelIds.size;
+    }
+    return total;
+  }
+
+  private getMaxReconnectAttempts(): number {
+    let max = 0;
+    for (const shard of this.shards) {
+      if (shard.reconnectAttempts > max) {
+        max = shard.reconnectAttempts;
+      }
+    }
+    return max;
+  }
+
   getStatus(): ChannelTrackerStatus {
     const fallbackActive = this.isPollingFallbackActive();
     return {
@@ -340,10 +403,11 @@ export class WsChannelTracker implements ChannelTracker {
       lastErrorMessage: this.lastErrorMessage,
       requests: this.requests,
       failures: this.failures,
-      connectionState: this.connectionState,
-      subscriptions: this.subscribedChannelIds.size,
+      connectionState: this.getAggregateConnectionState(),
+      subscriptions: this.getTotalSubscribedChannels(),
       desiredSubscriptions: this.desiredChannelIds.size,
-      reconnectAttempts: this.reconnectAttempts,
+      topicLimit: this.maxTrackedTopics,
+      reconnectAttempts: this.getMaxReconnectAttempts(),
       fallbackActive,
       fallbackUntil: fallbackActive ? this.wsFallbackUntil : null,
     };
@@ -358,28 +422,30 @@ export class WsChannelTracker implements ChannelTracker {
 
   dispose() {
     this.disposed = true;
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
-    if (this.pingTimer) {
-      clearInterval(this.pingTimer);
-      this.pingTimer = null;
-    }
     if (this.fallbackTimer) {
       clearTimeout(this.fallbackTimer);
       this.fallbackTimer = null;
     }
-    if (this.ws) {
-      try {
-        this.ws.close(1000, "DropPilot shutdown");
-      } catch {
-        // ignore close errors
-      }
+    for (const timer of this.offlinePruneTimers.values()) {
+      clearTimeout(timer);
     }
-    this.ws = null;
-    this.connectionState = "disconnected";
-    this.subscribedChannelIds.clear();
+    this.offlinePruneTimers.clear();
+    this.offlineSinceByChannelId.clear();
+    for (const shard of this.shards) {
+      this.clearShardReconnectTimer(shard);
+      this.stopShardPingLoop(shard);
+      if (shard.ws) {
+        try {
+          shard.ws.close(1000, "DropPilot shutdown");
+        } catch {
+          // ignore close errors
+        }
+      }
+      shard.ws = null;
+      shard.connectionState = "disconnected";
+      shard.subscribedChannelIds.clear();
+    }
+    this.desiredChannelIdsByShard.clear();
   }
 
   private getCachedChannels(gameName: string): ChannelInfo[] {
@@ -393,6 +459,7 @@ export class WsChannelTracker implements ChannelTracker {
     for (const channel of normalized) {
       if (!channel.id) continue;
       nextIds.add(channel.id);
+      this.clearOfflineMarker(channel.id);
       this.channelDetails.set(channel.id, cloneChannel(channel));
       const games = this.channelToGames.get(channel.id) ?? new Set<string>();
       games.add(gameName);
@@ -405,6 +472,7 @@ export class WsChannelTracker implements ChannelTracker {
       games.delete(gameName);
       if (!games.size) {
         this.channelToGames.delete(channelId);
+        this.clearOfflineMarker(channelId);
       }
     }
     this.gameChannelIds.set(gameName, nextIds);
@@ -412,160 +480,357 @@ export class WsChannelTracker implements ChannelTracker {
     this.gameRefreshedAt.set(gameName, Date.now());
   }
 
+  private isChannelSubscribed(channelId: string): boolean {
+    for (const shard of this.shards) {
+      if (shard.subscribedChannelIds.has(channelId)) return true;
+    }
+    return false;
+  }
+
   private recomputeDesiredChannels() {
-    const desired = new Set<string>();
+    const allChannelIds = new Set<string>();
     for (const ids of this.gameChannelIds.values()) {
       for (const channelId of ids) {
-        desired.add(channelId);
-        if (desired.size >= this.maxTrackedTopics) break;
+        allChannelIds.add(channelId);
       }
+    }
+
+    const ranked = Array.from(allChannelIds).map((channelId) => {
+      const games = this.channelToGames.get(channelId);
+      let gamePriority = 0;
+      if (games?.size) {
+        for (const game of games) {
+          gamePriority = Math.max(gamePriority, this.gameRefreshedAt.get(game) ?? 0);
+        }
+      }
+      return {
+        channelId,
+        gamePriority,
+        offline: this.offlineSinceByChannelId.has(channelId),
+        subscribed: this.isChannelSubscribed(channelId),
+        viewers: this.channelDetails.get(channelId)?.viewers ?? 0,
+        name: this.channelDetails.get(channelId)?.displayName ?? channelId,
+      };
+    });
+
+    ranked.sort((left, right) => {
+      if (left.gamePriority !== right.gamePriority) {
+        return right.gamePriority - left.gamePriority;
+      }
+      if (left.offline !== right.offline) {
+        return left.offline ? 1 : -1;
+      }
+      if (left.subscribed !== right.subscribed) {
+        return left.subscribed ? -1 : 1;
+      }
+      if (left.viewers !== right.viewers) {
+        return right.viewers - left.viewers;
+      }
+      return left.name.localeCompare(right.name);
+    });
+
+    this.warnIfTopicCapReached(ranked.length);
+    const desired = new Set<string>();
+    for (const entry of ranked) {
+      const channelId = entry.channelId;
+      desired.add(channelId);
       if (desired.size >= this.maxTrackedTopics) break;
     }
     this.desiredChannelIds = desired;
     this.syncSubscriptions();
   }
 
+  private warnIfTopicCapReached(candidateCount: number) {
+    if (candidateCount <= this.maxTrackedTopics) return;
+    const now = Date.now();
+    if (
+      this.lastTopicCapWarnAt !== null &&
+      now - this.lastTopicCapWarnAt < TOPIC_CAP_WARN_INTERVAL_MS
+    ) {
+      return;
+    }
+    this.lastTopicCapWarnAt = now;
+    console.warn(
+      `[DropPilot] WS topic cap reached (${this.maxTrackedTopics}). ` +
+        `Tracking top ${this.maxTrackedTopics} of ${candidateCount} channels.`,
+    );
+  }
+
+  private createShard(id: number): WsShard {
+    return {
+      id,
+      ws: null,
+      connectionState: "disconnected",
+      reconnectTimer: null,
+      pingTimer: null,
+      reconnectAttempts: 0,
+      subscribedChannelIds: new Set<string>(),
+    };
+  }
+
+  private hashChannelId(channelId: string): number {
+    let hash = 0;
+    for (let i = 0; i < channelId.length; i += 1) {
+      hash = (hash * 31 + channelId.charCodeAt(i)) >>> 0;
+    }
+    return hash;
+  }
+
+  private assignDesiredChannelsToShards() {
+    const desiredByShard = new Map<number, Set<string>>();
+    const desiredIds = Array.from(this.desiredChannelIds);
+    const activeShardCount = Math.min(
+      this.shards.length,
+      Math.ceil(desiredIds.length / WS_TOPICS_LIMIT),
+    );
+    for (let shardId = 0; shardId < activeShardCount; shardId += 1) {
+      desiredByShard.set(shardId, new Set<string>());
+    }
+    if (activeShardCount === 0) {
+      this.desiredChannelIdsByShard = desiredByShard;
+      this.channelShardById.clear();
+      return;
+    }
+
+    const toAssign: string[] = [];
+    for (const channelId of desiredIds) {
+      const preferredShardId = this.channelShardById.get(channelId);
+      if (
+        preferredShardId === undefined ||
+        preferredShardId < 0 ||
+        preferredShardId >= activeShardCount
+      ) {
+        toAssign.push(channelId);
+        continue;
+      }
+      const bucket = desiredByShard.get(preferredShardId);
+      if (!bucket || bucket.size >= WS_TOPICS_LIMIT) {
+        toAssign.push(channelId);
+        continue;
+      }
+      bucket.add(channelId);
+    }
+
+    for (const channelId of toAssign) {
+      const startShard = this.hashChannelId(channelId) % activeShardCount;
+      let assigned = false;
+      for (let offset = 0; offset < activeShardCount; offset += 1) {
+        const shardId = (startShard + offset) % activeShardCount;
+        const bucket = desiredByShard.get(shardId);
+        if (!bucket || bucket.size >= WS_TOPICS_LIMIT) continue;
+        bucket.add(channelId);
+        this.channelShardById.set(channelId, shardId);
+        assigned = true;
+        break;
+      }
+      if (!assigned) {
+        this.channelShardById.delete(channelId);
+      }
+    }
+
+    for (const [shardId, bucket] of desiredByShard) {
+      for (const channelId of bucket) {
+        this.channelShardById.set(channelId, shardId);
+      }
+    }
+    for (const channelId of Array.from(this.channelShardById.keys())) {
+      if (!this.desiredChannelIds.has(channelId)) {
+        this.channelShardById.delete(channelId);
+      }
+    }
+    this.desiredChannelIdsByShard = desiredByShard;
+  }
+
+  private disconnectShard(shard: WsShard, reason: string, resetReconnectAttempts: boolean) {
+    this.clearShardReconnectTimer(shard);
+    this.stopShardPingLoop(shard);
+    if (this.isShardOpen(shard) && shard.subscribedChannelIds.size > 0) {
+      this.sendSubscription(shard, "UNLISTEN", Array.from(shard.subscribedChannelIds));
+    }
+    shard.subscribedChannelIds.clear();
+    if (resetReconnectAttempts) {
+      shard.reconnectAttempts = 0;
+    }
+
+    const ws = shard.ws;
+    shard.ws = null;
+    shard.connectionState = "disconnected";
+    if (!ws) return;
+    try {
+      ws.close(1000, reason);
+    } catch {
+      // ignore close errors
+    }
+  }
+
   private syncSubscriptions() {
     this.maybeRestoreWs();
+    this.assignDesiredChannelsToShards();
+
     if (this.isPollingFallbackActive()) {
-      this.subscribedChannelIds.clear();
-      return;
-    }
-    if (this.desiredChannelIds.size === 0) {
-      if (this.subscribedChannelIds.size > 0) {
-        this.sendSubscription("UNLISTEN", Array.from(this.subscribedChannelIds));
-        this.subscribedChannelIds.clear();
+      for (const shard of this.shards) {
+        this.disconnectShard(shard, "Polling fallback active", false);
       }
       return;
     }
-    this.ensureSocket();
-    if (!this.isSocketOpen()) return;
 
-    const toSubscribe = Array.from(this.desiredChannelIds).filter(
-      (channelId) => !this.subscribedChannelIds.has(channelId),
-    );
-    const toUnsubscribe = Array.from(this.subscribedChannelIds).filter(
-      (channelId) => !this.desiredChannelIds.has(channelId),
-    );
-
-    if (toUnsubscribe.length) {
-      this.sendSubscription("UNLISTEN", toUnsubscribe);
-      for (const channelId of toUnsubscribe) {
-        this.subscribedChannelIds.delete(channelId);
+    for (const shard of this.shards) {
+      const desiredForShard = this.desiredChannelIdsByShard.get(shard.id);
+      if (!desiredForShard || desiredForShard.size === 0) {
+        this.disconnectShard(shard, "No topics assigned", true);
+        continue;
       }
-    }
-    if (toSubscribe.length) {
-      this.sendSubscription("LISTEN", toSubscribe);
-      for (const channelId of toSubscribe) {
-        this.subscribedChannelIds.add(channelId);
+
+      this.ensureShardSocket(shard);
+      if (!this.isShardOpen(shard)) continue;
+
+      const toSubscribe: string[] = [];
+      for (const channelId of desiredForShard) {
+        if (!shard.subscribedChannelIds.has(channelId)) {
+          toSubscribe.push(channelId);
+        }
+      }
+
+      const toUnsubscribe: string[] = [];
+      for (const channelId of shard.subscribedChannelIds) {
+        if (!desiredForShard.has(channelId)) {
+          toUnsubscribe.push(channelId);
+        }
+      }
+
+      if (toUnsubscribe.length) {
+        this.sendSubscription(shard, "UNLISTEN", toUnsubscribe);
+        for (const channelId of toUnsubscribe) {
+          shard.subscribedChannelIds.delete(channelId);
+        }
+      }
+      if (toSubscribe.length) {
+        this.sendSubscription(shard, "LISTEN", toSubscribe);
+        for (const channelId of toSubscribe) {
+          shard.subscribedChannelIds.add(channelId);
+        }
       }
     }
   }
 
-  private ensureSocket() {
+  private ensureShardSocket(shard: WsShard) {
     if (this.disposed) return;
     this.maybeRestoreWs();
     if (this.isPollingFallbackActive()) return;
-    if (this.ws && this.connectionState !== "disconnected") return;
+    const desiredForShard = this.desiredChannelIdsByShard.get(shard.id);
+    if (!desiredForShard || desiredForShard.size === 0) return;
+    if (shard.ws && shard.connectionState !== "disconnected") return;
 
-    this.connectionState = "connecting";
+    shard.connectionState = "connecting";
     let ws: NodeWebSocket;
     try {
       ws = new NodeWebSocket(this.wsUrl);
     } catch (err) {
       this.markWsError(err);
-      this.scheduleReconnect();
+      this.scheduleShardReconnect(shard);
       return;
     }
 
-    this.ws = ws;
+    shard.ws = ws;
     ws.on("open", () => {
+      if (shard.ws !== ws) return;
       this.clearWsFallback();
-      this.connectionState = "connected";
-      this.reconnectAttempts = 0;
+      this.clearShardReconnectTimer(shard);
+      shard.connectionState = "connected";
+      shard.reconnectAttempts = 0;
       this.state = "ok";
       this.lastSuccessAt = Date.now();
       this.lastErrorMessage = undefined;
-      this.startPingLoop();
-      this.subscribedChannelIds.clear();
-      if (this.desiredChannelIds.size) {
-        const ids = Array.from(this.desiredChannelIds);
-        this.sendSubscription("LISTEN", ids);
-        for (const channelId of ids) {
-          this.subscribedChannelIds.add(channelId);
-        }
+      this.startShardPingLoop(shard);
+      shard.subscribedChannelIds.clear();
+      const desiredIds = this.desiredChannelIdsByShard.get(shard.id);
+      if (!desiredIds || desiredIds.size === 0) return;
+      const ids = Array.from(desiredIds);
+      this.sendSubscription(shard, "LISTEN", ids);
+      for (const channelId of ids) {
+        shard.subscribedChannelIds.add(channelId);
       }
     });
     ws.on("message", (data: RawData) => {
-      this.handleWsMessage(data);
+      if (shard.ws !== ws) return;
+      this.handleWsMessage(shard, data);
     });
     ws.on("error", (err) => {
+      if (shard.ws !== ws) return;
       this.markWsError(err);
     });
     ws.on("close", () => {
-      this.connectionState = "disconnected";
-      this.stopPingLoop();
-      this.ws = null;
-      this.subscribedChannelIds.clear();
-      this.scheduleReconnect();
+      if (shard.ws !== ws) return;
+      shard.connectionState = "disconnected";
+      this.stopShardPingLoop(shard);
+      shard.ws = null;
+      shard.subscribedChannelIds.clear();
+      this.scheduleShardReconnect(shard);
     });
   }
 
-  private isSocketOpen() {
-    return !!this.ws && this.ws.readyState === NodeWebSocket.OPEN;
+  private isShardOpen(shard: WsShard) {
+    return !!shard.ws && shard.ws.readyState === NodeWebSocket.OPEN;
   }
 
-  private startPingLoop() {
-    this.stopPingLoop();
-    this.pingTimer = setInterval(() => {
-      if (!this.isSocketOpen()) return;
-      this.sendRaw({ type: "PING" });
+  private startShardPingLoop(shard: WsShard) {
+    this.stopShardPingLoop(shard);
+    shard.pingTimer = setInterval(() => {
+      if (!this.isShardOpen(shard)) return;
+      this.sendRaw(shard, { type: "PING" });
     }, this.pingIntervalMs);
   }
 
-  private stopPingLoop() {
-    if (this.pingTimer) {
-      clearInterval(this.pingTimer);
-      this.pingTimer = null;
-    }
+  private stopShardPingLoop(shard: WsShard) {
+    if (!shard.pingTimer) return;
+    clearInterval(shard.pingTimer);
+    shard.pingTimer = null;
   }
 
-  private scheduleReconnect() {
+  private clearShardReconnectTimer(shard: WsShard) {
+    if (!shard.reconnectTimer) return;
+    clearTimeout(shard.reconnectTimer);
+    shard.reconnectTimer = null;
+  }
+
+  private scheduleShardReconnect(shard: WsShard) {
     if (this.disposed) return;
     this.maybeRestoreWs();
     if (this.isPollingFallbackActive()) return;
-    if (this.reconnectTimer) return;
-    if (this.desiredChannelIds.size === 0) return;
-    this.reconnectAttempts += 1;
-    if (this.reconnectAttempts >= this.fallbackAfterReconnectAttempts) {
+    const desiredForShard = this.desiredChannelIdsByShard.get(shard.id);
+    if (!desiredForShard || desiredForShard.size === 0) return;
+    if (shard.reconnectTimer) return;
+
+    shard.reconnectAttempts += 1;
+    if (shard.reconnectAttempts >= this.fallbackAfterReconnectAttempts) {
       this.activatePollingFallback(
-        `WS unavailable after ${this.reconnectAttempts} reconnect attempts`,
+        `WS shard ${shard.id + 1} unavailable after ${shard.reconnectAttempts} reconnect attempts`,
       );
       return;
     }
-    const backoff = Math.min(30_000, 1_000 * 2 ** Math.min(this.reconnectAttempts, 5));
+    const backoff = Math.min(30_000, 1_000 * 2 ** Math.min(shard.reconnectAttempts, 5));
     const jitter = Math.floor(Math.random() * 500);
     const delay = backoff + jitter;
-    this.reconnectTimer = setTimeout(() => {
-      this.reconnectTimer = null;
-      this.ensureSocket();
+    shard.reconnectTimer = setTimeout(() => {
+      shard.reconnectTimer = null;
+      this.ensureShardSocket(shard);
     }, delay);
   }
 
-  private sendRaw(payload: Record<string, unknown>) {
-    if (!this.isSocketOpen() || !this.ws) return;
+  private sendRaw(shard: WsShard, payload: Record<string, unknown>) {
+    if (!this.isShardOpen(shard) || !shard.ws) return;
     try {
-      this.ws.send(JSON.stringify(payload));
+      shard.ws.send(JSON.stringify(payload));
     } catch (err) {
       this.markWsError(err);
     }
   }
 
-  private sendSubscription(type: "LISTEN" | "UNLISTEN", channelIds: string[]) {
+  private sendSubscription(shard: WsShard, type: "LISTEN" | "UNLISTEN", channelIds: string[]) {
     if (!channelIds.length) return;
-    if (!this.isSocketOpen() || !this.ws) return;
+    if (!this.isShardOpen(shard) || !shard.ws) return;
     for (const part of chunk(channelIds, LISTEN_BATCH_SIZE)) {
-      this.sendRaw({
+      this.sendRaw(shard, {
         type,
         nonce: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
         data: {
@@ -576,7 +841,7 @@ export class WsChannelTracker implements ChannelTracker {
     }
   }
 
-  private handleWsMessage(raw: unknown) {
+  private handleWsMessage(shard: WsShard, raw: unknown) {
     const text = toMessageText(raw);
     if (!text) return;
     let envelope: PubSubEnvelope;
@@ -594,9 +859,9 @@ export class WsChannelTracker implements ChannelTracker {
       return;
     }
     if (type === "RECONNECT") {
-      if (this.ws) {
+      if (shard.ws) {
         try {
-          this.ws.close();
+          shard.ws.close();
         } catch {
           // ignore close errors
         }
@@ -605,7 +870,7 @@ export class WsChannelTracker implements ChannelTracker {
     }
     if (type === "RESPONSE") {
       if (envelope.error) {
-        this.markWsError(envelope.error);
+        this.markWsError(`[shard ${shard.id + 1}] ${envelope.error}`);
       }
       return;
     }
@@ -627,10 +892,11 @@ export class WsChannelTracker implements ChannelTracker {
     const games = this.channelToGames.get(channelId);
     if (!games?.size) return;
     const now = Date.now();
+    const gameList = Array.from(games);
 
     const eventType = String(payload.type ?? "").toLowerCase();
     if (eventType === "stream-down") {
-      for (const game of games) {
+      for (const game of gameList) {
         const current = this.gameChannels.get(game);
         if (!current?.length) continue;
         const next = current.filter((channel) => channel.id !== channelId);
@@ -646,6 +912,7 @@ export class WsChannelTracker implements ChannelTracker {
           updated: [],
         });
       }
+      this.markOfflinePendingRemoval(channelId, now);
       this.state = "ok";
       this.lastSuccessAt = now;
       this.lastErrorMessage = undefined;
@@ -653,9 +920,10 @@ export class WsChannelTracker implements ChannelTracker {
     }
 
     if (eventType === "stream-up") {
+      this.clearOfflineMarker(channelId);
       const known = this.channelDetails.get(channelId);
       if (!known) return;
-      for (const game of games) {
+      for (const game of gameList) {
         const current = this.gameChannels.get(game) ?? [];
         if (current.some((channel) => channel.id === channelId)) continue;
         const channel = cloneChannel(known);
@@ -682,7 +950,8 @@ export class WsChannelTracker implements ChannelTracker {
     if (known) {
       known.viewers = viewerCount;
     }
-    for (const game of games) {
+    this.clearOfflineMarker(channelId);
+    for (const game of gameList) {
       const current = this.gameChannels.get(game);
       if (!current?.length) continue;
       let changed = false;
@@ -729,6 +998,44 @@ export class WsChannelTracker implements ChannelTracker {
     return null;
   }
 
+  private clearOfflineMarker(channelId: string) {
+    this.offlineSinceByChannelId.delete(channelId);
+    const timer = this.offlinePruneTimers.get(channelId);
+    if (timer) {
+      clearTimeout(timer);
+      this.offlinePruneTimers.delete(channelId);
+    }
+  }
+
+  private markOfflinePendingRemoval(channelId: string, now: number) {
+    this.offlineSinceByChannelId.set(channelId, now);
+    if (this.offlinePruneTimers.has(channelId)) return;
+    const timer = setTimeout(() => {
+      this.offlinePruneTimers.delete(channelId);
+      this.pruneOfflineChannel(channelId);
+    }, this.offlineUnsubscribeGraceMs);
+    this.offlinePruneTimers.set(channelId, timer);
+  }
+
+  private pruneOfflineChannel(channelId: string) {
+    if (this.disposed) return;
+    const games = this.channelToGames.get(channelId);
+    this.offlineSinceByChannelId.delete(channelId);
+    if (!games?.size) return;
+    let changed = false;
+    for (const game of games) {
+      const ids = this.gameChannelIds.get(game);
+      if (!ids) continue;
+      if (ids.delete(channelId)) {
+        changed = true;
+      }
+    }
+    this.channelToGames.delete(channelId);
+    if (changed) {
+      this.recomputeDesiredChannels();
+    }
+  }
+
   private markWsError(err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     this.state = "error";
@@ -761,14 +1068,10 @@ export class WsChannelTracker implements ChannelTracker {
     if (this.disposed) return;
     const now = Date.now();
     this.wsFallbackUntil = now + this.fallbackCooldownMs;
-    this.connectionState = "disconnected";
     this.lastErrorAt = now;
     this.lastErrorMessage = reason;
-    this.stopPingLoop();
-    this.subscribedChannelIds.clear();
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
+    for (const shard of this.shards) {
+      this.disconnectShard(shard, "Switching to polling fallback", false);
     }
     if (this.fallbackTimer) {
       clearTimeout(this.fallbackTimer);
@@ -777,17 +1080,9 @@ export class WsChannelTracker implements ChannelTracker {
       this.fallbackTimer = null;
       this.clearWsFallback();
       if (this.desiredChannelIds.size > 0) {
-        this.ensureSocket();
+        this.syncSubscriptions();
       }
     }, this.fallbackCooldownMs);
-    if (this.ws) {
-      try {
-        this.ws.close(1000, "Switching to polling fallback");
-      } catch {
-        // ignore close errors
-      }
-      this.ws = null;
-    }
   }
 
   private emitDiff(
