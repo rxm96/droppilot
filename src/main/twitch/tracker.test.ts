@@ -72,13 +72,13 @@ afterEach(async () => {
 });
 
 describe("normalizeTrackerMode", () => {
-  it("normalizes supported values and falls back to polling", () => {
+  it("normalizes supported values and falls back to hybrid", () => {
     expect(normalizeTrackerMode("ws")).toBe("ws");
     expect(normalizeTrackerMode("hybrid")).toBe("hybrid");
     expect(normalizeTrackerMode("polling")).toBe("polling");
     expect(normalizeTrackerMode("  WS  ")).toBe("ws");
-    expect(normalizeTrackerMode("something-else")).toBe("polling");
-    expect(normalizeTrackerMode(undefined)).toBe("polling");
+    expect(normalizeTrackerMode("something-else")).toBe("hybrid");
+    expect(normalizeTrackerMode(undefined)).toBe("hybrid");
   });
 });
 

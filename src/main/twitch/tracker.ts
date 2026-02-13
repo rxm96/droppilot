@@ -1145,7 +1145,7 @@ export function normalizeTrackerMode(input: string | undefined | null): ChannelT
   if (raw === "ws" || raw === "hybrid" || raw === "polling") {
     return raw;
   }
-  return "polling";
+  return "hybrid";
 }
 
 export function createChannelTracker(
