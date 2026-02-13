@@ -149,18 +149,19 @@ function App() {
   });
   const watchStats = useWatchPing({ watching, bumpStats, forwardAuthError, demoMode });
 
-  const { profile, appVersion, updateStatus, setUpdateStatus, trackerStatus } = useAppBootstrap({
-    authStatus: auth.status,
-    demoMode,
-    debugEnabled,
-    autoSelect,
-    view,
-    setView,
-    setAutoSelectEnabled,
-    watching,
-    fetchInventory,
-    forwardAuthError,
-  });
+  const { profile, appVersion, updateStatus, setUpdateStatus, trackerStatus, userPubSubStatus } =
+    useAppBootstrap({
+      authStatus: auth.status,
+      demoMode,
+      debugEnabled,
+      autoSelect,
+      view,
+      setView,
+      setAutoSelectEnabled,
+      watching,
+      fetchInventory,
+      forwardAuthError,
+    });
 
   const actions = useAppActions({
     creds,
@@ -361,6 +362,7 @@ function App() {
     stats,
     cpu: debugCpu,
     trackerStatus,
+    userPubSubStatus,
   });
 
   const navProps = {

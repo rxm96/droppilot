@@ -1,11 +1,13 @@
 import { useMemo } from "react";
 import type {
   AuthState,
+  ChannelDiff,
   ChannelTrackerStatus,
   ErrorInfo,
   InventoryState,
   ProfileState,
   StatsState,
+  UserPubSubStatus,
   WatchingState,
 } from "../types";
 import type { InventoryRefreshState } from "./useInventoryRefresh";
@@ -28,6 +30,8 @@ type Params = {
   inventoryRefresh: InventoryRefreshState;
   channelsCount: number;
   channelsLoading: boolean;
+  channelsRefreshing?: boolean;
+  channelDiff?: ChannelDiff | null;
   channelError: ErrorInfo | null;
   autoClaim: boolean;
   autoSelectEnabled: boolean;
@@ -42,6 +46,7 @@ type Params = {
   stats: StatsState;
   cpu: CpuSample;
   trackerStatus: ChannelTrackerStatus | null;
+  userPubSubStatus: UserPubSubStatus | null;
 };
 
 export function useDebugSnapshot({
@@ -58,6 +63,8 @@ export function useDebugSnapshot({
   inventoryRefresh,
   channelsCount,
   channelsLoading,
+  channelsRefreshing,
+  channelDiff,
   channelError,
   autoClaim,
   autoSelectEnabled,
@@ -72,6 +79,7 @@ export function useDebugSnapshot({
   stats,
   cpu,
   trackerStatus,
+  userPubSubStatus,
 }: Params) {
   return useMemo(
     () => ({
@@ -96,9 +104,19 @@ export function useDebugSnapshot({
       channels: {
         count: channelsCount,
         loading: channelsLoading,
+        refreshing: channelsRefreshing ?? false,
+        diff: channelDiff
+          ? {
+              at: channelDiff.at,
+              added: channelDiff.addedIds.length,
+              removed: channelDiff.removedIds.length,
+              updated: channelDiff.updatedIds.length,
+            }
+          : null,
         error: channelError ? { code: channelError.code, message: channelError.message } : null,
       },
       tracker: trackerStatus,
+      userPubSub: userPubSubStatus,
       automation: {
         autoClaim,
         autoSelectEnabled,
@@ -133,6 +151,8 @@ export function useDebugSnapshot({
       channelError,
       channelsCount,
       channelsLoading,
+      channelsRefreshing,
+      channelDiff,
       demoMode,
       inventory.status,
       inventoryFetchedAt,
@@ -150,6 +170,7 @@ export function useDebugSnapshot({
       stats,
       targetGame,
       trackerStatus,
+      userPubSubStatus,
       cpu,
       watchStats.lastError,
       watchStats.lastOk,

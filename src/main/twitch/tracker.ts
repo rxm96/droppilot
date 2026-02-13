@@ -4,6 +4,14 @@ import { WebSocket as NodeWebSocket, type RawData } from "ws";
 export type ChannelTrackerMode = "polling" | "ws" | "hybrid";
 export type ChannelTrackerState = "idle" | "ok" | "error";
 export type ChannelTrackerConnectionState = "disconnected" | "connecting" | "connected";
+export type ChannelTrackerShardStatus = {
+  id: number;
+  connectionState: ChannelTrackerConnectionState;
+  subscriptions: number;
+  desiredSubscriptions: number;
+  reconnectAttempts: number;
+  socketOpen: boolean;
+};
 
 export type ChannelTrackerStatus = {
   mode: ChannelTrackerMode;
@@ -22,6 +30,7 @@ export type ChannelTrackerStatus = {
   reconnectAttempts?: number;
   fallbackActive?: boolean;
   fallbackUntil?: number | null;
+  shards?: ChannelTrackerShardStatus[];
 };
 
 export type ChannelTrackerDiffSource = "ws" | "fetch";
@@ -391,6 +400,20 @@ export class WsChannelTracker implements ChannelTracker {
     return max;
   }
 
+  private getShardStatuses(): ChannelTrackerShardStatus[] {
+    return this.shards.map((shard) => {
+      const desiredForShard = this.desiredChannelIdsByShard.get(shard.id);
+      return {
+        id: shard.id + 1,
+        connectionState: shard.connectionState,
+        subscriptions: shard.subscribedChannelIds.size,
+        desiredSubscriptions: desiredForShard?.size ?? 0,
+        reconnectAttempts: shard.reconnectAttempts,
+        socketOpen: this.isShardOpen(shard),
+      };
+    });
+  }
+
   getStatus(): ChannelTrackerStatus {
     const fallbackActive = this.isPollingFallbackActive();
     return {
@@ -410,6 +433,7 @@ export class WsChannelTracker implements ChannelTracker {
       reconnectAttempts: this.getMaxReconnectAttempts(),
       fallbackActive,
       fallbackUntil: fallbackActive ? this.wsFallbackUntil : null,
+      shards: this.getShardStatuses(),
     };
   }
 

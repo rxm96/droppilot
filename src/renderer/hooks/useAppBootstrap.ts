@@ -1,12 +1,20 @@
 import { demoProfile } from "../demoData";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AuthState, ChannelTrackerStatus, ProfileState, View, WatchingState } from "../types";
+import type {
+  AuthState,
+  ChannelTrackerStatus,
+  ProfileState,
+  UserPubSubStatus,
+  View,
+  WatchingState,
+} from "../types";
 import { errorInfoFromIpc, errorInfoFromUnknown } from "../utils/errors";
 import {
   isChannelTrackerStatus,
   isIpcAuthErrorResponse,
   isIpcErrorResponse,
   isTwitchProfile,
+  isUserPubSubStatus,
 } from "../utils/ipc";
 import { isVerboseLoggingEnabled, logDebug } from "../utils/logger";
 import { setLogCollectionEnabled } from "../utils/logStore";
@@ -62,6 +70,7 @@ export function useAppBootstrap({
   const [updateStatus, setUpdateStatus] = useState<AppUpdateStatus>({ state: "idle" });
   const [appVersion, setAppVersion] = useState<string>("");
   const [trackerStatus, setTrackerStatus] = useState<ChannelTrackerStatus | null>(null);
+  const [userPubSubStatus, setUserPubSubStatus] = useState<UserPubSubStatus | null>(null);
   const fetchInventoryRef = useRef(fetchInventory);
 
   useEffect(() => {
@@ -176,6 +185,37 @@ export function useAppBootstrap({
   }, [forwardAuthError]);
 
   useEffect(() => {
+    let disposed = false;
+    const pollUserPubSubStatus = async () => {
+      try {
+        const res: unknown = await window.electronAPI.twitch.userPubSubStatus();
+        if (disposed) return;
+        if (isIpcErrorResponse(res)) {
+          if (isIpcAuthErrorResponse(res)) {
+            forwardAuthError(res.message);
+            return;
+          }
+          return;
+        }
+        if (!isUserPubSubStatus(res)) return;
+        setUserPubSubStatus(res);
+      } catch (err) {
+        if (!disposed) {
+          logDebug("twitch: userPubSubStatus failed", err);
+        }
+      }
+    };
+    void pollUserPubSubStatus();
+    const id = window.setInterval(() => {
+      void pollUserPubSubStatus();
+    }, 15_000);
+    return () => {
+      disposed = true;
+      window.clearInterval(id);
+    };
+  }, [forwardAuthError]);
+
+  useEffect(() => {
     let cancelled = false;
     const fetchVersion = async () => {
       try {
@@ -271,5 +311,6 @@ export function useAppBootstrap({
     updateStatus,
     setUpdateStatus,
     trackerStatus,
+    userPubSubStatus,
   };
 }

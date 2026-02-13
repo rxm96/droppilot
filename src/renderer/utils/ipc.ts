@@ -5,6 +5,8 @@ import type {
   InventoryItem,
   PriorityPlan,
   StatsData,
+  UserPubSubEvent,
+  UserPubSubStatus,
 } from "../types";
 
 type UnknownRecord = Record<string, unknown>;
@@ -42,11 +44,32 @@ const isNullableFiniteNumber = (value: unknown): value is number | null =>
 const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === "string");
 
+const isTrackerConnectionStateValue = (value: unknown): boolean =>
+  value === "disconnected" || value === "connecting" || value === "connected";
+
 const isTrackerConnectionState = (value: unknown): boolean =>
-  value === undefined || value === "disconnected" || value === "connecting" || value === "connected";
+  value === undefined || isTrackerConnectionStateValue(value);
 
 const isTrackerEffectiveMode = (value: unknown): boolean =>
   value === undefined || value === "polling" || value === "ws";
+
+const isUserPubSubState = (value: unknown): boolean =>
+  value === "idle" || value === "ok" || value === "error";
+
+const isUserPubSubConnectionState = (value: unknown): boolean =>
+  value === "disconnected" || value === "connecting" || value === "connected";
+
+const isTrackerShardStatus = (value: unknown): boolean => {
+  if (!isRecord(value)) return false;
+  return (
+    isFiniteNumber(value.id) &&
+    isTrackerConnectionStateValue(value.connectionState) &&
+    isFiniteNumber(value.subscriptions) &&
+    isFiniteNumber(value.desiredSubscriptions) &&
+    isFiniteNumber(value.reconnectAttempts) &&
+    typeof value.socketOpen === "boolean"
+  );
+};
 
 export const isArrayOf = <T>(value: unknown, guard: (item: unknown) => item is T): value is T[] =>
   Array.isArray(value) && value.every((item) => guard(item));
@@ -96,6 +119,8 @@ export const isChannelTrackerStatus = (value: unknown): value is ChannelTrackerS
     value.fallbackActive === undefined || typeof value.fallbackActive === "boolean";
   const validFallbackUntil =
     value.fallbackUntil === undefined || isNullableFiniteNumber(value.fallbackUntil);
+  const validShards =
+    value.shards === undefined || (Array.isArray(value.shards) && value.shards.every(isTrackerShardStatus));
   return (
     validMode &&
     validEffectiveMode &&
@@ -112,7 +137,40 @@ export const isChannelTrackerStatus = (value: unknown): value is ChannelTrackerS
     validTopicLimit &&
     validReconnectAttempts &&
     validFallbackActive &&
-    validFallbackUntil
+    validFallbackUntil &&
+    validShards
+  );
+};
+
+export const isUserPubSubStatus = (value: unknown): value is UserPubSubStatus => {
+  if (!isRecord(value)) return false;
+  return (
+    isUserPubSubState(value.state) &&
+    isUserPubSubConnectionState(value.connectionState) &&
+    typeof value.listening === "boolean" &&
+    isFiniteNumber(value.reconnectAttempts) &&
+    isNullableFiniteNumber(value.lastMessageAt) &&
+    isNullableFiniteNumber(value.lastErrorAt) &&
+    (value.lastErrorMessage === undefined || isString(value.lastErrorMessage)) &&
+    isFiniteNumber(value.events) &&
+    (value.currentUserId === undefined || isString(value.currentUserId))
+  );
+};
+
+export const isUserPubSubEvent = (value: unknown): value is UserPubSubEvent => {
+  if (!isRecord(value)) return false;
+  const validKind =
+    value.kind === "drop-progress" || value.kind === "drop-claim" || value.kind === "notification";
+  return (
+    validKind &&
+    isFiniteNumber(value.at) &&
+    isString(value.topic) &&
+    isString(value.messageType) &&
+    (value.dropId === undefined || isString(value.dropId)) &&
+    (value.dropInstanceId === undefined || isString(value.dropInstanceId)) &&
+    (value.currentProgressMin === undefined || isFiniteNumber(value.currentProgressMin)) &&
+    (value.requiredProgressMin === undefined || isFiniteNumber(value.requiredProgressMin)) &&
+    (value.notificationType === undefined || isString(value.notificationType))
   );
 };
 
