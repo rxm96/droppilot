@@ -22,6 +22,8 @@ export type InventoryItem = {
   requiredMinutes: number;
   earnedMinutes: number;
   status: "locked" | "progress" | "claimed";
+  imageUrl?: string;
+  campaignImageUrl?: string;
   linked?: boolean;
   campaignStatus?: string;
   campaignName?: string;

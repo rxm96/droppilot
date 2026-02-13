@@ -12,6 +12,8 @@ export interface InventoryItem {
   requiredMinutes: number;
   earnedMinutes: number;
   status: "locked" | "progress" | "claimed";
+  imageUrl?: string;
+  campaignImageUrl?: string;
   linked?: boolean;
   campaignStatus?: string;
   campaignName?: string;
@@ -83,6 +85,7 @@ export class TwitchService {
       const campaignName = (campaign as any)?.name as string | undefined;
       const startsAt = (campaign as any)?.startAt as string | undefined;
       const endsAt = (campaign as any)?.endAt as string | undefined;
+      const campaignImageUrl = extractCampaignImageUrl(campaign);
       // Some campaigns expose allow.isEnabled === false even though the user can earn progress.
       // Only treat it as excluded if Twitch explicitly disabled the campaign AND we have no progress yet.
       const allowDisabled = (campaign as any)?.allow?.isEnabled === false;
@@ -126,6 +129,28 @@ export class TwitchService {
           status = "progress";
         }
         const earnedMinutes = requiredMinutes > 0 ? Math.min(requiredMinutes, watched) : watched;
+        const imageUrl = extractDropImageUrl(drop, campaign);
+        if (dropsCount <= 3) {
+          const benefitEdges = (drop as any)?.benefitEdges;
+          const benefitEdgesList = Array.isArray(benefitEdges)
+            ? benefitEdges
+            : benefitEdges?.edges ?? benefitEdges?.nodes ?? [];
+          const benefitEdgeSample = Array.isArray(benefitEdgesList) ? benefitEdgesList[0] : null;
+          const benefitNode =
+            benefitEdgeSample?.node ?? benefitEdgeSample?.benefit ?? benefitEdgeSample ?? null;
+          this.debug("Drop image sample", {
+            dropId: drop.id,
+            dropName: drop.name,
+            imageUrl: imageUrl ?? "<missing>",
+            benefitKeys: drop?.benefit ? Object.keys(drop.benefit) : [],
+            benefitEdgesCount: Array.isArray(benefitEdgesList) ? benefitEdgesList.length : 0,
+            benefitEdgeKeys: benefitEdgeSample ? Object.keys(benefitEdgeSample) : [],
+            benefitNodeKeys: benefitNode ? Object.keys(benefitNode) : [],
+            localizedKeys: drop?.localizedContent ? Object.keys(drop.localizedContent) : [],
+            dropKeys: drop ? Object.keys(drop) : [],
+            campaignKeys: campaign ? Object.keys(campaign) : [],
+          });
+        }
         items.push({
           id: drop.id,
           game,
@@ -133,6 +158,8 @@ export class TwitchService {
           requiredMinutes,
           earnedMinutes,
           status,
+          imageUrl,
+          campaignImageUrl,
           linked,
           campaignStatus,
           campaignName,
@@ -697,6 +724,71 @@ function mapStatus(status: string | undefined, drop?: any): InventoryItem["statu
     return "claimed";
   }
   return "locked";
+}
+
+function extractDropImageUrl(drop: any, campaign: any): string | undefined {
+  const benefitEdgesRaw =
+    (Array.isArray(drop?.benefitEdges) ? drop.benefitEdges : drop?.benefitEdges?.edges) ??
+    drop?.benefitEdges?.nodes ??
+    [];
+  const benefitNodes = Array.isArray(benefitEdgesRaw)
+    ? benefitEdgesRaw
+        .map((edge: any) => edge?.node ?? edge?.benefit ?? edge)
+        .filter(Boolean)
+    : [];
+  const benefitCandidates: unknown[] = [];
+  for (const node of benefitNodes) {
+    benefitCandidates.push(
+      node?.imageAssetURL,
+      node?.imageAssetUrl,
+      node?.imageURL,
+      node?.imageUrl,
+      node?.image?.url,
+      node?.image?.URL,
+      node?.benefit?.imageURL,
+      node?.benefit?.imageUrl,
+      node?.benefit?.image?.url,
+      node?.benefit?.image?.URL,
+      node?.benefit?.imageAssetURL,
+      node?.benefit?.imageAssetUrl,
+    );
+  }
+  const candidates = [
+    ...benefitCandidates,
+    drop?.benefit?.imageURL,
+    drop?.benefit?.imageUrl,
+    drop?.benefit?.image?.url,
+    drop?.benefit?.image?.URL,
+    drop?.imageURL,
+    drop?.imageUrl,
+    drop?.image?.url,
+    drop?.image?.URL,
+    drop?.artworkURL,
+    drop?.artworkUrl,
+    drop?.localizedContent?.imageURL,
+    drop?.localizedContent?.imageUrl,
+  ];
+  for (const value of candidates) {
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+function extractCampaignImageUrl(campaign: any): string | undefined {
+  const candidates = [
+    campaign?.imageURL,
+    campaign?.imageUrl,
+    campaign?.game?.boxArtURL,
+    campaign?.game?.boxArtUrl,
+  ];
+  for (const value of candidates) {
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value;
+    }
+  }
+  return undefined;
 }
 
 type CampaignEdge = {
