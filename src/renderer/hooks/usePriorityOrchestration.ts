@@ -115,12 +115,9 @@ export function usePriorityOrchestration({
   useEffect(() => {
     if (inventoryStatus !== "ready") return;
     if (bestActionableGame) return;
-    if (!watching) {
-      setActiveTargetGame("");
-      return;
+    if (watching) {
+      stopWatching();
     }
-    setActiveTargetGame("");
-    stopWatching();
   }, [inventoryStatus, bestActionableGame, stopWatching, watching]);
 
   useEffect(() => {

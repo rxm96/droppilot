@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ClaimStatus, InventoryItem, InventoryState } from "../types";
+import type { ClaimStatus, InventoryItem, InventoryState, UserPubSubEvent } from "../types";
 import { buildDemoInventory } from "../demoData";
 import { getCategory } from "../utils";
 import { logDebug, logError, logInfo, logWarn } from "../utils/logger";
@@ -10,6 +10,7 @@ import {
   isIpcAuthErrorResponse,
   isIpcErrorResponse,
   isIpcOkFalseResponse,
+  isUserPubSubEvent,
 } from "../utils/ipc";
 import { RENDERER_ERROR_CODES, TWITCH_ERROR_CODES } from "../../shared/errorCodes";
 
@@ -32,6 +33,117 @@ const NOOP = () => {};
 const NOOP_CLAIM = () => {};
 const NOOP_AUTH = (_message?: string) => {};
 type FetchInventoryOpts = { forceLoading?: boolean };
+
+type InventoryPatchResult = {
+  changed: boolean;
+  items: InventoryItem[];
+  updatedId?: string;
+  deltaMinutes: number;
+  totalMinutes: number;
+  claimedItem?: InventoryItem;
+};
+
+const getTotalEarnedMinutes = (items: InventoryItem[]): number =>
+  items.reduce((acc, item) => acc + Math.max(0, Number(item.earnedMinutes) || 0), 0);
+
+export const applyDropProgressToInventoryItems = (
+  items: InventoryItem[],
+  payload: UserPubSubEvent,
+): InventoryPatchResult => {
+  if (payload.kind !== "drop-progress") {
+    return { changed: false, items, deltaMinutes: 0, totalMinutes: getTotalEarnedMinutes(items) };
+  }
+  const dropId = payload.dropId?.trim();
+  const currentProgressMin =
+    typeof payload.currentProgressMin === "number" && Number.isFinite(payload.currentProgressMin)
+      ? Math.max(0, payload.currentProgressMin)
+      : null;
+  if (!dropId || currentProgressMin === null) {
+    return { changed: false, items, deltaMinutes: 0, totalMinutes: getTotalEarnedMinutes(items) };
+  }
+  const index = items.findIndex((item) => item.id === dropId);
+  if (index < 0) {
+    return { changed: false, items, deltaMinutes: 0, totalMinutes: getTotalEarnedMinutes(items) };
+  }
+
+  const target = items[index];
+  const required = Math.max(0, Number(target.requiredMinutes) || 0);
+  const prevEarned = Math.max(0, Number(target.earnedMinutes) || 0);
+  const nextEarnedRaw = Math.max(prevEarned, currentProgressMin);
+  const nextEarned = required > 0 ? Math.min(required, nextEarnedRaw) : nextEarnedRaw;
+  let nextStatus = target.status;
+  if (nextStatus !== "claimed") {
+    if (required > 0 && nextEarned >= required) {
+      nextStatus = "progress";
+    } else if (nextEarned > 0 && nextStatus === "locked") {
+      nextStatus = "progress";
+    }
+  }
+  if (nextEarned === prevEarned && nextStatus === target.status) {
+    return { changed: false, items, deltaMinutes: 0, totalMinutes: getTotalEarnedMinutes(items) };
+  }
+
+  const nextItem: InventoryItem = {
+    ...target,
+    earnedMinutes: nextEarned,
+    status: nextStatus,
+  };
+  const nextItems = [...items];
+  nextItems[index] = nextItem;
+  return {
+    changed: true,
+    items: nextItems,
+    updatedId: nextItem.id,
+    deltaMinutes: Math.max(0, nextEarned - prevEarned),
+    totalMinutes: getTotalEarnedMinutes(nextItems),
+  };
+};
+
+export const applyDropClaimToInventoryItems = (
+  items: InventoryItem[],
+  payload: UserPubSubEvent,
+): InventoryPatchResult => {
+  if (payload.kind !== "drop-claim") {
+    return { changed: false, items, deltaMinutes: 0, totalMinutes: getTotalEarnedMinutes(items) };
+  }
+  const dropId = payload.dropId?.trim();
+  const dropInstanceId = payload.dropInstanceId?.trim();
+  if (!dropId && !dropInstanceId) {
+    return { changed: false, items, deltaMinutes: 0, totalMinutes: getTotalEarnedMinutes(items) };
+  }
+  const index = items.findIndex((item) => {
+    if (dropId && item.id === dropId) return true;
+    if (dropInstanceId && item.dropInstanceId && item.dropInstanceId === dropInstanceId) return true;
+    return false;
+  });
+  if (index < 0) {
+    return { changed: false, items, deltaMinutes: 0, totalMinutes: getTotalEarnedMinutes(items) };
+  }
+
+  const target = items[index];
+  const required = Math.max(0, Number(target.requiredMinutes) || 0);
+  const prevEarned = Math.max(0, Number(target.earnedMinutes) || 0);
+  const nextEarned = required > 0 ? Math.max(required, prevEarned) : prevEarned;
+  const nextItem: InventoryItem = {
+    ...target,
+    earnedMinutes: nextEarned,
+    status: "claimed",
+  };
+  if (target.status === "claimed" && nextEarned === prevEarned) {
+    return { changed: false, items, deltaMinutes: 0, totalMinutes: getTotalEarnedMinutes(items) };
+  }
+
+  const nextItems = [...items];
+  nextItems[index] = nextItem;
+  return {
+    changed: true,
+    items: nextItems,
+    updatedId: nextItem.id,
+    deltaMinutes: Math.max(0, nextEarned - prevEarned),
+    totalMinutes: getTotalEarnedMinutes(nextItems),
+    claimedItem: nextItem,
+  };
+};
 
 type InventoryEvents = {
   onMinutesEarned?: (minutes: number) => void;
@@ -68,6 +180,11 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
   const fetchInventoryRef = useRef<(opts?: FetchInventoryOpts) => Promise<void>>(() =>
     Promise.resolve(),
   );
+  const progressByDropIdRef = useRef<Map<string, number>>(new Map());
+  const pubSubReconcileTimerRef = useRef<number | null>(null);
+  const pubSubReconcilePendingForceRef = useRef(false);
+  const pubSubReconcileScheduledAtRef = useRef(0);
+  const pubSubLastReconcileAtRef = useRef(0);
   const demoItemsRef = useRef<InventoryItem[] | null>(null);
   const demoLastAtRef = useRef<number | null>(null);
 
@@ -80,6 +197,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
       setClaimStatus(null);
       totalMinutesRef.current = null;
       claimAttemptsRef.current.clear();
+      progressByDropIdRef.current.clear();
       pendingFetchOptsRef.current = null;
     }
   }, [demoMode, isLinked]);
@@ -352,6 +470,162 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
   );
 
   fetchInventoryRef.current = fetchInventory;
+
+  useEffect(() => {
+    if (demoMode || !isLinked) return;
+
+    const clearReconcileTimer = () => {
+      if (pubSubReconcileTimerRef.current !== null) {
+        window.clearTimeout(pubSubReconcileTimerRef.current);
+        pubSubReconcileTimerRef.current = null;
+      }
+    };
+
+    const scheduleReconcile = ({
+      forceLoading,
+      minGapMs,
+      baseDelayMs,
+    }: {
+      forceLoading: boolean;
+      minGapMs: number;
+      baseDelayMs: number;
+    }) => {
+      pubSubReconcilePendingForceRef.current =
+        pubSubReconcilePendingForceRef.current || forceLoading;
+      const now = Date.now();
+      const nextAt = Math.max(now + baseDelayMs, pubSubLastReconcileAtRef.current + minGapMs);
+      if (
+        pubSubReconcileTimerRef.current !== null &&
+        nextAt >= pubSubReconcileScheduledAtRef.current
+      ) {
+        return;
+      }
+      clearReconcileTimer();
+      pubSubReconcileScheduledAtRef.current = nextAt;
+      pubSubReconcileTimerRef.current = window.setTimeout(() => {
+        pubSubReconcileTimerRef.current = null;
+        pubSubLastReconcileAtRef.current = Date.now();
+        const force = pubSubReconcilePendingForceRef.current;
+        pubSubReconcilePendingForceRef.current = false;
+        void fetchInventoryRef.current({ forceLoading: force });
+      }, Math.max(0, nextAt - now));
+    };
+
+    const applyPatch = (event: UserPubSubEvent): boolean => {
+      let patched = false;
+      let updatedId: string | undefined;
+      let deltaMinutes = 0;
+      let nextTotal = totalMinutesRef.current ?? 0;
+      let claimedItem: InventoryItem | undefined;
+
+      setInventory((prev) => {
+        const items =
+          prev.status === "ready"
+            ? prev.items
+            : prev.status === "error" && prev.items
+              ? prev.items
+              : null;
+        if (!items?.length) return prev;
+        const patch =
+          event.kind === "drop-progress"
+            ? applyDropProgressToInventoryItems(items, event)
+            : event.kind === "drop-claim"
+              ? applyDropClaimToInventoryItems(items, event)
+              : null;
+        if (!patch || !patch.changed) return prev;
+        patched = true;
+        updatedId = patch.updatedId;
+        deltaMinutes = patch.deltaMinutes;
+        nextTotal = patch.totalMinutes;
+        claimedItem = patch.claimedItem;
+        if (prev.status === "ready") {
+          return { status: "ready", items: patch.items };
+        }
+        return { ...prev, items: patch.items };
+      });
+
+      if (!patched) return false;
+      totalMinutesRef.current = nextTotal;
+      if (deltaMinutes > 0) {
+        onMinutesEarned(deltaMinutes);
+      }
+      if (claimedItem && autoClaimEnabled) {
+        onClaimed({ title: claimedItem.title, game: claimedItem.game });
+      }
+      if (updatedId) {
+        setInventoryChanges((prev) => {
+          const updated = new Set(prev.updated);
+          updated.add(updatedId);
+          return { added: prev.added, updated };
+        });
+      }
+      return true;
+    };
+
+    const unsubscribe = window.electronAPI.twitch.onUserPubSubEvent((payload: unknown) => {
+      if (!isUserPubSubEvent(payload)) return;
+      logDebug("inventory: userPubSub event", {
+        kind: payload.kind,
+        messageType: payload.messageType,
+      });
+
+      if (payload.kind === "drop-progress") {
+        const dropId = payload.dropId?.trim();
+        const progress =
+          typeof payload.currentProgressMin === "number" && Number.isFinite(payload.currentProgressMin)
+            ? Math.max(0, payload.currentProgressMin)
+            : null;
+        if (dropId && progress !== null) {
+          const lastProgress = progressByDropIdRef.current.get(dropId) ?? -1;
+          if (progress <= lastProgress) {
+            scheduleReconcile({
+              forceLoading: false,
+              minGapMs: 60_000,
+              baseDelayMs: 20_000,
+            });
+            return;
+          }
+          progressByDropIdRef.current.set(dropId, progress);
+        }
+        const patched = applyPatch(payload);
+        scheduleReconcile(
+          patched
+            ? {
+                forceLoading: false,
+                minGapMs: 60_000,
+                baseDelayMs: 25_000,
+              }
+            : {
+                forceLoading: false,
+                minGapMs: 10_000,
+                baseDelayMs: 1_500,
+              },
+        );
+        return;
+      }
+
+      if (payload.kind === "drop-claim") {
+        applyPatch(payload);
+        scheduleReconcile({
+          forceLoading: true,
+          minGapMs: 2_000,
+          baseDelayMs: 450,
+        });
+        return;
+      }
+
+      scheduleReconcile({
+        forceLoading: true,
+        minGapMs: 2_000,
+        baseDelayMs: 450,
+      });
+    });
+
+    return () => {
+      clearReconcileTimer();
+      if (typeof unsubscribe === "function") unsubscribe();
+    };
+  }, [demoMode, isLinked, onClaimed, onMinutesEarned, autoClaimEnabled]);
 
   useEffect(() => {
     if (inventoryChanges.added.size === 0 && inventoryChanges.updated.size === 0) return;

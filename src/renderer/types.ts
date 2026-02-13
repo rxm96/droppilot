@@ -61,11 +61,87 @@ export type ChannelEntry = {
   game: string;
 };
 
+export type ChannelDiff = {
+  at: number;
+  addedIds: string[];
+  removedIds: string[];
+  updatedIds: string[];
+  titleChangedIds: string[];
+  viewerDeltaById: Record<string, number>;
+};
+
+export type ChannelLiveDiff = {
+  game: string;
+  at: number;
+  source: "ws" | "fetch";
+  reason: "snapshot" | "stream-up" | "stream-down" | "viewers";
+  added: ChannelEntry[];
+  removedIds: string[];
+  updated: ChannelEntry[];
+};
+
 export type PriorityPlan = {
   order: string[];
   availableGames: string[];
   missingPriority: string[];
   totalActiveDrops: number;
+};
+
+export type ChannelTrackerMode = "polling" | "ws" | "hybrid";
+export type ChannelTrackerState = "idle" | "ok" | "error";
+export type ChannelTrackerConnectionState = "disconnected" | "connecting" | "connected";
+export type ChannelTrackerShardStatus = {
+  id: number;
+  connectionState: ChannelTrackerConnectionState;
+  subscriptions: number;
+  desiredSubscriptions: number;
+  reconnectAttempts: number;
+  socketOpen: boolean;
+};
+export type ChannelTrackerStatus = {
+  mode: ChannelTrackerMode;
+  effectiveMode?: "polling" | "ws";
+  state: ChannelTrackerState;
+  lastRequestAt: number | null;
+  lastSuccessAt: number | null;
+  lastErrorAt: number | null;
+  lastErrorMessage?: string;
+  requests: number;
+  failures: number;
+  connectionState?: ChannelTrackerConnectionState;
+  subscriptions?: number;
+  desiredSubscriptions?: number;
+  topicLimit?: number;
+  reconnectAttempts?: number;
+  fallbackActive?: boolean;
+  fallbackUntil?: number | null;
+  shards?: ChannelTrackerShardStatus[];
+};
+
+export type UserPubSubState = "idle" | "ok" | "error";
+export type UserPubSubConnectionState = "disconnected" | "connecting" | "connected";
+export type UserPubSubStatus = {
+  state: UserPubSubState;
+  connectionState: UserPubSubConnectionState;
+  listening: boolean;
+  reconnectAttempts: number;
+  lastMessageAt: number | null;
+  lastErrorAt: number | null;
+  lastErrorMessage?: string;
+  events: number;
+  currentUserId?: string;
+};
+
+export type UserPubSubEvent = {
+  kind: "drop-progress" | "drop-claim" | "notification";
+  at: number;
+  topic: string;
+  messageType: string;
+  dropId?: string;
+  dropInstanceId?: string;
+  currentProgressMin?: number;
+  requiredProgressMin?: number;
+  notificationType?: string;
 };
 
 export type WatchingState = {

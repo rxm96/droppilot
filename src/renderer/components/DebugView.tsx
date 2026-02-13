@@ -1,6 +1,7 @@
 import { memo, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "../i18n";
 import { cn } from "../lib/utils";
+import type { ChannelTrackerStatus } from "../types";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
@@ -15,6 +16,7 @@ import {
   type LogLevel,
 } from "../utils/logStore";
 import { resetPerfStore } from "../utils/perfStore";
+import { isChannelTrackerStatus } from "../utils/ipc";
 
 type DebugViewProps = {
   snapshot: Record<string, unknown>;
@@ -120,6 +122,9 @@ export function DebugView({ snapshot }: DebugViewProps) {
   const [autoScroll, setAutoScroll] = useState(true);
   const [copied, setCopied] = useState(false);
   const [query, setQuery] = useState("");
+  const [simDropId, setSimDropId] = useState("");
+  const [simProgress, setSimProgress] = useState("1");
+  const [simBusy, setSimBusy] = useState(false);
   const [levels, setLevels] = useState<LevelFilter>({
     debug: true,
     info: true,
@@ -199,6 +204,23 @@ export function DebugView({ snapshot }: DebugViewProps) {
       return entry.messageLc.includes(needle) || entry.level.includes(needle);
     });
   }, [logs, levels, deferredQuery]);
+  const trackerStatus = useMemo<ChannelTrackerStatus | null>(() => {
+    const candidate = snapshot["tracker"];
+    return isChannelTrackerStatus(candidate) ? candidate : null;
+  }, [snapshot]);
+  const trackerShards = trackerStatus?.shards ?? [];
+  const suggestedDropId = useMemo(() => {
+    const candidate = snapshot["activeDropInfo"];
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return "";
+    const id = (candidate as Record<string, unknown>)["id"];
+    if (typeof id !== "string") return "";
+    return id.trim();
+  }, [snapshot]);
+
+  useEffect(() => {
+    if (!suggestedDropId) return;
+    setSimDropId((prev) => (prev.trim().length ? prev : suggestedDropId));
+  }, [suggestedDropId]);
 
   const numberFormatter = useMemo(
     () => new Intl.NumberFormat(language === "de" ? "de-DE" : "en-US"),
@@ -233,6 +255,50 @@ export function DebugView({ snapshot }: DebugViewProps) {
     }
   };
 
+  const emitDebugEvent = async (kind: "drop-progress" | "drop-claim" | "notification") => {
+    if (kind !== "notification" && simDropId.trim().length === 0) {
+      pushLog("warn", ["debug: missing drop id for pubsub simulation"]);
+      return;
+    }
+    const progressValue =
+      Number.isFinite(Number(simProgress)) && Number(simProgress) >= 0
+        ? Math.floor(Number(simProgress))
+        : 0;
+    setSimBusy(true);
+    try {
+      const payload =
+        kind === "drop-progress"
+          ? {
+              kind,
+              dropId: simDropId.trim(),
+              currentProgressMin: progressValue,
+              requiredProgressMin: Math.max(progressValue, 1),
+            }
+          : kind === "drop-claim"
+            ? {
+                kind,
+                dropId: simDropId.trim(),
+                dropInstanceId: `debug-claim-${Date.now()}`,
+              }
+            : {
+                kind,
+                notificationType: "user_drop_reward_reminder_notification",
+              };
+      const res = (await window.electronAPI.twitch.debugEmitUserPubSubEvent(payload)) as {
+        ok?: boolean;
+        message?: string;
+      };
+      if (!res?.ok) {
+        throw new Error(res?.message || "unknown debug emit error");
+      }
+      pushLog("info", [t("debug.sim.sent"), payload]);
+    } catch (err) {
+      pushLog("warn", [t("debug.sim.failed"), err]);
+    } finally {
+      setSimBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -252,7 +318,84 @@ export function DebugView({ snapshot }: DebugViewProps) {
               {copied ? t("debug.copied") : t("debug.copy")}
             </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
+            {trackerShards.length > 0 ? (
+              <div className="rounded-lg border border-border bg-muted/20 p-3">
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t("debug.trackerShards")}
+                </div>
+                <ul className="space-y-1.5">
+                  {trackerShards.map((shard) => (
+                    <li
+                      key={shard.id}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/70 bg-background/70 px-2 py-1.5 text-xs"
+                    >
+                      <span className="font-medium">
+                        {t("debug.trackerShard", { id: String(shard.id) })}
+                      </span>
+                      <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
+                        <Badge variant="outline" className="text-[10px]">
+                          {t(`control.trackerConn.${shard.connectionState}`)}
+                        </Badge>
+                        <span>
+                          {t("debug.trackerSubsShort")}: {formatNumber(shard.subscriptions)}/
+                          {formatNumber(shard.desiredSubscriptions)}
+                        </span>
+                        <span>
+                          {t("debug.trackerReconnectsShort")}: {formatNumber(shard.reconnectAttempts)}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            <div className="rounded-lg border border-border bg-muted/20 p-3">
+              <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {t("debug.sim.title")}
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Input
+                  type="text"
+                  placeholder={t("debug.sim.dropId")}
+                  value={simDropId}
+                  onChange={(e) => setSimDropId(e.target.value)}
+                />
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder={t("debug.sim.progress")}
+                  value={simProgress}
+                  onChange={(e) => setSimProgress(e.target.value)}
+                />
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="xs"
+                  disabled={simBusy || simDropId.trim().length === 0}
+                  onClick={() => void emitDebugEvent("drop-progress")}
+                >
+                  {t("debug.sim.progressBtn")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="xs"
+                  disabled={simBusy || simDropId.trim().length === 0}
+                  onClick={() => void emitDebugEvent("drop-claim")}
+                >
+                  {t("debug.sim.claimBtn")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="xs"
+                  disabled={simBusy}
+                  onClick={() => void emitDebugEvent("notification")}
+                >
+                  {t("debug.sim.notificationBtn")}
+                </Button>
+              </div>
+            </div>
             <ol className="code-panel" aria-label={t("debug.snapshot")}>
               {snapshotLines.map((line, index) => (
                 <li key={`${index}`} className="code-line">
