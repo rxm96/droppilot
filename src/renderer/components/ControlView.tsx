@@ -115,6 +115,9 @@ export function ControlView({
     resolveChannelDensity(channels.length, "balanced"),
   );
   const [isDensityTransitioning, setIsDensityTransitioning] = useState(false);
+  const [isPageVisible, setIsPageVisible] = useState(
+    () => typeof document === "undefined" || !document.hidden,
+  );
   const watchErrorText = watchError ? resolveErrorMessage(t, watchError) : null;
   const channelErrorText = channelError ? resolveErrorMessage(t, channelError) : null;
   const claimErrorText =
@@ -155,6 +158,18 @@ export function ControlView({
     }
     return changed;
   }, [channelDiff]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const onVisibilityChange = () => {
+      setIsPageVisible(!document.hidden);
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, []);
+
   useEffect(() => {
     setAnimatedViewersById((prev) => {
       const next: Record<string, number> = {};
@@ -181,6 +196,16 @@ export function ControlView({
       targets.set(id, target);
     }
     if (targets.size === 0) return;
+    if (!isPageVisible) {
+      setAnimatedViewersById((prev) => {
+        const next = { ...prev };
+        for (const [id, target] of targets) {
+          next[id] = target;
+        }
+        return next;
+      });
+      return;
+    }
     if (viewerAnimFrameRef.current !== null) {
       window.cancelAnimationFrame(viewerAnimFrameRef.current);
       viewerAnimFrameRef.current = null;
@@ -211,7 +236,7 @@ export function ControlView({
         viewerAnimFrameRef.current = null;
       }
     };
-  }, [channelDiff, channels]);
+  }, [channelDiff, channels, isPageVisible]);
 
   useEffect(() => {
     const next = new Map<string, { earned: number; status: string }>();
@@ -294,6 +319,7 @@ export function ControlView({
   };
   const [progressNow, setProgressNow] = useState(() => Date.now());
   const shouldTickProgress = Boolean(
+    isPageVisible &&
     watching &&
     inventoryFetchedAt &&
     activeDropInfo &&

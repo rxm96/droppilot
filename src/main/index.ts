@@ -138,7 +138,8 @@ function createWindow(startHidden = false): BrowserWindow {
       contextIsolation: true,
       nodeIntegration: false,
       devTools: verboseLogsEnabled,
-      backgroundThrottling: false,
+      // Let Chromium throttle renderer work when minimized/hidden (e.g. tray mode).
+      backgroundThrottling: true,
       spellcheck: false,
     },
   });
