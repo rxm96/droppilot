@@ -687,7 +687,7 @@ export function ControlView({
               {trackerStatus ? (
                 <div className="status-row control-tracker-row">
                   {trackerStatus.connectionState &&
-                  (trackerStatus.connectionState !== "connected" || trackerStatus.fallbackActive) ? (
+                  trackerStatus.connectionState !== "connected" ? (
                     <span className="pill ghost small">
                       {t("control.trackerConnection")}:{" "}
                       {t(`control.trackerConn.${trackerStatus.connectionState}`)}
