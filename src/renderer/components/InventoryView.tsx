@@ -118,6 +118,7 @@ export function InventoryView({
               Math.max(0, Number(item.earnedMinutes) || 0),
             );
             const pct = req ? Math.min(100, Math.round((earned / req) * 100)) : 0;
+            const imageUrl = typeof item.imageUrl === "string" ? item.imageUrl.trim() : "";
             return (
               <li
                 key={item.id}
@@ -128,9 +129,19 @@ export function InventoryView({
               >
                 <div className="inv-card-main">
                   <div className="inv-card-header">
-                    <div>
-                      <div className="meta">{item.game}</div>
-                      <div className="inv-card-title">{item.title}</div>
+                    <div className="inv-card-heading">
+                      {imageUrl ? (
+                        <img
+                          className="inv-card-thumb"
+                          src={imageUrl}
+                          alt=""
+                          loading="lazy"
+                        />
+                      ) : null}
+                      <div className="inv-card-title-wrap">
+                        <div className="meta">{item.game}</div>
+                        <div className="inv-card-title">{item.title}</div>
+                      </div>
                     </div>
                     <span className="pill ghost small">
                       {categoryLabel(category, (key) => t(key))}

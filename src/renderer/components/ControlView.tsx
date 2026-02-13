@@ -18,15 +18,10 @@ const CHANNEL_SKELETON = Array.from({ length: 4 }, (_, idx) => ({ key: `sk-${idx
 type ChannelDensity = "comfortable" | "balanced" | "compact";
 
 const resolveChannelDensity = (count: number, current: ChannelDensity): ChannelDensity => {
-  if (current === "comfortable") {
-    return count >= 10 ? "balanced" : "comfortable";
+  if (count <= 5) {
+    return current === "comfortable" ? "comfortable" : "balanced";
   }
-  if (current === "compact") {
-    return count <= 14 ? "balanced" : "compact";
-  }
-  if (count <= 6) return "comfortable";
-  if (count >= 18) return "compact";
-  return "balanced";
+  return "compact";
 };
 
 type ControlProps = {
@@ -548,75 +543,6 @@ export function ControlView({
       </div>
       <div className="control-layout">
         <div className="control-left">
-          <div className="card watch-card">
-            <div
-              className="watch-visual"
-              style={
-                activeThumb
-                  ? {
-                      backgroundImage: `linear-gradient(120deg, rgba(5,10,22,0.8), rgba(8,12,26,0.8)), url(${activeThumb})`,
-                    }
-                  : undefined
-              }
-            />
-            <div className="watch-body">
-              <div className="label">{t("control.activeStream")}</div>
-              {watching ? (
-                <>
-                  <div className="watch-heading">
-                    <div>
-                      <div className="watch-name">
-                        <span>{watching.name}</span>
-                        <span
-                          className="live-dot"
-                          aria-label={t("control.live")}
-                          title={t("control.live")}
-                        />
-                      </div>
-                      <div className="meta">
-                        {watching.game}
-                        {activeLoginMismatch ? `  @${activeLoginMismatch}` : ""}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="watch-meta">
-                    {activeChannel ? (
-                      <span className="pill viewers-chip small">
-                        {activeViewers} {t("control.viewers")}
-                      </span>
-                    ) : (
-                      <span className="pill ghost small">Channel-Metadaten fehlen</span>
-                    )}
-                  </div>
-                  <div className="watch-actions">
-                    <button type="button" className="ghost danger" onClick={stopWatching}>
-                      {t("control.stop")}
-                    </button>
-                  </div>
-                  {autoSwitchInfo ? (
-                    <p className="meta muted">
-                      Auto-Switch ({autoSwitchInfo.reason}):{" "}
-                      {autoSwitchInfo.from?.name ?? "Unknown"} -{">"} {autoSwitchInfo.to.name} um{" "}
-                      {new Date(autoSwitchInfo.at).toLocaleTimeString()}
-                    </p>
-                  ) : null}
-                  {watchErrorText ? (
-                    <p className="error">
-                      {t("control.pingError")}: {watchErrorText}
-                    </p>
-                  ) : null}
-                </>
-              ) : (
-                <div className="watch-empty">
-                  <p className="meta">{t("control.noChannel")}</p>
-                  <p className="meta muted">
-                    {showNoDropsHint ? t("control.noDropsHint") : t("control.pickStream")}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
           <div className="card control-drops">
             <div className="card-header-row">
               <div className="label">{t("control.progress")}</div>
@@ -626,6 +552,71 @@ export function ControlView({
                 </div>
               ) : null}
             </div>
+            {watching ? (
+              <div
+                className="active-stream-bar"
+                style={
+                  activeThumb
+                    ? {
+                        backgroundImage: `var(--active-stream-overlay), url(${activeThumb})`,
+                      }
+                    : undefined
+                }
+              >
+                <div
+                  className="active-stream-thumb"
+                  style={activeThumb ? { backgroundImage: `url(${activeThumb})` } : undefined}
+                />
+                <div className="active-stream-info">
+                  <div className="label">{t("control.activeStream")}</div>
+                  <div className="active-stream-name">
+                    <span>{watching.name}</span>
+                    <span
+                      className="live-dot"
+                      aria-label={t("control.live")}
+                      title={t("control.live")}
+                    />
+                  </div>
+                  <div className="meta">
+                    {watching.game}
+                    {activeLoginMismatch ? `  @${activeLoginMismatch}` : ""}
+                  </div>
+                </div>
+                <div className="active-stream-actions">
+                  {activeChannel ? (
+                    <span className="pill viewers-chip small">
+                      {activeViewers} {t("control.viewers")}
+                    </span>
+                  ) : (
+                    <span className="pill ghost small">Channel-Metadaten fehlen</span>
+                  )}
+                  <button type="button" className="ghost danger" onClick={stopWatching}>
+                    {t("control.stop")}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="active-stream-bar empty">
+                <div>
+                  <div className="label">{t("control.activeStream")}</div>
+                  <p className="meta">{t("control.noChannel")}</p>
+                  <p className="meta muted">
+                    {showNoDropsHint ? t("control.noDropsHint") : t("control.pickStream")}
+                  </p>
+                </div>
+              </div>
+            )}
+            {autoSwitchInfo ? (
+              <p className="meta muted">
+                Auto-Switch ({autoSwitchInfo.reason}): {autoSwitchInfo.from?.name ?? "Unknown"} -{">"}{" "}
+                {autoSwitchInfo.to.name} um {new Date(autoSwitchInfo.at).toLocaleTimeString()}
+              </p>
+            ) : null}
+            {watchErrorText ? (
+              <p className="error">
+                {t("control.pingError")}: {watchErrorText}
+              </p>
+            ) : null}
             {targetGame ? (
               <>
                 {activeDropInfo ? (
@@ -684,6 +675,13 @@ export function ControlView({
                                   ? "progress"
                                   : "locked";
                             const animate = !firstRenderRef.current && dropChangedIds.has(d.id);
+                            const dropImage =
+                              typeof d.imageUrl === "string" ? d.imageUrl.trim() : "";
+                            const campaignImage =
+                              typeof d.campaignImageUrl === "string"
+                                ? d.campaignImageUrl.trim()
+                                : "";
+                            const imageSrc = dropImage || campaignImage;
                             return (
                               <li
                                 key={d.id}
@@ -694,17 +692,35 @@ export function ControlView({
                                     : undefined
                                 }
                               >
-                                <div className="drop-header">
-                                  <div className="drop-title">{d.title}</div>
-                                  <span className="pill ghost small">{statusLabel}</span>
-                                </div>
-                                <div className="meta muted drop-meta-line">
-                                  <span className="drop-meta-item">
-                                    {earnedDisplay}/{req} min
-                                  </span>
-                                </div>
-                                <div className="progress-bar small">
-                                  <span style={{ width: `${pct}%` }} />
+                                {imageSrc ? (
+                                  <div
+                                    className="drop-image-frame"
+                                    style={
+                                      campaignImage
+                                        ? {
+                                            backgroundImage: `linear-gradient(150deg, rgba(5, 10, 22, 0.6), rgba(8, 12, 26, 0.8)), url(${campaignImage})`,
+                                            backgroundSize: "cover",
+                                            backgroundPosition: "center",
+                                          }
+                                        : undefined
+                                    }
+                                  >
+                                    <img src={imageSrc} alt="" loading="lazy" />
+                                  </div>
+                                ) : null}
+                                <div className="drop-body">
+                                  <div className="drop-header">
+                                    <div className="drop-title">{d.title}</div>
+                                    <span className="pill ghost small">{statusLabel}</span>
+                                  </div>
+                                  <div className="meta muted drop-meta-line">
+                                    <span className="drop-meta-item">
+                                      {earnedDisplay}/{req} min
+                                    </span>
+                                  </div>
+                                  <div className="progress-bar small">
+                                    <span style={{ width: `${pct}%` }} />
+                                  </div>
                                 </div>
                               </li>
                             );

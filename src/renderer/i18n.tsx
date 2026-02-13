@@ -156,6 +156,10 @@ const translations: Translations = {
     "control.trackerConn.connected": "connected",
     "control.trackerConn.connecting": "connecting",
     "control.trackerConn.disconnected": "disconnected",
+    "control.previewTitle": "Drop preview",
+    "control.previewClose": "Close",
+    "control.previewDrop": "Preview {title}",
+    "control.previewOpen": "Preview",
 
     "debug.title": "Debug",
     "debug.subtitle": "Live event log and current state snapshot.",
@@ -473,6 +477,10 @@ const translations: Translations = {
     "control.trackerConn.connected": "verbunden",
     "control.trackerConn.connecting": "verbinde",
     "control.trackerConn.disconnected": "getrennt",
+    "control.previewTitle": "Drop-Vorschau",
+    "control.previewClose": "Schliessen",
+    "control.previewDrop": "Vorschau {title}",
+    "control.previewOpen": "Vorschau",
 
     "debug.title": "Debug",
     "debug.subtitle": "Live-Log und aktueller Status-Snapshot.",

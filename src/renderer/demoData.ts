@@ -27,6 +27,20 @@ function slugify(value: string) {
 }
 
 const demoAvatar = svgDataUri(64, 64, "DP", "#ff8a00");
+const demoDropColors = new Map<string, string>([
+  ["VALORANT", "#ef4444"],
+  ["Apex Legends", "#f97316"],
+  ["Fortnite", "#3b82f6"],
+  ["Overwatch 2", "#f59e0b"],
+  ["Rust", "#14b8a6"],
+  ["Counter-Strike 2", "#22c55e"],
+]);
+
+const demoDropImage = (item: InventoryItem) => {
+  const label = item.title.split(" ").slice(0, 2).join(" ");
+  const color = demoDropColors.get(item.game) ?? "#64748b";
+  return svgDataUri(64, 64, label, color);
+};
 
 export const demoProfile: ProfileState = {
   status: "ready",
@@ -37,7 +51,7 @@ export const demoProfile: ProfileState = {
 
 export function buildDemoInventory(now = Date.now()): InventoryItem[] {
   const iso = (minutesFromNow: number) => new Date(now + minutesFromNow * 60_000).toISOString();
-  return [
+  const items: InventoryItem[] = [
     {
       id: "demo-valorant-1",
       game: "VALORANT",
@@ -153,6 +167,11 @@ export function buildDemoInventory(now = Date.now()): InventoryItem[] {
       dropInstanceId: "drop-cs2-1",
     },
   ];
+  return items.map((item) => ({
+    ...item,
+    imageUrl: demoDropImage(item),
+    campaignImageUrl: demoDropImage(item),
+  }));
 }
 
 function makeChannel(
