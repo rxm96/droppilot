@@ -156,7 +156,7 @@ export type WatchingState = {
 
 export type AutoSwitchInfo = {
   at: number;
-  reason: "offline";
+  reason: "offline" | "priority";
   from?: { id: string; name: string };
   to: { id: string; name: string };
 };

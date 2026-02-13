@@ -86,14 +86,31 @@ export function usePriorityOrchestration({
     return order;
   }, [withCategories]);
 
+  const strictPriorityGames = useMemo(() => {
+    const seen = new Set<string>();
+    const order: string[] = [];
+    for (const game of priorityGames) {
+      const normalized = game.trim();
+      if (!normalized || seen.has(normalized)) continue;
+      seen.add(normalized);
+      order.push(normalized);
+    }
+    return order;
+  }, [priorityGames]);
+
   const priorityOrder = useMemo(
-    () =>
-      effectivePriorityPlan?.order?.length
+    () => {
+      if (obeyPriority) {
+        // Strict mode: only games explicitly listed by the user are allowed.
+        return strictPriorityGames;
+      }
+      return effectivePriorityPlan?.order?.length
         ? effectivePriorityPlan.order
         : priorityGames.length
           ? priorityGames
-          : fallbackOrder,
-    [effectivePriorityPlan, priorityGames, fallbackOrder],
+          : fallbackOrder;
+    },
+    [effectivePriorityPlan, priorityGames, fallbackOrder, obeyPriority, strictPriorityGames],
   );
 
   const bestActionableGame = useMemo(

@@ -31,6 +31,7 @@ type Params = {
   inventoryFetchedAt: number | null;
   autoSelectEnabled: boolean;
   autoSwitchEnabled: boolean;
+  forcePrioritySwitch?: boolean;
   allowWatching: boolean;
   canWatchTarget: boolean;
   trackerMode?: ChannelTrackerMode | null;
@@ -196,6 +197,7 @@ export function useChannels({
   inventoryFetchedAt,
   autoSelectEnabled,
   autoSwitchEnabled,
+  forcePrioritySwitch = false,
   allowWatching,
   canWatchTarget,
   trackerMode,
@@ -545,12 +547,13 @@ export function useChannels({
       fetchInventory();
       return;
     }
-    if (!autoSwitchEnabled) return;
+    const shouldForceSwitch = forcePrioritySwitch && canWatchTarget;
+    if (!autoSwitchEnabled && !shouldForceSwitch) return;
     const first = channels[0];
     setWatchingFromChannel(first);
     setAutoSwitch({
       at: Date.now(),
-      reason: "offline",
+      reason: shouldForceSwitch ? "priority" : "offline",
       from: { id: watching.id, name: watching.name },
       to: { id: first.id, name: first.displayName },
     });
@@ -560,6 +563,8 @@ export function useChannels({
     watching,
     allowWatching,
     autoSwitchEnabled,
+    forcePrioritySwitch,
+    canWatchTarget,
     clearWatching,
     setWatchingFromChannel,
     fetchInventory,

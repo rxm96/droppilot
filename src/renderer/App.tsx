@@ -303,6 +303,7 @@ function App() {
       clearWatching,
       autoSelectEnabled,
       autoSwitchEnabled,
+      forcePrioritySwitch: obeyPriority,
       fetchInventory: () => fetchInventory(),
       inventoryFetchedAt,
       allowWatching,
