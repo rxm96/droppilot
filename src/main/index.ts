@@ -1,4 +1,12 @@
-import { app, BrowserWindow, shell, Tray, Menu, nativeImage, Notification } from "electron";
+import {
+  app,
+  BrowserWindow,
+  shell,
+  Tray,
+  Menu,
+  nativeImage,
+  Notification,
+} from "electron";
 import { autoUpdater } from "electron-updater";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
@@ -13,6 +21,7 @@ import { loadSettings, saveSettings } from "./core/settings";
 import { loadStats, saveStats, bumpStats, resetStats } from "./core/stats";
 
 const isDev = !app.isPackaged;
+const devToolsEnabled = isDev;
 const devServerUrl = process.env.VITE_DEV_SERVER_URL ?? "http://localhost:5173";
 const debugLogsOptIn =
   process.argv.includes("--debug-logs") || process.env.DROPPILOT_DEBUG_LOGS === "1";
@@ -137,7 +146,7 @@ function createWindow(startHidden = false): BrowserWindow {
       preload: join(__dirname, "../preload/preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
-      devTools: verboseLogsEnabled,
+      devTools: devToolsEnabled,
       // Let Chromium throttle renderer work when minimized/hidden (e.g. tray mode).
       backgroundThrottling: true,
       spellcheck: false,
@@ -147,7 +156,12 @@ function createWindow(startHidden = false): BrowserWindow {
   if (isDev) {
     // Use Vite dev server during development (fallback to default port)
     win.loadURL(withDebugLogsQuery(devServerUrl));
-    win.webContents.openDevTools();
+    win.webContents.on("did-finish-load", () => {
+      if (!verboseLogsEnabled) return;
+      if (!win.isDestroyed() && !win.webContents.isDevToolsOpened()) {
+        win.webContents.openDevTools({ mode: "right" });
+      }
+    });
   } else {
     const rendererUrl = format({
       pathname: join(__dirname, "../../dist/renderer/index.html"),
@@ -194,7 +208,22 @@ function createTray(win: BrowserWindow) {
   if (tray) return tray;
   const icon = resolveTrayIcon();
   tray = new Tray(icon);
-  const contextMenu = Menu.buildFromTemplate([
+  const toggleDevTools = () => {
+    const targets = BrowserWindow.getAllWindows().filter((w) => !w.isDestroyed());
+    if (targets.length === 0) {
+      console.warn("devtools: no windows");
+      return;
+    }
+    for (const target of targets) {
+      const wc = target.webContents;
+      if (wc.isDevToolsOpened()) {
+        wc.closeDevTools();
+      } else {
+        wc.openDevTools({ mode: "right" });
+      }
+    }
+  };
+  const contextMenuItems = [
     {
       label: "Oeffnen",
       click: () => {
@@ -206,14 +235,24 @@ function createTray(win: BrowserWindow) {
       label: "Minimieren",
       click: () => win.hide(),
     },
-    { type: "separator" },
+    ...(devToolsEnabled
+      ? [
+          { type: "separator" as const },
+          {
+            label: "DevTools",
+            click: toggleDevTools,
+          },
+        ]
+      : []),
+    { type: "separator" as const },
     {
       label: "Beenden",
       click: () => {
         app.quit();
       },
     },
-  ]);
+  ];
+  const contextMenu = Menu.buildFromTemplate(contextMenuItems);
   tray.setToolTip("DropPilot");
   tray.setContextMenu(contextMenu);
   tray.on("click", () => {
