@@ -46,6 +46,31 @@ describe("applyDropProgressToInventoryItems", () => {
     expect(patched.changed).toBe(false);
     expect(patched.items[0].earnedMinutes).toBe(34);
   });
+
+  it("syncs in-progress drops within the same campaign", () => {
+    const items = [
+      makeItem({ id: "drop-1", earnedMinutes: 10, campaignId: "camp-1", status: "progress" }),
+      makeItem({ id: "drop-2", earnedMinutes: 9, campaignId: "camp-1", status: "progress" }),
+      makeItem({ id: "drop-3", earnedMinutes: 0, campaignId: "camp-1", status: "locked" }),
+      makeItem({ id: "drop-4", earnedMinutes: 7, campaignId: "camp-2", status: "progress" }),
+    ];
+    const payload: UserPubSubEvent = {
+      kind: "drop-progress",
+      at: Date.now(),
+      topic: "user-drop-events.1",
+      messageType: "drop-progress",
+      dropId: "drop-1",
+      currentProgressMin: 12,
+      requiredProgressMin: 60,
+    };
+    const patched = applyDropProgressToInventoryItems(items, payload);
+    expect(patched.changed).toBe(true);
+    expect(patched.deltaMinutes).toBe(5);
+    expect(patched.items[0].earnedMinutes).toBe(12);
+    expect(patched.items[1].earnedMinutes).toBe(12);
+    expect(patched.items[2].earnedMinutes).toBe(0);
+    expect(patched.items[3].earnedMinutes).toBe(7);
+  });
 });
 
 describe("applyDropClaimToInventoryItems", () => {

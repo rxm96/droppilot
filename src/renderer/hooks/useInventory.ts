@@ -32,6 +32,9 @@ const CLAIM_RETRY_MS = 90_000;
 const NOOP = () => {};
 const NOOP_CLAIM = () => {};
 const NOOP_AUTH = (_message?: string) => {};
+const PUBSUB_PROGRESS_RECONCILE_MIN_GAP_MS = 30_000;
+const PUBSUB_PROGRESS_RECONCILE_DELAY_MS = 15_000;
+const PUBSUB_PROGRESS_STALE_DELAY_MS = 10_000;
 type FetchInventoryOpts = { forceLoading?: boolean };
 
 type InventoryPatchResult = {
@@ -67,34 +70,62 @@ export const applyDropProgressToInventoryItems = (
   }
 
   const target = items[index];
-  const required = Math.max(0, Number(target.requiredMinutes) || 0);
-  const prevEarned = Math.max(0, Number(target.earnedMinutes) || 0);
-  const nextEarnedRaw = Math.max(prevEarned, currentProgressMin);
-  const nextEarned = required > 0 ? Math.min(required, nextEarnedRaw) : nextEarnedRaw;
-  let nextStatus = target.status;
-  if (nextStatus !== "claimed") {
-    if (required > 0 && nextEarned >= required) {
-      nextStatus = "progress";
-    } else if (nextEarned > 0 && nextStatus === "locked") {
-      nextStatus = "progress";
+  const targetCampaignId = target.campaignId?.trim();
+  const candidateIndexes =
+    targetCampaignId && targetCampaignId.length > 0
+      ? items
+          .map((item, idx) => ({ item, idx }))
+          .filter(
+            ({ item }) =>
+              item.campaignId?.trim() === targetCampaignId &&
+              (item.id === target.id || item.status === "progress"),
+          )
+          .map(({ idx }) => idx)
+      : [index];
+
+  let changed = false;
+  let deltaMinutes = 0;
+  const nextItems = [...items];
+  let updatedId: string | undefined;
+
+  for (const idx of candidateIndexes) {
+    const current = nextItems[idx];
+    const required = Math.max(0, Number(current.requiredMinutes) || 0);
+    const prevEarned = Math.max(0, Number(current.earnedMinutes) || 0);
+    const nextEarnedRaw = Math.max(prevEarned, currentProgressMin);
+    const nextEarned = required > 0 ? Math.min(required, nextEarnedRaw) : nextEarnedRaw;
+    let nextStatus = current.status;
+    if (nextStatus !== "claimed") {
+      if (required > 0 && nextEarned >= required) {
+        nextStatus = "progress";
+      } else if (nextEarned > 0 && nextStatus === "locked") {
+        nextStatus = "progress";
+      }
     }
+    if (nextEarned === prevEarned && nextStatus === current.status) {
+      continue;
+    }
+    changed = true;
+    deltaMinutes += Math.max(0, nextEarned - prevEarned);
+    if (!updatedId || current.id === target.id) {
+      updatedId = current.id;
+    }
+    nextItems[idx] = {
+      ...current,
+      earnedMinutes: nextEarned,
+      status: nextStatus,
+    };
   }
-  if (nextEarned === prevEarned && nextStatus === target.status) {
+
+  if (!changed) {
     return { changed: false, items, deltaMinutes: 0, totalMinutes: getTotalEarnedMinutes(items) };
   }
 
-  const nextItem: InventoryItem = {
-    ...target,
-    earnedMinutes: nextEarned,
-    status: nextStatus,
-  };
-  const nextItems = [...items];
-  nextItems[index] = nextItem;
   return {
     changed: true,
     items: nextItems,
-    updatedId: nextItem.id,
-    deltaMinutes: Math.max(0, nextEarned - prevEarned),
+    updatedId,
+    deltaMinutes,
     totalMinutes: getTotalEarnedMinutes(nextItems),
   };
 };
@@ -580,8 +611,8 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
           if (progress <= lastProgress) {
             scheduleReconcile({
               forceLoading: false,
-              minGapMs: 60_000,
-              baseDelayMs: 20_000,
+              minGapMs: PUBSUB_PROGRESS_RECONCILE_MIN_GAP_MS,
+              baseDelayMs: PUBSUB_PROGRESS_STALE_DELAY_MS,
             });
             return;
           }
@@ -592,8 +623,8 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
           patched
             ? {
                 forceLoading: false,
-                minGapMs: 60_000,
-                baseDelayMs: 25_000,
+                minGapMs: PUBSUB_PROGRESS_RECONCILE_MIN_GAP_MS,
+                baseDelayMs: PUBSUB_PROGRESS_RECONCILE_DELAY_MS,
               }
             : {
                 forceLoading: false,
