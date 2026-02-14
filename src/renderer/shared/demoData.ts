@@ -68,7 +68,7 @@ export function buildDemoInventory(now = Date.now()): InventoryItem[] {
     {
       id: "demo-valorant-2",
       game: "VALORANT",
-      title: "Player Card",
+      title: "Player Card with a long title",
       requiredMinutes: 30,
       earnedMinutes: 0,
       status: "locked",
