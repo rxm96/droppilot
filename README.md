@@ -1,5 +1,8 @@
 # DropPilot
 
+> **Downloads:** Grab the latest Windows installer from **GitHub Releases**:
+> `https://github.com/rxm96/droppilot/releases`
+
 ## What it does
 
 DropPilot focuses on keeping Twitch drops simple and hands-off while still transparent.
@@ -7,10 +10,12 @@ DropPilot focuses on keeping Twitch drops simple and hands-off while still trans
 - Tracks drop inventory, claim status, and progress in real time.
 - Surfaces a target game view with per-drop progress, ETA, and remaining time.
 - Builds and respects a priority list so the app can focus on what matters most.
-- Auto-selects a channel and auto-switches when the current stream disappears.
+- Auto-selects a stream and auto-switches when the current stream disappears.
 - Auto-claims drops (optional) and keeps a clear audit of what happened.
+- Optional warmup mode briefly watches a stream to discover drops when no priority game is active.
 - Configurable refresh cadence to balance responsiveness vs. load.
 - Alerting for key events (new drops, auto-claim, drop ending, watch errors).
+- Browser-based login (no credential storage).
 - Demo mode for exploring the UI without a live account.
 - Debug tools for live logs, state snapshot, perf and CPU sampling (off by default).
 
@@ -85,6 +90,7 @@ through the in-app Settings view.
 
 ## Troubleshooting
 
+- If you see "Not logged in", use **Login with browser** in the top bar.
 - If the app feels slow, disable the Debug tab and restart.
 - If you need verbose logs, enable Debug tools in Settings.
 
