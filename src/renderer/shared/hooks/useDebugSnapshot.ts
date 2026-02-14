@@ -15,6 +15,7 @@ import type { WatchStats } from "./useWatchPing";
 import type { ActiveDropInfo } from "./useTargetDrops";
 import { getPerfSnapshot } from "@renderer/shared/utils/perfStore";
 import type { CpuSample } from "./useDebugCpu";
+import type { WarmupState } from "./useCampaignWarmup";
 
 type Params = {
   authStatus: AuthState["status"];
@@ -37,6 +38,7 @@ type Params = {
   autoSelectEnabled: boolean;
   autoSwitchEnabled: boolean;
   obeyPriority: boolean;
+  allowWatching: boolean;
   refreshMinMs: number;
   refreshMaxMs: number;
   watchStats: WatchStats;
@@ -47,6 +49,7 @@ type Params = {
   cpu: CpuSample;
   trackerStatus: ChannelTrackerStatus | null;
   userPubSubStatus: UserPubSubStatus | null;
+  warmup: WarmupState;
 };
 
 export function useDebugSnapshot({
@@ -70,6 +73,7 @@ export function useDebugSnapshot({
   autoSelectEnabled,
   autoSwitchEnabled,
   obeyPriority,
+  allowWatching,
   refreshMinMs,
   refreshMaxMs,
   watchStats,
@@ -80,6 +84,7 @@ export function useDebugSnapshot({
   cpu,
   trackerStatus,
   userPubSubStatus,
+  warmup,
 }: Params) {
   return useMemo(
     () => ({
@@ -122,6 +127,7 @@ export function useDebugSnapshot({
         autoSelectEnabled,
         autoSwitchEnabled,
         obeyPriority,
+        allowWatching,
         refreshMinMs,
         refreshMaxMs,
       },
@@ -131,6 +137,24 @@ export function useDebugSnapshot({
         error: watchStats.lastError
           ? { code: watchStats.lastError.code, message: watchStats.lastError.message }
           : null,
+      },
+      warmup: {
+        active: warmup.active,
+        game: warmup.game,
+        allowWatching: warmup.allowWatching,
+        demoMode: warmup.demoMode,
+        lastAttemptAt: warmup.lastAttemptAt
+          ? new Date(warmup.lastAttemptAt).toISOString()
+          : null,
+        lastReason: warmup.lastReason,
+        cooldownUntil: warmup.cooldownUntil ? new Date(warmup.cooldownUntil).toISOString() : null,
+        attemptedCampaigns: warmup.attemptedCampaigns.map((entry) => ({
+          id: entry.id,
+          game: entry.game ?? null,
+          name: entry.name ?? null,
+          until: new Date(entry.until).toISOString(),
+        })),
+        attemptedCount: warmup.attemptedCampaigns.length,
       },
       activeDropInfo,
       priority: {
@@ -165,6 +189,7 @@ export function useDebugSnapshot({
       obeyPriority,
       priorityOrder,
       profile,
+      allowWatching,
       refreshMaxMs,
       refreshMinMs,
       stats,
@@ -175,6 +200,7 @@ export function useDebugSnapshot({
       watchStats.lastError,
       watchStats.lastOk,
       watchStats.nextAt,
+      warmup,
       watching,
     ],
   );

@@ -13,6 +13,8 @@ type HeroProps = {
   dropsTotal?: number;
   dropsClaimed?: number;
   targetProgress?: number;
+  warmupActive?: boolean;
+  warmupGame?: string;
 };
 
 export function Hero({
@@ -24,6 +26,8 @@ export function Hero({
   dropsTotal,
   dropsClaimed,
   targetProgress,
+  warmupActive,
+  warmupGame,
 }: HeroProps) {
   const { t } = useI18n();
   const [nowTick, setNowTick] = useState(() => Date.now());
@@ -64,17 +68,29 @@ export function Hero({
           Math.max(0, Math.round((1 - (nextWatchAt - nowTick) / WATCH_INTERVAL_MS) * 100)),
         )
       : null;
+  const warmupLabel = warmupActive
+    ? warmupGame
+      ? t("hero.warmup", { game: warmupGame })
+      : t("hero.warmupActive")
+    : "";
 
   return (
     <header className="rounded-xl border border-border bg-card p-5 text-foreground shadow-sm motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <h1 className="m-0 text-2xl font-semibold tracking-tight">{t("hero.title")}</h1>
-          {demoMode ? (
-            <span className="inline-flex items-center rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">
-              {t("hero.demoMode")}
-            </span>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            {warmupLabel ? (
+              <span className="inline-flex items-center rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+                {warmupLabel}
+              </span>
+            ) : null}
+            {demoMode ? (
+              <span className="inline-flex items-center rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">
+                {t("hero.demoMode")}
+              </span>
+            ) : null}
+          </div>
         </div>
         <div className="grid gap-3 md:grid-cols-3">
           <div className="rounded-lg border border-border bg-background p-4 shadow-sm motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
