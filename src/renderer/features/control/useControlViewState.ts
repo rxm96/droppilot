@@ -36,6 +36,8 @@ const resolveChannelDensity = (count: number, current: ChannelDensity): ChannelD
   return "compact";
 };
 
+const VIEWER_ANIM_DURATION_MS = 400;
+
 type Params = {
   channels: ChannelEntry[];
   channelDiff: ChannelDiff | null;
@@ -71,6 +73,9 @@ export function useControlViewState({
   const densityApplyTimerRef = useRef<number | null>(null);
   const densitySettleTimerRef = useRef<number | null>(null);
   const viewerAnimFrameRef = useRef<number | null>(null);
+  const viewerAnimLastRef = useRef<number | null>(null);
+  const viewerTargetsRef = useRef<Record<string, number>>({});
+  const animatedViewersRef = useRef<Record<string, number>>({});
   const [exitingChannels, setExitingChannels] = useState<ChannelEntry[]>([]);
   const [animatedViewersById, setAnimatedViewersById] = useState<Record<string, number>>({});
   const [channelDensityClass, setChannelDensityClass] = useState<ChannelDensity>(() =>
@@ -126,6 +131,7 @@ export function useControlViewState({
       for (const channel of channels) {
         next[channel.id] = prev[channel.id] ?? channel.viewers;
       }
+      animatedViewersRef.current = next;
       return next;
     });
   }, [channels]);
@@ -134,58 +140,83 @@ export function useControlViewState({
     if (!channelDiff) return;
     const entries = Object.entries(channelDiff.viewerDeltaById).filter(([, delta]) => Boolean(delta));
     if (entries.length === 0) return;
-    const starts = new Map<string, number>();
-    const targets = new Map<string, number>();
     const channelById = new Map(channels.map((channel) => [channel.id, channel]));
-    for (const [id, delta] of entries) {
+    for (const [id] of entries) {
       const channel = channelById.get(id);
       if (!channel) continue;
-      const target = Math.max(0, channel.viewers);
-      const start = Math.max(0, target - delta);
-      starts.set(id, start);
-      targets.set(id, target);
+      viewerTargetsRef.current[id] = Math.max(0, channel.viewers);
     }
-    if (targets.size === 0) return;
     if (!isPageVisible) {
+      const targets = viewerTargetsRef.current;
+      if (Object.keys(targets).length === 0) return;
       setAnimatedViewersById((prev) => {
         const next = { ...prev };
-        for (const [id, target] of targets) {
-          next[id] = target;
+        for (const [id, target] of Object.entries(targets)) {
+          next[id] = Math.round(target);
         }
+        animatedViewersRef.current = {
+          ...animatedViewersRef.current,
+          ...targets,
+        };
         return next;
       });
-      return;
-    }
-    if (viewerAnimFrameRef.current !== null) {
-      window.cancelAnimationFrame(viewerAnimFrameRef.current);
-      viewerAnimFrameRef.current = null;
-    }
-    const durationMs = 440;
-    const startedAt = performance.now();
-    const tick = (now: number) => {
-      const progress = Math.min(1, (now - startedAt) / durationMs);
-      const eased = 1 - (1 - progress) ** 3;
-      setAnimatedViewersById((prev) => {
-        const next = { ...prev };
-        for (const [id, target] of targets) {
-          const start = starts.get(id) ?? target;
-          next[id] = Math.round(start + (target - start) * eased);
-        }
-        return next;
-      });
-      if (progress < 1) {
-        viewerAnimFrameRef.current = window.requestAnimationFrame(tick);
-      } else {
-        viewerAnimFrameRef.current = null;
-      }
-    };
-    viewerAnimFrameRef.current = window.requestAnimationFrame(tick);
-    return () => {
+      viewerTargetsRef.current = {};
       if (viewerAnimFrameRef.current !== null) {
         window.cancelAnimationFrame(viewerAnimFrameRef.current);
         viewerAnimFrameRef.current = null;
+        viewerAnimLastRef.current = null;
       }
-    };
+      return;
+    }
+    if (viewerAnimFrameRef.current === null) {
+      viewerAnimLastRef.current = performance.now();
+      const tick = (now: number) => {
+        const last = viewerAnimLastRef.current ?? now;
+        const dt = Math.min(100, Math.max(1, now - last));
+        viewerAnimLastRef.current = now;
+        const alpha = 1 - Math.exp(-dt / VIEWER_ANIM_DURATION_MS);
+        const targets = viewerTargetsRef.current;
+        const current = animatedViewersRef.current;
+        const targetEntries = Object.entries(targets);
+        if (targetEntries.length === 0) {
+          viewerAnimFrameRef.current = null;
+          viewerAnimLastRef.current = null;
+          return;
+        }
+        let nextValues: Record<string, number> | null = null;
+        setAnimatedViewersById((prev) => {
+          let nextInt: Record<string, number> | null = null;
+          let changed = false;
+          for (const [id, target] of targetEntries) {
+            const start = current[id] ?? target;
+            const updated = start + (target - start) * alpha;
+            if (!nextValues) {
+              nextValues = { ...current };
+            }
+            nextValues[id] = updated;
+            if (Math.abs(target - updated) < 0.5) {
+              nextValues[id] = target;
+              delete targets[id];
+            }
+            const rounded = Math.round(nextValues[id]);
+            if (!nextInt) {
+              nextInt = { ...prev };
+            }
+            if (nextInt[id] !== rounded) {
+              nextInt[id] = rounded;
+              changed = true;
+            }
+          }
+          if (nextValues) {
+            animatedViewersRef.current = nextValues;
+          }
+          if (nextInt && changed) return nextInt;
+          return prev;
+        });
+        viewerAnimFrameRef.current = window.requestAnimationFrame(tick);
+      };
+      viewerAnimFrameRef.current = window.requestAnimationFrame(tick);
+    }
   }, [channelDiff, channels, isPageVisible]);
 
   useEffect(() => {
