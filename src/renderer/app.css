@@ -2330,6 +2330,7 @@ code {
   min-height: 56px;
   border-radius: 8px;
   flex: 0 0 auto;
+  align-self: center;
   background: color-mix(in srgb, var(--panel-strong) 70%, transparent);
   background-image: none !important;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
@@ -2352,25 +2353,34 @@ code {
 .control-drops .drop-body {
   padding: 0;
   min-height: 0;
-  gap: 4px;
+  gap: 6px;
+  min-height: 56px;
 }
 
 .control-drops .drop-header {
-  align-items: flex-start;
+  align-items: baseline;
   gap: 6px;
 }
 
 .control-drops .drop-body .progress-bar {
+  margin-top: auto;
+}
+
+.control-drops .drop-meta-line {
   margin-top: 2px;
+  margin-bottom: 0;
 }
 
 .control-drops .drop-title {
+  line-height: 1.2;
+  min-height: 0;
+}
+
+.control-drops .drop-title-text {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  line-height: 1.2;
-  min-height: calc(1.2em * 2);
 }
 
 .control-drops .drop-meta-line {

@@ -343,7 +343,9 @@ export function ControlView({
                                 ) : null}
                                 <div className="drop-body">
                                   <div className="drop-header">
-                                    <div className="drop-title">{d.title}</div>
+                                  <div className="drop-title">
+                                    <span className="drop-title-text">{d.title}</span>
+                                  </div>
                                     <span className="pill ghost small">{statusLabel}</span>
                                   </div>
                                   <div className="meta muted drop-meta-line">
