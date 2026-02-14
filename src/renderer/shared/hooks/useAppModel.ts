@@ -189,6 +189,7 @@ export function useAppModel() {
     saveAutoSelect,
     saveAutoSwitchEnabled,
     saveWarmupEnabled,
+    saveBetaUpdates,
     saveDemoMode,
     saveAlertsEnabled,
     saveAlertsNotifyWhileFocused,

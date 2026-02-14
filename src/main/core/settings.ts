@@ -82,9 +82,7 @@ export async function loadSettings(): Promise<SettingsData> {
           ? parsed.warmupEnabled
           : defaultSettings.warmupEnabled,
       betaUpdates:
-        typeof parsed?.betaUpdates === "boolean"
-          ? parsed.betaUpdates
-          : defaultSettings.betaUpdates,
+        typeof parsed?.betaUpdates === "boolean" ? parsed.betaUpdates : defaultSettings.betaUpdates,
       refreshMinMs:
         Number.isFinite(parsed?.refreshMinMs) && parsed.refreshMinMs > 0
           ? parsed.refreshMinMs

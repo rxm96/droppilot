@@ -3,7 +3,7 @@ import { autoUpdater } from "electron-updater";
 import type { AuthController, AuthResult } from "../auth";
 import type { TwitchService } from "../twitch/service";
 import type { SessionData } from "../core/storage";
-import { exportSettings, importSettings, loadSettings, type SettingsData } from "../core/settings";
+import { exportSettings, importSettings, type SettingsData } from "../core/settings";
 import type { StatsData } from "../core/stats";
 import type { PriorityPlan } from "../twitch/channels";
 import { TwitchServiceError } from "../twitch/errors";
