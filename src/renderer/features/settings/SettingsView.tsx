@@ -17,6 +17,8 @@ type SettingsProps = {
   setAutoSwitchEnabled: (val: boolean) => void;
   warmupEnabled: boolean;
   setWarmupEnabled: (val: boolean) => void;
+  betaUpdates: boolean;
+  setBetaUpdates: (val: boolean) => void;
   demoMode: boolean;
   setDemoMode: (val: boolean) => void;
   debugEnabled: boolean;
@@ -88,6 +90,8 @@ export function SettingsView({
   setAutoSwitchEnabled,
   warmupEnabled,
   setWarmupEnabled,
+  betaUpdates,
+  setBetaUpdates,
   demoMode,
   setDemoMode,
   debugEnabled,
@@ -258,6 +262,21 @@ export function SettingsView({
                     </button>
                   ) : null}
                 </div>
+              </div>
+            ) : null}
+            {showUpdateCheck ? (
+              <div className="toggle-row">
+                <label className="toggle">
+                  <input
+                    type="checkbox"
+                    checked={betaUpdates}
+                    onChange={(e) => setBetaUpdates(e.target.checked)}
+                  />
+                  <span className="toggle-label">
+                    <span className="toggle-title">{t("settings.updateBeta")}</span>
+                    <span className="toggle-hint">{t("settings.updateBetaHint")}</span>
+                  </span>
+                </label>
               </div>
             ) : null}
           </section>

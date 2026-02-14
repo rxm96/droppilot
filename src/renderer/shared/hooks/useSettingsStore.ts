@@ -11,6 +11,7 @@ type SettingsData = {
   autoSelect?: boolean;
   autoSwitch?: boolean;
   warmupEnabled?: boolean;
+  betaUpdates?: boolean;
   refreshMinMs?: number;
   refreshMaxMs?: number;
   demoMode?: boolean;
@@ -34,6 +35,7 @@ type SettingsHook = {
   autoSelect: boolean;
   autoSwitchEnabled: boolean;
   warmupEnabled: boolean;
+  betaUpdates: boolean;
   refreshMinMs: number;
   refreshMaxMs: number;
   demoMode: boolean;
@@ -54,6 +56,7 @@ type SettingsHook = {
   saveAutoSelect: (val: boolean) => Promise<void>;
   saveAutoSwitchEnabled: (val: boolean) => Promise<void>;
   saveWarmupEnabled: (val: boolean) => Promise<void>;
+  saveBetaUpdates: (val: boolean) => Promise<void>;
   saveRefreshIntervals: (minMs: number, maxMs: number) => Promise<void>;
   saveDemoMode: (val: boolean) => Promise<void>;
   saveDebugEnabled: (val: boolean) => Promise<void>;
@@ -94,6 +97,7 @@ export function useSettingsStore(): SettingsHook {
   const [autoSelect, setAutoSelect] = useState<boolean>(true);
   const [autoSwitchEnabled, setAutoSwitchEnabled] = useState<boolean>(true);
   const [warmupEnabled, setWarmupEnabled] = useState<boolean>(true);
+  const [betaUpdates, setBetaUpdates] = useState<boolean>(false);
   const [refreshMinMs, setRefreshMinMs] = useState<number>(120_000);
   const [refreshMaxMs, setRefreshMaxMs] = useState<number>(240_000);
   const [demoMode, setDemoMode] = useState<boolean>(false);
@@ -123,6 +127,7 @@ export function useSettingsStore(): SettingsHook {
       setAutoSelect(res.autoSelect !== false);
       setAutoSwitchEnabled(res.autoSwitch !== false);
       setWarmupEnabled(res.warmupEnabled !== false);
+      setBetaUpdates(res.betaUpdates === true);
       setRefreshMinMs(
         Number.isFinite(res.refreshMinMs) && res.refreshMinMs ? res.refreshMinMs : 120_000,
       );
@@ -165,6 +170,7 @@ export function useSettingsStore(): SettingsHook {
       setAutoSelect(saved.autoSelect !== false);
       setAutoSwitchEnabled(saved.autoSwitch !== false);
       setWarmupEnabled(saved.warmupEnabled !== false);
+      setBetaUpdates(saved.betaUpdates === true);
       setRefreshMinMs(
         Number.isFinite(saved.refreshMinMs) && saved.refreshMinMs ? saved.refreshMinMs : 120_000,
       );
@@ -229,6 +235,11 @@ export function useSettingsStore(): SettingsHook {
   const saveWarmupEnabled = async (val: boolean) => {
     setWarmupEnabled(val);
     await persist({ warmupEnabled: val });
+  };
+
+  const saveBetaUpdates = async (val: boolean) => {
+    setBetaUpdates(val);
+    await persist({ betaUpdates: val });
   };
 
   const saveRefreshIntervals = async (minMs: number, maxMs: number) => {
@@ -343,6 +354,7 @@ export function useSettingsStore(): SettingsHook {
       setAutoSelect(saved.autoSelect !== false);
       setAutoSwitchEnabled(saved.autoSwitch !== false);
       setWarmupEnabled(saved.warmupEnabled !== false);
+      setBetaUpdates(saved.betaUpdates === true);
       setRefreshMinMs(
         Number.isFinite(saved.refreshMinMs) && saved.refreshMinMs ? saved.refreshMinMs : 120_000,
       );
@@ -388,6 +400,7 @@ export function useSettingsStore(): SettingsHook {
     autoSelect,
     autoSwitchEnabled,
     warmupEnabled,
+    betaUpdates,
     refreshMinMs,
     refreshMaxMs,
     demoMode,
@@ -408,6 +421,7 @@ export function useSettingsStore(): SettingsHook {
     saveAutoSelect,
     saveAutoSwitchEnabled,
     saveWarmupEnabled,
+    saveBetaUpdates,
     saveRefreshIntervals,
     saveDemoMode,
     saveDebugEnabled,

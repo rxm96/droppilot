@@ -11,6 +11,7 @@ type SettingsPayload = {
   autoSelect?: boolean;
   autoSwitch?: boolean;
   warmupEnabled?: boolean;
+  betaUpdates?: boolean;
   refreshMinMs?: number;
   refreshMaxMs?: number;
   demoMode?: boolean;

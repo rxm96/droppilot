@@ -13,6 +13,7 @@ export type SettingsData = {
   autoSelect: boolean;
   autoSwitch: boolean;
   warmupEnabled: boolean;
+  betaUpdates: boolean;
   refreshMinMs: number;
   refreshMaxMs: number;
   demoMode: boolean;
@@ -39,6 +40,7 @@ const defaultSettings: SettingsData = {
   autoSelect: true,
   autoSwitch: true,
   warmupEnabled: true,
+  betaUpdates: false,
   refreshMinMs: 120_000,
   refreshMaxMs: 240_000,
   demoMode: false,
@@ -79,6 +81,10 @@ export async function loadSettings(): Promise<SettingsData> {
         typeof parsed?.warmupEnabled === "boolean"
           ? parsed.warmupEnabled
           : defaultSettings.warmupEnabled,
+      betaUpdates:
+        typeof parsed?.betaUpdates === "boolean"
+          ? parsed.betaUpdates
+          : defaultSettings.betaUpdates,
       refreshMinMs:
         Number.isFinite(parsed?.refreshMinMs) && parsed.refreshMinMs > 0
           ? parsed.refreshMinMs
@@ -145,6 +151,7 @@ export async function saveSettings(data: Partial<SettingsData>): Promise<Setting
     autoSwitch: typeof data.autoSwitch === "boolean" ? data.autoSwitch : current.autoSwitch,
     warmupEnabled:
       typeof data.warmupEnabled === "boolean" ? data.warmupEnabled : current.warmupEnabled,
+    betaUpdates: typeof data.betaUpdates === "boolean" ? data.betaUpdates : current.betaUpdates,
     refreshMinMs:
       Number.isFinite(data.refreshMinMs) && (data.refreshMinMs as number) > 0
         ? (data.refreshMinMs as number)

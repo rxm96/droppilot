@@ -3,7 +3,7 @@ import { autoUpdater } from "electron-updater";
 import type { AuthController, AuthResult } from "../auth";
 import type { TwitchService } from "../twitch/service";
 import type { SessionData } from "../core/storage";
-import { exportSettings, importSettings, type SettingsData } from "../core/settings";
+import { exportSettings, importSettings, loadSettings, type SettingsData } from "../core/settings";
 import type { StatsData } from "../core/stats";
 import type { PriorityPlan } from "../twitch/channels";
 import { TwitchServiceError } from "../twitch/errors";
@@ -308,6 +308,9 @@ export function registerIpcHandlers(deps: {
   ipcMain.handle("settings/save", async (_e, payload: Partial<SettingsData>) => {
     const saved = await saveSettings(payload);
     applyAutoStartSetting?.(saved.autoStart);
+    if (process.platform === "win32" && app.isPackaged) {
+      autoUpdater.allowPrerelease = saved.betaUpdates === true;
+    }
     return saved;
   });
 
@@ -318,6 +321,9 @@ export function registerIpcHandlers(deps: {
   ipcMain.handle("settings/import", async (_e, payload: Partial<SettingsData>) => {
     const saved = await importSettings(payload);
     applyAutoStartSetting?.(saved.autoStart);
+    if (process.platform === "win32" && app.isPackaged) {
+      autoUpdater.allowPrerelease = saved.betaUpdates === true;
+    }
     return saved;
   });
 
@@ -386,6 +392,8 @@ export function registerIpcHandlers(deps: {
     }
     try {
       autoUpdater.autoDownload = false;
+      const settings = await loadSettings();
+      autoUpdater.allowPrerelease = settings.betaUpdates === true;
       const result = await autoUpdater.checkForUpdates();
       const version = result?.updateInfo?.version;
       const releaseNotes = normalizeReleaseNotes(result?.updateInfo?.releaseNotes);

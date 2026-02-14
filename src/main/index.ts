@@ -318,8 +318,17 @@ function setupAutoUpdater() {
   const check = () => {
     void autoUpdater.checkForUpdates();
   };
-  check();
-  updateTimer = setInterval(check, UPDATE_INTERVAL_MS);
+  void loadSettings()
+    .then((settings) => {
+      autoUpdater.allowPrerelease = settings.betaUpdates === true;
+    })
+    .catch(() => {
+      autoUpdater.allowPrerelease = false;
+    })
+    .finally(() => {
+      check();
+      updateTimer = setInterval(check, UPDATE_INTERVAL_MS);
+    });
 }
 
 app.whenReady().then(() => {

@@ -21,6 +21,7 @@ type Params = {
   saveAutoSelect: (val: boolean) => Promise<void>;
   saveAutoSwitchEnabled: (val: boolean) => Promise<void>;
   saveWarmupEnabled: (val: boolean) => Promise<void>;
+  saveBetaUpdates: (val: boolean) => Promise<void>;
   saveDemoMode: (val: boolean) => Promise<void>;
   saveAlertsEnabled: (val: boolean) => Promise<void>;
   saveAlertsNotifyWhileFocused: (val: boolean) => Promise<void>;
@@ -57,6 +58,7 @@ export function useAppActions({
   saveAutoSelect,
   saveAutoSwitchEnabled,
   saveWarmupEnabled,
+  saveBetaUpdates,
   saveDemoMode,
   saveAlertsEnabled,
   saveAlertsNotifyWhileFocused,
@@ -105,6 +107,7 @@ export function useAppActions({
     saveAutoSelect,
     saveAutoSwitchEnabled,
     saveWarmupEnabled,
+    saveBetaUpdates,
     saveDemoMode,
     saveAlertsEnabled,
     saveAlertsNotifyWhileFocused,
