@@ -16,10 +16,23 @@ export type WithCategory = { item: InventoryItem; category: string };
 
 const ACTIONABLE_CATEGORIES = new Set(["in-progress", "upcoming"]);
 
-export const isGameActionable = (game: string, withCategories: WithCategory[]): boolean =>
-  withCategories.some(
-    ({ item, category }) => item.game === game && ACTIONABLE_CATEGORIES.has(category),
-  );
+const parseIsoMs = (value?: string): number | null => {
+  if (!value) return null;
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? ms : null;
+};
+
+export const isGameActionable = (game: string, withCategories: WithCategory[]): boolean => {
+  const now = Date.now();
+  return withCategories.some(({ item, category }) => {
+    if (item.game !== game) return false;
+    if (category === "in-progress") return true;
+    if (category !== "upcoming" || !ACTIONABLE_CATEGORIES.has(category)) return false;
+    const startMs = parseIsoMs(item.startsAt);
+    if (startMs === null) return true;
+    return now >= startMs;
+  });
+};
 
 export const computeFallbackOrder = (withCategories: WithCategory[]): string[] => {
   const seen = new Set<string>();
@@ -72,8 +85,15 @@ export const computePriorityOrder = ({
 
 export const computeBestActionableGame = (
   priorityOrder: string[],
+  fallbackOrder: string[],
   withCategories: WithCategory[],
-): string => priorityOrder.find((game) => isGameActionable(game, withCategories)) ?? "";
+  obeyPriority: boolean,
+): string => {
+  const primary = priorityOrder.find((game) => isGameActionable(game, withCategories));
+  if (primary) return primary;
+  if (obeyPriority) return "";
+  return fallbackOrder.find((game) => isGameActionable(game, withCategories)) ?? "";
+};
 
 export const computeNextActiveTargetGame = ({
   inventoryStatus,
@@ -89,10 +109,12 @@ export const computeNextActiveTargetGame = ({
   withCategories: WithCategory[];
 }): string => {
   if (inventoryStatus !== "ready") return activeTargetGame;
-  if (!bestActionableGame) return activeTargetGame;
   const currentHasDrops = activeTargetGame
     ? isGameActionable(activeTargetGame, withCategories)
     : false;
+  if (!bestActionableGame) {
+    return currentHasDrops ? activeTargetGame : "";
+  }
   if (!activeTargetGame || !currentHasDrops) return bestActionableGame;
   if (!obeyPriority) return activeTargetGame;
   return bestActionableGame !== activeTargetGame ? bestActionableGame : activeTargetGame;
@@ -176,8 +198,8 @@ export function usePriorityOrchestration({
   }, [effectivePriorityPlan, priorityGames, fallbackOrder, obeyPriority, strictPriorityGames]);
 
   const bestActionableGame = useMemo(
-    () => computeBestActionableGame(priorityOrder, withCategories),
-    [priorityOrder, withCategories],
+    () => computeBestActionableGame(priorityOrder, fallbackOrder, withCategories, obeyPriority),
+    [priorityOrder, fallbackOrder, withCategories, obeyPriority],
   );
 
   useEffect(() => {

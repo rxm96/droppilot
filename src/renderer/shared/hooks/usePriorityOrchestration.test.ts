@@ -1,10 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { InventoryItem } from "@renderer/shared/types";
 import {
   computeBestActionableGame,
   computeFallbackOrder,
   computeNextActiveTargetGame,
   computePriorityOrder,
+  isGameActionable,
   normalizePriorityGames,
   type WithCategory,
 } from "@renderer/shared/hooks/usePriorityOrchestration";
@@ -95,8 +96,25 @@ describe("priority orchestration helpers", () => {
       { item: makeItem({ id: "a1", game: "A" }), category: "in-progress" },
       { item: makeItem({ id: "b1", game: "B" }), category: "upcoming" },
     ];
-    const result = computeBestActionableGame(["B", "A"], withCategories);
+    const result = computeBestActionableGame(["B", "A"], ["A"], withCategories, false);
     expect(result).toBe("B");
+  });
+
+  it("falls back to actionable drops when priority list has no matches", () => {
+    const withCategories: WithCategory[] = [
+      { item: makeItem({ id: "a1", game: "A" }), category: "in-progress" },
+      { item: makeItem({ id: "b1", game: "B" }), category: "upcoming" },
+    ];
+    const result = computeBestActionableGame(["C"], ["B", "A"], withCategories, false);
+    expect(result).toBe("B");
+  });
+
+  it("keeps strict priority even if fallback has drops", () => {
+    const withCategories: WithCategory[] = [
+      { item: makeItem({ id: "a1", game: "A" }), category: "in-progress" },
+    ];
+    const result = computeBestActionableGame(["C"], ["A"], withCategories, true);
+    expect(result).toBe("");
   });
 
   it("computes next active target game based on priority and availability", () => {
@@ -142,5 +160,39 @@ describe("priority orchestration helpers", () => {
       withCategories: [],
     });
     expect(result).toBe("A");
+  });
+
+  it("clears target when no actionable drops remain", () => {
+    const withCategories: WithCategory[] = [
+      { item: makeItem({ id: "a1", game: "A", status: "claimed" }), category: "finished" },
+    ];
+    const result = computeNextActiveTargetGame({
+      inventoryStatus: "ready",
+      activeTargetGame: "A",
+      bestActionableGame: "",
+      obeyPriority: true,
+      withCategories,
+    });
+    expect(result).toBe("");
+  });
+
+  it("treats upcoming drops as actionable only after start time", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-02-14T00:00:00Z"));
+    const withCategories: WithCategory[] = [
+      {
+        item: makeItem({
+          id: "a1",
+          game: "A",
+          status: "locked",
+          startsAt: "2026-02-15T00:00:00Z",
+        }),
+        category: "upcoming",
+      },
+    ];
+    expect(isGameActionable("A", withCategories)).toBe(false);
+    vi.setSystemTime(new Date("2026-02-15T01:00:00Z"));
+    expect(isGameActionable("A", withCategories)).toBe(true);
+    vi.useRealTimers();
   });
 });
