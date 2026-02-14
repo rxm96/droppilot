@@ -1,5 +1,4 @@
 import { BrowserWindow, shell } from "electron";
-import { URL } from "node:url";
 import {
   TWITCH_CLIENT_ID,
   TWITCH_OAUTH_DEVICE_URL,
