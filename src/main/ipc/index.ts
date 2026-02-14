@@ -140,12 +140,6 @@ export function registerIpcHandlers(deps: {
     return result;
   });
 
-  ipcMain.handle("auth/loginCredentials", async (_e, payload): Promise<AuthResult> => {
-    const result = await auth.loginWithCredentials(payload);
-    userPubSub?.notifySessionChanged();
-    return result;
-  });
-
   ipcMain.handle("auth/session", async () => {
     return loadSession();
   });
@@ -173,6 +167,20 @@ export function registerIpcHandlers(deps: {
   ipcMain.handle("twitch/inventory", async () => {
     try {
       return await twitch.getInventory();
+    } catch (err) {
+      if (twitch.isAuthError(err)) {
+        return { error: "auth", message: (err as Error).message, status: (err as any).status };
+      }
+      if (err instanceof TwitchServiceError) {
+        return { error: "twitch", code: err.code, message: err.message };
+      }
+      return { error: "unknown", message: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle("twitch/campaigns", async () => {
+    try {
+      return await twitch.getCampaigns();
     } catch (err) {
       if (twitch.isAuthError(err)) {
         return { error: "auth", message: (err as Error).message, status: (err as any).status };
