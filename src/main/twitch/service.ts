@@ -218,10 +218,7 @@ export class TwitchService {
           for (const drop of node.timeBasedDrops) {
             const self = (drop as any)?.self;
             const rawStatus =
-              self?.status ??
-              (drop as any)?.status ??
-              (drop as any)?.state ??
-              undefined;
+              self?.status ?? (drop as any)?.status ?? (drop as any)?.state ?? undefined;
             const hasEvidence = !!self || typeof rawStatus === "string";
             if (!hasEvidence) continue;
             sawEvidence = true;
@@ -561,9 +558,9 @@ export class TwitchService {
     );
   }
 
-  private async fetchCampaignEdges(
-    opts?: { includeAvailable?: boolean },
-  ): Promise<{ edges: CampaignEdge[]; summary: string }> {
+  private async fetchCampaignEdges(opts?: {
+    includeAvailable?: boolean;
+  }): Promise<{ edges: CampaignEdge[]; summary: string }> {
     const campaignsById = new Map<string, CampaignEdge>();
     let inventorySummary = "n/a";
     let campaignsSummary = "n/a";
@@ -631,7 +628,7 @@ export class TwitchService {
         const dropCampaigns = campaigns?.data?.currentUser?.dropCampaigns;
         const availableRaw = Array.isArray(dropCampaigns)
           ? dropCampaigns
-          : dropCampaigns?.edges ?? [];
+          : (dropCampaigns?.edges ?? []);
         const available = availableRaw.map(normalizeEdge);
         fetchedEdges += availableRaw.length;
         for (const edge of available) {
@@ -641,8 +638,9 @@ export class TwitchService {
         const pageInfo = dropCampaigns?.pageInfo;
         nextCursor = pageInfo?.hasNextPage ? pageInfo.endCursor : null;
         if (!nextCursor) {
-          campaignsSummary = `currentUser: ${!!campaigns?.data?.currentUser}, edges: ${fetchedEdges}, pages: ${page +
-            1}`;
+          campaignsSummary = `currentUser: ${!!campaigns?.data?.currentUser}, edges: ${fetchedEdges}, pages: ${
+            page + 1
+          }`;
           if (available.length > 0) {
             this.debug(
               "Campaigns edges sample",

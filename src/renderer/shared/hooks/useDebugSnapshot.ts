@@ -143,9 +143,7 @@ export function useDebugSnapshot({
         game: warmup.game,
         allowWatching: warmup.allowWatching,
         demoMode: warmup.demoMode,
-        lastAttemptAt: warmup.lastAttemptAt
-          ? new Date(warmup.lastAttemptAt).toISOString()
-          : null,
+        lastAttemptAt: warmup.lastAttemptAt ? new Date(warmup.lastAttemptAt).toISOString() : null,
         lastReason: warmup.lastReason,
         cooldownUntil: warmup.cooldownUntil ? new Date(warmup.cooldownUntil).toISOString() : null,
         attemptedCampaigns: warmup.attemptedCampaigns.map((entry) => ({

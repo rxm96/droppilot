@@ -573,8 +573,7 @@ const translations: Translations = {
     "updateOverlay.whatsNew": "Was ist neu",
     "updateOverlay.whatsNewVersion": "Was ist neu in v{version}",
     "settings.advanced": "Automatisierung",
-    "settings.advancedHint":
-      "Steuert Auto-Claim, Auto-Select, Auto-Switch, Warmup & Refresh-Takt.",
+    "settings.advancedHint": "Steuert Auto-Claim, Auto-Select, Auto-Switch, Warmup & Refresh-Takt.",
     "settings.autoClaim": "Auto-Claim aktiv",
     "settings.autoClaimHint": "Claimt fertige Drops automatisch.",
     "settings.autoSelect": "Auto-Select ersten Stream",

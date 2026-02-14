@@ -204,10 +204,7 @@ export const selectWarmupTarget = ({
       skippedAttempted += 1;
       continue;
     }
-    if (
-      (campaignId && knownCampaignIds.has(campaignId)) ||
-      knownActiveGames.has(gameKey)
-    ) {
+    if ((campaignId && knownCampaignIds.has(campaignId)) || knownActiveGames.has(gameKey)) {
       skippedKnown += 1;
       continue;
     }
@@ -234,9 +231,7 @@ export const selectWarmupTarget = ({
     };
   }
 
-  const targetGame = normalizedPriority.find((game) =>
-    activeGames.has(game.toLowerCase()),
-  );
+  const targetGame = normalizedPriority.find((game) => activeGames.has(game.toLowerCase()));
   if (!targetGame) {
     return { game: "", reason: "no-priority-campaigns" };
   }
@@ -271,9 +266,7 @@ export function useCampaignWarmup({
     inFlight: false,
     lastAt: 0,
   });
-  const warmupAttemptedRef = useRef<Map<string, WarmupAttemptStored>>(
-    loadWarmupCampaignAttempts(),
-  );
+  const warmupAttemptedRef = useRef<Map<string, WarmupAttemptStored>>(loadWarmupCampaignAttempts());
   const mountedRef = useRef(true);
   const [warmupState, setWarmupState] = useState<WarmupState>({
     active: false,
@@ -361,9 +354,7 @@ export function useCampaignWarmup({
     const now = Date.now();
     updateWarmupState({ allowWatching, demoMode });
     const cooldownUntil =
-      warmupRef.current.lastAt > 0
-        ? warmupRef.current.lastAt + WARMUP_COOLDOWN_MS
-        : null;
+      warmupRef.current.lastAt > 0 ? warmupRef.current.lastAt + WARMUP_COOLDOWN_MS : null;
     const skipReason = (() => {
       if (!allowWatching || demoMode) return "disabled";
       if (inventoryStatus !== "ready") return `inventory:${inventoryStatus}`;

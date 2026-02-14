@@ -185,9 +185,7 @@ export function SettingsView({
             <div className="settings-row">
               <div>
                 <div className="label">{t("settings.session")}</div>
-                <p className="meta">
-                  {isLinked ? t("session.ready") : t("session.loginNeeded")}
-                </p>
+                <p className="meta">{isLinked ? t("session.ready") : t("session.loginNeeded")}</p>
               </div>
               <div className="settings-actions">
                 <span className={`status-pill ${isLinked ? "ok" : "warn"}`}>
