@@ -1,7 +1,7 @@
 # DropPilot
 
 > **Downloads:** Grab the latest Windows installer from **GitHub Releases**:
-> `https://github.com/rxm96/droppilot/releases`
+> [github.com/rxm96/droppilot/releases](https://github.com/rxm96/droppilot/releases)
 
 ## What it does
 
