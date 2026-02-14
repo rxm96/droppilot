@@ -8,6 +8,7 @@ type Params = {
   saveAutoClaim: (val: boolean) => Promise<void>;
   saveAutoSelect: (val: boolean) => Promise<void>;
   saveAutoSwitchEnabled: (val: boolean) => Promise<void>;
+  saveWarmupEnabled: (val: boolean) => Promise<void>;
   saveDemoMode: (val: boolean) => Promise<void>;
   saveAlertsEnabled: (val: boolean) => Promise<void>;
   saveAlertsNotifyWhileFocused: (val: boolean) => Promise<void>;
@@ -28,6 +29,7 @@ export function useSettingsActions({
   saveAutoClaim,
   saveAutoSelect,
   saveAutoSwitchEnabled,
+  saveWarmupEnabled,
   saveDemoMode,
   saveAlertsEnabled,
   saveAlertsNotifyWhileFocused,
@@ -75,6 +77,13 @@ export function useSettingsActions({
       void saveAutoSwitchEnabled(val);
     },
     [saveAutoSwitchEnabled],
+  );
+
+  const handleSetWarmupEnabled = useCallback(
+    (val: boolean) => {
+      void saveWarmupEnabled(val);
+    },
+    [saveWarmupEnabled],
   );
 
   const handleSetDemoMode = useCallback(
@@ -158,6 +167,7 @@ export function useSettingsActions({
     handleSetAutoClaim,
     handleSetAutoSelect,
     handleSetAutoSwitchEnabled,
+    handleSetWarmupEnabled,
     handleSetDemoMode,
     handleSetAlertsEnabled,
     handleSetAlertsNotifyWhileFocused,

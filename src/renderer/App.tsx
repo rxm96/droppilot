@@ -10,7 +10,6 @@ function App() {
     titleBarProps,
     updateOverlayProps,
     navProps,
-    authProps,
     overviewProps,
     inventoryProps,
     priorityProps,
@@ -30,7 +29,6 @@ function App() {
 
           <AppContent
             navProps={navProps}
-            authProps={authProps}
             overviewProps={overviewProps}
             inventoryProps={inventoryProps}
             priorityProps={priorityProps}

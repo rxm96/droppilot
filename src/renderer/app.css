@@ -2462,6 +2462,25 @@ code {
   line-height: 1.2;
 }
 
+.toggle .toggle-label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.toggle .toggle-title {
+  display: block;
+  font-size: 13px;
+  color: var(--foreground);
+}
+
+.toggle .toggle-hint {
+  display: block;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
 .toggle input {
   appearance: none;
   margin: 0;

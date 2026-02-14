@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { ChannelEntry, FilterKey } from "@renderer/shared/types";
 import { usePriorityActions } from "./usePriorityActions";
@@ -7,19 +6,7 @@ import type { AppUpdateStatus } from "./useAppBootstrap";
 import { useUpdateActions } from "./useUpdateActions";
 import { useWatchingActions } from "./useWatchingActions";
 
-type Creds = {
-  username: string;
-  password: string;
-  token: string;
-};
-
-export const createStartLoginWithCreds =
-  (startLoginWithCreds: (creds: Creds) => void, creds: Creds) => () =>
-    startLoginWithCreds(creds);
-
 type Params = {
-  creds: Creds;
-  startLoginWithCreds: (creds: Creds) => void;
   newGame: string;
   setNewGame: (val: string) => void;
   selectedGame: string;
@@ -33,6 +20,7 @@ type Params = {
   saveAutoClaim: (val: boolean) => Promise<void>;
   saveAutoSelect: (val: boolean) => Promise<void>;
   saveAutoSwitchEnabled: (val: boolean) => Promise<void>;
+  saveWarmupEnabled: (val: boolean) => Promise<void>;
   saveDemoMode: (val: boolean) => Promise<void>;
   saveAlertsEnabled: (val: boolean) => Promise<void>;
   saveAlertsNotifyWhileFocused: (val: boolean) => Promise<void>;
@@ -55,8 +43,6 @@ type Params = {
 };
 
 export function useAppActions({
-  creds,
-  startLoginWithCreds,
   newGame,
   setNewGame,
   selectedGame,
@@ -70,6 +56,7 @@ export function useAppActions({
   saveAutoClaim,
   saveAutoSelect,
   saveAutoSwitchEnabled,
+  saveWarmupEnabled,
   saveDemoMode,
   saveAlertsEnabled,
   saveAlertsNotifyWhileFocused,
@@ -117,6 +104,7 @@ export function useAppActions({
     saveAutoClaim,
     saveAutoSelect,
     saveAutoSwitchEnabled,
+    saveWarmupEnabled,
     saveDemoMode,
     saveAlertsEnabled,
     saveAlertsNotifyWhileFocused,
@@ -132,16 +120,10 @@ export function useAppActions({
 
   const updateActions = useUpdateActions({ setUpdateStatus });
 
-  const handleStartLoginWithCreds = useMemo(
-    () => createStartLoginWithCreds(startLoginWithCreds, creds),
-    [startLoginWithCreds, creds],
-  );
-
   return {
     ...priorityActions,
     ...watchingActions,
     ...updateActions,
-    handleStartLoginWithCreds,
     ...settingsActions,
   };
 }

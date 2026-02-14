@@ -3,6 +3,7 @@ import { useAlertEffects } from "./useAlertEffects";
 import { useAppActions } from "./useAppActions";
 import { useAppBootstrap } from "./useAppBootstrap";
 import { useAuth } from "./useAuth";
+import { useCampaignWarmup } from "./useCampaignWarmup";
 import { useChannels } from "./useChannels";
 import { useDebugCpu } from "./useDebugCpu";
 import { useDebugSnapshot } from "./useDebugSnapshot";
@@ -23,9 +24,8 @@ import { isVerboseLoggingEnabled } from "@renderer/shared/utils/logger";
 const PAGE_SIZE = 8;
 
 export function useAppModel() {
-  const { auth, startLogin, startLoginWithCreds, logout } = useAuth();
+  const { auth, startLogin, logout } = useAuth();
   const { theme, setTheme } = useTheme();
-  const [creds, setCreds] = useState({ username: "", password: "", token: "" });
   const [filter, setFilter] = useState<FilterKey>("all");
   const [view, setView] = useState<View>("inventory");
   const [page, setPage] = useState<number>(1);
@@ -37,6 +37,7 @@ export function useAppModel() {
     autoClaim,
     autoSelect,
     autoSwitchEnabled,
+    warmupEnabled,
     refreshMinMs,
     refreshMaxMs,
     demoMode,
@@ -56,6 +57,7 @@ export function useAppModel() {
     saveAutoClaim,
     saveAutoSelect,
     saveAutoSwitchEnabled,
+    saveWarmupEnabled,
     saveRefreshIntervals,
     saveDemoMode,
     saveDebugEnabled,
@@ -88,6 +90,7 @@ export function useAppModel() {
   const isLinked = auth.status === "ok";
   const isLinkedOrDemo = isLinked || demoMode;
   const allowWatching = isLinkedOrDemo;
+  const allowWarmup = allowWatching && warmupEnabled;
   const effectiveAuthStatus = demoMode ? "ok" : auth.status;
   const isMac = useMemo(
     () => typeof navigator !== "undefined" && /mac/i.test(navigator.platform),
@@ -143,6 +146,17 @@ export function useAppModel() {
     fetchInventory,
   });
   const watchStats = useWatchPing({ watching, bumpStats, forwardAuthError, demoMode });
+  const warmupState = useCampaignWarmup({
+    allowWatching: allowWarmup,
+    demoMode,
+    inventoryStatus: inventory.status,
+    inventoryFetchedAt,
+    withCategories,
+    priorityGames,
+    watching,
+    fetchInventory,
+    forwardAuthError,
+  });
 
   const { profile, appVersion, updateStatus, setUpdateStatus, trackerStatus, userPubSubStatus } =
     useAppBootstrap({
@@ -159,8 +173,6 @@ export function useAppModel() {
     });
 
   const actions = useAppActions({
-    creds,
-    startLoginWithCreds,
     newGame,
     setNewGame,
     selectedGame,
@@ -174,6 +186,7 @@ export function useAppModel() {
     saveAutoClaim,
     saveAutoSelect,
     saveAutoSwitchEnabled,
+    saveWarmupEnabled,
     saveDemoMode,
     saveAlertsEnabled,
     saveAlertsNotifyWhileFocused,
@@ -348,7 +361,9 @@ export function useAppModel() {
     autoClaim,
     autoSelectEnabled,
     autoSwitchEnabled,
+    warmupEnabled,
     obeyPriority,
+    allowWatching,
     refreshMinMs,
     refreshMaxMs,
     watchStats,
@@ -359,6 +374,7 @@ export function useAppModel() {
     cpu: debugCpu,
     trackerStatus,
     userPubSubStatus,
+    warmup: warmupState,
   });
 
   const navProps = {
@@ -368,12 +384,6 @@ export function useAppModel() {
     startLogin,
     logout,
     showDebug: debugEnabled,
-  };
-  const authProps = {
-    auth,
-    creds,
-    setCreds,
-    startLoginWithCreds: actions.handleStartLoginWithCreds,
   };
   const overviewProps = { inventory, stats, resetStats };
   const inventoryProps = {
@@ -412,7 +422,6 @@ export function useAppModel() {
     setObeyPriority: actions.handleSetObeyPriority,
   };
   const settingsProps = {
-    startLogin,
     isLinked,
     theme,
     setTheme,
@@ -424,6 +433,8 @@ export function useAppModel() {
     setAutoSelect: actions.handleSetAutoSelect,
     autoSwitchEnabled,
     setAutoSwitchEnabled: actions.handleSetAutoSwitchEnabled,
+    warmupEnabled,
+    setWarmupEnabled: actions.handleSetWarmupEnabled,
     demoMode,
     setDemoMode: actions.handleSetDemoMode,
     debugEnabled,
@@ -506,6 +517,8 @@ export function useAppModel() {
     dropsTotal: totalDrops,
     dropsClaimed: claimedDrops,
     targetProgress,
+    warmupActive: warmupState.active,
+    warmupGame: warmupState.game,
   };
 
   const titleBarProps = {
@@ -529,7 +542,6 @@ export function useAppModel() {
     titleBarProps,
     updateOverlayProps,
     navProps,
-    authProps,
     overviewProps,
     inventoryProps,
     priorityProps,

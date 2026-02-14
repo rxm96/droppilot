@@ -2,7 +2,6 @@ import { useI18n } from "@renderer/shared/i18n";
 import type { ThemePreference } from "@renderer/shared/theme";
 
 type SettingsProps = {
-  startLogin: () => void;
   isLinked: boolean;
   language: "de" | "en";
   setLanguage: (val: "de" | "en") => void;
@@ -16,6 +15,8 @@ type SettingsProps = {
   setAutoSelect: (val: boolean) => void;
   autoSwitchEnabled: boolean;
   setAutoSwitchEnabled: (val: boolean) => void;
+  warmupEnabled: boolean;
+  setWarmupEnabled: (val: boolean) => void;
   demoMode: boolean;
   setDemoMode: (val: boolean) => void;
   debugEnabled: boolean;
@@ -72,7 +73,6 @@ type SettingsProps = {
 };
 
 export function SettingsView({
-  startLogin,
   isLinked,
   language,
   setLanguage,
@@ -86,6 +86,8 @@ export function SettingsView({
   setAutoSelect,
   autoSwitchEnabled,
   setAutoSwitchEnabled,
+  warmupEnabled,
+  setWarmupEnabled,
   demoMode,
   setDemoMode,
   debugEnabled,
@@ -183,14 +185,14 @@ export function SettingsView({
             <div className="settings-row">
               <div>
                 <div className="label">{t("settings.session")}</div>
-                <p className="meta">{t("settings.quickActions")}</p>
+                <p className="meta">
+                  {isLinked ? t("session.ready") : t("session.loginNeeded")}
+                </p>
               </div>
               <div className="settings-actions">
-                {!isLinked && (
-                  <button type="button" onClick={startLogin}>
-                    {t("session.loginBrowser")}
-                  </button>
-                )}
+                <span className={`status-pill ${isLinked ? "ok" : "warn"}`}>
+                  {isLinked ? t("session.connected") : t("session.disconnected")}
+                </span>
               </div>
             </div>
             <div className="settings-row">
@@ -319,7 +321,10 @@ export function SettingsView({
                   checked={autoClaim}
                   onChange={(e) => setAutoClaim(e.target.checked)}
                 />
-                <span>{t("settings.autoClaim")}</span>
+                <span className="toggle-label">
+                  <span className="toggle-title">{t("settings.autoClaim")}</span>
+                  <span className="toggle-hint">{t("settings.autoClaimHint")}</span>
+                </span>
               </label>
             </div>
             <div className="toggle-row">
@@ -329,7 +334,10 @@ export function SettingsView({
                   checked={autoSelect}
                   onChange={(e) => setAutoSelect(e.target.checked)}
                 />
-                <span>{t("settings.autoSelect")}</span>
+                <span className="toggle-label">
+                  <span className="toggle-title">{t("settings.autoSelect")}</span>
+                  <span className="toggle-hint">{t("settings.autoSelectHint")}</span>
+                </span>
               </label>
             </div>
             <div className="toggle-row">
@@ -339,7 +347,23 @@ export function SettingsView({
                   checked={autoSwitchEnabled}
                   onChange={(e) => setAutoSwitchEnabled(e.target.checked)}
                 />
-                <span>{t("settings.autoSwitch")}</span>
+                <span className="toggle-label">
+                  <span className="toggle-title">{t("settings.autoSwitch")}</span>
+                  <span className="toggle-hint">{t("settings.autoSwitchHint")}</span>
+                </span>
+              </label>
+            </div>
+            <div className="toggle-row">
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={warmupEnabled}
+                  onChange={(e) => setWarmupEnabled(e.target.checked)}
+                />
+                <span className="toggle-label">
+                  <span className="toggle-title">{t("settings.warmup")}</span>
+                  <span className="toggle-hint">{t("settings.warmupHint")}</span>
+                </span>
               </label>
             </div>
             <div className="settings-row">

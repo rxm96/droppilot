@@ -10,6 +10,7 @@ type SettingsPayload = {
   autoClaim?: boolean;
   autoSelect?: boolean;
   autoSwitch?: boolean;
+  warmupEnabled?: boolean;
   refreshMinMs?: number;
   refreshMaxMs?: number;
   demoMode?: boolean;
@@ -79,14 +80,13 @@ const api = {
   openExternal: (url: string) => shell.openExternal(url),
   auth: {
     login: () => ipcRenderer.invoke("auth/login"),
-    loginCredentials: (payload: { username: string; password: string; token?: string }) =>
-      ipcRenderer.invoke("auth/loginCredentials", payload),
     session: () => ipcRenderer.invoke("auth/session"),
     logout: () => ipcRenderer.invoke("auth/logout"),
   },
   twitch: {
     profile: () => ipcRenderer.invoke("twitch/profile"),
     inventory: () => ipcRenderer.invoke("twitch/inventory"),
+    campaigns: () => ipcRenderer.invoke("twitch/campaigns"),
     priorityPlan: (payload: { priorityGames?: string[] }) =>
       ipcRenderer.invoke("twitch/priorityPlan", payload),
     channels: (payload: { game: string }) => ipcRenderer.invoke("twitch/channels", payload),

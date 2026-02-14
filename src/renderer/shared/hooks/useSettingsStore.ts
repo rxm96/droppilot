@@ -10,6 +10,7 @@ type SettingsData = {
   autoClaim?: boolean;
   autoSelect?: boolean;
   autoSwitch?: boolean;
+  warmupEnabled?: boolean;
   refreshMinMs?: number;
   refreshMaxMs?: number;
   demoMode?: boolean;
@@ -32,6 +33,7 @@ type SettingsHook = {
   autoClaim: boolean;
   autoSelect: boolean;
   autoSwitchEnabled: boolean;
+  warmupEnabled: boolean;
   refreshMinMs: number;
   refreshMaxMs: number;
   demoMode: boolean;
@@ -51,6 +53,7 @@ type SettingsHook = {
   saveAutoClaim: (val: boolean) => Promise<void>;
   saveAutoSelect: (val: boolean) => Promise<void>;
   saveAutoSwitchEnabled: (val: boolean) => Promise<void>;
+  saveWarmupEnabled: (val: boolean) => Promise<void>;
   saveRefreshIntervals: (minMs: number, maxMs: number) => Promise<void>;
   saveDemoMode: (val: boolean) => Promise<void>;
   saveDebugEnabled: (val: boolean) => Promise<void>;
@@ -90,6 +93,7 @@ export function useSettingsStore(): SettingsHook {
   const [autoClaim, setAutoClaim] = useState<boolean>(true);
   const [autoSelect, setAutoSelect] = useState<boolean>(true);
   const [autoSwitchEnabled, setAutoSwitchEnabled] = useState<boolean>(true);
+  const [warmupEnabled, setWarmupEnabled] = useState<boolean>(true);
   const [refreshMinMs, setRefreshMinMs] = useState<number>(120_000);
   const [refreshMaxMs, setRefreshMaxMs] = useState<number>(240_000);
   const [demoMode, setDemoMode] = useState<boolean>(false);
@@ -118,6 +122,7 @@ export function useSettingsStore(): SettingsHook {
       setAutoClaim(res.autoClaim !== false);
       setAutoSelect(res.autoSelect !== false);
       setAutoSwitchEnabled(res.autoSwitch !== false);
+      setWarmupEnabled(res.warmupEnabled !== false);
       setRefreshMinMs(
         Number.isFinite(res.refreshMinMs) && res.refreshMinMs ? res.refreshMinMs : 120_000,
       );
@@ -159,6 +164,7 @@ export function useSettingsStore(): SettingsHook {
       setAutoClaim(saved.autoClaim !== false);
       setAutoSelect(saved.autoSelect !== false);
       setAutoSwitchEnabled(saved.autoSwitch !== false);
+      setWarmupEnabled(saved.warmupEnabled !== false);
       setRefreshMinMs(
         Number.isFinite(saved.refreshMinMs) && saved.refreshMinMs ? saved.refreshMinMs : 120_000,
       );
@@ -218,6 +224,11 @@ export function useSettingsStore(): SettingsHook {
   const saveAutoSwitchEnabled = async (val: boolean) => {
     setAutoSwitchEnabled(val);
     await persist({ autoSwitch: val });
+  };
+
+  const saveWarmupEnabled = async (val: boolean) => {
+    setWarmupEnabled(val);
+    await persist({ warmupEnabled: val });
   };
 
   const saveRefreshIntervals = async (minMs: number, maxMs: number) => {
@@ -286,6 +297,7 @@ export function useSettingsStore(): SettingsHook {
       autoClaim: true,
       autoSelect: true,
       autoSwitch: true,
+      warmupEnabled: true,
       refreshMinMs: 120_000,
       refreshMaxMs: 240_000,
       demoMode: false,
@@ -293,6 +305,7 @@ export function useSettingsStore(): SettingsHook {
     setAutoClaim(defaults.autoClaim);
     setAutoSelect(defaults.autoSelect);
     setAutoSwitchEnabled(defaults.autoSwitch);
+    setWarmupEnabled(defaults.warmupEnabled);
     setRefreshMinMs(defaults.refreshMinMs);
     setRefreshMaxMs(defaults.refreshMaxMs);
     setDemoMode(defaults.demoMode);
@@ -329,6 +342,7 @@ export function useSettingsStore(): SettingsHook {
       setAutoClaim(saved.autoClaim !== false);
       setAutoSelect(saved.autoSelect !== false);
       setAutoSwitchEnabled(saved.autoSwitch !== false);
+      setWarmupEnabled(saved.warmupEnabled !== false);
       setRefreshMinMs(
         Number.isFinite(saved.refreshMinMs) && saved.refreshMinMs ? saved.refreshMinMs : 120_000,
       );
@@ -373,6 +387,7 @@ export function useSettingsStore(): SettingsHook {
     autoClaim,
     autoSelect,
     autoSwitchEnabled,
+    warmupEnabled,
     refreshMinMs,
     refreshMaxMs,
     demoMode,
@@ -392,6 +407,7 @@ export function useSettingsStore(): SettingsHook {
     saveAutoClaim,
     saveAutoSelect,
     saveAutoSwitchEnabled,
+    saveWarmupEnabled,
     saveRefreshIntervals,
     saveDemoMode,
     saveDebugEnabled,
