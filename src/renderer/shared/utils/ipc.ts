@@ -120,7 +120,8 @@ export const isChannelTrackerStatus = (value: unknown): value is ChannelTrackerS
   const validFallbackUntil =
     value.fallbackUntil === undefined || isNullableFiniteNumber(value.fallbackUntil);
   const validShards =
-    value.shards === undefined || (Array.isArray(value.shards) && value.shards.every(isTrackerShardStatus));
+    value.shards === undefined ||
+    (Array.isArray(value.shards) && value.shards.every(isTrackerShardStatus));
   return (
     validMode &&
     validEffectiveMode &&
@@ -192,7 +193,10 @@ export const isChannelLiveDiff = (value: unknown): value is ChannelLiveDiff => {
   const reason = value.reason;
   const validSource = source === "ws" || source === "fetch";
   const validReason =
-    reason === "snapshot" || reason === "stream-up" || reason === "stream-down" || reason === "viewers";
+    reason === "snapshot" ||
+    reason === "stream-up" ||
+    reason === "stream-down" ||
+    reason === "viewers";
   return (
     isString(value.game) &&
     isFiniteNumber(value.at) &&

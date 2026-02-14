@@ -323,10 +323,7 @@ export class WsChannelTracker implements ChannelTracker {
     }
     this.refreshMs = Math.max(10_000, opts.refreshMs ?? 90_000);
     this.fallbackPollRefreshMs = Math.max(5_000, opts.fallbackPollRefreshMs ?? 25_000);
-    this.fallbackAfterReconnectAttempts = Math.max(
-      1,
-      opts.fallbackAfterReconnectAttempts ?? 8,
-    );
+    this.fallbackAfterReconnectAttempts = Math.max(1, opts.fallbackAfterReconnectAttempts ?? 8);
     this.fallbackCooldownMs = Math.max(30_000, opts.fallbackCooldownMs ?? 30 * 60_000);
     this.offlineUnsubscribeGraceMs = Math.max(
       5_000,

@@ -138,7 +138,9 @@ export function useControlViewState({
 
   useEffect(() => {
     if (!channelDiff) return;
-    const entries = Object.entries(channelDiff.viewerDeltaById).filter(([, delta]) => Boolean(delta));
+    const entries = Object.entries(channelDiff.viewerDeltaById).filter(([, delta]) =>
+      Boolean(delta),
+    );
     if (entries.length === 0) return;
     const channelById = new Map(channels.map((channel) => [channel.id, channel]));
     for (const [id] of entries) {
@@ -291,10 +293,10 @@ export function useControlViewState({
   const [progressNow, setProgressNow] = useState(() => Date.now());
   const shouldTickProgress = Boolean(
     isPageVisible &&
-      watching &&
-      inventoryFetchedAt &&
-      activeDropInfo &&
-      activeDropInfo.requiredMinutes > activeDropInfo.earnedMinutes,
+    watching &&
+    inventoryFetchedAt &&
+    activeDropInfo &&
+    activeDropInfo.requiredMinutes > activeDropInfo.earnedMinutes,
   );
   useEffect(() => {
     if (!shouldTickProgress) return;
@@ -309,7 +311,10 @@ export function useControlViewState({
         activeEta: activeDropInfo?.eta ?? null,
       };
     }
-    const activeRemainingBase = Math.max(0, activeDropInfo.requiredMinutes - activeDropInfo.earnedMinutes);
+    const activeRemainingBase = Math.max(
+      0,
+      activeDropInfo.requiredMinutes - activeDropInfo.earnedMinutes,
+    );
     const elapsedMinutesRaw = Math.max(0, (progressNow - inventoryFetchedAt) / 60_000);
     const elapsedApplied = Math.min(elapsedMinutesRaw, activeRemainingBase);
     const activeRemainingMinutes = Math.max(0, activeRemainingBase - elapsedApplied);

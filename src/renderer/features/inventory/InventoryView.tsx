@@ -131,12 +131,7 @@ export function InventoryView({
                   <div className="inv-card-header">
                     <div className="inv-card-heading">
                       {imageUrl ? (
-                        <img
-                          className="inv-card-thumb"
-                          src={imageUrl}
-                          alt=""
-                          loading="lazy"
-                        />
+                        <img className="inv-card-thumb" src={imageUrl} alt="" loading="lazy" />
                       ) : null}
                       <div className="inv-card-title-wrap">
                         <div className="meta">{item.game}</div>

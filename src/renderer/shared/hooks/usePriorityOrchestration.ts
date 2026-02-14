@@ -1,7 +1,16 @@
 import { buildDemoPriorityPlan } from "@renderer/shared/demoData";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { InventoryItem, InventoryState, PriorityPlan, WatchingState } from "@renderer/shared/types";
-import { isIpcAuthErrorResponse, isIpcErrorResponse, isPriorityPlan } from "@renderer/shared/utils/ipc";
+import type {
+  InventoryItem,
+  InventoryState,
+  PriorityPlan,
+  WatchingState,
+} from "@renderer/shared/types";
+import {
+  isIpcAuthErrorResponse,
+  isIpcErrorResponse,
+  isPriorityPlan,
+} from "@renderer/shared/utils/ipc";
 
 export type WithCategory = { item: InventoryItem; category: string };
 
@@ -156,18 +165,15 @@ export function usePriorityOrchestration({
     return normalizePriorityGames(priorityGames);
   }, [priorityGames]);
 
-  const priorityOrder = useMemo(
-    () => {
-      return computePriorityOrder({
-        obeyPriority,
-        effectivePriorityPlan,
-        priorityGames,
-        fallbackOrder,
-        strictPriorityGames,
-      });
-    },
-    [effectivePriorityPlan, priorityGames, fallbackOrder, obeyPriority, strictPriorityGames],
-  );
+  const priorityOrder = useMemo(() => {
+    return computePriorityOrder({
+      obeyPriority,
+      effectivePriorityPlan,
+      priorityGames,
+      fallbackOrder,
+      strictPriorityGames,
+    });
+  }, [effectivePriorityPlan, priorityGames, fallbackOrder, obeyPriority, strictPriorityGames]);
 
   const bestActionableGame = useMemo(
     () => computeBestActionableGame(priorityOrder, withCategories),

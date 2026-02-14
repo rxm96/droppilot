@@ -38,7 +38,12 @@ describe("priority orchestration helpers", () => {
   it("computes priority order with strict mode", () => {
     const result = computePriorityOrder({
       obeyPriority: true,
-      effectivePriorityPlan: { order: ["X"], availableGames: [], missingPriority: [], totalActiveDrops: 0 },
+      effectivePriorityPlan: {
+        order: ["X"],
+        availableGames: [],
+        missingPriority: [],
+        totalActiveDrops: 0,
+      },
       priorityGames: ["A"],
       fallbackOrder: ["B"],
       strictPriorityGames: ["A", "C"],
@@ -49,7 +54,12 @@ describe("priority orchestration helpers", () => {
   it("computes priority order with plan, then list, then fallback", () => {
     const fromPlan = computePriorityOrder({
       obeyPriority: false,
-      effectivePriorityPlan: { order: ["P"], availableGames: [], missingPriority: [], totalActiveDrops: 0 },
+      effectivePriorityPlan: {
+        order: ["P"],
+        availableGames: [],
+        missingPriority: [],
+        totalActiveDrops: 0,
+      },
       priorityGames: ["A"],
       fallbackOrder: ["B"],
       strictPriorityGames: [],
@@ -58,7 +68,12 @@ describe("priority orchestration helpers", () => {
 
     const fromList = computePriorityOrder({
       obeyPriority: false,
-      effectivePriorityPlan: { order: [], availableGames: [], missingPriority: [], totalActiveDrops: 0 },
+      effectivePriorityPlan: {
+        order: [],
+        availableGames: [],
+        missingPriority: [],
+        totalActiveDrops: 0,
+      },
       priorityGames: ["A"],
       fallbackOrder: ["B"],
       strictPriorityGames: [],

@@ -241,8 +241,8 @@ export function ControlView({
             )}
             {autoSwitchInfo ? (
               <p className="meta muted">
-                Auto-Switch ({autoSwitchInfo.reason}): {autoSwitchInfo.from?.name ?? "Unknown"} -{">"}{" "}
-                {autoSwitchInfo.to.name} um {new Date(autoSwitchInfo.at).toLocaleTimeString()}
+                Auto-Switch ({autoSwitchInfo.reason}): {autoSwitchInfo.from?.name ?? "Unknown"} -
+                {">"} {autoSwitchInfo.to.name} um {new Date(autoSwitchInfo.at).toLocaleTimeString()}
               </p>
             ) : null}
             {watchErrorText ? (
@@ -299,7 +299,9 @@ export function ControlView({
                             const earned = Math.max(0, Number(d.earnedMinutes) || 0);
                             const isActive = activeDropInfo?.id === d.id;
                             const earnedDisplay = Math.min(req, earned);
-                            const pct = req ? Math.min(100, Math.round((earnedDisplay / req) * 100)) : 0;
+                            const pct = req
+                              ? Math.min(100, Math.round((earnedDisplay / req) * 100))
+                              : 0;
                             const statusLabel = mapStatusLabel(d.status, (key) => t(key));
                             const statusClass =
                               d.status === "claimed"
@@ -343,9 +345,9 @@ export function ControlView({
                                 ) : null}
                                 <div className="drop-body">
                                   <div className="drop-header">
-                                  <div className="drop-title">
-                                    <span className="drop-title-text">{d.title}</span>
-                                  </div>
+                                    <div className="drop-title">
+                                      <span className="drop-title-text">{d.title}</span>
+                                    </div>
                                     <span className="pill ghost small">{statusLabel}</span>
                                   </div>
                                   <div className="meta muted drop-meta-line">
@@ -495,9 +497,7 @@ export function ControlView({
                         />
                       ) : null}
                       <span className="viewer-badge">
-                        <span className="viewer-main">
-                          {formatViewers(animatedViewerCount)}
-                        </span>
+                        <span className="viewer-main">{formatViewers(animatedViewerCount)}</span>
                       </span>
                       <div className="channel-content">
                         <div className="channel-header">

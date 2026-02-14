@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ClaimStatus, InventoryItem, InventoryState, UserPubSubEvent } from "@renderer/shared/types";
+import type {
+  ClaimStatus,
+  InventoryItem,
+  InventoryState,
+  UserPubSubEvent,
+} from "@renderer/shared/types";
 import { buildDemoInventory } from "@renderer/shared/demoData";
 import { getCategory } from "@renderer/shared/utils";
 import { logDebug, logError, logInfo, logWarn } from "@renderer/shared/utils/logger";
@@ -130,7 +135,8 @@ export const applyDropClaimToInventoryItems = (
   }
   const index = items.findIndex((item) => {
     if (dropId && item.id === dropId) return true;
-    if (dropInstanceId && item.dropInstanceId && item.dropInstanceId === dropInstanceId) return true;
+    if (dropInstanceId && item.dropInstanceId && item.dropInstanceId === dropInstanceId)
+      return true;
     return false;
   });
   if (index < 0) {
@@ -519,13 +525,16 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
       }
       clearReconcileTimer();
       pubSubReconcileScheduledAtRef.current = nextAt;
-      pubSubReconcileTimerRef.current = window.setTimeout(() => {
-        pubSubReconcileTimerRef.current = null;
-        pubSubLastReconcileAtRef.current = Date.now();
-        const force = pubSubReconcilePendingForceRef.current;
-        pubSubReconcilePendingForceRef.current = false;
-        void fetchInventoryRef.current({ forceLoading: force });
-      }, Math.max(0, nextAt - now));
+      pubSubReconcileTimerRef.current = window.setTimeout(
+        () => {
+          pubSubReconcileTimerRef.current = null;
+          pubSubLastReconcileAtRef.current = Date.now();
+          const force = pubSubReconcilePendingForceRef.current;
+          pubSubReconcilePendingForceRef.current = false;
+          void fetchInventoryRef.current({ forceLoading: force });
+        },
+        Math.max(0, nextAt - now),
+      );
     };
 
     const applyPatch = (event: UserPubSubEvent): boolean => {
@@ -590,7 +599,8 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
       if (payload.kind === "drop-progress") {
         const dropId = payload.dropId?.trim();
         const progress =
-          typeof payload.currentProgressMin === "number" && Number.isFinite(payload.currentProgressMin)
+          typeof payload.currentProgressMin === "number" &&
+          Number.isFinite(payload.currentProgressMin)
             ? Math.max(0, payload.currentProgressMin)
             : null;
         if (dropId && progress !== null) {

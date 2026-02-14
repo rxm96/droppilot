@@ -16,6 +16,7 @@ npm run build
 ```
 
 ## Releases
+
 Releases are published via Git tags and GitHub Releases. Use the scripts below to bump versions and push tags:
 
 - `npm run release:patch`

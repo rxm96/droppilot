@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { translate } from "@renderer/shared/i18n";
 import type { Language } from "@renderer/shared/i18n";
-import type { AutoSwitchInfo, InventoryItem, InventoryState, WatchingState } from "@renderer/shared/types";
+import type {
+  AutoSwitchInfo,
+  InventoryItem,
+  InventoryState,
+  WatchingState,
+} from "@renderer/shared/types";
 import type { ActiveDropInfo } from "./useTargetDrops";
 import type { WatchStats } from "./useWatchPing";
 import { resolveErrorMessage } from "@renderer/shared/utils/errors";

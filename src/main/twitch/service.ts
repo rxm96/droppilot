@@ -134,7 +134,7 @@ export class TwitchService {
           const benefitEdges = (drop as any)?.benefitEdges;
           const benefitEdgesList = Array.isArray(benefitEdges)
             ? benefitEdges
-            : benefitEdges?.edges ?? benefitEdges?.nodes ?? [];
+            : (benefitEdges?.edges ?? benefitEdges?.nodes ?? []);
           const benefitEdgeSample = Array.isArray(benefitEdgesList) ? benefitEdgesList[0] : null;
           const benefitNode =
             benefitEdgeSample?.node ?? benefitEdgeSample?.benefit ?? benefitEdgeSample ?? null;
@@ -731,9 +731,7 @@ function extractDropImageUrl(drop: any): string | undefined {
     drop?.benefitEdges?.nodes ??
     [];
   const benefitNodes = Array.isArray(benefitEdgesRaw)
-    ? benefitEdgesRaw
-        .map((edge: any) => edge?.node ?? edge?.benefit ?? edge)
-        .filter(Boolean)
+    ? benefitEdgesRaw.map((edge: any) => edge?.node ?? edge?.benefit ?? edge).filter(Boolean)
     : [];
   const benefitCandidates: unknown[] = [];
   for (const node of benefitNodes) {

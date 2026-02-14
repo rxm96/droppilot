@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import type { ErrorInfo, WatchingState } from "@renderer/shared/types";
 import { errorInfoFromIpc, errorInfoFromUnknown } from "@renderer/shared/utils/errors";
-import { isIpcAuthErrorResponse, isIpcErrorResponse, isIpcOkFalseResponse } from "@renderer/shared/utils/ipc";
+import {
+  isIpcAuthErrorResponse,
+  isIpcErrorResponse,
+  isIpcOkFalseResponse,
+} from "@renderer/shared/utils/ipc";
 import { logInfo, logWarn } from "@renderer/shared/utils/logger";
 import { TWITCH_ERROR_CODES } from "../../../shared/errorCodes";
 

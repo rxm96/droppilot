@@ -356,7 +356,8 @@ export function DebugView({ snapshot }: DebugViewProps) {
                           {formatNumber(shard.desiredSubscriptions)}
                         </span>
                         <span>
-                          {t("debug.trackerReconnectsShort")}: {formatNumber(shard.reconnectAttempts)}
+                          {t("debug.trackerReconnectsShort")}:{" "}
+                          {formatNumber(shard.reconnectAttempts)}
                         </span>
                       </div>
                     </li>

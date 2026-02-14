@@ -202,10 +202,7 @@ export const isFreshCache = ({
   refreshWindowMs: number;
   hasChannels: boolean;
 }): boolean =>
-  fetchedAt !== null &&
-  fetchedGame === game &&
-  now - fetchedAt < refreshWindowMs &&
-  hasChannels;
+  fetchedAt !== null && fetchedGame === game && now - fetchedAt < refreshWindowMs && hasChannels;
 
 export const hasRecentInventory = ({
   inventoryFetchedAt,
@@ -352,19 +349,52 @@ export function useChannels({
         return;
       }
 
-    const prevList = channelsRef.current;
-    const hasVisibleChannels = prevList.length > 0 && fetchedGame === gameName;
-    if (hasVisibleChannels) {
-      setChannelsRefreshing(true);
-    } else {
-      setChannelsLoading(true);
-    }
-    setChannelError(null);
-    try {
-      if (demoMode) {
-        const list = getDemoChannels(gameName);
+      const prevList = channelsRef.current;
+      const hasVisibleChannels = prevList.length > 0 && fetchedGame === gameName;
+      if (hasVisibleChannels) {
+        setChannelsRefreshing(true);
+      } else {
+        setChannelsLoading(true);
+      }
+      setChannelError(null);
+      try {
+        if (demoMode) {
+          const list = getDemoChannels(gameName);
+          if (gameName !== targetGameRef.current || requestId < latestAppliedRequestRef.current) {
+            logDebug("channels: ignore stale demo response", {
+              game: gameName,
+              current: targetGameRef.current,
+              requestId,
+            });
+            return;
+          }
+          latestAppliedRequestRef.current = requestId;
+          const diff = buildChannelDiff(prevList, list, now);
+          setChannelDiff(diff);
+          applyChannelsState(mergeChannelList(prevList, list));
+          setFetchedAt(now);
+          setFetchedGame(gameName);
+          if (diff) {
+            logDebug("channels: diff", {
+              game: gameName,
+              added: diff.addedIds.length,
+              removed: diff.removedIds.length,
+              updated: diff.updatedIds.length,
+            });
+          }
+          const shouldSkipInventory =
+            (autoSelectEnabled && !watching) || hasRecentInventoryNow(now);
+          if (shouldSkipInventory) {
+            logDebug("channels: skip inventory fetch (recent or auto-select)");
+          } else {
+            fetchInventory();
+          }
+          return;
+        }
+        logInfo("channels: fetch start", { game: gameName, force });
+        const res: unknown = await window.electronAPI.twitch.channels({ game: gameName });
         if (gameName !== targetGameRef.current || requestId < latestAppliedRequestRef.current) {
-          logDebug("channels: ignore stale demo response", {
+          logDebug("channels: ignore stale response", {
             game: gameName,
             current: targetGameRef.current,
             requestId,
@@ -372,6 +402,39 @@ export function useChannels({
           return;
         }
         latestAppliedRequestRef.current = requestId;
+        if (isIpcErrorResponse(res)) {
+          if (isIpcAuthErrorResponse(res)) {
+            onAuthError?.(res.message);
+            setChannelDiff(null);
+            applyChannelsState([]);
+            setChannelError(null);
+            logWarn("channels: auth error", res);
+            return;
+          }
+          setChannelError(
+            errorInfoFromIpc(res, {
+              code: RENDERER_ERROR_CODES.CHANNELS_FETCH_FAILED,
+              message: "Unable to load channels",
+            }),
+          );
+          setChannelDiff(null);
+          applyChannelsState([]);
+          logWarn("channels: fetch error", res);
+          return;
+        }
+        if (!isArrayOf(res, isChannelEntry)) {
+          setChannelError({
+            code: RENDERER_ERROR_CODES.CHANNELS_INVALID_RESPONSE,
+            message: "Invalid channels response",
+          });
+          setChannelDiff(null);
+          applyChannelsState([]);
+          logWarn("channels: invalid response", res);
+          return;
+        }
+        const list = res;
+        logInfo("channels: fetch success", { game: gameName, count: list.length });
+        logDebug("channels: sample", list.slice(0, 3));
         const diff = buildChannelDiff(prevList, list, now);
         setChannelDiff(diff);
         applyChannelsState(mergeChannelList(prevList, list));
@@ -389,91 +452,26 @@ export function useChannels({
         if (shouldSkipInventory) {
           logDebug("channels: skip inventory fetch (recent or auto-select)");
         } else {
+          // Nach Channel-Fetch auch Inventar neu laden, damit Drop-Progress aktuell bleibt.
           fetchInventory();
         }
-        return;
-      }
-      logInfo("channels: fetch start", { game: gameName, force });
-      const res: unknown = await window.electronAPI.twitch.channels({ game: gameName });
-      if (gameName !== targetGameRef.current || requestId < latestAppliedRequestRef.current) {
-        logDebug("channels: ignore stale response", {
-          game: gameName,
-          current: targetGameRef.current,
-          requestId,
-        });
-        return;
-      }
-      latestAppliedRequestRef.current = requestId;
-      if (isIpcErrorResponse(res)) {
-        if (isIpcAuthErrorResponse(res)) {
-          onAuthError?.(res.message);
-          setChannelDiff(null);
-          applyChannelsState([]);
-          setChannelError(null);
-          logWarn("channels: auth error", res);
+      } catch (err) {
+        if (gameName !== targetGameRef.current || requestId < latestAppliedRequestRef.current) {
+          logDebug("channels: ignore stale failure", {
+            game: gameName,
+            current: targetGameRef.current,
+            requestId,
+          });
           return;
         }
         setChannelError(
-          errorInfoFromIpc(res, {
+          errorInfoFromUnknown(err, {
             code: RENDERER_ERROR_CODES.CHANNELS_FETCH_FAILED,
             message: "Unable to load channels",
           }),
         );
         setChannelDiff(null);
         applyChannelsState([]);
-        logWarn("channels: fetch error", res);
-        return;
-      }
-      if (!isArrayOf(res, isChannelEntry)) {
-        setChannelError({
-          code: RENDERER_ERROR_CODES.CHANNELS_INVALID_RESPONSE,
-          message: "Invalid channels response",
-        });
-        setChannelDiff(null);
-        applyChannelsState([]);
-        logWarn("channels: invalid response", res);
-        return;
-      }
-      const list = res;
-      logInfo("channels: fetch success", { game: gameName, count: list.length });
-      logDebug("channels: sample", list.slice(0, 3));
-      const diff = buildChannelDiff(prevList, list, now);
-      setChannelDiff(diff);
-      applyChannelsState(mergeChannelList(prevList, list));
-      setFetchedAt(now);
-      setFetchedGame(gameName);
-      if (diff) {
-        logDebug("channels: diff", {
-          game: gameName,
-          added: diff.addedIds.length,
-          removed: diff.removedIds.length,
-          updated: diff.updatedIds.length,
-        });
-      }
-      const shouldSkipInventory = (autoSelectEnabled && !watching) || hasRecentInventoryNow(now);
-      if (shouldSkipInventory) {
-        logDebug("channels: skip inventory fetch (recent or auto-select)");
-      } else {
-        // Nach Channel-Fetch auch Inventar neu laden, damit Drop-Progress aktuell bleibt.
-        fetchInventory();
-      }
-    } catch (err) {
-      if (gameName !== targetGameRef.current || requestId < latestAppliedRequestRef.current) {
-        logDebug("channels: ignore stale failure", {
-          game: gameName,
-          current: targetGameRef.current,
-          requestId,
-        });
-        return;
-      }
-      setChannelError(
-        errorInfoFromUnknown(err, {
-          code: RENDERER_ERROR_CODES.CHANNELS_FETCH_FAILED,
-          message: "Unable to load channels",
-        }),
-      );
-      setChannelDiff(null);
-      applyChannelsState([]);
       } finally {
         inFlightGamesRef.current.delete(gameName);
         if (gameName === targetGameRef.current) {

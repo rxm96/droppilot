@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { errorInfoFromIpc, errorInfoFromUnknown, resolveErrorMessage } from "@renderer/shared/utils/errors";
+import {
+  errorInfoFromIpc,
+  errorInfoFromUnknown,
+  resolveErrorMessage,
+} from "@renderer/shared/utils/errors";
 
 describe("errors helpers", () => {
   it("normalizes ipc errors with fallback", () => {

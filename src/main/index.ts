@@ -1,12 +1,4 @@
-import {
-  app,
-  BrowserWindow,
-  shell,
-  Tray,
-  Menu,
-  nativeImage,
-  Notification,
-} from "electron";
+import { app, BrowserWindow, shell, Tray, Menu, nativeImage, Notification } from "electron";
 import { autoUpdater } from "electron-updater";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
