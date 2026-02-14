@@ -25,6 +25,17 @@ export interface InventoryItem {
   isClaimable?: boolean;
 }
 
+type CampaignInfo = {
+  id: string;
+  name: string;
+  game: string;
+  startsAt?: string;
+  endsAt?: string;
+  status?: string;
+  isActive: boolean;
+  hasUnclaimedDrops?: boolean;
+};
+
 export type ChannelInfo = {
   id: string; // broadcaster id
   displayName: string;
@@ -61,7 +72,7 @@ export class TwitchService {
   }
 
   async getInventory(): Promise<InventoryItem[]> {
-    const { edges, summary } = await this.fetchCampaignEdges();
+    const { edges, summary } = await this.fetchCampaignEdges({ includeAvailable: false });
     if (edges.length === 0) {
       this.debug("Inventory empty (no active campaigns)", { summary });
       return [];
@@ -99,7 +110,7 @@ export class TwitchService {
           (drop.self as any)?.state ??
           (drop as any).status;
         const dropInstanceId = drop.self?.dropInstanceID ?? (drop.self as any)?.dropInstanceId;
-        const isClaimed = drop.self?.isClaimed === true;
+        const isClaimed = isTruthyFlag(drop.self?.isClaimed);
         // Some schemas expose multiple required fields; pick the smallest positive to avoid overcount
         const requiredCandidates = [
           // @ts-ignore
@@ -180,6 +191,64 @@ export class TwitchService {
 
     this.debug("Built inventory items", items.length);
     return items;
+  }
+
+  async getCampaigns(): Promise<CampaignInfo[]> {
+    const { edges } = await this.fetchCampaignEdges({ includeAvailable: true });
+    if (edges.length === 0) {
+      return [];
+    }
+    const nodes = await this.enrichCampaigns(edges);
+    const now = Date.now();
+    const campaigns: CampaignInfo[] = [];
+    for (const node of nodes) {
+      if (!node?.id || !node?.name) continue;
+      const game = node.game?.displayName?.trim() ?? "";
+      if (!game) continue;
+      const startsAt = typeof node.startAt === "string" ? node.startAt : undefined;
+      const endsAt = typeof node.endAt === "string" ? node.endAt : undefined;
+      const isActive = isCampaignActive({ startsAt, endsAt }, now);
+      let hasUnclaimedDrops: boolean | undefined = undefined;
+      if (Array.isArray(node.timeBasedDrops)) {
+        if (node.timeBasedDrops.length === 0) {
+          hasUnclaimedDrops = false;
+        } else {
+          let sawEvidence = false;
+          let sawUnclaimed = false;
+          for (const drop of node.timeBasedDrops) {
+            const self = (drop as any)?.self;
+            const rawStatus =
+              self?.status ??
+              (drop as any)?.status ??
+              (drop as any)?.state ??
+              undefined;
+            const hasEvidence = !!self || typeof rawStatus === "string";
+            if (!hasEvidence) continue;
+            sawEvidence = true;
+            if (self && isTruthyFlag(self?.isClaimed)) continue;
+            const status = mapStatus(rawStatus, drop);
+            if (status !== "claimed") {
+              sawUnclaimed = true;
+              break;
+            }
+          }
+          hasUnclaimedDrops = sawEvidence ? sawUnclaimed : undefined;
+        }
+      } else {
+        hasUnclaimedDrops = false;
+      }
+      campaigns.push({
+        id: node.id,
+        name: node.name,
+        game,
+        startsAt,
+        endsAt,
+        status: node.status,
+        isActive,
+        hasUnclaimedDrops,
+      });
+    }
+    return campaigns;
   }
 
   async getPriorityPlan(priorityGames: string[]): Promise<PriorityPlan> {
@@ -492,10 +561,13 @@ export class TwitchService {
     );
   }
 
-  private async fetchCampaignEdges(): Promise<{ edges: CampaignEdge[]; summary: string }> {
+  private async fetchCampaignEdges(
+    opts?: { includeAvailable?: boolean },
+  ): Promise<{ edges: CampaignEdge[]; summary: string }> {
     const campaignsById = new Map<string, CampaignEdge>();
     let inventorySummary = "n/a";
     let campaignsSummary = "n/a";
+    const includeAvailable = opts?.includeAvailable !== false;
 
     const normalizeEdge = (edge: CampaignEdge | any): CampaignEdge => {
       if (!edge) return {};
@@ -510,16 +582,16 @@ export class TwitchService {
       { fetchRewardCampaigns: true },
     );
     const inv = await this.gqlRequest<InventoryResponse>(inventoryPayload, "Inventory");
-    const inProgressRaw =
-      inv?.data?.currentUser?.inventory?.dropCampaignsInProgress ??
-      inv?.data?.currentUser?.inventory?.dropCampaigns ??
-      [];
-    const inProgress = inProgressRaw.map(normalizeEdge);
+    const inProgressRaw = inv?.data?.currentUser?.inventory?.dropCampaignsInProgress ?? [];
+    const allInventoryRaw = inv?.data?.currentUser?.inventory?.dropCampaigns ?? [];
+    const combinedInventoryRaw =
+      inProgressRaw.length > 0 ? [...inProgressRaw, ...allInventoryRaw] : allInventoryRaw;
+    const inProgress = combinedInventoryRaw.map(normalizeEdge);
     for (const edge of inProgress) {
       const id = edge.node?.id;
       if (id) campaignsById.set(id, edge);
     }
-    inventorySummary = `currentUser: ${!!inv?.data?.currentUser}, inProgress: ${inProgressRaw.length}, normalized: ${campaignsById.size}`;
+    inventorySummary = `currentUser: ${!!inv?.data?.currentUser}, inProgress: ${inProgressRaw.length}, all: ${allInventoryRaw.length}, combined: ${combinedInventoryRaw.length}, normalized: ${campaignsById.size}`;
     this.debug("Inventory fetch", inventorySummary);
     this.debug(
       "Inventory edges sample",
@@ -535,36 +607,67 @@ export class TwitchService {
       this.debug("Inventory raw edge[0]", JSON.stringify(inProgress[0], null, 2));
     }
 
-    // 2) ViewerDropsDashboard (available campaigns) — merge/overwrite by id
-    const campaignsPayload = createPersistedQuery(
-      "ViewerDropsDashboard",
-      "5a4da2ab3d5b47c9f9ce864e727b2cb346af1e3ea8b897fe8f704a97ff017619",
-      { fetchRewardCampaigns: true },
-    );
-    const campaigns = await this.gqlRequest<CampaignsResponse>(
-      campaignsPayload,
-      "ViewerDropsDashboard",
-    );
-    const availableRaw = campaigns?.data?.currentUser?.dropCampaigns?.edges ?? [];
-    const available = availableRaw.map(normalizeEdge);
-    for (const edge of available) {
-      const id = edge.node?.id;
-      if (id) campaignsById.set(id, edge);
-    }
-    campaignsSummary = `currentUser: ${!!campaigns?.data?.currentUser}, edges: ${availableRaw.length}`;
-    this.debug("Campaigns fetch", campaignsSummary);
-    this.debug(
-      "Campaigns edges sample",
-      available.slice(0, 3).map((e) => ({
-        id: e?.node?.id,
-        name: e?.node?.name,
-        game: e?.node?.game?.displayName,
-        dropCount: e?.node?.timeBasedDrops?.length,
-        rawKeys: e ? Object.keys(e) : [],
-      })),
-    );
-    if (available.length > 0 && available[0] && !available[0].node) {
-      this.debug("Campaign raw edge[0]", JSON.stringify(available[0], null, 2));
+    if (includeAvailable) {
+      // 2) ViewerDropsDashboard (available campaigns) — merge/overwrite by id
+      const campaignsPayloadBase = {
+        operationName: "ViewerDropsDashboard",
+        sha: "5a4da2ab3d5b47c9f9ce864e727b2cb346af1e3ea8b897fe8f704a97ff017619",
+      };
+      const campaignsPages = 4;
+      let nextCursor: string | null | undefined;
+      let fetchedEdges = 0;
+      for (let page = 0; page < campaignsPages; page += 1) {
+        const variables: Record<string, unknown> = { fetchRewardCampaigns: false, first: 100 };
+        if (nextCursor) variables.after = nextCursor;
+        const campaignsPayload = createPersistedQuery(
+          campaignsPayloadBase.operationName,
+          campaignsPayloadBase.sha,
+          variables,
+        );
+        const campaigns = await this.gqlRequest<CampaignsResponse>(
+          campaignsPayload,
+          campaignsPayloadBase.operationName,
+        );
+        const dropCampaigns = campaigns?.data?.currentUser?.dropCampaigns;
+        const availableRaw = Array.isArray(dropCampaigns)
+          ? dropCampaigns
+          : dropCampaigns?.edges ?? [];
+        const available = availableRaw.map(normalizeEdge);
+        fetchedEdges += availableRaw.length;
+        for (const edge of available) {
+          const id = edge.node?.id;
+          if (id) campaignsById.set(id, edge);
+        }
+        const pageInfo = dropCampaigns?.pageInfo;
+        nextCursor = pageInfo?.hasNextPage ? pageInfo.endCursor : null;
+        if (!nextCursor) {
+          campaignsSummary = `currentUser: ${!!campaigns?.data?.currentUser}, edges: ${fetchedEdges}, pages: ${page +
+            1}`;
+          if (available.length > 0) {
+            this.debug(
+              "Campaigns edges sample",
+              available.slice(0, 3).map((e) => ({
+                id: e?.node?.id,
+                name: e?.node?.name,
+                game: e?.node?.game?.displayName,
+                dropCount: e?.node?.timeBasedDrops?.length,
+                rawKeys: e ? Object.keys(e) : [],
+              })),
+            );
+            if (available[0] && !available[0].node) {
+              this.debug("Campaign raw edge[0]", JSON.stringify(available[0], null, 2));
+            }
+          }
+          break;
+        }
+      }
+      if (campaignsSummary === "n/a") {
+        campaignsSummary = `currentUser: unknown, edges: ${fetchedEdges}, pages: ${campaignsPages}`;
+      }
+      this.debug("Campaigns fetch", campaignsSummary);
+    } else {
+      campaignsSummary = "skipped";
+      this.debug("Campaigns fetch", campaignsSummary);
     }
 
     const mergedEdges = Array.from(campaignsById.values());
@@ -705,6 +808,14 @@ export class TwitchService {
   }
 }
 
+function isTruthyFlag(value: unknown): boolean {
+  if (value === true) return true;
+  if (typeof value === "number") return value === 1;
+  if (typeof value !== "string") return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === "true" || normalized === "1" || normalized === "yes";
+}
+
 function mapStatus(status: string | undefined, drop?: any): InventoryItem["status"] {
   const s = (status ?? "").toLowerCase();
   if (
@@ -719,7 +830,7 @@ function mapStatus(status: string | undefined, drop?: any): InventoryItem["statu
   if (s === "in_progress" || s === "active" || s === "progress") {
     return "progress";
   }
-  if ((drop as any)?.self?.isClaimed) {
+  if (isTruthyFlag((drop as any)?.self?.isClaimed)) {
     return "claimed";
   }
   return "locked";
@@ -789,10 +900,14 @@ function extractCampaignImageUrl(campaign: any): string | undefined {
 }
 
 type CampaignEdge = {
+  cursor?: string;
   node?: {
     id: string;
     name: string;
     game?: { displayName?: string };
+    startAt?: string;
+    endAt?: string;
+    status?: string;
     timeBasedDrops?: Array<{
       id: string;
       name: string;
@@ -807,7 +922,10 @@ type CampaignNode = CampaignEdge["node"];
 type CampaignsResponse = {
   data?: {
     currentUser?: {
-      dropCampaigns?: { edges?: CampaignEdge[] };
+      dropCampaigns?: {
+        edges?: CampaignEdge[];
+        pageInfo?: { hasNextPage?: boolean; endCursor?: string | null };
+      };
     };
   };
 };
@@ -821,6 +939,29 @@ type InventoryResponse = {
       };
     };
   };
+};
+
+const parseIsoMs = (value?: string): number | null => {
+  if (!value) return null;
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? ms : null;
+};
+
+const isCampaignActive = (
+  {
+    startsAt,
+    endsAt,
+  }: {
+    startsAt?: string;
+    endsAt?: string;
+  },
+  now = Date.now(),
+): boolean => {
+  const startMs = parseIsoMs(startsAt);
+  if (startMs !== null && now < startMs) return false;
+  const endMs = parseIsoMs(endsAt);
+  if (endMs !== null && now > endMs) return false;
+  return true;
 };
 
 function createPersistedQuery(
