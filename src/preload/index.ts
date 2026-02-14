@@ -1,4 +1,4 @@
-import { Language } from "@renderer/i18n";
+import type { Language } from "../renderer/shared/i18n";
 import { contextBridge, ipcRenderer, shell } from "electron";
 
 type SettingsPayload = {

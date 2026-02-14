@@ -1,5 +1,5 @@
 import type { SessionData } from "../core/storage";
-import { TWITCH_CLIENT_ID, TWITCH_WEB_USER_AGENT } from "../config";
+import { TWITCH_WEB_USER_AGENT } from "../config";
 import { TwitchClient, TwitchAuthError, type TwitchUser } from "./client";
 import { buildPriorityPlan, type PriorityPlan } from "./channels";
 import { TwitchServiceError } from "./errors";
@@ -129,7 +129,7 @@ export class TwitchService {
           status = "progress";
         }
         const earnedMinutes = requiredMinutes > 0 ? Math.min(requiredMinutes, watched) : watched;
-        const imageUrl = extractDropImageUrl(drop, campaign);
+        const imageUrl = extractDropImageUrl(drop);
         if (dropsCount <= 3) {
           const benefitEdges = (drop as any)?.benefitEdges;
           const benefitEdgesList = Array.isArray(benefitEdges)
@@ -416,7 +416,6 @@ export class TwitchService {
     const spadeUrl = await this.resolveSpadeUrl(login);
     const validate = await this.client.getValidateInfo();
     const cookieHeader = await this.client.getCookieHeader().catch(() => "");
-    const accessToken = await this.client.getAccessToken().catch(() => null);
     const broadcastId = streamInfo.broadcastId ?? payload.streamId ?? streamInfo.streamId;
     const channelId = streamInfo.channelId ?? payload.channelId;
 
@@ -726,7 +725,7 @@ function mapStatus(status: string | undefined, drop?: any): InventoryItem["statu
   return "locked";
 }
 
-function extractDropImageUrl(drop: any, campaign: any): string | undefined {
+function extractDropImageUrl(drop: any): string | undefined {
   const benefitEdgesRaw =
     (Array.isArray(drop?.benefitEdges) ? drop.benefitEdges : drop?.benefitEdges?.edges) ??
     drop?.benefitEdges?.nodes ??
