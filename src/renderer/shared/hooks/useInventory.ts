@@ -392,7 +392,8 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
             let scheduledRefresh = false;
             const claimable = items.filter((item) => {
               if (item.status === "claimed") return false;
-              if (!item.dropInstanceId && !item.campaignId) return false;
+              if (typeof item.isClaimable === "boolean") return item.isClaimable;
+              if (!item.dropInstanceId) return false;
               const req = Math.max(0, Number(item.requiredMinutes) || 0);
               const earned = Math.max(0, Number(item.earnedMinutes) || 0);
               const progressDone = req === 0 || earned >= req;
