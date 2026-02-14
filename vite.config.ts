@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import electron from "vite-plugin-electron/simple";
 import renderer from "vite-plugin-electron-renderer";
 import { execSync } from "node:child_process";
+import { resolve } from "node:path";
 
 const gitSha = (() => {
   try {
@@ -14,6 +15,11 @@ const gitSha = (() => {
 
 export default defineConfig({
   root: "src/renderer",
+  resolve: {
+    alias: {
+      "@renderer": resolve(__dirname, "src/renderer"),
+    },
+  },
   server: {
     port: 5173,
     strictPort: true,
