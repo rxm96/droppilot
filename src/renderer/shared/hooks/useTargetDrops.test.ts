@@ -103,7 +103,7 @@ describe("computeTargetDrops", () => {
       now,
     });
     expect(result.liveDeltaApplied).toBe(10);
-    expect(result.targetProgress).toBe(17);
+    expect(result.targetProgress).toBe(0);
     expect(result.canWatchTarget).toBe(true);
   });
 

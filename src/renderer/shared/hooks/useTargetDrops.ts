@@ -163,10 +163,7 @@ export function computeTargetDrops({
     ? Math.min(liveDeltaMinutes, Math.max(0, activeDropRequired - activeDropEarned))
     : 0;
   const targetProgress = totalRequiredMinutes
-    ? Math.min(
-        100,
-        Math.round(((totalEarnedMinutes + liveDeltaApplied) / totalRequiredMinutes) * 100),
-      )
+    ? Math.min(100, Math.round((totalEarnedMinutes / totalRequiredMinutes) * 100))
     : 0;
   const activeDropVirtualEarned = activeDrop
     ? Math.min(activeDropRequired, activeDropEarned + liveDeltaApplied)
