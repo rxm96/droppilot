@@ -68,6 +68,7 @@ const translations: Translations = {
 
     "inventory.title": "Inventory",
     "inventory.filterHint": "Filters: Not linked, Upcoming, Expired, Excluded, Finished.",
+    "inventory.refresh": "Refresh",
     "inventory.refreshing": "Refreshing...",
     "inventory.filter.all": "All",
     "inventory.filter.active": "Active",
@@ -432,6 +433,7 @@ const translations: Translations = {
 
     "inventory.title": "Inventory",
     "inventory.filterHint": "Filter: Not linked, Upcoming, Expired, Excluded, Finished.",
+    "inventory.refresh": "Aktualisieren",
     "inventory.refreshing": "Aktualisiere...",
     "inventory.filter.all": "Alle",
     "inventory.filter.active": "Aktiv",

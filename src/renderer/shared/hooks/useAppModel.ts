@@ -21,14 +21,11 @@ import { useTheme } from "@renderer/shared/theme";
 import type { FilterKey, View } from "@renderer/shared/types";
 import { isVerboseLoggingEnabled } from "@renderer/shared/utils/logger";
 
-const PAGE_SIZE = 8;
-
 export function useAppModel() {
   const { auth, startLogin, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const [filter, setFilter] = useState<FilterKey>("all");
   const [view, setView] = useState<View>("inventory");
-  const [page, setPage] = useState<number>(1);
   const {
     priorityGames,
     obeyPriority,
@@ -226,32 +223,10 @@ export function useAppModel() {
   authErrorHandlerRef.current = actions.handleAuthError;
 
   useEffect(() => {
-    setPage(1);
-  }, [filter, gameFilter]);
-
-  useEffect(() => {
     if (!claimStatus) return;
     const id = window.setTimeout(() => setClaimStatus(null), 8000);
     return () => window.clearTimeout(id);
   }, [claimStatus, setClaimStatus]);
-
-  const filteredItems = useMemo(() => {
-    return withCategories
-      .filter(({ item, category }) => {
-        const matchesStatus =
-          filter === "all" ? category !== "not-linked" : category === filter;
-        const matchesGame = gameFilter === "all" ? true : item.game === gameFilter;
-        return matchesStatus && matchesGame;
-      })
-      .map(({ item }) => item);
-  }, [withCategories, filter, gameFilter]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const paginatedItems = useMemo(
-    () => filteredItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
-    [filteredItems, currentPage],
-  );
 
   const previewPriorityGames =
     dragIndex !== null && dragOverIndex !== null && priorityGames.length > 0
@@ -393,13 +368,8 @@ export function useAppModel() {
     gameFilter,
     onGameFilterChange: setGameFilter,
     uniqueGames,
-    paginatedItems,
-    filteredCount: filteredItems.length,
-    currentPage,
-    totalPages,
-    setPage,
-    changes: inventoryChanges,
     refreshing: inventoryRefreshing,
+    onRefresh: actions.handleFetchInventory,
     campaigns,
     campaignsLoading,
     isLinked: isLinkedOrDemo,

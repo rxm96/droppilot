@@ -1,6 +1,6 @@
 import type { CampaignSummary, FilterKey, InventoryItem, InventoryState } from "@renderer/shared/types";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getCategory, mapStatusLabel, formatRange, categoryLabel } from "@renderer/shared/utils";
+import { formatRange, categoryLabel, mapStatusLabel } from "@renderer/shared/utils";
 import { useI18n } from "@renderer/shared/i18n";
 import { resolveErrorMessage } from "@renderer/shared/utils/errors";
 
@@ -10,10 +10,17 @@ const parseIsoMs = (value?: string): number | null => {
   return Number.isFinite(ms) ? ms : null;
 };
 
+const CAMPAIGN_PAGE_SIZE = 8;
+const CAMPAIGN_SKELETON = Array.from({ length: CAMPAIGN_PAGE_SIZE }, (_, idx) => ({
+  key: `campaign-sk-${idx}`,
+}));
+
+type CampaignPhase = "expired" | "in-progress" | "upcoming" | "finished";
+
 const getCampaignPhase = (
   campaign: CampaignSummary,
   now = Date.now(),
-): ReturnType<typeof getCategory> => {
+): CampaignPhase => {
   const status = (campaign.status ?? "").toUpperCase();
   const endMs = parseIsoMs(campaign.endsAt);
   if (status === "EXPIRED" || (endMs !== null && endMs < now)) return "expired";
@@ -30,13 +37,8 @@ type InventoryProps = {
   gameFilter: string;
   onGameFilterChange: (val: string) => void;
   uniqueGames: string[];
-  paginatedItems: InventoryItem[];
-  filteredCount: number;
-  currentPage: number;
-  totalPages: number;
-  setPage: (page: number) => void;
-  changes: { added: Set<string>; updated: Set<string> };
   refreshing: boolean;
+  onRefresh: () => void;
   campaigns: CampaignSummary[];
   campaignsLoading: boolean;
   isLinked: boolean;
@@ -53,13 +55,8 @@ export function InventoryView({
   gameFilter,
   onGameFilterChange,
   uniqueGames,
-  paginatedItems,
-  filteredCount,
-  currentPage,
-  totalPages,
-  setPage,
-  changes,
   refreshing,
+  onRefresh,
   campaigns,
   campaignsLoading,
   isLinked,
@@ -69,7 +66,13 @@ export function InventoryView({
   onAddPriorityGame,
 }: InventoryProps) {
   const { t } = useI18n();
-  const firstRenderRef = useRef(true);
+  const isInventoryLoading = inventory.status === "loading";
+  const showCampaignSkeleton = isInventoryLoading;
+  const isInventoryError = inventory.status === "error";
+  const [campaignPage, setCampaignPage] = useState(1);
+  const [campaignsEntering, setCampaignsEntering] = useState(false);
+  const prevShowCampaignSkeletonRef = useRef(showCampaignSkeleton);
+  const refreshDisabled = refreshing || isInventoryLoading;
   const inventoryErrorText =
     inventory.status === "error"
       ? resolveErrorMessage(t, { code: inventory.code, message: inventory.message })
@@ -240,17 +243,40 @@ export function InventoryView({
     : t("session.loginNeeded");
 
   useEffect(() => {
-    if (firstRenderRef.current) {
-      firstRenderRef.current = false;
+    setCampaignPage(1);
+  }, [filter, gameFilter]);
+
+  useEffect(() => {
+    const wasSkeleton = prevShowCampaignSkeletonRef.current;
+    prevShowCampaignSkeletonRef.current = showCampaignSkeleton;
+    if (wasSkeleton && !showCampaignSkeleton) {
+      setCampaignsEntering(true);
+      const id = window.setTimeout(() => setCampaignsEntering(false), 280);
+      return () => window.clearTimeout(id);
     }
-  }, []);
+    return undefined;
+  }, [showCampaignSkeleton]);
+
+  const totalCampaignPages = Math.max(
+    1,
+    Math.ceil(visibleCampaigns.length / CAMPAIGN_PAGE_SIZE),
+  );
+  const currentCampaignPage = Math.min(campaignPage, totalCampaignPages);
+  const paginatedCampaigns = useMemo(
+    () =>
+      visibleCampaigns.slice(
+        (currentCampaignPage - 1) * CAMPAIGN_PAGE_SIZE,
+        currentCampaignPage * CAMPAIGN_PAGE_SIZE,
+      ),
+    [visibleCampaigns, currentCampaignPage],
+  );
+
   return (
     <>
       <div className="panel-head">
         <div>
           <h2>{t("inventory.title")}</h2>
           <p className="meta">{t("inventory.filterHint")}</p>
-          {refreshing && <span className="pill ghost">{t("inventory.refreshing")}</span>}
         </div>
         <div className="filters filters-row">
           <div className="filters-buttons">
@@ -272,43 +298,85 @@ export function InventoryView({
               </button>
             ))}
           </div>
-          <select
-            className="select"
-            value={gameFilter}
-            onChange={(e) => {
-              onGameFilterChange(e.target.value);
-              setPage(1);
-            }}
-          >
-            <option value="all">{t("inventory.allGames")}</option>
-            {uniqueGames.map((g) => (
-              <option key={g} value={g}>
-                {g}
-              </option>
-            ))}
-          </select>
+          <div className="filters-actions">
+            <button
+              type="button"
+              className="ghost subtle-btn"
+              onClick={onRefresh}
+              disabled={refreshDisabled}
+            >
+              {refreshing ? (
+                <span className="inline-loader">
+                  <span className="spinner" />
+                  {t("inventory.refreshing")}
+                </span>
+              ) : (
+                t("inventory.refresh")
+              )}
+            </button>
+            <select
+              className="select"
+              value={gameFilter}
+              onChange={(e) => {
+                onGameFilterChange(e.target.value);
+              }}
+            >
+              <option value="all">{t("inventory.allGames")}</option>
+              {uniqueGames.map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
       <section className="inventory-section">
         <div className="inventory-section-head">
           <h3>{t("inventory.campaigns.title")}</h3>
-          {!campaignsLoading && (
+          {!showCampaignSkeleton && (
             <span className="pill ghost small">
               {t("inventory.campaigns.count", { count: visibleCampaigns.length })}
             </span>
           )}
         </div>
-        {!campaignsLoading && hasUnlinkedCampaigns && (
+        {!showCampaignSkeleton && hasUnlinkedCampaigns && (
           <p className="meta">{t("inventory.campaigns.linkHint")}</p>
         )}
-        {campaignsLoading && <p className="meta">{t("inventory.campaigns.loading")}</p>}
-        {!campaignsLoading && visibleCampaigns.length === 0 && (
+        {showCampaignSkeleton && (
+          <>
+            <span className="sr-only" role="status">
+              {t("inventory.loading")}
+            </span>
+            <ul className="campaign-list campaign-list-skeleton" aria-hidden="true">
+              {CAMPAIGN_SKELETON.map((sk) => (
+                <li key={sk.key} className="campaign-card skeleton-card">
+                  <div className="campaign-card-top">
+                    <div className="campaign-card-main">
+                      <div className="skeleton-line skeleton-thumb" />
+                      <div className="campaign-card-body skeleton-body">
+                        <div className="skeleton-line tiny" />
+                        <div className="skeleton-line medium" />
+                        <div className="skeleton-line short" />
+                      </div>
+                    </div>
+                    <div className="campaign-card-meta">
+                      <div className="skeleton-chip small" />
+                      <div className="skeleton-chip wide" />
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+        {!showCampaignSkeleton && !campaignsLoading && !isInventoryError && visibleCampaigns.length === 0 && (
           <p className="meta">{campaignsEmptyText}</p>
         )}
-        {!campaignsLoading && visibleCampaigns.length > 0 && (
-          <ul className="campaign-list">
-            {visibleCampaigns.map(({ campaign, phase }) => {
+        {!showCampaignSkeleton && visibleCampaigns.length > 0 && (
+          <ul className={`campaign-list${campaignsEntering ? " is-entering" : ""}`}>
+            {paginatedCampaigns.map(({ campaign, phase }) => {
               const name = campaign.name ?? campaign.game ?? t("inventory.campaigns.unknown");
               const game = campaign.game ?? "";
               const imageUrl = typeof campaign.imageUrl === "string" ? campaign.imageUrl.trim() : "";
@@ -321,6 +389,7 @@ export function InventoryView({
                 ? t("inventory.campaigns.inPriority")
                 : t("inventory.campaigns.addPriority");
               const derivedHasUnclaimedDrops = resolveHasUnclaimedDrops(campaign);
+              const allClaimed = derivedHasUnclaimedDrops === false;
               const needsLink = shouldShowLinkRequired(campaign);
               const drops = campaignDrops
                 .map((drop) => {
@@ -345,12 +414,6 @@ export function InventoryView({
                   };
                 })
                 .sort((a, b) => a.title.localeCompare(b.title));
-              const dropsLabel =
-                derivedHasUnclaimedDrops === false
-                  ? t("inventory.campaigns.allClaimed")
-                  : derivedHasUnclaimedDrops === true
-                    ? t("inventory.campaigns.dropsOpen")
-                    : null;
               const isExpanded = expandedCampaigns.has(campaignKey);
               const expandLabel = isExpanded
                 ? t("inventory.campaigns.hideDrops")
@@ -369,12 +432,16 @@ export function InventoryView({
                         </div>
                         <div className="meta">
                           {formatRange(campaign.startsAt, campaign.endsAt, t)}
-                          {dropsLabel ? ` - ${dropsLabel}` : ""}
                         </div>
                       </div>
                     </div>
                     <div className="campaign-card-meta">
                       <span className="pill ghost small">{phaseLabel}</span>
+                      {allClaimed ? (
+                        <span className="pill ghost small success-chip">
+                          {t("inventory.campaigns.allClaimed")}
+                        </span>
+                      ) : null}
                       {needsLink ? (
                         <span className="pill ghost small danger-chip">
                           {t("inventory.campaigns.linkRequired")}
@@ -467,107 +534,35 @@ export function InventoryView({
             })}
           </ul>
         )}
+        {!showCampaignSkeleton && visibleCampaigns.length > paginatedCampaigns.length && (
+          <div className="pagination">
+            <button
+              type="button"
+              className="ghost"
+              disabled={currentCampaignPage === 1}
+              onClick={() => setCampaignPage(Math.max(1, currentCampaignPage - 1))}
+            >
+              {t("inventory.prev")}
+            </button>
+            <span className="meta">
+              {t("inventory.page", { current: currentCampaignPage, total: totalCampaignPages })}
+            </span>
+            <button
+              type="button"
+              className="ghost"
+              disabled={currentCampaignPage === totalCampaignPages}
+              onClick={() =>
+                setCampaignPage(Math.min(totalCampaignPages, currentCampaignPage + 1))
+              }
+            >
+              {t("inventory.next")}
+            </button>
+          </div>
+        )}
       </section>
 
-      {inventory.status === "loading" && <p className="meta">{t("inventory.loading")}</p>}
       {inventory.status === "error" && inventoryErrorText && (
         <p className="error">{`${t("inventory.error")}: ${inventoryErrorText}`}</p>
-      )}
-      {inventory.status === "idle" && <p className="meta">{t("inventory.idle")}</p>}
-
-      {inventory.status === "ready" && filteredCount === 0 && (
-        <p className="meta">{t("inventory.empty")}</p>
-      )}
-
-      {inventory.status === "ready" && filteredCount > 0 && (
-        <ul className="inventory-list">
-          {paginatedItems.map((item, idx) => {
-            const category = getCategory(
-              item,
-              isLinked,
-              allowUnlinkedBadgeEmotes,
-              allowUnlinkedGames,
-            );
-            const added = changes.added.has(item.id);
-            const updated = changes.updated.has(item.id);
-            const animate = !firstRenderRef.current && (added || updated);
-            const req = Math.max(0, Number(item.requiredMinutes) || 0);
-            const earned = Math.min(
-              req || Number.POSITIVE_INFINITY,
-              Math.max(0, Number(item.earnedMinutes) || 0),
-            );
-            const pct = req ? Math.min(100, Math.round((earned / req) * 100)) : 0;
-            const imageUrl = typeof item.imageUrl === "string" ? item.imageUrl.trim() : "";
-            return (
-              <li
-                key={item.id}
-                className={`inv-card ${category} ${added ? "added" : ""} ${updated ? "changed" : ""} ${
-                  animate ? "animate-item" : ""
-                }`}
-                style={animate ? { animationDelay: `${idx * 35}ms` } : undefined}
-              >
-                <div className="inv-card-main">
-                  <div className="inv-card-header">
-                    <div className="inv-card-heading">
-                      {imageUrl ? (
-                        <img className="inv-card-thumb" src={imageUrl} alt="" loading="lazy" />
-                      ) : null}
-                      <div className="inv-card-title-wrap">
-                        <div className="meta">{item.game}</div>
-                        <div className="inv-card-title">{item.title}</div>
-                      </div>
-                    </div>
-                    <span className="pill ghost small">
-                      {categoryLabel(category, (key) => t(key))}
-                    </span>
-                  </div>
-                  <div className="meta">{formatRange(item.startsAt, item.endsAt, t)}</div>
-                </div>
-                <div className="inv-card-progress">
-                  <div className="inv-progress-meta">
-                    <span className="meta">
-                      {earned}/{req} {t("inventory.minutes")}
-                    </span>
-                    <span className="pill ghost small">
-                      {mapStatusLabel(item.status, (key) => t(key))}
-                    </span>
-                  </div>
-                  <div className="progress-bar small">
-                    <span
-                      style={{
-                        width: `${pct}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-
-      {inventory.status === "ready" && filteredCount > paginatedItems.length && (
-        <div className="pagination">
-          <button
-            type="button"
-            className="ghost"
-            disabled={currentPage === 1}
-            onClick={() => setPage(Math.max(1, currentPage - 1))}
-          >
-            {t("inventory.prev")}
-          </button>
-          <span className="meta">
-            {t("inventory.page", { current: currentPage, total: totalPages })}
-          </span>
-          <button
-            type="button"
-            className="ghost"
-            disabled={currentPage === totalPages}
-            onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
-          >
-            {t("inventory.next")}
-          </button>
-        </div>
       )}
     </>
   );
