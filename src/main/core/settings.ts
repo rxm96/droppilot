@@ -30,6 +30,8 @@ export type SettingsData = {
   allowUnlinkedGames: boolean;
 };
 
+const MIN_REFRESH_MS = 3_600_000;
+
 const settingsFile = join(app.getPath("userData"), "settings.json");
 
 const defaultSettings: SettingsData = {
@@ -59,10 +61,22 @@ const defaultSettings: SettingsData = {
   allowUnlinkedGames: false,
 };
 
+const normalizeRefreshIntervals = (
+  minValue: unknown,
+  maxValue: unknown,
+): { min: number; max: number } => {
+  const rawMin = Number.isFinite(minValue) ? (minValue as number) : defaultSettings.refreshMinMs;
+  const rawMax = Number.isFinite(maxValue) ? (maxValue as number) : defaultSettings.refreshMaxMs;
+  const clampedMin = Math.max(MIN_REFRESH_MS, Math.min(rawMin, rawMax));
+  const clampedMax = Math.max(clampedMin, rawMax);
+  return { min: clampedMin, max: clampedMax };
+};
+
 export async function loadSettings(): Promise<SettingsData> {
   try {
     const raw = await fs.readFile(settingsFile, "utf-8");
     const parsed = JSON.parse(raw);
+    const refresh = normalizeRefreshIntervals(parsed?.refreshMinMs, parsed?.refreshMaxMs);
     return {
       ...defaultSettings,
       ...parsed,
@@ -87,14 +101,8 @@ export async function loadSettings(): Promise<SettingsData> {
           : defaultSettings.warmupEnabled,
       betaUpdates:
         typeof parsed?.betaUpdates === "boolean" ? parsed.betaUpdates : defaultSettings.betaUpdates,
-      refreshMinMs:
-        Number.isFinite(parsed?.refreshMinMs) && parsed.refreshMinMs > 0
-          ? parsed.refreshMinMs
-          : defaultSettings.refreshMinMs,
-      refreshMaxMs:
-        Number.isFinite(parsed?.refreshMaxMs) && parsed.refreshMaxMs > 0
-          ? parsed.refreshMaxMs
-          : defaultSettings.refreshMaxMs,
+      refreshMinMs: refresh.min,
+      refreshMaxMs: refresh.max,
       demoMode: typeof parsed?.demoMode === "boolean" ? parsed.demoMode : defaultSettings.demoMode,
       debugEnabled:
         typeof parsed?.debugEnabled === "boolean"
@@ -148,6 +156,10 @@ export async function loadSettings(): Promise<SettingsData> {
 
 export async function saveSettings(data: Partial<SettingsData>): Promise<SettingsData> {
   const current = await loadSettings();
+  const refresh = normalizeRefreshIntervals(
+    Number.isFinite(data.refreshMinMs) ? data.refreshMinMs : current.refreshMinMs,
+    Number.isFinite(data.refreshMaxMs) ? data.refreshMaxMs : current.refreshMaxMs,
+  );
   const next: SettingsData = {
     ...current,
     ...data,
@@ -162,14 +174,8 @@ export async function saveSettings(data: Partial<SettingsData>): Promise<Setting
     warmupEnabled:
       typeof data.warmupEnabled === "boolean" ? data.warmupEnabled : current.warmupEnabled,
     betaUpdates: typeof data.betaUpdates === "boolean" ? data.betaUpdates : current.betaUpdates,
-    refreshMinMs:
-      Number.isFinite(data.refreshMinMs) && (data.refreshMinMs as number) > 0
-        ? (data.refreshMinMs as number)
-        : current.refreshMinMs,
-    refreshMaxMs:
-      Number.isFinite(data.refreshMaxMs) && (data.refreshMaxMs as number) > 0
-        ? (data.refreshMaxMs as number)
-        : current.refreshMaxMs,
+    refreshMinMs: refresh.min,
+    refreshMaxMs: refresh.max,
     demoMode: typeof data.demoMode === "boolean" ? data.demoMode : current.demoMode,
     debugEnabled: typeof data.debugEnabled === "boolean" ? data.debugEnabled : current.debugEnabled,
     alertsEnabled:

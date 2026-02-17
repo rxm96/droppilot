@@ -1,4 +1,5 @@
 import { useI18n } from "@renderer/shared/i18n";
+import { useEffect, useState } from "react";
 import type { ThemePreference } from "@renderer/shared/theme";
 
 type SettingsProps = {
@@ -153,6 +154,27 @@ export function SettingsView({
   const showProgress = updateStatus?.state === "downloading" && Number.isFinite(progressPct);
   const canDownload = updateStatus?.state === "available" && typeof downloadUpdate === "function";
   const canInstall = updateStatus?.state === "downloaded" && typeof installUpdate === "function";
+  const refreshPresets = [
+    { key: "60-70", minMs: 60 * 60_000, maxMs: 70 * 60_000, label: t("settings.refreshPreset.1h") },
+    { key: "120-150", minMs: 120 * 60_000, maxMs: 150 * 60_000, label: t("settings.refreshPreset.2h") },
+    { key: "240-300", minMs: 240 * 60_000, maxMs: 300 * 60_000, label: t("settings.refreshPreset.4h") },
+    { key: "360-420", minMs: 360 * 60_000, maxMs: 420 * 60_000, label: t("settings.refreshPreset.6h") },
+    { key: "720-840", minMs: 720 * 60_000, maxMs: 840 * 60_000, label: t("settings.refreshPreset.12h") },
+  ];
+  const currentPreset =
+    refreshPresets.find((preset) => preset.minMs === refreshMinMs && preset.maxMs === refreshMaxMs)
+      ?.key ?? "custom";
+  const customPresetLabel = t("settings.refreshPreset.custom", {
+    min: String(Math.round(refreshMinMs / 60_000)),
+    max: String(Math.round(refreshMaxMs / 60_000)),
+  });
+  const [showRefreshAdvanced, setShowRefreshAdvanced] = useState(false);
+
+  useEffect(() => {
+    if (currentPreset === "custom") {
+      setShowRefreshAdvanced(true);
+    }
+  }, [currentPreset]);
   const updateLabel = (() => {
     if (!updateStatus || updateStatus.state === "idle") return null;
     switch (updateStatus.state) {
@@ -424,37 +446,75 @@ export function SettingsView({
               </div>
               <div className="settings-actions">
                 <label className="meta">
-                  Min (s)
-                  <input
-                    type="number"
-                    className="input"
-                    min={3600}
-                    step={60}
-                    value={Math.round(refreshMinMs / 1000)}
+                  {t("settings.refreshPreset")}
+                  <select
+                    className="select"
+                    value={currentPreset}
                     onChange={(e) => {
-                      const val = Number(e.target.value) * 1000;
-                      setRefreshIntervals(val, refreshMaxMs);
+                      const value = e.target.value;
+                      const preset = refreshPresets.find((entry) => entry.key === value);
+                      if (preset) {
+                        setRefreshIntervals(preset.minMs, preset.maxMs);
+                      }
                     }}
-                    onBlur={() => setRefreshIntervals(refreshMinMs, refreshMaxMs)}
-                  />
+                  >
+                    {refreshPresets.map((preset) => (
+                      <option key={preset.key} value={preset.key}>
+                        {preset.label}
+                      </option>
+                    ))}
+                    {currentPreset === "custom" ? (
+                      <option value="custom">{customPresetLabel}</option>
+                    ) : null}
+                  </select>
                 </label>
-                <label className="meta">
-                  Max (s)
-                  <input
-                    type="number"
-                    className="input"
-                    min={3600}
-                    step={60}
-                    value={Math.round(refreshMaxMs / 1000)}
-                    onChange={(e) => {
-                      const val = Number(e.target.value) * 1000;
-                      setRefreshIntervals(refreshMinMs, val);
-                    }}
-                    onBlur={() => setRefreshIntervals(refreshMinMs, refreshMaxMs)}
-                  />
-                </label>
+                <button
+                  type="button"
+                  className="ghost subtle-btn"
+                  onClick={() => setShowRefreshAdvanced((prev) => !prev)}
+                >
+                  {showRefreshAdvanced
+                    ? t("settings.refreshAdvancedHide")
+                    : t("settings.refreshAdvancedShow")}
+                </button>
               </div>
             </div>
+            {showRefreshAdvanced ? (
+              <div className="settings-row">
+                <div className="settings-actions">
+                  <label className="meta">
+                    {t("settings.refreshMin")}
+                    <input
+                      type="number"
+                      className="input"
+                      min={60}
+                      step={5}
+                      value={Math.round(refreshMinMs / 60_000)}
+                      onChange={(e) => {
+                        const val = Number(e.target.value) * 60_000;
+                        setRefreshIntervals(val, refreshMaxMs);
+                      }}
+                      onBlur={() => setRefreshIntervals(refreshMinMs, refreshMaxMs)}
+                    />
+                  </label>
+                  <label className="meta">
+                    {t("settings.refreshMax")}
+                    <input
+                      type="number"
+                      className="input"
+                      min={60}
+                      step={5}
+                      value={Math.round(refreshMaxMs / 60_000)}
+                      onChange={(e) => {
+                        const val = Number(e.target.value) * 60_000;
+                        setRefreshIntervals(refreshMinMs, val);
+                      }}
+                      onBlur={() => setRefreshIntervals(refreshMinMs, refreshMaxMs)}
+                    />
+                  </label>
+                </div>
+              </div>
+            ) : null}
           </section>
         </div>
 

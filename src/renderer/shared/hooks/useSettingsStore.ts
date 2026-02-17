@@ -94,6 +94,21 @@ const toErrorMessage = (err: unknown, fallbackKey: string): string => {
   return fallbackKey;
 };
 
+const MIN_REFRESH_MS = 3_600_000;
+const DEFAULT_REFRESH_MIN = 3_600_000;
+const DEFAULT_REFRESH_MAX = 4_200_000;
+
+const normalizeRefreshIntervals = (
+  minValue: number | undefined,
+  maxValue: number | undefined,
+): { min: number; max: number } => {
+  const rawMin = Number.isFinite(minValue) ? (minValue as number) : DEFAULT_REFRESH_MIN;
+  const rawMax = Number.isFinite(maxValue) ? (maxValue as number) : DEFAULT_REFRESH_MAX;
+  const clampedMin = Math.max(MIN_REFRESH_MS, Math.min(rawMin, rawMax));
+  const clampedMax = Math.max(clampedMin, rawMax);
+  return { min: clampedMin, max: clampedMax };
+};
+
 export function useSettingsStore(): SettingsHook {
   const [priorityGames, setPriorityGames] = useState<string[]>([]);
   const [obeyPriority, setObeyPriority] = useState<boolean>(false);
@@ -104,8 +119,8 @@ export function useSettingsStore(): SettingsHook {
   const [autoSwitchEnabled, setAutoSwitchEnabled] = useState<boolean>(true);
   const [warmupEnabled, setWarmupEnabled] = useState<boolean>(true);
   const [betaUpdates, setBetaUpdates] = useState<boolean>(false);
-  const [refreshMinMs, setRefreshMinMs] = useState<number>(120_000);
-  const [refreshMaxMs, setRefreshMaxMs] = useState<number>(240_000);
+  const [refreshMinMs, setRefreshMinMs] = useState<number>(DEFAULT_REFRESH_MIN);
+  const [refreshMaxMs, setRefreshMaxMs] = useState<number>(DEFAULT_REFRESH_MAX);
   const [demoMode, setDemoMode] = useState<boolean>(false);
   const [debugEnabled, setDebugEnabled] = useState<boolean>(false);
   const [alertsEnabled, setAlertsEnabled] = useState<boolean>(true);
@@ -136,12 +151,9 @@ export function useSettingsStore(): SettingsHook {
       setAutoSwitchEnabled(res.autoSwitch !== false);
       setWarmupEnabled(res.warmupEnabled !== false);
       setBetaUpdates(res.betaUpdates === true);
-      setRefreshMinMs(
-        Number.isFinite(res.refreshMinMs) && res.refreshMinMs ? res.refreshMinMs : 120_000,
-      );
-      setRefreshMaxMs(
-        Number.isFinite(res.refreshMaxMs) && res.refreshMaxMs ? res.refreshMaxMs : 240_000,
-      );
+      const refresh = normalizeRefreshIntervals(res.refreshMinMs, res.refreshMaxMs);
+      setRefreshMinMs(refresh.min);
+      setRefreshMaxMs(refresh.max);
       setDemoMode(res.demoMode === true);
       setDebugEnabled(res.debugEnabled === true);
       setAlertsEnabled(res.alertsEnabled !== false);
@@ -181,12 +193,9 @@ export function useSettingsStore(): SettingsHook {
       setAutoSwitchEnabled(saved.autoSwitch !== false);
       setWarmupEnabled(saved.warmupEnabled !== false);
       setBetaUpdates(saved.betaUpdates === true);
-      setRefreshMinMs(
-        Number.isFinite(saved.refreshMinMs) && saved.refreshMinMs ? saved.refreshMinMs : 120_000,
-      );
-      setRefreshMaxMs(
-        Number.isFinite(saved.refreshMaxMs) && saved.refreshMaxMs ? saved.refreshMaxMs : 240_000,
-      );
+      const refresh = normalizeRefreshIntervals(saved.refreshMinMs, saved.refreshMaxMs);
+      setRefreshMinMs(refresh.min);
+      setRefreshMaxMs(refresh.max);
       setDemoMode(saved.demoMode === true);
       setDebugEnabled(saved.debugEnabled === true);
       setAlertsEnabled(saved.alertsEnabled !== false);
@@ -255,13 +264,10 @@ export function useSettingsStore(): SettingsHook {
   };
 
   const saveRefreshIntervals = async (minMs: number, maxMs: number) => {
-    const clampedMin = Math.max(60_000, Math.min(minMs || 0, maxMs || minMs || 0));
-    const clampedMax = Math.max(clampedMin, maxMs || clampedMin);
-    const safeMin = clampedMin;
-    const safeMax = clampedMax;
-    setRefreshMinMs(safeMin);
-    setRefreshMaxMs(safeMax);
-    await persist({ refreshMinMs: safeMin, refreshMaxMs: safeMax });
+    const refresh = normalizeRefreshIntervals(minMs, maxMs);
+    setRefreshMinMs(refresh.min);
+    setRefreshMaxMs(refresh.max);
+    await persist({ refreshMinMs: refresh.min, refreshMaxMs: refresh.max });
   };
 
   const saveDemoMode = async (val: boolean) => {
@@ -331,8 +337,8 @@ export function useSettingsStore(): SettingsHook {
       autoSelect: true,
       autoSwitch: true,
       warmupEnabled: true,
-      refreshMinMs: 120_000,
-      refreshMaxMs: 240_000,
+      refreshMinMs: DEFAULT_REFRESH_MIN,
+      refreshMaxMs: DEFAULT_REFRESH_MAX,
       demoMode: false,
       enableBadgesEmotes: false,
       allowUnlinkedGames: false,
@@ -381,12 +387,9 @@ export function useSettingsStore(): SettingsHook {
       setAutoSwitchEnabled(saved.autoSwitch !== false);
       setWarmupEnabled(saved.warmupEnabled !== false);
       setBetaUpdates(saved.betaUpdates === true);
-      setRefreshMinMs(
-        Number.isFinite(saved.refreshMinMs) && saved.refreshMinMs ? saved.refreshMinMs : 120_000,
-      );
-      setRefreshMaxMs(
-        Number.isFinite(saved.refreshMaxMs) && saved.refreshMaxMs ? saved.refreshMaxMs : 240_000,
-      );
+      const refresh = normalizeRefreshIntervals(saved.refreshMinMs, saved.refreshMaxMs);
+      setRefreshMinMs(refresh.min);
+      setRefreshMaxMs(refresh.max);
       setDemoMode(saved.demoMode === true);
       setAlertsEnabled(saved.alertsEnabled !== false);
       setAlertsNotifyWhileFocused(saved.alertsNotifyWhileFocused === true);
