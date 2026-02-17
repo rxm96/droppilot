@@ -31,6 +31,8 @@ type Params = {
   saveAlertsWatchError: (val: boolean) => Promise<void>;
   saveAlertsAutoSwitch: (val: boolean) => Promise<void>;
   saveAlertsNewDrops: (val: boolean) => Promise<void>;
+  saveEnableBadgesEmotes: (val: boolean) => Promise<void>;
+  saveAllowUnlinkedGames: (val: boolean) => Promise<void>;
   saveRefreshIntervals: (minMs: number, maxMs: number) => Promise<void>;
   resetAutomation: () => Promise<void>;
   setWatchingFromChannel: (channel: ChannelEntry) => void;
@@ -68,6 +70,8 @@ export function useAppActions({
   saveAlertsWatchError,
   saveAlertsAutoSwitch,
   saveAlertsNewDrops,
+  saveEnableBadgesEmotes,
+  saveAllowUnlinkedGames,
   saveRefreshIntervals,
   resetAutomation,
   setWatchingFromChannel,
@@ -117,6 +121,8 @@ export function useAppActions({
     saveAlertsWatchError,
     saveAlertsAutoSwitch,
     saveAlertsNewDrops,
+    saveEnableBadgesEmotes,
+    saveAllowUnlinkedGames,
     saveRefreshIntervals,
     resetAutomation,
   });

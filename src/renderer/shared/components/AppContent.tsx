@@ -10,6 +10,7 @@ import {
 } from "@renderer/features";
 import { TopNav } from "./TopNav";
 import { isPerfEnabled, recordRender } from "@renderer/shared/utils/perfStore";
+import { useI18n } from "@renderer/shared/i18n";
 
 type AppContentProps = {
   navProps: ComponentProps<typeof TopNav>;
@@ -33,6 +34,7 @@ export function AppContent({
   debugEnabled,
 }: AppContentProps) {
   const view = navProps.view;
+  const { t } = useI18n();
   const renderWithPerf = useCallback(
     (id: string, node: ReactNode) => {
       if (!debugEnabled || !isPerfEnabled()) return node;
@@ -49,6 +51,7 @@ export function AppContent({
       <TopNav {...navProps} />
 
       <section className="panel inventory-panel">
+
         {view === "overview" && renderWithPerf("OverviewView", <OverviewView {...overviewProps} />)}
 
         {view === "inventory" &&

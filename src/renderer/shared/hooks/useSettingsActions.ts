@@ -19,6 +19,8 @@ type Params = {
   saveAlertsWatchError: (val: boolean) => Promise<void>;
   saveAlertsAutoSwitch: (val: boolean) => Promise<void>;
   saveAlertsNewDrops: (val: boolean) => Promise<void>;
+  saveEnableBadgesEmotes: (val: boolean) => Promise<void>;
+  saveAllowUnlinkedGames: (val: boolean) => Promise<void>;
   saveRefreshIntervals: (minMs: number, maxMs: number) => Promise<void>;
   resetAutomation: () => Promise<void>;
 };
@@ -41,6 +43,8 @@ export function useSettingsActions({
   saveAlertsWatchError,
   saveAlertsAutoSwitch,
   saveAlertsNewDrops,
+  saveEnableBadgesEmotes,
+  saveAllowUnlinkedGames,
   saveRefreshIntervals,
   resetAutomation,
 }: Params) {
@@ -158,6 +162,19 @@ export function useSettingsActions({
     [saveAlertsNewDrops],
   );
 
+  const handleSetEnableBadgesEmotes = useCallback(
+    (val: boolean) => {
+      void saveEnableBadgesEmotes(val);
+    },
+    [saveEnableBadgesEmotes],
+  );
+
+  const handleSetAllowUnlinkedGames = useCallback(
+    (val: boolean) => {
+      void saveAllowUnlinkedGames(val);
+    },
+    [saveAllowUnlinkedGames],
+  );
   const handleSetRefreshIntervals = useCallback(
     (minMs: number, maxMs: number) => {
       void saveRefreshIntervals(minMs, maxMs);
@@ -187,6 +204,8 @@ export function useSettingsActions({
     handleSetAlertsWatchError,
     handleSetAlertsAutoSwitch,
     handleSetAlertsNewDrops,
+    handleSetEnableBadgesEmotes,
+    handleSetAllowUnlinkedGames,
     handleSetRefreshIntervals,
     handleResetAutomation,
   };

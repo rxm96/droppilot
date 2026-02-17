@@ -78,10 +78,21 @@ export function usePriorityActions({
     void savePriorityGames([...priorityGames, name]);
   }, [priorityGames, savePriorityGames, selectedGame]);
 
+  const addGameByName = useCallback(
+    (name: string) => {
+      const trimmed = name.trim();
+      if (!trimmed) return;
+      if (priorityGames.includes(trimmed)) return;
+      void savePriorityGames([...priorityGames, trimmed]);
+    },
+    [priorityGames, savePriorityGames],
+  );
+
   return {
     addGame,
     removeGame,
     handleDropReorder,
     addGameFromSelect,
+    addGameByName,
   };
 }

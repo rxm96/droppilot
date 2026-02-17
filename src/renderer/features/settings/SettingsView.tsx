@@ -39,6 +39,10 @@ type SettingsProps = {
   setAlertsAutoSwitch: (val: boolean) => void;
   alertsNewDrops: boolean;
   setAlertsNewDrops: (val: boolean) => void;
+  enableBadgesEmotes: boolean;
+  setEnableBadgesEmotes: (val: boolean) => void;
+  allowUnlinkedGames: boolean;
+  setAllowUnlinkedGames: (val: boolean) => void;
   sendTestAlert: () => void;
   refreshMinMs: number;
   refreshMaxMs: number;
@@ -112,6 +116,10 @@ export function SettingsView({
   setAlertsAutoSwitch,
   alertsNewDrops,
   setAlertsNewDrops,
+  enableBadgesEmotes,
+  setEnableBadgesEmotes,
+  allowUnlinkedGames,
+  setAllowUnlinkedGames,
   sendTestAlert,
   refreshMinMs,
   refreshMaxMs,
@@ -383,6 +391,32 @@ export function SettingsView({
                 </span>
               </label>
             </div>
+            <div className="toggle-row">
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={enableBadgesEmotes}
+                  onChange={(e) => setEnableBadgesEmotes(e.target.checked)}
+                />
+                <span className="toggle-label">
+                  <span className="toggle-title">{t("settings.badgesEmotes")}</span>
+                  <span className="toggle-hint">{t("settings.badgesEmotesHint")}</span>
+                </span>
+              </label>
+            </div>
+            <div className="toggle-row">
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={allowUnlinkedGames}
+                  onChange={(e) => setAllowUnlinkedGames(e.target.checked)}
+                />
+                <span className="toggle-label">
+                  <span className="toggle-title">{t("settings.allowUnlinked")}</span>
+                  <span className="toggle-hint">{t("settings.allowUnlinkedHint")}</span>
+                </span>
+              </label>
+            </div>
             <div className="settings-row">
               <div>
                 <div className="label">{t("settings.refreshInterval")}</div>
@@ -394,8 +428,8 @@ export function SettingsView({
                   <input
                     type="number"
                     className="input"
-                    min={60}
-                    step={10}
+                    min={3600}
+                    step={60}
                     value={Math.round(refreshMinMs / 1000)}
                     onChange={(e) => {
                       const val = Number(e.target.value) * 1000;
@@ -409,8 +443,8 @@ export function SettingsView({
                   <input
                     type="number"
                     className="input"
-                    min={60}
-                    step={10}
+                    min={3600}
+                    step={60}
                     value={Math.round(refreshMaxMs / 1000)}
                     onChange={(e) => {
                       const val = Number(e.target.value) * 1000;

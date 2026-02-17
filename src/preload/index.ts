@@ -23,6 +23,8 @@ type SettingsPayload = {
   alertsWatchError?: boolean;
   alertsAutoSwitch?: boolean;
   alertsNewDrops?: boolean;
+  enableBadgesEmotes?: boolean;
+  allowUnlinkedGames?: boolean;
 };
 
 type ChannelsDiffPayload = {

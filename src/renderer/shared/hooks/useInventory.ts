@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
+  CampaignSummary,
   ClaimStatus,
   InventoryItem,
   InventoryState,
@@ -12,6 +13,7 @@ import { errorInfoFromIpc, errorInfoFromUnknown } from "@renderer/shared/utils/e
 import {
   isArrayOf,
   isInventoryItem,
+  isInventoryBundle,
   isIpcAuthErrorResponse,
   isIpcErrorResponse,
   isIpcOkFalseResponse,
@@ -20,12 +22,10 @@ import {
 import { RENDERER_ERROR_CODES, TWITCH_ERROR_CODES } from "../../../shared/errorCodes";
 
 const CLAIM_RETRY_MS = 90_000;
+const CLAIM_WINDOW_MS = 24 * 60 * 60 * 1000;
 const NOOP = () => {};
 const NOOP_CLAIM = () => {};
 const NOOP_AUTH = (_message?: string) => {};
-const PUBSUB_PROGRESS_RECONCILE_MIN_GAP_MS = 30_000;
-const PUBSUB_PROGRESS_RECONCILE_DELAY_MS = 15_000;
-const PUBSUB_PROGRESS_STALE_DELAY_MS = 10_000;
 type FetchInventoryOpts = { forceLoading?: boolean };
 
 type InventoryPatchResult = {
@@ -39,6 +39,105 @@ type InventoryPatchResult = {
 
 const getTotalEarnedMinutes = (items: InventoryItem[]): number =>
   items.reduce((acc, item) => acc + Math.max(0, Number(item.earnedMinutes) || 0), 0);
+
+const parseIsoMs = (value?: string): number | null => {
+  if (!value) return null;
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? ms : null;
+};
+
+const isWithinClaimWindow = (item: InventoryItem, now = Date.now()): boolean => {
+  if (!item.endsAt) return true;
+  const endMs = Date.parse(item.endsAt);
+  if (!Number.isFinite(endMs)) return true;
+  return now < endMs + CLAIM_WINDOW_MS;
+};
+
+const isCampaignActive = (
+  startsAt?: string,
+  endsAt?: string,
+  now = Date.now(),
+): boolean => {
+  const startMs = parseIsoMs(startsAt);
+  if (startMs !== null && now < startMs) return false;
+  const endMs = parseIsoMs(endsAt);
+  if (endMs !== null && now > endMs) return false;
+  return true;
+};
+
+const buildCampaignsFromInventory = (
+  items: InventoryItem[],
+  now = Date.now(),
+): CampaignSummary[] => {
+  type CampaignRecord = CampaignSummary & { startMs?: number; endMs?: number };
+  const map = new Map<string, CampaignRecord>();
+  for (const item of items) {
+    if (!item || typeof item !== "object") continue;
+    const game = typeof item.game === "string" ? item.game.trim() : "";
+    if (!game) continue;
+    const campaignName =
+      typeof item.campaignName === "string" ? item.campaignName.trim() : "";
+    const rawId = typeof item.campaignId === "string" ? item.campaignId.trim() : "";
+    const fallbackId = campaignName || game;
+    const id = rawId || (fallbackId ? `campaign:${fallbackId.toLowerCase()}` : item.id);
+    if (!id) continue;
+    const entry =
+      map.get(id) ?? {
+        id,
+        name: campaignName || `${game} Drops`,
+        game,
+        hasUnclaimedDrops: undefined,
+      };
+    if (!entry.name && campaignName) entry.name = campaignName;
+    if (!entry.game) entry.game = game;
+    const startMs = parseIsoMs(item.startsAt);
+    if (startMs !== null && (entry.startMs === undefined || startMs < entry.startMs)) {
+      entry.startMs = startMs;
+      entry.startsAt = item.startsAt;
+    }
+    const endMs = parseIsoMs(item.endsAt);
+    if (endMs !== null && (entry.endMs === undefined || endMs > entry.endMs)) {
+      entry.endMs = endMs;
+      entry.endsAt = item.endsAt;
+    }
+    if (typeof item.campaignStatus === "string" && item.campaignStatus.trim()) {
+      entry.status = item.campaignStatus.trim();
+    }
+    if (item.linked === false) {
+      entry.isAccountConnected = false;
+    } else if (item.linked === true && entry.isAccountConnected !== false) {
+      entry.isAccountConnected = true;
+    }
+    const campaignImage =
+      typeof item.campaignImageUrl === "string" ? item.campaignImageUrl.trim() : "";
+    const dropImage = typeof item.imageUrl === "string" ? item.imageUrl.trim() : "";
+    if (!entry.imageUrl && (campaignImage || dropImage)) {
+      entry.imageUrl = campaignImage || dropImage;
+    }
+    if (item.status !== "claimed") {
+      entry.hasUnclaimedDrops = true;
+    } else if (entry.hasUnclaimedDrops === undefined) {
+      entry.hasUnclaimedDrops = false;
+    }
+    map.set(id, entry);
+  }
+  const result: CampaignSummary[] = [];
+  for (const entry of map.values()) {
+    result.push({
+      id: entry.id,
+      name: entry.name,
+      game: entry.game,
+      imageUrl: entry.imageUrl,
+      isAccountConnected: entry.isAccountConnected,
+      startsAt: entry.startsAt,
+      endsAt: entry.endsAt,
+      status: entry.status,
+      hasUnclaimedDrops: entry.hasUnclaimedDrops,
+      isActive: isCampaignActive(entry.startsAt, entry.endsAt, now),
+    });
+  }
+  return result;
+};
 
 export const applyDropProgressToInventoryItems = (
   items: InventoryItem[],
@@ -177,6 +276,8 @@ type InventoryEvents = {
 type InventoryOptions = {
   autoClaim?: boolean;
   demoMode?: boolean;
+  allowUnlinkedBadgeEmotes?: boolean;
+  allowUnlinkedGames?: boolean;
 };
 
 export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?: InventoryOptions) {
@@ -185,7 +286,11 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
   const onAuthError = events?.onAuthError ?? NOOP_AUTH;
   const autoClaimEnabled = opts?.autoClaim !== false;
   const demoMode = opts?.demoMode === true;
+  const allowUnlinkedBadgeEmotes = opts?.allowUnlinkedBadgeEmotes === true;
+  const allowUnlinkedGames = opts?.allowUnlinkedGames === true;
   const [inventory, setInventory] = useState<InventoryState>({ status: "idle" });
+  const [campaigns, setCampaigns] = useState<CampaignSummary[]>([]);
+  const [campaignsLoading, setCampaignsLoading] = useState(false);
   const [inventoryRefreshing, setInventoryRefreshing] = useState(false);
   const [inventoryChanges, setInventoryChanges] = useState<{
     added: Set<string>;
@@ -218,6 +323,8 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
       setInventoryChanges({ added: new Set(), updated: new Set() });
       setInventoryFetchedAt(null);
       setClaimStatus(null);
+      setCampaigns([]);
+      setCampaignsLoading(false);
       totalMinutesRef.current = null;
       claimAttemptsRef.current.clear();
       progressByDropIdRef.current.clear();
@@ -261,6 +368,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
         } else {
           setInventoryRefreshing(true);
         }
+        setCampaignsLoading(!demoMode && isLinked);
         if (demoMode) {
           const now = Date.now();
           let nextItems = demoItemsRef.current ?? buildDemoInventory(now);
@@ -321,6 +429,8 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
           setInventoryFetchedAt(now);
           setInventoryChanges({ added, updated });
           setInventoryRefreshing(false);
+          setCampaigns(buildCampaignsFromInventory(nextItems, now));
+          setCampaignsLoading(false);
           return;
         }
         try {
@@ -331,6 +441,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
               logWarn("inventory: auth error", res);
               onAuthError(res.message);
               setInventory({ status: "idle" });
+              setCampaignsLoading(false);
               return;
             }
             const errInfo = errorInfoFromIpc(res, {
@@ -344,18 +455,26 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
               items: hadItems ? prevItems : undefined,
             });
             logWarn("inventory: fetch error", res);
+            setCampaignsLoading(false);
             return;
           }
-          if (!isArrayOf(res, isInventoryItem)) {
+          const bundle = isInventoryBundle(res)
+            ? res
+            : isArrayOf(res, isInventoryItem)
+              ? { items: res, campaigns: [] }
+              : null;
+          if (!bundle) {
             setInventory({
               status: "error",
               code: RENDERER_ERROR_CODES.INVENTORY_INVALID_RESPONSE,
               message: "Inventory response was invalid",
               items: hadItems ? prevItems : undefined,
             });
+            setCampaignsLoading(false);
             return;
           }
-          const nextItems = res;
+          const nextItems = bundle.items;
+          setCampaigns(bundle.campaigns);
           const nextTotalMinutes = nextItems.reduce(
             (acc: number, item) => acc + Math.max(0, Number(item.earnedMinutes) || 0),
             0,
@@ -385,13 +504,14 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
           setInventory({ status: "ready", items: nextItems });
           setInventoryFetchedAt(Date.now());
           setInventoryChanges({ added, updated });
+          setCampaignsLoading(false);
 
           const maybeAutoClaim = async (items: InventoryItem[]) => {
             if (!autoClaimEnabled) return;
             const now = Date.now();
-            let scheduledRefresh = false;
             const claimable = items.filter((item) => {
               if (item.status === "claimed") return false;
+              if (!isWithinClaimWindow(item, now)) return false;
               if (typeof item.isClaimable === "boolean") return item.isClaimable;
               if (!item.dropInstanceId) return false;
               const req = Math.max(0, Number(item.requiredMinutes) || 0);
@@ -438,13 +558,6 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
                   message: `Auto-claimed: ${drop.title}`,
                   at: Date.now(),
                 });
-                if (!scheduledRefresh) {
-                  scheduledRefresh = true;
-                  window.setTimeout(
-                    () => fetchInventoryRef.current?.({ forceLoading: true }),
-                    1200,
-                  );
-                }
               } catch (err) {
                 logWarn("inventory: claim error", { title: drop.title, err });
                 const errInfo = errorInfoFromUnknown(err, {
@@ -475,6 +588,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
             code: errInfo.code,
             items: hadItems ? prevItems : undefined,
           });
+          setCampaignsLoading(false);
         } finally {
           setInventoryRefreshing(false);
         }
@@ -490,10 +604,18 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
         }
       }
     },
-    [inventory, onClaimed, onMinutesEarned, onAuthError, autoClaimEnabled, demoMode],
+    [inventory, onClaimed, onMinutesEarned, onAuthError, autoClaimEnabled, demoMode, isLinked],
   );
 
   fetchInventoryRef.current = fetchInventory;
+
+  useEffect(() => {
+    if (!demoMode) return;
+    const now = Date.now();
+    const items = demoItemsRef.current ?? buildDemoInventory(now);
+    setCampaigns(buildCampaignsFromInventory(items, now));
+    setCampaignsLoading(false);
+  }, [demoMode]);
 
   useEffect(() => {
     if (demoMode || !isLinked) return;
@@ -538,12 +660,18 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
       );
     };
 
-    const applyPatch = (event: UserPubSubEvent): boolean => {
+    const applyPatch = (
+      event: UserPubSubEvent,
+    ): {
+      patched: boolean;
+      hasUnclaimedInCampaign?: boolean;
+    } => {
       let patched = false;
       let updatedId: string | undefined;
       let deltaMinutes = 0;
       let nextTotal = totalMinutesRef.current ?? 0;
       let claimedItem: InventoryItem | undefined;
+      let hasUnclaimedInCampaign: boolean | undefined;
 
       setInventory((prev) => {
         const items =
@@ -565,13 +693,22 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
         deltaMinutes = patch.deltaMinutes;
         nextTotal = patch.totalMinutes;
         claimedItem = patch.claimedItem;
+        if (event.kind === "drop-claim" && patch.updatedId) {
+          const updated = patch.items.find((item) => item.id === patch.updatedId);
+          const campaignId = updated?.campaignId?.trim();
+          if (campaignId) {
+            hasUnclaimedInCampaign = patch.items.some(
+              (item) => item.campaignId?.trim() === campaignId && item.status !== "claimed",
+            );
+          }
+        }
         if (prev.status === "ready") {
           return { status: "ready", items: patch.items };
         }
         return { ...prev, items: patch.items };
       });
 
-      if (!patched) return false;
+      if (!patched) return { patched: false };
       totalMinutesRef.current = nextTotal;
       if (deltaMinutes > 0) {
         onMinutesEarned(deltaMinutes);
@@ -587,7 +724,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
           return { added: prev.added, updated };
         });
       }
-      return true;
+      return { patched: true, hasUnclaimedInCampaign };
     };
 
     const unsubscribe = window.electronAPI.twitch.onUserPubSubEvent((payload: unknown) => {
@@ -607,39 +744,24 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
         if (dropId && progress !== null) {
           const lastProgress = progressByDropIdRef.current.get(dropId) ?? -1;
           if (progress <= lastProgress) {
-            scheduleReconcile({
-              forceLoading: false,
-              minGapMs: PUBSUB_PROGRESS_RECONCILE_MIN_GAP_MS,
-              baseDelayMs: PUBSUB_PROGRESS_STALE_DELAY_MS,
-            });
             return;
           }
           progressByDropIdRef.current.set(dropId, progress);
         }
-        const patched = applyPatch(payload);
-        scheduleReconcile(
-          patched
-            ? {
-                forceLoading: false,
-                minGapMs: PUBSUB_PROGRESS_RECONCILE_MIN_GAP_MS,
-                baseDelayMs: PUBSUB_PROGRESS_RECONCILE_DELAY_MS,
-              }
-            : {
-                forceLoading: false,
-                minGapMs: 10_000,
-                baseDelayMs: 1_500,
-              },
-        );
+        applyPatch(payload);
         return;
       }
 
       if (payload.kind === "drop-claim") {
-        applyPatch(payload);
-        scheduleReconcile({
-          forceLoading: true,
-          minGapMs: 2_000,
-          baseDelayMs: 450,
-        });
+        const result = applyPatch(payload);
+        if (!result.patched) return;
+        if (result.hasUnclaimedInCampaign === false || result.hasUnclaimedInCampaign === undefined) {
+          scheduleReconcile({
+            forceLoading: true,
+            minGapMs: 2_000,
+            baseDelayMs: 450,
+          });
+        }
         return;
       }
 
@@ -679,14 +801,16 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
     () =>
       inventoryItems.map((item) => ({
         item,
-        category: getCategory(item, isLinked),
+        category: getCategory(item, isLinked, allowUnlinkedBadgeEmotes, allowUnlinkedGames),
       })),
-    [inventoryItems, isLinked],
+    [inventoryItems, isLinked, allowUnlinkedBadgeEmotes, allowUnlinkedGames],
   );
 
   return {
     inventory,
     inventoryItems,
+    campaigns,
+    campaignsLoading,
     inventoryRefreshing,
     inventoryChanges,
     inventoryFetchedAt,

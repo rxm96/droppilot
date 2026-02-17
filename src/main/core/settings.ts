@@ -26,6 +26,8 @@ export type SettingsData = {
   alertsWatchError: boolean;
   alertsAutoSwitch: boolean;
   alertsNewDrops: boolean;
+  enableBadgesEmotes: boolean;
+  allowUnlinkedGames: boolean;
 };
 
 const settingsFile = join(app.getPath("userData"), "settings.json");
@@ -41,8 +43,8 @@ const defaultSettings: SettingsData = {
   autoSwitch: true,
   warmupEnabled: true,
   betaUpdates: false,
-  refreshMinMs: 120_000,
-  refreshMaxMs: 240_000,
+  refreshMinMs: 3_600_000,
+  refreshMaxMs: 4_200_000,
   demoMode: false,
   debugEnabled: false,
   alertsEnabled: true,
@@ -53,6 +55,8 @@ const defaultSettings: SettingsData = {
   alertsWatchError: true,
   alertsAutoSwitch: true,
   alertsNewDrops: true,
+  enableBadgesEmotes: false,
+  allowUnlinkedGames: false,
 };
 
 export async function loadSettings(): Promise<SettingsData> {
@@ -128,6 +132,14 @@ export async function loadSettings(): Promise<SettingsData> {
         typeof parsed?.alertsNewDrops === "boolean"
           ? parsed.alertsNewDrops
           : defaultSettings.alertsNewDrops,
+      enableBadgesEmotes:
+        typeof parsed?.enableBadgesEmotes === "boolean"
+          ? parsed.enableBadgesEmotes
+          : defaultSettings.enableBadgesEmotes,
+      allowUnlinkedGames:
+        typeof parsed?.allowUnlinkedGames === "boolean"
+          ? parsed.allowUnlinkedGames
+          : defaultSettings.allowUnlinkedGames,
     };
   } catch {
     return defaultSettings;
@@ -184,6 +196,14 @@ export async function saveSettings(data: Partial<SettingsData>): Promise<Setting
       typeof data.alertsAutoSwitch === "boolean" ? data.alertsAutoSwitch : current.alertsAutoSwitch,
     alertsNewDrops:
       typeof data.alertsNewDrops === "boolean" ? data.alertsNewDrops : current.alertsNewDrops,
+    enableBadgesEmotes:
+      typeof data.enableBadgesEmotes === "boolean"
+        ? data.enableBadgesEmotes
+        : current.enableBadgesEmotes,
+    allowUnlinkedGames:
+      typeof data.allowUnlinkedGames === "boolean"
+        ? data.allowUnlinkedGames
+        : current.allowUnlinkedGames,
   };
   await fs.mkdir(app.getPath("userData"), { recursive: true });
   await fs.writeFile(settingsFile, JSON.stringify(next, null, 2), "utf-8");

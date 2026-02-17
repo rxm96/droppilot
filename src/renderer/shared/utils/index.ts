@@ -3,16 +3,20 @@ import type { InventoryItem } from "@renderer/shared/types";
 export function getCategory(
   item: InventoryItem,
   isLinked: boolean,
+  allowUnlinkedBadgeEmotes = false,
+  allowUnlinkedGames = false,
 ): "in-progress" | "upcoming" | "finished" | "not-linked" | "expired" | "excluded" {
   const now = Date.now();
+  const allowUnlinked =
+    allowUnlinkedGames || (allowUnlinkedBadgeEmotes && item.campaignHasBadgeOrEmote === true);
   if (!isLinked) return "not-linked";
+  if (item.linked === false && !allowUnlinked) return "not-linked";
   if (item.excluded) return "excluded";
   if (item.status === "claimed") return "finished";
   const campaignStatus = (item.campaignStatus ?? "").toUpperCase();
   const endsAt = item.endsAt ? Date.parse(item.endsAt) : undefined;
   if (campaignStatus === "EXPIRED" || (endsAt && endsAt < now)) return "expired";
   const earned = Math.max(0, Number(item.earnedMinutes) || 0);
-  if (item.linked === false && item.status === "locked" && earned <= 0) return "not-linked";
   switch (item.status) {
     case "progress":
       return "in-progress";

@@ -51,6 +51,8 @@ export function useAppModel() {
     alertsWatchError,
     alertsAutoSwitch,
     alertsNewDrops,
+    enableBadgesEmotes,
+    allowUnlinkedGames,
     savePriorityGames,
     saveObeyPriority,
     saveLanguage,
@@ -71,6 +73,8 @@ export function useAppModel() {
     saveAlertsWatchError,
     saveAlertsAutoSwitch,
     saveAlertsNewDrops,
+    saveEnableBadgesEmotes,
+    saveAllowUnlinkedGames,
     resetAutomation,
     selectedGame,
     setSelectedGame,
@@ -123,6 +127,8 @@ export function useAppModel() {
   const {
     inventory,
     inventoryItems,
+    campaigns,
+    campaignsLoading,
     inventoryRefreshing,
     inventoryChanges,
     inventoryFetchedAt,
@@ -137,7 +143,12 @@ export function useAppModel() {
       onClaimed: handleDropClaimed,
       onAuthError: forwardAuthError,
     },
-    { autoClaim, demoMode },
+    {
+      autoClaim,
+      demoMode,
+      allowUnlinkedBadgeEmotes: enableBadgesEmotes,
+      allowUnlinkedGames,
+    },
   );
 
   const inventoryRefresh = useInventoryRefresh({
@@ -169,7 +180,6 @@ export function useAppModel() {
       view,
       setView,
       setAutoSelectEnabled,
-      watching,
       fetchInventory,
       forwardAuthError,
     });
@@ -199,6 +209,8 @@ export function useAppModel() {
     saveAlertsWatchError,
     saveAlertsAutoSwitch,
     saveAlertsNewDrops,
+    saveEnableBadgesEmotes,
+    saveAllowUnlinkedGames,
     saveRefreshIntervals,
     resetAutomation,
     setWatchingFromChannel,
@@ -226,7 +238,8 @@ export function useAppModel() {
   const filteredItems = useMemo(() => {
     return withCategories
       .filter(({ item, category }) => {
-        const matchesStatus = filter === "all" ? true : category === filter;
+        const matchesStatus =
+          filter === "all" ? category !== "not-linked" : category === filter;
         const matchesGame = gameFilter === "all" ? true : item.game === gameFilter;
         return matchesStatus && matchesGame;
       })
@@ -387,7 +400,13 @@ export function useAppModel() {
     setPage,
     changes: inventoryChanges,
     refreshing: inventoryRefreshing,
+    campaigns,
+    campaignsLoading,
     isLinked: isLinkedOrDemo,
+    allowUnlinkedBadgeEmotes: enableBadgesEmotes,
+    allowUnlinkedGames,
+    priorityGames,
+    onAddPriorityGame: actions.addGameByName,
   };
   const priorityProps = {
     uniqueGames,
@@ -444,6 +463,10 @@ export function useAppModel() {
     setAlertsAutoSwitch: actions.handleSetAlertsAutoSwitch,
     alertsNewDrops,
     setAlertsNewDrops: actions.handleSetAlertsNewDrops,
+    enableBadgesEmotes,
+    setEnableBadgesEmotes: actions.handleSetEnableBadgesEmotes,
+    allowUnlinkedGames,
+    setAllowUnlinkedGames: actions.handleSetAllowUnlinkedGames,
     sendTestAlert: handleTestAlert,
     refreshMinMs,
     refreshMaxMs,

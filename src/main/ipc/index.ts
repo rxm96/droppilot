@@ -182,7 +182,7 @@ export function registerIpcHandlers(deps: {
 
   ipcMain.handle("twitch/inventory", async () => {
     try {
-      return await twitch.getInventory();
+      return await twitch.getInventoryBundle();
     } catch (err) {
       if (twitch.isAuthError(err)) {
         return { error: "auth", message: (err as Error).message, status: (err as any).status };

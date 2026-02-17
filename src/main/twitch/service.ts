@@ -1,6 +1,6 @@
 import type { SessionData } from "../core/storage";
 import { TWITCH_WEB_USER_AGENT } from "../config";
-import { TwitchClient, TwitchAuthError, type TwitchUser } from "./client";
+import { TwitchClient, TwitchAuthError, type RevalidateResult, type TwitchUser } from "./client";
 import { buildPriorityPlan, type PriorityPlan } from "./channels";
 import { TwitchServiceError } from "./errors";
 import { TWITCH_ERROR_CODES } from "../../shared/errorCodes";
@@ -15,6 +15,7 @@ export interface InventoryItem {
   imageUrl?: string;
   campaignImageUrl?: string;
   linked?: boolean;
+  campaignHasBadgeOrEmote?: boolean;
   campaignStatus?: string;
   campaignName?: string;
   startsAt?: string;
@@ -29,11 +30,23 @@ type CampaignInfo = {
   id: string;
   name: string;
   game: string;
+  imageUrl?: string;
+  drops?: CampaignDropInfo[];
+  isAccountConnected?: boolean;
   startsAt?: string;
   endsAt?: string;
   status?: string;
   isActive: boolean;
   hasUnclaimedDrops?: boolean;
+};
+
+type CampaignDropInfo = {
+  id: string;
+  name?: string;
+  requiredMinutes?: number;
+  earnedMinutes?: number;
+  status?: InventoryItem["status"];
+  imageUrl?: string;
 };
 
 export type ChannelInfo = {
@@ -46,6 +59,11 @@ export type ChannelInfo = {
   language?: string;
   thumbnail?: string;
   game: string;
+};
+
+export type InventoryBundle = {
+  items: InventoryItem[];
+  campaigns: CampaignInfo[];
 };
 
 export class TwitchService {
@@ -71,126 +89,27 @@ export class TwitchService {
     }
   }
 
-  async getInventory(): Promise<InventoryItem[]> {
-    const { edges, summary } = await this.fetchCampaignEdges({ includeAvailable: false });
+  async revalidateSession(): Promise<RevalidateResult> {
+    return this.client.revalidateSession();
+  }
+
+  async getInventoryBundle(): Promise<InventoryBundle> {
+    const { edges, summary, claimedBenefitIds } = await this.fetchCampaignEdges({
+      includeAvailable: true,
+      availableStatuses: ["ACTIVE", "UPCOMING"],
+    });
     if (edges.length === 0) {
-      this.debug("Inventory empty (no active campaigns)", { summary });
-      return [];
+      return { items: [], campaigns: [] };
     }
     const detailed = await this.enrichCampaigns(edges);
-    const items: InventoryItem[] = [];
-    let dropsCount = 0;
+    const items = this.buildInventoryItems(detailed, claimedBenefitIds, summary);
+    const campaigns = buildCampaignSummaries(detailed);
+    return { items, campaigns };
+  }
 
-    this.debug(
-      "Detailed campaigns",
-      detailed.length,
-      "drop lengths",
-      detailed.map((c) => c.timeBasedDrops?.length ?? 0),
-    );
-
-    for (const campaign of detailed) {
-      if (!campaign || !campaign.timeBasedDrops) continue;
-      const game = campaign.game?.displayName ?? "Unknown game";
-      const linked = (campaign as any)?.self?.isAccountConnected ?? false;
-      const campaignStatus = (campaign as any)?.status as string | undefined;
-      const campaignName = (campaign as any)?.name as string | undefined;
-      const startsAt = (campaign as any)?.startAt as string | undefined;
-      const endsAt = (campaign as any)?.endAt as string | undefined;
-      const campaignImageUrl = extractCampaignImageUrl(campaign);
-      // Some campaigns expose allow.isEnabled === false even though the user can earn progress.
-      // Only treat it as excluded if Twitch explicitly disabled the campaign AND we have no progress yet.
-      const allowDisabled = (campaign as any)?.allow?.isEnabled === false;
-      const campaignId = (campaign as any)?.id;
-      for (const drop of campaign.timeBasedDrops) {
-        dropsCount += 1;
-        let watched = drop.self?.currentMinutesWatched ?? 0;
-        const rawStatus =
-          drop.self?.status ??
-          // some schemas use different keys
-          (drop.self as any)?.state ??
-          (drop as any).status;
-        const dropInstanceId = drop.self?.dropInstanceID ?? (drop.self as any)?.dropInstanceId;
-        const isClaimed = isTruthyFlag(drop.self?.isClaimed);
-        // Some schemas expose multiple required fields; pick the smallest positive to avoid overcount
-        const requiredCandidates = [
-          // @ts-ignore
-          (drop as any).requiredMinutesWatched,
-          // @ts-ignore
-          (drop as any).required_minutes,
-          // @ts-ignore
-          (drop as any).requiredMinutes,
-          drop.minutesWatchedRequired,
-        ];
-        const requiredValid = requiredCandidates
-          .map((v) => Number(v))
-          .filter((n) => Number.isFinite(n) && n > 0);
-        const requiredMinutes = requiredValid.length ? Math.min(...requiredValid) : 0;
-        let status = mapStatus(rawStatus, drop);
-        if (status === "claimed" && requiredMinutes > 0 && watched === 0) {
-          // Claimed drops report full progress.
-          watched = requiredMinutes;
-        }
-        // Heuristics: treat watched progress as "progress" even if status says locked; treat fully watched as claimable
-        const progressDone = requiredMinutes > 0 && watched >= requiredMinutes;
-        if (isClaimed) {
-          status = "claimed";
-        } else if (progressDone && status !== "claimed") {
-          status = "progress";
-        } else if (watched > 0 && status === "locked") {
-          status = "progress";
-        }
-        const earnedMinutes = requiredMinutes > 0 ? Math.min(requiredMinutes, watched) : watched;
-        const imageUrl = extractDropImageUrl(drop);
-        if (dropsCount <= 3) {
-          const benefitEdges = (drop as any)?.benefitEdges;
-          const benefitEdgesList = Array.isArray(benefitEdges)
-            ? benefitEdges
-            : (benefitEdges?.edges ?? benefitEdges?.nodes ?? []);
-          const benefitEdgeSample = Array.isArray(benefitEdgesList) ? benefitEdgesList[0] : null;
-          const benefitNode =
-            benefitEdgeSample?.node ?? benefitEdgeSample?.benefit ?? benefitEdgeSample ?? null;
-          this.debug("Drop image sample", {
-            dropId: drop.id,
-            dropName: drop.name,
-            imageUrl: imageUrl ?? "<missing>",
-            benefitKeys: drop?.benefit ? Object.keys(drop.benefit) : [],
-            benefitEdgesCount: Array.isArray(benefitEdgesList) ? benefitEdgesList.length : 0,
-            benefitEdgeKeys: benefitEdgeSample ? Object.keys(benefitEdgeSample) : [],
-            benefitNodeKeys: benefitNode ? Object.keys(benefitNode) : [],
-            localizedKeys: drop?.localizedContent ? Object.keys(drop.localizedContent) : [],
-            dropKeys: drop ? Object.keys(drop) : [],
-            campaignKeys: campaign ? Object.keys(campaign) : [],
-          });
-        }
-        items.push({
-          id: drop.id,
-          game,
-          title: drop.name,
-          requiredMinutes,
-          earnedMinutes,
-          status,
-          imageUrl,
-          campaignImageUrl,
-          linked,
-          campaignStatus,
-          campaignName,
-          startsAt,
-          endsAt,
-          excluded: allowDisabled && watched <= 0 && !isClaimed,
-          campaignId,
-          dropInstanceId,
-          isClaimable: !!dropInstanceId && !isClaimed && status !== "claimed" && progressDone,
-        });
-      }
-    }
-
-    if (items.length === 0) {
-      this.debug("Inventory empty (no claimable/progress drops)", { summary, dropsCount });
-      return [];
-    }
-
-    this.debug("Built inventory items", items.length);
-    return items;
+  async getInventory(): Promise<InventoryItem[]> {
+    const bundle = await this.getInventoryBundle();
+    return bundle.items;
   }
 
   async getCampaigns(): Promise<CampaignInfo[]> {
@@ -199,53 +118,7 @@ export class TwitchService {
       return [];
     }
     const nodes = await this.enrichCampaigns(edges);
-    const now = Date.now();
-    const campaigns: CampaignInfo[] = [];
-    for (const node of nodes) {
-      if (!node?.id || !node?.name) continue;
-      const game = node.game?.displayName?.trim() ?? "";
-      if (!game) continue;
-      const startsAt = typeof node.startAt === "string" ? node.startAt : undefined;
-      const endsAt = typeof node.endAt === "string" ? node.endAt : undefined;
-      const isActive = isCampaignActive({ startsAt, endsAt }, now);
-      let hasUnclaimedDrops: boolean | undefined = undefined;
-      if (Array.isArray(node.timeBasedDrops)) {
-        if (node.timeBasedDrops.length === 0) {
-          hasUnclaimedDrops = false;
-        } else {
-          let sawEvidence = false;
-          let sawUnclaimed = false;
-          for (const drop of node.timeBasedDrops) {
-            const self = (drop as any)?.self;
-            const rawStatus =
-              self?.status ?? (drop as any)?.status ?? (drop as any)?.state ?? undefined;
-            const hasEvidence = !!self || typeof rawStatus === "string";
-            if (!hasEvidence) continue;
-            sawEvidence = true;
-            if (self && isTruthyFlag(self?.isClaimed)) continue;
-            const status = mapStatus(rawStatus, drop);
-            if (status !== "claimed") {
-              sawUnclaimed = true;
-              break;
-            }
-          }
-          hasUnclaimedDrops = sawEvidence ? sawUnclaimed : undefined;
-        }
-      } else {
-        hasUnclaimedDrops = false;
-      }
-      campaigns.push({
-        id: node.id,
-        name: node.name,
-        game,
-        startsAt,
-        endsAt,
-        status: node.status,
-        isActive,
-        hasUnclaimedDrops,
-      });
-    }
-    return campaigns;
+    return buildCampaignSummaries(nodes);
   }
 
   async getPriorityPlan(priorityGames: string[]): Promise<PriorityPlan> {
@@ -560,11 +433,16 @@ export class TwitchService {
 
   private async fetchCampaignEdges(opts?: {
     includeAvailable?: boolean;
-  }): Promise<{ edges: CampaignEdge[]; summary: string }> {
+    availableStatuses?: string[];
+  }): Promise<{ edges: CampaignEdge[]; summary: string; claimedBenefitIds: Set<string> }> {
     const campaignsById = new Map<string, CampaignEdge>();
     let inventorySummary = "n/a";
     let campaignsSummary = "n/a";
     const includeAvailable = opts?.includeAvailable !== false;
+    const availableStatuses = Array.isArray(opts?.availableStatuses)
+      ? opts?.availableStatuses.map((entry) => String(entry).toUpperCase())
+      : [];
+    const claimedBenefitIds = new Set<string>();
 
     const normalizeEdge = (edge: CampaignEdge | any): CampaignEdge => {
       if (!edge) return {};
@@ -579,8 +457,9 @@ export class TwitchService {
       { fetchRewardCampaigns: true },
     );
     const inv = await this.gqlRequest<InventoryResponse>(inventoryPayload, "Inventory");
-    const inProgressRaw = inv?.data?.currentUser?.inventory?.dropCampaignsInProgress ?? [];
-    const allInventoryRaw = inv?.data?.currentUser?.inventory?.dropCampaigns ?? [];
+    const inventoryRoot = inv?.data?.currentUser?.inventory;
+    const inProgressRaw = inventoryRoot?.dropCampaignsInProgress ?? [];
+    const allInventoryRaw = inventoryRoot?.dropCampaigns ?? [];
     const combinedInventoryRaw =
       inProgressRaw.length > 0 ? [...inProgressRaw, ...allInventoryRaw] : allInventoryRaw;
     const inProgress = combinedInventoryRaw.map(normalizeEdge);
@@ -588,7 +467,14 @@ export class TwitchService {
       const id = edge.node?.id;
       if (id) campaignsById.set(id, edge);
     }
-    inventorySummary = `currentUser: ${!!inv?.data?.currentUser}, inProgress: ${inProgressRaw.length}, all: ${allInventoryRaw.length}, combined: ${combinedInventoryRaw.length}, normalized: ${campaignsById.size}`;
+    const gameEventDropsRaw = Array.isArray(inventoryRoot?.gameEventDrops)
+      ? inventoryRoot?.gameEventDrops
+      : [];
+    for (const entry of gameEventDropsRaw) {
+      const id = typeof entry?.id === "string" ? entry.id.trim() : "";
+      if (id) claimedBenefitIds.add(id);
+    }
+    inventorySummary = `currentUser: ${!!inv?.data?.currentUser}, inProgress: ${inProgressRaw.length}, all: ${allInventoryRaw.length}, combined: ${combinedInventoryRaw.length}, normalized: ${campaignsById.size}, claimedBenefits: ${claimedBenefitIds.size}`;
     this.debug("Inventory fetch", inventorySummary);
     this.debug(
       "Inventory edges sample",
@@ -610,7 +496,7 @@ export class TwitchService {
         operationName: "ViewerDropsDashboard",
         sha: "5a4da2ab3d5b47c9f9ce864e727b2cb346af1e3ea8b897fe8f704a97ff017619",
       };
-      const campaignsPages = 4;
+      const campaignsPages = 1;
       let nextCursor: string | null | undefined;
       let fetchedEdges = 0;
       for (let page = 0; page < campaignsPages; page += 1) {
@@ -625,15 +511,30 @@ export class TwitchService {
           campaignsPayload,
           campaignsPayloadBase.operationName,
         );
+        if (page === 0) {
+          this.debug("Campaigns raw response", JSON.stringify(campaigns, null, 2));
+        }
         const dropCampaigns = campaigns?.data?.currentUser?.dropCampaigns;
         const availableRaw = Array.isArray(dropCampaigns)
           ? dropCampaigns
           : (dropCampaigns?.edges ?? []);
-        const available = availableRaw.map(normalizeEdge);
+        const available = availableRaw
+          .map(normalizeEdge)
+          .filter((edge) => {
+            if (availableStatuses.length === 0) return true;
+            const status = typeof edge.node?.status === "string" ? edge.node?.status : "";
+            return availableStatuses.includes(status.toUpperCase());
+          });
         fetchedEdges += availableRaw.length;
         for (const edge of available) {
           const id = edge.node?.id;
-          if (id) campaignsById.set(id, edge);
+          if (!id) continue;
+          const existing = campaignsById.get(id);
+          if (existing) {
+            campaignsById.set(id, mergePrimaryData(existing, edge));
+          } else {
+            campaignsById.set(id, edge);
+          }
         }
         const pageInfo = dropCampaigns?.pageInfo;
         nextCursor = pageInfo?.hasNextPage ? pageInfo.endCursor : null;
@@ -677,12 +578,14 @@ export class TwitchService {
       return {
         edges: [],
         summary: `Campaigns(${campaignsSummary}); Inventory(${inventorySummary}); totalEdges=0`,
+        claimedBenefitIds,
       };
     }
 
     return {
       edges: mergedEdges,
       summary: `Campaigns(${campaignsSummary}); Inventory(${inventorySummary}); totalEdges=${mergedEdges.length}`,
+      claimedBenefitIds,
     };
   }
 
@@ -720,21 +623,8 @@ export class TwitchService {
         const node = res?.data?.user?.dropCampaign as CampaignNode | undefined;
         if (node?.id && campaignsById.has(node.id)) {
           const base = campaignsById.get(node.id)!;
-          let mergedDrops = node.timeBasedDrops;
-          if (base.timeBasedDrops && node.timeBasedDrops) {
-            const baseById = new Map((base.timeBasedDrops ?? []).map((d) => [d.id, d]));
-            mergedDrops = node.timeBasedDrops.map((d) => {
-              const baseDrop = baseById.get(d.id);
-              return {
-                ...baseDrop,
-                ...d,
-                self: d.self ?? baseDrop?.self, // preserve progress info
-              };
-            });
-          } else if (base.timeBasedDrops && !node.timeBasedDrops) {
-            mergedDrops = base.timeBasedDrops;
-          }
-          campaignsById.set(node.id, { ...base, ...node, timeBasedDrops: mergedDrops });
+          const merged = mergePrimaryData(base, node) as CampaignNode;
+          campaignsById.set(node.id, merged);
         }
       }
     }
@@ -779,6 +669,137 @@ export class TwitchService {
     return eligible;
   }
 
+  private buildInventoryItems(
+    detailed: CampaignNode[],
+    claimedBenefitIds: Set<string>,
+    summary: string,
+  ): InventoryItem[] {
+    const items: InventoryItem[] = [];
+    let dropsCount = 0;
+
+    this.debug(
+      "Detailed campaigns",
+      detailed.length,
+      "drop lengths",
+      detailed.map((c) => c.timeBasedDrops?.length ?? 0),
+    );
+
+    for (const campaign of detailed) {
+      if (!campaign || !campaign.timeBasedDrops) continue;
+      const game = campaign.game?.displayName ?? "Unknown game";
+      const linked = (campaign as any)?.self?.isAccountConnected ?? false;
+      const campaignStatus = (campaign as any)?.status as string | undefined;
+      const campaignName = (campaign as any)?.name as string | undefined;
+      const startsAt = (campaign as any)?.startAt as string | undefined;
+      const endsAt = (campaign as any)?.endAt as string | undefined;
+      const campaignImageUrl = extractCampaignImageUrl(campaign);
+      const campaignHasBadgeOrEmote = campaign.timeBasedDrops.some((drop) =>
+        dropHasBadgeOrEmote(drop),
+      );
+      const withinClaimWindow = isWithinClaimWindow(endsAt);
+      // Some campaigns expose allow.isEnabled === false even though the user can earn progress.
+      // Only treat it as excluded if Twitch explicitly disabled the campaign AND we have no progress yet.
+      const allowDisabled = (campaign as any)?.allow?.isEnabled === false;
+      const campaignId = (campaign as any)?.id;
+      for (const drop of campaign.timeBasedDrops) {
+        dropsCount += 1;
+        let watched = drop.self?.currentMinutesWatched ?? 0;
+        const rawStatus =
+          drop.self?.status ??
+          // some schemas use different keys
+          (drop.self as any)?.state ??
+          (drop as any).status;
+        const dropInstanceId = drop.self?.dropInstanceID ?? (drop.self as any)?.dropInstanceId;
+        const benefitClaimed = hasClaimedBenefit(claimedBenefitIds, drop);
+        const isClaimed = isTruthyFlag(drop.self?.isClaimed) || benefitClaimed;
+        // Some schemas expose multiple required fields; pick the smallest positive to avoid overcount
+        const requiredCandidates = [
+          // @ts-ignore
+          (drop as any).requiredMinutesWatched,
+          // @ts-ignore
+          (drop as any).required_minutes,
+          // @ts-ignore
+          (drop as any).requiredMinutes,
+          drop.minutesWatchedRequired,
+        ];
+        const requiredValid = requiredCandidates
+          .map((v) => Number(v))
+          .filter((n) => Number.isFinite(n) && n > 0);
+        const requiredMinutes = requiredValid.length ? Math.min(...requiredValid) : 0;
+        let status = mapStatus(rawStatus, drop);
+        if (status === "claimed" && requiredMinutes > 0 && watched === 0) {
+          // Claimed drops report full progress.
+          watched = requiredMinutes;
+        }
+        // Heuristics: treat watched progress as "progress" even if status says locked; treat fully watched as claimable
+        const progressDone = requiredMinutes > 0 && watched >= requiredMinutes;
+        if (isClaimed) {
+          status = "claimed";
+        } else if (progressDone && status !== "claimed") {
+          status = "progress";
+        } else if (watched > 0 && status === "locked") {
+          status = "progress";
+        }
+        const earnedMinutes = requiredMinutes > 0 ? Math.min(requiredMinutes, watched) : watched;
+        const imageUrl = extractDropImageUrl(drop);
+        if (dropsCount <= 3) {
+          const benefitEdges = (drop as any)?.benefitEdges;
+          const benefitEdgesList = Array.isArray(benefitEdges)
+            ? benefitEdges
+            : (benefitEdges?.edges ?? benefitEdges?.nodes ?? []);
+          const benefitEdgeSample = Array.isArray(benefitEdgesList) ? benefitEdgesList[0] : null;
+          const benefitNode =
+            benefitEdgeSample?.node ?? benefitEdgeSample?.benefit ?? benefitEdgeSample ?? null;
+          this.debug("Drop image sample", {
+            dropId: drop.id,
+            dropName: drop.name,
+            imageUrl: imageUrl ?? "<missing>",
+            benefitKeys: drop?.benefit ? Object.keys(drop.benefit) : [],
+            benefitEdgesCount: Array.isArray(benefitEdgesList) ? benefitEdgesList.length : 0,
+            benefitEdgeKeys: benefitEdgeSample ? Object.keys(benefitEdgeSample) : [],
+            benefitNodeKeys: benefitNode ? Object.keys(benefitNode) : [],
+            localizedKeys: drop?.localizedContent ? Object.keys(drop.localizedContent) : [],
+            dropKeys: drop ? Object.keys(drop) : [],
+            campaignKeys: campaign ? Object.keys(campaign) : [],
+          });
+        }
+        items.push({
+          id: drop.id,
+          game,
+          title: drop.name,
+          requiredMinutes,
+          earnedMinutes,
+          status,
+          imageUrl,
+          campaignImageUrl,
+          linked,
+          campaignHasBadgeOrEmote,
+          campaignStatus,
+          campaignName,
+          startsAt,
+          endsAt,
+          excluded: allowDisabled && watched <= 0 && !isClaimed,
+          campaignId,
+          dropInstanceId,
+          isClaimable:
+            !!dropInstanceId &&
+            !isClaimed &&
+            status !== "claimed" &&
+            progressDone &&
+            withinClaimWindow,
+        });
+      }
+    }
+
+    if (items.length === 0) {
+      this.debug("Inventory empty (no claimable/progress drops)", { summary, dropsCount });
+      return [];
+    }
+
+    this.debug("Built inventory items", items.length);
+    return items;
+  }
+
   isAuthError(err: unknown): err is TwitchAuthError {
     return err instanceof TwitchAuthError;
   }
@@ -814,6 +835,13 @@ function isTruthyFlag(value: unknown): boolean {
   return normalized === "true" || normalized === "1" || normalized === "yes";
 }
 
+function isWithinClaimWindow(endsAt?: string, now = Date.now()): boolean {
+  if (!endsAt) return true;
+  const endMs = Date.parse(endsAt);
+  if (!Number.isFinite(endMs)) return true;
+  return now < endMs + 24 * 60 * 60 * 1000;
+}
+
 function mapStatus(status: string | undefined, drop?: any): InventoryItem["status"] {
   const s = (status ?? "").toLowerCase();
   if (
@@ -832,6 +860,38 @@ function mapStatus(status: string | undefined, drop?: any): InventoryItem["statu
     return "claimed";
   }
   return "locked";
+}
+
+function normalizeBenefitType(value: unknown): string {
+  if (typeof value !== "string") return "";
+  return value.trim().toUpperCase();
+}
+
+function isBadgeOrEmoteType(value: unknown): boolean {
+  const normalized = normalizeBenefitType(value);
+  if (!normalized) return false;
+  return normalized.includes("BADGE") || normalized.includes("EMOTE");
+}
+
+function dropHasBadgeOrEmote(drop: any): boolean {
+  const candidates: unknown[] = [];
+  const edgesRaw =
+    (Array.isArray(drop?.benefitEdges) ? drop.benefitEdges : drop?.benefitEdges?.edges) ??
+    drop?.benefitEdges?.nodes ??
+    [];
+  if (Array.isArray(edgesRaw)) {
+    for (const edge of edgesRaw) {
+      const node = edge?.node ?? edge?.benefit ?? edge;
+      if (!node) continue;
+      candidates.push(node?.distributionType, node?.type);
+      const benefit = node?.benefit;
+      if (benefit) {
+        candidates.push(benefit?.distributionType, benefit?.type);
+      }
+    }
+  }
+  candidates.push(drop?.benefit?.distributionType, drop?.benefit?.type);
+  return candidates.some(isBadgeOrEmoteType);
 }
 
 function extractDropImageUrl(drop: any): string | undefined {
@@ -882,19 +942,159 @@ function extractDropImageUrl(drop: any): string | undefined {
   return undefined;
 }
 
+function mergePrimaryData(primary: any, secondary: any): any {
+  if (primary === undefined) return secondary;
+  if (secondary === undefined) return primary;
+  const primaryIsArray = Array.isArray(primary);
+  const secondaryIsArray = Array.isArray(secondary);
+  if (primaryIsArray || secondaryIsArray) {
+    return primary;
+  }
+  if (primary && secondary && typeof primary === "object" && typeof secondary === "object") {
+    const out: Record<string, unknown> = {};
+    const keys = new Set([...Object.keys(primary), ...Object.keys(secondary)]);
+    for (const key of keys) {
+      out[key] = mergePrimaryData((primary as any)[key], (secondary as any)[key]);
+    }
+    return out;
+  }
+  return primary;
+}
+
+function buildCampaignSummaries(nodes: CampaignNode[]): CampaignInfo[] {
+  const now = Date.now();
+  const campaigns: CampaignInfo[] = [];
+  for (const node of nodes) {
+    if (!node?.id || !node?.name) continue;
+    const game = node.game?.displayName?.trim() ?? "";
+    if (!game) continue;
+    const startsAt = typeof node.startAt === "string" ? node.startAt : undefined;
+    const endsAt = typeof node.endAt === "string" ? node.endAt : undefined;
+    const isActive = isCampaignActive({ startsAt, endsAt }, now);
+    const imageUrl = extractCampaignImageUrl(node);
+    const isAccountConnected =
+      typeof (node as any)?.self?.isAccountConnected === "boolean"
+        ? Boolean((node as any).self.isAccountConnected)
+        : undefined;
+    let drops: CampaignDropInfo[] | undefined = undefined;
+    let hasUnclaimedDrops: boolean | undefined = undefined;
+    if (Array.isArray(node.timeBasedDrops)) {
+      drops = [];
+      for (const drop of node.timeBasedDrops) {
+        if (!drop?.id) continue;
+        const self = (drop as any)?.self;
+        const rawStatus =
+          self?.status ?? (drop as any)?.status ?? (drop as any)?.state ?? undefined;
+        const requiredCandidates = [
+          // @ts-ignore
+          (drop as any).requiredMinutesWatched,
+          // @ts-ignore
+          (drop as any).required_minutes,
+          // @ts-ignore
+          (drop as any).requiredMinutes,
+          drop.minutesWatchedRequired,
+        ];
+        const requiredValid = requiredCandidates
+          .map((v) => Number(v))
+          .filter((n) => Number.isFinite(n) && n > 0);
+        const requiredMinutes = requiredValid.length ? Math.min(...requiredValid) : 0;
+        const watched = Number(self?.currentMinutesWatched ?? 0) || 0;
+        let status = mapStatus(rawStatus, drop);
+        if (isTruthyFlag(self?.isClaimed)) {
+          status = "claimed";
+        } else if (requiredMinutes > 0 && watched >= requiredMinutes) {
+          status = "progress";
+        } else if (watched > 0 && status === "locked") {
+          status = "progress";
+        }
+        let earnedMinutes = requiredMinutes > 0 ? Math.min(requiredMinutes, watched) : watched;
+        if (status === "claimed" && requiredMinutes > 0 && earnedMinutes === 0) {
+          earnedMinutes = requiredMinutes;
+        }
+        drops.push({
+          id: drop.id,
+          name: drop.name,
+          requiredMinutes,
+          earnedMinutes,
+          status,
+          imageUrl: extractDropImageUrl(drop),
+        });
+      }
+      if (drops.length === 0) {
+        hasUnclaimedDrops = false;
+      } else {
+        hasUnclaimedDrops = drops.some((drop) => drop.status !== "claimed");
+      }
+    } else {
+      hasUnclaimedDrops = false;
+    }
+    campaigns.push({
+      id: node.id,
+      name: node.name,
+      game,
+      imageUrl,
+      drops,
+      isAccountConnected,
+      startsAt,
+      endsAt,
+      status: node.status,
+      isActive,
+      hasUnclaimedDrops,
+    });
+  }
+  return campaigns;
+}
+
+function collectBenefitIds(drop: any): string[] {
+  const ids: string[] = [];
+  const pushId = (value: unknown) => {
+    if (typeof value !== "string") return;
+    const trimmed = value.trim();
+    if (trimmed) ids.push(trimmed);
+  };
+  pushId(drop?.benefit?.id);
+  const edgesRaw =
+    (Array.isArray(drop?.benefitEdges) ? drop.benefitEdges : drop?.benefitEdges?.edges) ??
+    drop?.benefitEdges?.nodes ??
+    [];
+  if (Array.isArray(edgesRaw)) {
+    for (const edge of edgesRaw) {
+      pushId(edge?.id);
+      pushId(edge?.node?.id);
+      pushId(edge?.benefit?.id);
+    }
+  }
+  return ids;
+}
+
+function hasClaimedBenefit(claimed: Set<string>, drop: any): boolean {
+  if (!claimed || claimed.size === 0) return false;
+  const ids = collectBenefitIds(drop);
+  if (ids.length === 0) return false;
+  return ids.some((id) => claimed.has(id));
+}
+
 function extractCampaignImageUrl(campaign: any): string | undefined {
   const candidates = [
-    campaign?.imageURL,
-    campaign?.imageUrl,
     campaign?.game?.boxArtURL,
     campaign?.game?.boxArtUrl,
+    campaign?.imageURL,
+    campaign?.imageUrl,
   ];
   for (const value of candidates) {
     if (typeof value === "string" && value.trim().length > 0) {
-      return value;
+      return normalizeTwitchImageUrl(value.trim(), 88, 88);
     }
   }
   return undefined;
+}
+
+function normalizeTwitchImageUrl(value: string, width: number, height: number): string {
+  return value
+    .replace("{width}", String(width))
+    .replace("{height}", String(height))
+    .replace("%7Bwidth%7D", String(width))
+    .replace("%7Bheight%7D", String(height));
 }
 
 type CampaignEdge = {

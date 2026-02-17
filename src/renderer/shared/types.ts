@@ -25,6 +25,7 @@ export type InventoryItem = {
   imageUrl?: string;
   campaignImageUrl?: string;
   linked?: boolean;
+  campaignHasBadgeOrEmote?: boolean;
   campaignStatus?: string;
   campaignName?: string;
   startsAt?: string;
@@ -33,6 +34,29 @@ export type InventoryItem = {
   dropInstanceId?: string;
   campaignId?: string;
   isClaimable?: boolean;
+};
+
+export type CampaignDropSummary = {
+  id: string;
+  name?: string;
+  requiredMinutes?: number;
+  earnedMinutes?: number;
+  status?: InventoryItem["status"];
+  imageUrl?: string;
+};
+
+export type CampaignSummary = {
+  id?: string;
+  name?: string;
+  game?: string;
+  imageUrl?: string;
+  drops?: CampaignDropSummary[];
+  isAccountConnected?: boolean;
+  startsAt?: string;
+  endsAt?: string;
+  isActive?: boolean;
+  status?: string;
+  hasUnclaimedDrops?: boolean;
 };
 
 export type InventoryState =

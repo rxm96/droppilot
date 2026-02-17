@@ -2,6 +2,7 @@ import type {
   ChannelEntry,
   ChannelLiveDiff,
   ChannelTrackerStatus,
+  CampaignSummary,
   InventoryItem,
   PriorityPlan,
   StatsData,
@@ -28,6 +29,11 @@ export type TwitchProfile = {
   displayName: string;
   profileImageUrl?: string;
   email?: string;
+};
+
+export type InventoryBundle = {
+  items: InventoryItem[];
+  campaigns: CampaignSummary[];
 };
 
 const isRecord = (value: unknown): value is UnknownRecord =>
@@ -221,6 +227,20 @@ export const isInventoryItem = (value: unknown): value is InventoryItem => {
     validStatus
   );
 };
+
+export const isCampaignSummary = (value: unknown): value is CampaignSummary => {
+  if (!isRecord(value)) return false;
+  return (
+    (value.id === undefined || isString(value.id)) &&
+    (value.name === undefined || isString(value.name)) &&
+    (value.game === undefined || isString(value.game))
+  );
+};
+
+export const isInventoryBundle = (value: unknown): value is InventoryBundle =>
+  isRecord(value) &&
+  isArrayOf(value.items, isInventoryItem) &&
+  isArrayOf(value.campaigns, isCampaignSummary);
 
 export const isStatsData = (value: unknown): value is StatsData => {
   if (!isRecord(value)) return false;

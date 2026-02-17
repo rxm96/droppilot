@@ -24,6 +24,8 @@ type SettingsData = {
   alertsWatchError?: boolean;
   alertsAutoSwitch?: boolean;
   alertsNewDrops?: boolean;
+  enableBadgesEmotes?: boolean;
+  allowUnlinkedGames?: boolean;
 };
 
 type SettingsHook = {
@@ -48,6 +50,8 @@ type SettingsHook = {
   alertsWatchError: boolean;
   alertsAutoSwitch: boolean;
   alertsNewDrops: boolean;
+  enableBadgesEmotes: boolean;
+  allowUnlinkedGames: boolean;
   savePriorityGames: (list: string[]) => Promise<void>;
   saveObeyPriority: (val: boolean) => Promise<void>;
   saveLanguage: (val: Language) => Promise<void>;
@@ -68,6 +72,8 @@ type SettingsHook = {
   saveAlertsWatchError: (val: boolean) => Promise<void>;
   saveAlertsAutoSwitch: (val: boolean) => Promise<void>;
   saveAlertsNewDrops: (val: boolean) => Promise<void>;
+  saveEnableBadgesEmotes: (val: boolean) => Promise<void>;
+  saveAllowUnlinkedGames: (val: boolean) => Promise<void>;
   resetAutomation: () => Promise<void>;
   selectedGame: string;
   setSelectedGame: (val: string) => void;
@@ -110,6 +116,8 @@ export function useSettingsStore(): SettingsHook {
   const [alertsWatchError, setAlertsWatchError] = useState<boolean>(true);
   const [alertsAutoSwitch, setAlertsAutoSwitch] = useState<boolean>(true);
   const [alertsNewDrops, setAlertsNewDrops] = useState<boolean>(true);
+  const [enableBadgesEmotes, setEnableBadgesEmotes] = useState<boolean>(false);
+  const [allowUnlinkedGames, setAllowUnlinkedGames] = useState<boolean>(false);
   const [selectedGame, setSelectedGame] = useState<string>("");
   const [newGame, setNewGame] = useState<string>("");
   const [settingsJson, setSettingsJson] = useState<string>("");
@@ -148,6 +156,8 @@ export function useSettingsStore(): SettingsHook {
       setAlertsWatchError(res.alertsWatchError !== false);
       setAlertsAutoSwitch(res.alertsAutoSwitch !== false);
       setAlertsNewDrops(res.alertsNewDrops !== false);
+      setEnableBadgesEmotes(res.enableBadgesEmotes === true);
+      setAllowUnlinkedGames(res.allowUnlinkedGames === true);
       setSettingsJson(JSON.stringify(res, null, 2));
     } catch (err) {
       console.error("settings load failed", err);
@@ -191,6 +201,8 @@ export function useSettingsStore(): SettingsHook {
       setAlertsWatchError(saved.alertsWatchError !== false);
       setAlertsAutoSwitch(saved.alertsAutoSwitch !== false);
       setAlertsNewDrops(saved.alertsNewDrops !== false);
+      setEnableBadgesEmotes(saved.enableBadgesEmotes === true);
+      setAllowUnlinkedGames(saved.allowUnlinkedGames === true);
       setSettingsJson(JSON.stringify(saved, null, 2));
     } catch (err) {
       setSettingsError(toErrorMessage(err, "error.settings.save_failed"));
@@ -303,6 +315,16 @@ export function useSettingsStore(): SettingsHook {
     await persist({ alertsNewDrops: val });
   };
 
+  const saveEnableBadgesEmotes = async (val: boolean) => {
+    setEnableBadgesEmotes(val);
+    await persist({ enableBadgesEmotes: val });
+  };
+
+  const saveAllowUnlinkedGames = async (val: boolean) => {
+    setAllowUnlinkedGames(val);
+    await persist({ allowUnlinkedGames: val });
+  };
+
   const resetAutomation = async () => {
     const defaults = {
       autoClaim: true,
@@ -312,6 +334,8 @@ export function useSettingsStore(): SettingsHook {
       refreshMinMs: 120_000,
       refreshMaxMs: 240_000,
       demoMode: false,
+      enableBadgesEmotes: false,
+      allowUnlinkedGames: false,
     };
     setAutoClaim(defaults.autoClaim);
     setAutoSelect(defaults.autoSelect);
@@ -320,6 +344,8 @@ export function useSettingsStore(): SettingsHook {
     setRefreshMinMs(defaults.refreshMinMs);
     setRefreshMaxMs(defaults.refreshMaxMs);
     setDemoMode(defaults.demoMode);
+    setEnableBadgesEmotes(defaults.enableBadgesEmotes);
+    setAllowUnlinkedGames(defaults.allowUnlinkedGames);
     await persist(defaults);
   };
 
@@ -374,6 +400,8 @@ export function useSettingsStore(): SettingsHook {
       setAlertsWatchError(saved.alertsWatchError !== false);
       setAlertsAutoSwitch(saved.alertsAutoSwitch !== false);
       setAlertsNewDrops(saved.alertsNewDrops !== false);
+      setEnableBadgesEmotes(saved.enableBadgesEmotes === true);
+      setAllowUnlinkedGames(saved.allowUnlinkedGames === true);
       setSettingsJson(JSON.stringify(saved, null, 2));
       setSettingsInfo("settings.info.imported");
       setSettingsError(null);
@@ -413,6 +441,8 @@ export function useSettingsStore(): SettingsHook {
     alertsWatchError,
     alertsAutoSwitch,
     alertsNewDrops,
+    enableBadgesEmotes,
+    allowUnlinkedGames,
     savePriorityGames,
     saveObeyPriority,
     saveLanguage,
@@ -433,6 +463,8 @@ export function useSettingsStore(): SettingsHook {
     saveAlertsWatchError,
     saveAlertsAutoSwitch,
     saveAlertsNewDrops,
+    saveEnableBadgesEmotes,
+    saveAllowUnlinkedGames,
     resetAutomation,
     selectedGame,
     setSelectedGame,
