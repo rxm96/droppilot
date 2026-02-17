@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { InventoryState, WatchingState } from "@renderer/shared/types";
+import type { CampaignSummary, InventoryState, WatchingState } from "@renderer/shared/types";
 import {
   isArrayOf,
   isChannelEntry,
@@ -12,17 +12,6 @@ import {
   normalizePriorityGames,
   type WithCategory,
 } from "./usePriorityOrchestration";
-
-export type CampaignSummary = {
-  id?: string;
-  name?: string;
-  game?: string;
-  startsAt?: string;
-  endsAt?: string;
-  isActive?: boolean;
-  status?: string;
-  hasUnclaimedDrops?: boolean;
-};
 
 type Params = {
   allowWatching: boolean;
@@ -67,6 +56,7 @@ const WARMUP_PINGS = 3;
 const WARMUP_PING_INTERVAL_MS = 60_000;
 const WARMUP_COOLDOWN_MS = 5 * 60_000;
 const WARMUP_CAMPAIGN_COOLDOWN_MS = 24 * 60 * 60_000;
+const WARMUP_INVENTORY_REFRESH_MS = 60 * 60_000;
 const WARMUP_CAMPAIGN_STORAGE_KEY = "droppilot:warmup-campaign-attempts";
 
 const loadWarmupCampaignAttempts = (): Map<string, WarmupAttemptStored> => {
@@ -488,7 +478,12 @@ export function useCampaignWarmup({
           }
         }
         if (!cancelled) {
-          void fetchInventory({ forceLoading: true });
+          const now = Date.now();
+          const shouldRefresh =
+            !inventoryFetchedAt || now - inventoryFetchedAt > WARMUP_INVENTORY_REFRESH_MS;
+          if (shouldRefresh) {
+            void fetchInventory({ forceLoading: true });
+          }
           updateWarmupState({ lastReason: "complete" });
         }
       } catch (err) {
@@ -513,6 +508,7 @@ export function useCampaignWarmup({
     demoMode,
     fetchInventory,
     forwardAuthError,
+    inventoryFetchedAt,
     inventoryStatus,
     hasPriorityMatch,
     knownCampaignIds,

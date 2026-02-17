@@ -18,7 +18,7 @@ type Params = {
   fetchInventory: FetchInventory;
 };
 
-const MIN_REFRESH_MS = 60_000;
+const MIN_REFRESH_MS = 60 * 60_000;
 
 export function useInventoryRefresh({
   watching,

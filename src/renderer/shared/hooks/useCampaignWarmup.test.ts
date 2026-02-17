@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { selectWarmupTarget, type CampaignSummary } from "./useCampaignWarmup";
+import { selectWarmupTarget } from "./useCampaignWarmup";
+import type { CampaignSummary } from "@renderer/shared/types";
 
 const makeCampaign = (overrides: Partial<CampaignSummary> = {}): CampaignSummary => ({
   id: "c1",

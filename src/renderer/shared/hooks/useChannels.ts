@@ -27,8 +27,6 @@ type Params = {
   watching: WatchingState;
   setWatchingFromChannel: (channel: ChannelEntry) => void;
   clearWatching: () => void;
-  fetchInventory: () => void;
-  inventoryFetchedAt: number | null;
   autoSelectEnabled: boolean;
   autoSwitchEnabled: boolean;
   forcePrioritySwitch?: boolean;
@@ -268,8 +266,6 @@ export function useChannels({
   watching,
   setWatchingFromChannel,
   clearWatching,
-  fetchInventory,
-  inventoryFetchedAt,
   autoSelectEnabled,
   autoSwitchEnabled,
   forcePrioritySwitch = false,
@@ -279,7 +275,6 @@ export function useChannels({
   demoMode,
   onAuthError,
 }: Params) {
-  const RECENT_INVENTORY_WINDOW_MS = 30_000;
   const TRACKER_REFRESH_WINDOW_MS =
     trackerMode && trackerMode !== "polling" ? 10 * 60_000 : 5 * 60_000;
   const [channels, setChannels] = useState<ChannelEntry[]>([]);
@@ -322,16 +317,6 @@ export function useChannels({
       }),
     [channels.length, fetchedAt, fetchedGame, TRACKER_REFRESH_WINDOW_MS],
   );
-  const hasRecentInventoryNow = useCallback(
-    (now = Date.now()) =>
-      hasRecentInventory({
-        inventoryFetchedAt,
-        now,
-        recentWindowMs: RECENT_INVENTORY_WINDOW_MS,
-      }),
-    [inventoryFetchedAt, RECENT_INVENTORY_WINDOW_MS],
-  );
-
   const fetchChannels = useCallback(
     async (gameName: string, { force }: { force?: boolean } = {}) => {
       if (!allowWatching) return;
@@ -381,13 +366,6 @@ export function useChannels({
               removed: diff.removedIds.length,
               updated: diff.updatedIds.length,
             });
-          }
-          const shouldSkipInventory =
-            (autoSelectEnabled && !watching) || hasRecentInventoryNow(now);
-          if (shouldSkipInventory) {
-            logDebug("channels: skip inventory fetch (recent or auto-select)");
-          } else {
-            fetchInventory();
           }
           return;
         }
@@ -448,13 +426,6 @@ export function useChannels({
             updated: diff.updatedIds.length,
           });
         }
-        const shouldSkipInventory = (autoSelectEnabled && !watching) || hasRecentInventoryNow(now);
-        if (shouldSkipInventory) {
-          logDebug("channels: skip inventory fetch (recent or auto-select)");
-        } else {
-          // Nach Channel-Fetch auch Inventar neu laden, damit Drop-Progress aktuell bleibt.
-          fetchInventory();
-        }
       } catch (err) {
         if (gameName !== targetGameRef.current || requestId < latestAppliedRequestRef.current) {
           logDebug("channels: ignore stale failure", {
@@ -485,9 +456,7 @@ export function useChannels({
       applyChannelsState,
       autoSelectEnabled,
       demoMode,
-      fetchInventory,
       fetchedGame,
-      hasRecentInventoryNow,
       isFresh,
       onAuthError,
       watching,
@@ -607,11 +576,6 @@ export function useChannels({
       return;
     const first = channels[0];
     setWatchingFromChannel(first);
-    if (hasRecentInventoryNow()) {
-      logDebug("channels: skip inventory fetch (recent inventory)");
-    } else {
-      fetchInventory();
-    }
   }, [
     channels,
     watching,
@@ -619,10 +583,7 @@ export function useChannels({
     autoSelectEnabled,
     allowWatching,
     canWatchTarget,
-    inventoryFetchedAt,
     setWatchingFromChannel,
-    fetchInventory,
-    hasRecentInventoryNow,
   ]);
 
   // Auto-switch if current channel disappears
@@ -638,7 +599,6 @@ export function useChannels({
     if (action.action === "none") return;
     if (action.action === "clear") {
       clearWatching();
-      fetchInventory();
       return;
     }
     setWatchingFromChannel(action.nextChannel);
@@ -648,7 +608,6 @@ export function useChannels({
       from: { id: watching.id, name: watching.name },
       to: { id: action.nextChannel.id, name: action.nextChannel.displayName },
     });
-    fetchInventory();
   }, [
     channels,
     watching,
@@ -658,7 +617,6 @@ export function useChannels({
     canWatchTarget,
     clearWatching,
     setWatchingFromChannel,
-    fetchInventory,
   ]);
 
   useEffect(() => {

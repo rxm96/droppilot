@@ -268,7 +268,6 @@ export function useAppModel() {
     obeyPriority,
     watching,
     stopWatching: actions.stopWatching,
-    forwardAuthError,
   });
 
   const targetGame = activeTargetGame || "";
@@ -292,19 +291,6 @@ export function useAppModel() {
     inventoryFetchedAt,
   });
 
-  useEffect(() => {
-    if (!watching) return;
-    const eta = activeDropEta;
-    if (!eta) return;
-    const timeout = window.setTimeout(
-      () => {
-        void fetchInventory({ forceLoading: true });
-      },
-      Math.max(0, eta + 30_000 - Date.now()),
-    );
-    return () => window.clearTimeout(timeout);
-  }, [watching, activeDropEta, fetchInventory]);
-
   const { channels, channelDiff, channelError, channelsLoading, channelsRefreshing, autoSwitch } =
     useChannels({
       targetGame,
@@ -315,8 +301,6 @@ export function useAppModel() {
       autoSelectEnabled,
       autoSwitchEnabled,
       forcePrioritySwitch: obeyPriority,
-      fetchInventory: () => fetchInventory(),
-      inventoryFetchedAt,
       allowWatching,
       canWatchTarget,
       trackerMode: trackerStatus?.mode,

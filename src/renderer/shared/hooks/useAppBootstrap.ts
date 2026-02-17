@@ -6,7 +6,6 @@ import type {
   ProfileState,
   UserPubSubStatus,
   View,
-  WatchingState,
 } from "@renderer/shared/types";
 import { errorInfoFromIpc, errorInfoFromUnknown } from "@renderer/shared/utils/errors";
 import {
@@ -49,7 +48,6 @@ type Params = {
   view: View;
   setView: (next: View) => void;
   setAutoSelectEnabled: (next: boolean) => void;
-  watching: WatchingState;
   fetchInventory: FetchInventory;
   forwardAuthError: (message?: string) => void;
 };
@@ -62,7 +60,6 @@ export function useAppBootstrap({
   view,
   setView,
   setAutoSelectEnabled,
-  watching,
   fetchInventory,
   forwardAuthError,
 }: Params) {
@@ -294,16 +291,6 @@ export function useAppBootstrap({
       setProfile({ status: "idle" });
     }
   }, [authStatus, demoMode, fetchProfile]);
-
-  useEffect(() => {
-    const onUnload = () => {
-      if (watching) {
-        void fetchInventoryRef.current({ forceLoading: true });
-      }
-    };
-    window.addEventListener("beforeunload", onUnload);
-    return () => window.removeEventListener("beforeunload", onUnload);
-  }, [watching]);
 
   return {
     profile,

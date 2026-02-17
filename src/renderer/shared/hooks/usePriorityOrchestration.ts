@@ -6,11 +6,6 @@ import type {
   PriorityPlan,
   WatchingState,
 } from "@renderer/shared/types";
-import {
-  isIpcAuthErrorResponse,
-  isIpcErrorResponse,
-  isPriorityPlan,
-} from "@renderer/shared/utils/ipc";
 
 export type WithCategory = { item: InventoryItem; category: string };
 
@@ -57,6 +52,35 @@ export const normalizePriorityGames = (priorityGames: string[]): string[] => {
     order.push(normalized);
   }
   return order;
+};
+
+const buildLivePriorityPlan = (
+  items: InventoryItem[],
+  priorityGames: string[],
+): PriorityPlan => {
+  const activeItems = items.filter((i) => i.status !== "claimed");
+  const availableGames = Array.from(new Set(activeItems.map((i) => i.game)));
+  const order: string[] = [];
+
+  for (const g of priorityGames) {
+    if (availableGames.includes(g) && !order.includes(g)) {
+      order.push(g);
+    }
+  }
+  for (const g of availableGames) {
+    if (!order.includes(g)) {
+      order.push(g);
+    }
+  }
+
+  const missingPriority = priorityGames.filter((g) => !availableGames.includes(g));
+
+  return {
+    order,
+    availableGames,
+    missingPriority,
+    totalActiveDrops: activeItems.length,
+  };
 };
 
 export const computePriorityOrder = ({
@@ -129,7 +153,6 @@ type Params = {
   obeyPriority: boolean;
   watching: WatchingState;
   stopWatching: (opts?: { skipRefresh?: boolean }) => void;
-  forwardAuthError: (message?: string) => void;
 };
 
 export function usePriorityOrchestration({
@@ -141,7 +164,6 @@ export function usePriorityOrchestration({
   obeyPriority,
   watching,
   stopWatching,
-  forwardAuthError,
 }: Params) {
   const [priorityPlan, setPriorityPlan] = useState<PriorityPlan | null>(null);
   const [activeTargetGame, setActiveTargetGame] = useState<string>("");
@@ -150,26 +172,9 @@ export function usePriorityOrchestration({
     setPriorityPlan(buildDemoPriorityPlan(inventoryItems, priorityGames));
   }, [inventoryItems, priorityGames]);
 
-  const refreshLivePriorityPlan = useCallback(async () => {
-    try {
-      const res: unknown = await window.electronAPI.twitch.priorityPlan({ priorityGames });
-      if (isIpcErrorResponse(res)) {
-        if (isIpcAuthErrorResponse(res)) {
-          forwardAuthError(res.message);
-          return;
-        }
-        console.error("priority plan error", res);
-        return;
-      }
-      if (!isPriorityPlan(res)) {
-        console.error("priority plan invalid response", res);
-        return;
-      }
-      setPriorityPlan(res);
-    } catch (err) {
-      console.error("priority plan failed", err);
-    }
-  }, [forwardAuthError, priorityGames]);
+  const refreshLivePriorityPlan = useCallback(() => {
+    setPriorityPlan(buildLivePriorityPlan(inventoryItems, priorityGames));
+  }, [inventoryItems, priorityGames]);
 
   const refreshPriorityPlan = demoMode ? refreshDemoPriorityPlan : refreshLivePriorityPlan;
 
