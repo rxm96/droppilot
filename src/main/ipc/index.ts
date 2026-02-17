@@ -140,6 +140,22 @@ export function registerIpcHandlers(deps: {
     return result;
   });
 
+  ipcMain.handle("auth/revalidate", async () => {
+    try {
+      const result = await twitch.revalidateSession();
+      if (result.ok && result.status === "refreshed") {
+        userPubSub?.notifySessionChanged();
+      }
+      return result;
+    } catch (err) {
+      return {
+        ok: false,
+        status: "error",
+        message: err instanceof Error ? err.message : String(err),
+      };
+    }
+  });
+
   ipcMain.handle("auth/session", async () => {
     return loadSession();
   });

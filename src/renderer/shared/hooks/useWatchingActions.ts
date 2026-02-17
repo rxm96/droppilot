@@ -52,40 +52,62 @@ export function useWatchingActions({
   logout,
 }: Params) {
   const authErrorRef = useRef<AuthErrorTracker>({ count: 0, lastAt: 0 });
+  const revalidateInFlightRef = useRef<Promise<unknown> | null>(null);
 
   const startWatching = useCallback(
     (ch: ChannelEntry) => {
       setAutoSelectEnabled(true);
       setWatchingFromChannel(ch);
-      fetchInventory();
     },
-    [fetchInventory, setAutoSelectEnabled, setWatchingFromChannel],
+    [setAutoSelectEnabled, setWatchingFromChannel],
   );
 
-  const stopWatching = useCallback(
-    (opts?: { skipRefresh?: boolean }) => {
-      setAutoSelectEnabled(false);
-      clearWatching();
-      if (!opts?.skipRefresh) {
-        void fetchInventory({ forceLoading: true });
-      }
-    },
-    [clearWatching, fetchInventory, setAutoSelectEnabled],
-  );
+  const stopWatching = useCallback(() => {
+    setAutoSelectEnabled(false);
+    clearWatching();
+  }, [clearWatching, setAutoSelectEnabled]);
 
   const handleAuthError = useCallback(
     (message?: string) => {
       if (!isLinked) return;
       logWarn("auth: invalid", { message });
-      stopWatching({ skipRefresh: true });
+      stopWatching();
       const now = Date.now();
       const nextTracker = updateAuthErrorTracker(authErrorRef.current, now, AUTH_ERROR_WINDOW_MS);
       authErrorRef.current = nextTracker;
 
       void (async () => {
+        type RevalidateResponse = { ok?: boolean; status?: string };
         const session = await window.electronAPI.auth.session().catch(() => null);
         const token = session?.accessToken?.trim?.() ?? "";
         const expiresAt = typeof session?.expiresAt === "number" ? session.expiresAt : 0;
+        let revalidateResult: RevalidateResponse | null = null;
+        try {
+          if (!revalidateInFlightRef.current) {
+            revalidateInFlightRef.current =
+              window.electronAPI.auth.revalidate?.().catch(() => null) ?? null;
+          }
+          revalidateResult = revalidateInFlightRef.current
+            ? ((await revalidateInFlightRef.current) as RevalidateResponse | null)
+            : null;
+        } finally {
+          revalidateInFlightRef.current = null;
+        }
+        if (revalidateResult?.ok) {
+          authErrorRef.current = { count: 0, lastAt: 0 };
+          logWarn("auth: session revalidated", { status: revalidateResult.status });
+          return;
+        }
+
+        const revalidateStatus =
+          revalidateResult && typeof revalidateResult.status === "string"
+            ? (revalidateResult.status as string)
+            : null;
+        const fatalRevalidate =
+          revalidateStatus === "missing_token" ||
+          revalidateStatus === "unauthorized" ||
+          revalidateStatus === "refresh_unavailable" ||
+          revalidateStatus === "refresh_failed";
         const shouldLogout = shouldLogoutForAuthError({
           token,
           expiresAt,
@@ -93,11 +115,15 @@ export function useWatchingActions({
           maxSoft: AUTH_ERROR_MAX_SOFT,
           count: nextTracker.count,
         });
-        if (shouldLogout) {
+        if (fatalRevalidate || shouldLogout) {
           void logout();
           return;
         }
-        logWarn("auth: transient error, keeping session", { message, expiresAt });
+        logWarn("auth: transient error, keeping session", {
+          message,
+          expiresAt,
+          revalidateStatus,
+        });
       })();
     },
     [isLinked, stopWatching, logout],

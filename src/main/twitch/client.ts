@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto";
 import {
   TWITCH_CLIENT_ID,
+  TWITCH_CLIENT_SECRET,
   TWITCH_WEB_USER_AGENT,
   TWITCH_INTEGRITY_URL,
   TWITCH_COOKIE_OVERRIDE,
+  TWITCH_OAUTH_TOKEN_URL,
 } from "../config";
 import type { SessionData } from "../core/storage";
 import { ensureSessionIds, updateSession } from "../core/session";
@@ -22,6 +24,40 @@ export interface ValidateInfo {
   expiresIn: number;
   scopes?: string[];
 }
+
+type ValidateResponse = {
+  login: string;
+  user_id: string;
+  expires_in: number;
+  scopes?: string[];
+  client_id?: string;
+};
+
+type RefreshTokenResponse = {
+  access_token?: string;
+  refresh_token?: string;
+  expires_in?: number;
+  scope?: string[];
+};
+
+export type RevalidateResult =
+  | {
+      ok: true;
+      status: "valid" | "refreshed";
+      expiresAt: number;
+      expiresIn: number;
+      login?: string;
+    }
+  | {
+      ok: false;
+      status:
+        | "missing_token"
+        | "unauthorized"
+        | "refresh_unavailable"
+        | "refresh_failed"
+        | "error";
+      message?: string;
+    };
 
 export class TwitchAuthError extends Error {
   constructor(
@@ -338,6 +374,102 @@ export class TwitchClient {
     this.sessionId = ids.sessionId;
   }
 
+  private async requestValidateInfo(
+    token: string,
+  ): Promise<{ ok: true; data: ValidateResponse } | { ok: false; status: number; message?: string }> {
+    try {
+      const validateRes = await fetch("https://id.twitch.tv/oauth2/validate", {
+        headers: { Authorization: `OAuth ${token}` },
+      });
+      if (validateRes.status === 401) {
+        return { ok: false, status: 401 };
+      }
+      if (!validateRes.ok) {
+        let message = "";
+        try {
+          message = await validateRes.text();
+        } catch {
+          message = "";
+        }
+        return { ok: false, status: validateRes.status, message: message || undefined };
+      }
+      const data = (await validateRes.json()) as ValidateResponse;
+      return { ok: true, data };
+    } catch (err) {
+      return {
+        ok: false,
+        status: 0,
+        message: err instanceof Error ? err.message : String(err),
+      };
+    }
+  }
+
+  private async refreshAccessToken(
+    refreshToken: string,
+  ): Promise<
+    | { ok: true; accessToken: string; refreshToken?: string; expiresIn: number; scopes: string[] }
+    | { ok: false; status: "refresh_unavailable" | "refresh_failed" | "error"; message?: string }
+  > {
+    if (!TWITCH_CLIENT_SECRET) {
+      return {
+        ok: false,
+        status: "refresh_unavailable",
+        message: "Missing client secret",
+      };
+    }
+    try {
+      const res = await fetch(TWITCH_OAUTH_TOKEN_URL, {
+        method: "POST",
+        headers: {
+          "Client-Id": TWITCH_CLIENT_ID,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          client_id: TWITCH_CLIENT_ID,
+          client_secret: TWITCH_CLIENT_SECRET,
+          grant_type: "refresh_token",
+          refresh_token: refreshToken,
+        }),
+      });
+      if (!res.ok) {
+        let message = "";
+        try {
+          message = await res.text();
+        } catch {
+          message = "";
+        }
+        return {
+          ok: false,
+          status: "refresh_failed",
+          message: message || `Refresh failed (${res.status})`,
+        };
+      }
+      const data = (await res.json()) as RefreshTokenResponse;
+      const accessToken = data?.access_token;
+      if (!accessToken) {
+        return { ok: false, status: "refresh_failed", message: "Missing access token" };
+      }
+      const expiresIn =
+        typeof data.expires_in === "number" && Number.isFinite(data.expires_in)
+          ? data.expires_in
+          : 4 * 60 * 60;
+      const scopes = Array.isArray(data.scope) ? data.scope : [];
+      return {
+        ok: true,
+        accessToken,
+        refreshToken: data.refresh_token,
+        expiresIn,
+        scopes,
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        status: "error",
+        message: err instanceof Error ? err.message : String(err),
+      };
+    }
+  }
+
   async getValidateInfo(): Promise<ValidateInfo> {
     if (this.validateInfo) return this.validateInfo;
 
@@ -345,21 +477,18 @@ export class TwitchClient {
     if (!session?.accessToken) {
       throw new TwitchAuthError("Not logged in");
     }
-    const validateRes = await fetch("https://id.twitch.tv/oauth2/validate", {
-      headers: { Authorization: `OAuth ${session.accessToken}` },
-    });
-    if (validateRes.status === 401) {
-      throw new TwitchAuthError("Unauthorized", 401);
-    }
+    const validateRes = await this.requestValidateInfo(session.accessToken);
     if (!validateRes.ok) {
-      throw new Error(`Validate failed: ${validateRes.status}`);
+      if (validateRes.status === 401) {
+        throw new TwitchAuthError("Unauthorized", 401);
+      }
+      throw new Error(
+        `Validate failed${validateRes.status ? `: ${validateRes.status}` : ""}${
+          validateRes.message ? ` ${validateRes.message}` : ""
+        }`,
+      );
     }
-    const validate = (await validateRes.json()) as {
-      login: string;
-      user_id: string;
-      expires_in: number;
-      scopes?: string[];
-    };
+    const validate = validateRes.data;
     this.validateInfo = {
       login: validate.login,
       userId: validate.user_id,
@@ -367,6 +496,80 @@ export class TwitchClient {
       scopes: validate.scopes,
     };
     return this.validateInfo;
+  }
+
+  async revalidateSession(): Promise<RevalidateResult> {
+    const session = await this.sessionProvider();
+    const token = session?.accessToken?.trim();
+    if (!token) {
+      return { ok: false, status: "missing_token" };
+    }
+
+    const validateRes = await this.requestValidateInfo(token);
+    if (validateRes.ok) {
+      const expiresIn = Math.max(0, Number(validateRes.data.expires_in) || 0);
+      const expiresAt = Date.now() + expiresIn * 1000;
+      this.validateInfo = {
+        login: validateRes.data.login,
+        userId: validateRes.data.user_id,
+        expiresIn,
+        scopes: validateRes.data.scopes,
+      };
+      await updateSession({
+        expiresAt,
+        loginName: validateRes.data.login,
+        scopes: Array.isArray(validateRes.data.scopes)
+          ? validateRes.data.scopes
+          : session?.scopes ?? [],
+      });
+      return {
+        ok: true,
+        status: "valid",
+        expiresAt,
+        expiresIn,
+        login: validateRes.data.login,
+      };
+    }
+
+    if (validateRes.status === 401) {
+      const refreshToken = session?.refreshToken?.trim();
+      if (!refreshToken) {
+        return { ok: false, status: "unauthorized" };
+      }
+      const refreshed = await this.refreshAccessToken(refreshToken);
+      if (!refreshed.ok) {
+        return {
+          ok: false,
+          status: refreshed.status,
+          message: refreshed.message,
+        };
+      }
+      const expiresIn = Math.max(0, Number(refreshed.expiresIn) || 0);
+      const expiresAt = Date.now() + expiresIn * 1000;
+      this.validateInfo = undefined;
+      await updateSession({
+        accessToken: refreshed.accessToken,
+        refreshToken: refreshed.refreshToken ?? refreshToken,
+        expiresAt,
+        scopes:
+          refreshed.scopes.length > 0 ? refreshed.scopes : session?.scopes ?? [],
+      });
+      return {
+        ok: true,
+        status: "refreshed",
+        expiresAt,
+        expiresIn,
+        login: session?.loginName,
+      };
+    }
+
+    return {
+      ok: false,
+      status: "error",
+      message:
+        validateRes.message ??
+        (validateRes.status ? `Validate failed (${validateRes.status})` : "Validate failed"),
+    };
   }
 
   async getUser(): Promise<TwitchUser> {

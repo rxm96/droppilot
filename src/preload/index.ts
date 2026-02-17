@@ -81,6 +81,7 @@ const api = {
   openExternal: (url: string) => shell.openExternal(url),
   auth: {
     login: () => ipcRenderer.invoke("auth/login"),
+    revalidate: () => ipcRenderer.invoke("auth/revalidate"),
     session: () => ipcRenderer.invoke("auth/session"),
     logout: () => ipcRenderer.invoke("auth/logout"),
   },
