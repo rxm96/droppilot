@@ -27,6 +27,37 @@ describe("parseUserPubSubEvent", () => {
     });
   });
 
+  it("parses drop-progress payloads with numeric strings", () => {
+    const event = parseUserPubSubEvent(
+      "user-drop-events.123",
+      JSON.stringify({
+        type: "drop-progress",
+        data: {
+          drop_id: "drop-1",
+          current_progress_min: "7",
+          required_progress_min: "15",
+        },
+      }),
+    );
+    expect(event?.kind).toBe("drop-progress");
+    expect(event?.currentProgressMin).toBe(7);
+    expect(event?.requiredProgressMin).toBe(15);
+  });
+
+  it("parses object payload messages without JSON decoding step", () => {
+    const event = parseUserPubSubEvent("user-drop-events.123", {
+      type: "drop-progress",
+      data: {
+        drop_id: "drop-1",
+        current_progress_min: 9,
+        required_progress_min: 15,
+      },
+    });
+    expect(event?.kind).toBe("drop-progress");
+    expect(event?.dropId).toBe("drop-1");
+    expect(event?.currentProgressMin).toBe(9);
+  });
+
   it("parses drop-claim payloads", () => {
     const event = parseUserPubSubEvent(
       "user-drop-events.123",

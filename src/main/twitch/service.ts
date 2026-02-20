@@ -4,6 +4,39 @@ import { TwitchClient, TwitchAuthError, type RevalidateResult, type TwitchUser }
 import { buildPriorityPlan, type PriorityPlan } from "./channels";
 import { TwitchServiceError } from "./errors";
 import { TWITCH_ERROR_CODES } from "../../shared/errorCodes";
+import {
+  buildCampaignSummaries,
+  collectBlockingReasonHints,
+  collectLockedReasonHints,
+  createPersistedQuery,
+  dropHasBadgeOrEmote,
+  extractAllowedChannelFilters,
+  extractCampaignImageUrl,
+  extractBenefitEdges,
+  extractDropImageUrl,
+  extractPreconditionDropIds,
+  hasClaimedBenefit,
+  isPersistedQueryNotFound,
+  isTruthyFlag,
+  isWithinClaimWindow,
+  mapStatus,
+  mergePrimaryData,
+  parseIsoMs,
+  pickRequiredMinutes,
+  unlockGuidanceForReason,
+  type AvailableDropsResponse,
+  type CampaignEdge,
+  type CampaignInfo,
+  type CampaignNode,
+  type CampaignsResponse,
+  type ClaimDropRewardsResponse,
+  type DirectoryGameRedirectResponse,
+  type DirectoryPageGameResponse,
+  type DirectoryStreamNode,
+  type DropCampaignDetailsResponse,
+  type InventoryResponse,
+  type VideoPlayerStreamInfoOverlayChannelResponse,
+} from "./serviceUtils";
 
 export interface InventoryItem {
   id: string;
@@ -24,30 +57,16 @@ export interface InventoryItem {
   dropInstanceId?: string;
   campaignId?: string;
   isClaimable?: boolean;
+  blocked?: boolean;
+  blockingReasonHints?: string[];
+  allowedChannelIds?: string[];
+  allowedChannelLogins?: string[];
 }
 
-type CampaignInfo = {
-  id: string;
-  name: string;
-  game: string;
-  imageUrl?: string;
-  drops?: CampaignDropInfo[];
-  isAccountConnected?: boolean;
-  startsAt?: string;
-  endsAt?: string;
-  status?: string;
-  isActive: boolean;
-  hasUnclaimedDrops?: boolean;
-};
-
-type CampaignDropInfo = {
-  id: string;
-  name?: string;
-  requiredMinutes?: number;
-  earnedMinutes?: number;
-  status?: InventoryItem["status"];
-  imageUrl?: string;
-};
+const DIRECTORY_PAGE_GAME_HASHES = [
+  "76cb069d835b8a02914c08dc42c421d0dafda8af5b113a3f19141824b901402f",
+  "98a996c3c3ebb1ba4fd65d6671c6028d7ee8d615cb540b0731b3db2a911d3649",
+];
 
 export type ChannelInfo = {
   id: string; // broadcaster id
@@ -69,6 +88,7 @@ export type InventoryBundle = {
 export class TwitchService {
   private client: TwitchClient;
   private debug = (...args: unknown[]) => console.log("[TwitchService]", ...args);
+  private loggedCampaignDiagnostics = new Set<string>();
 
   constructor(sessionProvider: () => Promise<SessionData | null>) {
     this.client = new TwitchClient(sessionProvider);
@@ -127,7 +147,7 @@ export class TwitchService {
   }
 
   async resolveGameSlug(name: string): Promise<string | null> {
-    const res = await this.gqlRequest<any>(
+    const res = await this.gqlRequest<DirectoryGameRedirectResponse>(
       {
         operationName: "DirectoryGameRedirect",
         extensions: {
@@ -153,52 +173,80 @@ export class TwitchService {
         `Game slug missing for ${gameName}`,
       );
     }
-    const res = await this.gqlRequest<any>(
-      {
-        operationName: "DirectoryPage_Game",
-        extensions: {
-          persistedQuery: {
-            version: 1,
-            sha256Hash: "98a996c3c3ebb1ba4fd65d6671c6028d7ee8d615cb540b0731b3db2a911d3649",
-          },
-        },
-        variables: {
-          limit: 20,
-          slug,
-          imageWidth: 70,
-          includeCostreaming: false,
-          options: {
-            broadcasterLanguages: [],
-            freeformTags: null,
-            includeRestricted: ["SUB_ONLY_LIVE"],
-            recommendationsContext: { platform: "web" },
-            sort: "VIEWER_COUNT",
-            systemFilters: ["DROPS_ENABLED"], // only show drops-enabled streams
-            tags: [],
-            requestID: "COD-CHANNEL-FETCH",
-          },
-          sortTypeIsRecency: false,
-        },
+    const variables = {
+      limit: 20,
+      slug,
+      imageWidth: 70,
+      includeCostreaming: false,
+      options: {
+        broadcasterLanguages: [],
+        freeformTags: null,
+        includeRestricted: ["SUB_ONLY_LIVE"],
+        recommendationsContext: { platform: "web" },
+        sort: "VIEWER_COUNT",
+        systemFilters: ["DROPS_ENABLED"], // only show drops-enabled streams
+        tags: [],
+        requestID: "COD-CHANNEL-FETCH",
       },
-      "DirectoryPage_Game",
-    );
+      sortTypeIsRecency: false,
+    };
+
+    let res: DirectoryPageGameResponse | null = null;
+    let lastPersistedQueryErr: unknown = null;
+    for (const sha of DIRECTORY_PAGE_GAME_HASHES) {
+      try {
+        res = await this.gqlRequest<DirectoryPageGameResponse>(
+          {
+            operationName: "DirectoryPage_Game",
+            extensions: {
+              persistedQuery: {
+                version: 1,
+                sha256Hash: sha,
+              },
+            },
+            variables,
+          },
+          "DirectoryPage_Game",
+        );
+        break;
+      } catch (err) {
+        if (isPersistedQueryNotFound(err)) {
+          lastPersistedQueryErr = err;
+          this.debug("DirectoryPage_Game persisted query not found", {
+            gameName,
+            slug,
+            sha,
+          });
+          continue;
+        }
+        throw err;
+      }
+    }
+    if (!res) {
+      if (lastPersistedQueryErr) throw lastPersistedQueryErr;
+      throw new TwitchServiceError(
+        TWITCH_ERROR_CODES.GQL_FAILED,
+        "DirectoryPage_Game failed: no successful persisted query",
+      );
+    }
 
     const edges = res?.data?.game?.streams?.edges ?? [];
     const channels: ChannelInfo[] = edges
-      .map((e: any) => e?.node)
-      .filter(Boolean)
-      .filter((n: any) => n?.broadcaster?.broadcastSettings?.isDropsEnabled !== false)
-      .map((n: any) => ({
-        id: n.broadcaster?.id ?? n.id,
-        streamId: n.id,
-        displayName: n.broadcaster?.displayName ?? n.broadcaster?.login ?? "unknown",
-        login: n.broadcaster?.login ?? n.broadcaster?.displayName ?? "",
-        title: n.broadcaster?.broadcastSettings?.title ?? "",
-        viewers: n.viewersCount ?? 0,
-        language: n.broadcaster?.language ?? "",
-        thumbnail: n.previewImageURL,
+      .map((e) => e?.node)
+      .filter((node): node is DirectoryStreamNode => !!node)
+      .filter((node) => node.broadcaster?.broadcastSettings?.isDropsEnabled !== false)
+      .map((node) => ({
+        id: node.broadcaster?.id ?? node.id ?? "",
+        streamId: node.id,
+        displayName: node.broadcaster?.displayName ?? node.broadcaster?.login ?? "unknown",
+        login: node.broadcaster?.login ?? node.broadcaster?.displayName ?? "",
+        title: node.broadcaster?.broadcastSettings?.title ?? "",
+        viewers: node.viewersCount ?? 0,
+        language: node.broadcaster?.language ?? "",
+        thumbnail: node.previewImageURL,
         game: gameName,
-      }));
+      }))
+      .filter((channel) => channel.id && channel.login);
 
     // Additional eligibility check: ensure the channel actually has viewerDropCampaigns.
     try {
@@ -228,7 +276,7 @@ export class TwitchService {
         input: { dropInstanceID: claimId },
       },
     );
-    const res = await this.gqlRequest<any>(body, "DropsPage_ClaimDropRewards");
+    const res = await this.gqlRequest<ClaimDropRewardsResponse>(body, "DropsPage_ClaimDropRewards");
     const status =
       res?.data?.claimDropRewards?.status ??
       res?.data?.claimDropRewards?.payload?.status ??
@@ -330,7 +378,10 @@ export class TwitchService {
       },
       variables: { channel: login },
     };
-    const res = await this.gqlRequest<any>(body, "VideoPlayerStreamInfoOverlayChannel");
+    const res = await this.gqlRequest<VideoPlayerStreamInfoOverlayChannelResponse>(
+      body,
+      "VideoPlayerStreamInfoOverlayChannel",
+    );
     const user = res?.data?.user;
     const stream = user?.stream ?? null;
     if (!stream) return null;
@@ -392,8 +443,8 @@ export class TwitchService {
       streamId: payload.streamId ?? streamInfo.streamId,
       broadcastId,
       spade: spadeUrl ?? "<none>",
-      cookieHeader,
-      payloadBody,
+      hasCookieHeader: cookieHeader.length > 0,
+      payloadEventCount: payloadBody.length,
     });
 
     // Keep headers minimal.
@@ -404,7 +455,11 @@ export class TwitchService {
       ...(cookieHeader ? { Cookie: cookieHeader } : {}),
     };
 
-    this.debug("Watch ping request", { url: spadeUrl, headers, body: formBody });
+    this.debug("Watch ping request", {
+      url: spadeUrl,
+      headers: headers.Cookie ? { ...headers, Cookie: "<redacted>" } : headers,
+      bodyLength: formBody.length,
+    });
 
     const res = await fetch(spadeUrl, {
       method: "POST",
@@ -444,10 +499,10 @@ export class TwitchService {
       : [];
     const claimedBenefitIds = new Set<string>();
 
-    const normalizeEdge = (edge: CampaignEdge | any): CampaignEdge => {
+    const normalizeEdge = (edge: CampaignEdge | CampaignNode | null | undefined): CampaignEdge => {
       if (!edge) return {};
-      if ((edge as CampaignEdge).node) return edge as CampaignEdge;
-      return { node: edge as CampaignEdge["node"] };
+      if ("id" in edge) return { node: edge };
+      return edge;
     };
 
     // 1) Inventory (in-progress campaigns).
@@ -487,7 +542,10 @@ export class TwitchService {
       })),
     );
     if (inProgress.length > 0 && inProgress[0] && !inProgress[0].node) {
-      this.debug("Inventory raw edge[0]", JSON.stringify(inProgress[0], null, 2));
+      this.debug("Inventory edge shape mismatch", {
+        hasNode: !!inProgress[0].node,
+        edgeKeys: Object.keys(inProgress[0]),
+      });
     }
 
     if (includeAvailable) {
@@ -496,11 +554,17 @@ export class TwitchService {
         operationName: "ViewerDropsDashboard",
         sha: "5a4da2ab3d5b47c9f9ce864e727b2cb346af1e3ea8b897fe8f704a97ff017619",
       };
-      const campaignsPages = 1;
+      const maxCampaignPages = 20;
       let nextCursor: string | null | undefined;
       let fetchedEdges = 0;
-      for (let page = 0; page < campaignsPages; page += 1) {
-        const variables: Record<string, unknown> = { fetchRewardCampaigns: false, first: 100 };
+      let fetchedPages = 0;
+      let sawCurrentUser = false;
+      for (let page = 0; page < maxCampaignPages; page += 1) {
+        fetchedPages = page + 1;
+        const variables: { fetchRewardCampaigns: boolean; first: number; after?: string } = {
+          fetchRewardCampaigns: false,
+          first: 100,
+        };
         if (nextCursor) variables.after = nextCursor;
         const campaignsPayload = createPersistedQuery(
           campaignsPayloadBase.operationName,
@@ -511,13 +575,21 @@ export class TwitchService {
           campaignsPayload,
           campaignsPayloadBase.operationName,
         );
+        sawCurrentUser = sawCurrentUser || !!campaigns?.data?.currentUser;
         if (page === 0) {
-          this.debug("Campaigns raw response", JSON.stringify(campaigns, null, 2));
+          this.debug("Campaigns first page summary", {
+            hasCurrentUser: !!campaigns?.data?.currentUser,
+            dropCampaignsShape: Array.isArray(campaigns?.data?.currentUser?.dropCampaigns)
+              ? "array"
+              : "connection",
+            requestedFirst: variables.first,
+          });
         }
         const dropCampaigns = campaigns?.data?.currentUser?.dropCampaigns;
+        const dropCampaignConnection = Array.isArray(dropCampaigns) ? undefined : dropCampaigns;
         const availableRaw = Array.isArray(dropCampaigns)
           ? dropCampaigns
-          : (dropCampaigns?.edges ?? []);
+          : (dropCampaignConnection?.edges ?? []);
         const available = availableRaw
           .map(normalizeEdge)
           .filter((edge) => {
@@ -531,12 +603,12 @@ export class TwitchService {
           if (!id) continue;
           const existing = campaignsById.get(id);
           if (existing) {
-            campaignsById.set(id, mergePrimaryData(existing, edge));
+            campaignsById.set(id, mergePrimaryData(existing, edge) as CampaignEdge);
           } else {
             campaignsById.set(id, edge);
           }
         }
-        const pageInfo = dropCampaigns?.pageInfo;
+        const pageInfo = dropCampaignConnection?.pageInfo;
         nextCursor = pageInfo?.hasNextPage ? pageInfo.endCursor : null;
         if (!nextCursor) {
           campaignsSummary = `currentUser: ${!!campaigns?.data?.currentUser}, edges: ${fetchedEdges}, pages: ${
@@ -554,14 +626,24 @@ export class TwitchService {
               })),
             );
             if (available[0] && !available[0].node) {
-              this.debug("Campaign raw edge[0]", JSON.stringify(available[0], null, 2));
+              this.debug("Campaign edge shape mismatch", {
+                hasNode: !!available[0].node,
+                edgeKeys: Object.keys(available[0]),
+              });
             }
           }
           break;
         }
       }
+      const paginationTruncated = !!nextCursor;
       if (campaignsSummary === "n/a") {
-        campaignsSummary = `currentUser: unknown, edges: ${fetchedEdges}, pages: ${campaignsPages}`;
+        campaignsSummary = `currentUser: ${sawCurrentUser}, edges: ${fetchedEdges}, pages: ${fetchedPages}, truncated: ${paginationTruncated}`;
+      }
+      if (paginationTruncated) {
+        this.debug("Campaigns pagination truncated", {
+          fetchedPages,
+          maxCampaignPages,
+        });
       }
       this.debug("Campaigns fetch", campaignsSummary);
     } else {
@@ -617,10 +699,12 @@ export class TwitchService {
         ),
       );
 
-      const responses = await this.gqlRequest<any>(gqlPayload, "DropCampaignDetails");
+      const responses = await this.gqlRequest<
+        DropCampaignDetailsResponse | DropCampaignDetailsResponse[]
+      >(gqlPayload, "DropCampaignDetails");
       const responseList = Array.isArray(responses) ? responses : [responses];
       for (const res of responseList) {
-        const node = res?.data?.user?.dropCampaign as CampaignNode | undefined;
+        const node = res?.data?.user?.dropCampaign;
         if (node?.id && campaignsById.has(node.id)) {
           const base = campaignsById.get(node.id)!;
           const merged = mergePrimaryData(base, node) as CampaignNode;
@@ -654,7 +738,10 @@ export class TwitchService {
           { channelID: String(id) },
         ),
       );
-      const res = await this.gqlRequest<any>(payload, "DropsHighlightService_AvailableDrops");
+      const res = await this.gqlRequest<AvailableDropsResponse | AvailableDropsResponse[]>(
+        payload,
+        "DropsHighlightService_AvailableDrops",
+      );
       const list = Array.isArray(res) ? res : [res];
       for (const entry of list) {
         const channel = entry?.data?.channel;
@@ -676,6 +763,7 @@ export class TwitchService {
   ): InventoryItem[] {
     const items: InventoryItem[] = [];
     let dropsCount = 0;
+    const now = Date.now();
 
     this.debug(
       "Detailed campaigns",
@@ -685,47 +773,79 @@ export class TwitchService {
     );
 
     for (const campaign of detailed) {
-      if (!campaign || !campaign.timeBasedDrops) continue;
+      if (!campaign.timeBasedDrops) continue;
       const game = campaign.game?.displayName ?? "Unknown game";
-      const linked = (campaign as any)?.self?.isAccountConnected ?? false;
-      const campaignStatus = (campaign as any)?.status as string | undefined;
-      const campaignName = (campaign as any)?.name as string | undefined;
-      const startsAt = (campaign as any)?.startAt as string | undefined;
-      const endsAt = (campaign as any)?.endAt as string | undefined;
+      const linked = isTruthyFlag(campaign.self?.isAccountConnected);
+      const campaignStatus = campaign.status;
+      const campaignName = campaign.name;
+      const startsAt = campaign.startAt;
+      const endsAt = campaign.endAt;
+      const campaignNotStarted = (() => {
+        const startMs = parseIsoMs(startsAt);
+        return startMs !== null && now < startMs;
+      })();
+      const campaignExpired = (() => {
+        const endMs = parseIsoMs(endsAt);
+        return endMs !== null && now > endMs;
+      })();
       const campaignImageUrl = extractCampaignImageUrl(campaign);
+      const allowChannelFilters = extractAllowedChannelFilters(campaign);
       const campaignHasBadgeOrEmote = campaign.timeBasedDrops.some((drop) =>
         dropHasBadgeOrEmote(drop),
       );
-      const withinClaimWindow = isWithinClaimWindow(endsAt);
+      const withinClaimWindow = isWithinClaimWindow(endsAt, now);
       // Some campaigns expose allow.isEnabled === false even though the user can earn progress.
       // Only treat it as excluded if Twitch explicitly disabled the campaign AND we have no progress yet.
-      const allowDisabled = (campaign as any)?.allow?.isEnabled === false;
-      const campaignId = (campaign as any)?.id;
+      const allowDisabled = campaign.allow?.isEnabled === false;
+      const campaignId = campaign.id;
+      const campaignLogKey =
+        [campaignId, campaignName, game]
+          .map((v) => (typeof v === "string" ? v.trim() : ""))
+          .filter(Boolean)
+          .join("::") || `campaign-${items.length}`;
+      const claimedDropIds = new Set<string>();
+      for (const drop of campaign.timeBasedDrops) {
+        const benefitClaimed = hasClaimedBenefit(claimedBenefitIds, drop);
+        const isClaimed = isTruthyFlag(drop.self?.isClaimed) || benefitClaimed;
+        if (isClaimed && typeof drop?.id === "string" && drop.id.trim()) {
+          claimedDropIds.add(drop.id);
+        }
+      }
+      const campaignDiagnostics = {
+        campaignId,
+        campaignName,
+        campaignStatus,
+        game,
+        startsAt,
+        endsAt,
+        linked,
+        allowDisabled,
+        campaignNotStarted,
+        campaignExpired,
+        withinClaimWindow,
+        counters: {
+          total: 0,
+          locked: 0,
+          progress: 0,
+          claimed: 0,
+          excluded: 0,
+          claimable: 0,
+          blocked: 0,
+        },
+        drops: [] as Array<Record<string, unknown>>,
+      };
       for (const drop of campaign.timeBasedDrops) {
         dropsCount += 1;
-        let watched = drop.self?.currentMinutesWatched ?? 0;
+        let watched = Number(drop.self?.currentMinutesWatched ?? 0) || 0;
         const rawStatus =
           drop.self?.status ??
           // some schemas use different keys
-          (drop.self as any)?.state ??
-          (drop as any).status;
-        const dropInstanceId = drop.self?.dropInstanceID ?? (drop.self as any)?.dropInstanceId;
+          drop.self?.state ??
+          drop.status;
+        const dropInstanceId = drop.self?.dropInstanceID ?? drop.self?.dropInstanceId;
         const benefitClaimed = hasClaimedBenefit(claimedBenefitIds, drop);
         const isClaimed = isTruthyFlag(drop.self?.isClaimed) || benefitClaimed;
-        // Some schemas expose multiple required fields; pick the smallest positive to avoid overcount
-        const requiredCandidates = [
-          // @ts-ignore
-          (drop as any).requiredMinutesWatched,
-          // @ts-ignore
-          (drop as any).required_minutes,
-          // @ts-ignore
-          (drop as any).requiredMinutes,
-          drop.minutesWatchedRequired,
-        ];
-        const requiredValid = requiredCandidates
-          .map((v) => Number(v))
-          .filter((n) => Number.isFinite(n) && n > 0);
-        const requiredMinutes = requiredValid.length ? Math.min(...requiredValid) : 0;
+        const requiredMinutes = pickRequiredMinutes(drop);
         let status = mapStatus(rawStatus, drop);
         if (status === "claimed" && requiredMinutes > 0 && watched === 0) {
           // Claimed drops report full progress.
@@ -742,27 +862,96 @@ export class TwitchService {
         }
         const earnedMinutes = requiredMinutes > 0 ? Math.min(requiredMinutes, watched) : watched;
         const imageUrl = extractDropImageUrl(drop);
+        const excluded = allowDisabled && watched <= 0 && !isClaimed;
+        const hasPreconditionsMet = drop.self?.hasPreconditionsMet;
+        const prerequisiteDropIds = extractPreconditionDropIds(drop);
+        const missingPrerequisiteDropIds = prerequisiteDropIds.filter(
+          (preId) => !claimedDropIds.has(preId),
+        );
+        const blockingReasonHints = collectBlockingReasonHints({
+          linked,
+          allowDisabled,
+          campaignNotStarted,
+          campaignExpired,
+          missingPrerequisiteDropIds,
+          hasPreconditionsMet,
+          progressDone,
+          dropInstanceId,
+          withinClaimWindow,
+          isClaimed,
+        });
+        const hardBlockingReasonHints = blockingReasonHints.filter(
+          (reason) =>
+            reason !== "missing_drop_instance_id" &&
+            reason !== "account_not_linked" &&
+            reason !== "campaign_allow_disabled",
+        );
+        const blocked = hardBlockingReasonHints.length > 0;
+        const canBuildFallbackClaimId = Boolean(campaignId && drop.id);
+        const isClaimable =
+          (Boolean(dropInstanceId) || canBuildFallbackClaimId) &&
+          !isClaimed &&
+          status !== "claimed" &&
+          progressDone &&
+          withinClaimWindow &&
+          !blocked;
+        const lockedReasonHints =
+          status === "locked"
+            ? collectLockedReasonHints({
+                requiredMinutes,
+                watched,
+                blockingReasonHints,
+              })
+            : [];
+        const unlockGuidance = (status === "locked" ? lockedReasonHints : blockingReasonHints).map(
+          unlockGuidanceForReason,
+        );
         if (dropsCount <= 3) {
-          const benefitEdges = (drop as any)?.benefitEdges;
-          const benefitEdgesList = Array.isArray(benefitEdges)
-            ? benefitEdges
-            : (benefitEdges?.edges ?? benefitEdges?.nodes ?? []);
+          const benefitEdgesList = extractBenefitEdges(drop);
           const benefitEdgeSample = Array.isArray(benefitEdgesList) ? benefitEdgesList[0] : null;
-          const benefitNode =
-            benefitEdgeSample?.node ?? benefitEdgeSample?.benefit ?? benefitEdgeSample ?? null;
+          const benefitNode = benefitEdgeSample?.benefit ?? null;
           this.debug("Drop image sample", {
             dropId: drop.id,
             dropName: drop.name,
             imageUrl: imageUrl ?? "<missing>",
-            benefitKeys: drop?.benefit ? Object.keys(drop.benefit) : [],
+            benefitKeys: benefitNode ? Object.keys(benefitNode) : [],
             benefitEdgesCount: Array.isArray(benefitEdgesList) ? benefitEdgesList.length : 0,
             benefitEdgeKeys: benefitEdgeSample ? Object.keys(benefitEdgeSample) : [],
             benefitNodeKeys: benefitNode ? Object.keys(benefitNode) : [],
-            localizedKeys: drop?.localizedContent ? Object.keys(drop.localizedContent) : [],
             dropKeys: drop ? Object.keys(drop) : [],
             campaignKeys: campaign ? Object.keys(campaign) : [],
           });
         }
+        campaignDiagnostics.counters.total += 1;
+        if (status === "locked") campaignDiagnostics.counters.locked += 1;
+        if (status === "progress") campaignDiagnostics.counters.progress += 1;
+        if (status === "claimed") campaignDiagnostics.counters.claimed += 1;
+        if (excluded) campaignDiagnostics.counters.excluded += 1;
+        if (isClaimable) campaignDiagnostics.counters.claimable += 1;
+        if (blocked) campaignDiagnostics.counters.blocked += 1;
+        campaignDiagnostics.drops.push({
+          dropId: drop.id,
+          dropName: drop.name,
+          rawStatus,
+          normalizedStatus: status,
+          requiredMinutes,
+          watched,
+          earnedMinutes,
+          isClaimed,
+          benefitClaimed,
+          dropInstanceId,
+          excluded,
+          isClaimable,
+          blocked,
+          blockingReasonHints,
+          prerequisiteDropIds,
+          missingPrerequisiteDropIds,
+          lockedReasonHints,
+          unlockGuidance,
+          dropAllow: drop.allow ?? null,
+          dropSelf: drop.self ?? null,
+          dropKeySample: drop ? Object.keys(drop) : [],
+        });
         items.push({
           id: drop.id,
           game,
@@ -778,15 +967,25 @@ export class TwitchService {
           campaignName,
           startsAt,
           endsAt,
-          excluded: allowDisabled && watched <= 0 && !isClaimed,
+          excluded,
           campaignId,
           dropInstanceId,
-          isClaimable:
-            !!dropInstanceId &&
-            !isClaimed &&
-            status !== "claimed" &&
-            progressDone &&
-            withinClaimWindow,
+          isClaimable,
+          blocked,
+          blockingReasonHints,
+          allowedChannelIds:
+            allowChannelFilters.ids.length > 0 ? allowChannelFilters.ids : undefined,
+          allowedChannelLogins:
+            allowChannelFilters.logins.length > 0 ? allowChannelFilters.logins : undefined,
+        });
+      }
+      if (!this.loggedCampaignDiagnostics.has(campaignLogKey)) {
+        this.loggedCampaignDiagnostics.add(campaignLogKey);
+        this.debug("Campaign diagnostics (first seen)", {
+          ...campaignDiagnostics,
+          campaignAllow: campaign.allow ?? null,
+          campaignSelf: campaign.self ?? null,
+          campaignKeySample: campaign ? Object.keys(campaign) : [],
         });
       }
     }
@@ -827,354 +1026,4 @@ export class TwitchService {
   }
 }
 
-function isTruthyFlag(value: unknown): boolean {
-  if (value === true) return true;
-  if (typeof value === "number") return value === 1;
-  if (typeof value !== "string") return false;
-  const normalized = value.trim().toLowerCase();
-  return normalized === "true" || normalized === "1" || normalized === "yes";
-}
 
-function isWithinClaimWindow(endsAt?: string, now = Date.now()): boolean {
-  if (!endsAt) return true;
-  const endMs = Date.parse(endsAt);
-  if (!Number.isFinite(endMs)) return true;
-  return now < endMs + 24 * 60 * 60 * 1000;
-}
-
-function mapStatus(status: string | undefined, drop?: any): InventoryItem["status"] {
-  const s = (status ?? "").toLowerCase();
-  if (
-    s === "claimed" ||
-    s === "fulfilled" ||
-    s === "ended" ||
-    s === "complete" ||
-    s === "completed"
-  ) {
-    return "claimed";
-  }
-  if (s === "in_progress" || s === "active" || s === "progress") {
-    return "progress";
-  }
-  if (isTruthyFlag((drop as any)?.self?.isClaimed)) {
-    return "claimed";
-  }
-  return "locked";
-}
-
-function normalizeBenefitType(value: unknown): string {
-  if (typeof value !== "string") return "";
-  return value.trim().toUpperCase();
-}
-
-function isBadgeOrEmoteType(value: unknown): boolean {
-  const normalized = normalizeBenefitType(value);
-  if (!normalized) return false;
-  return normalized.includes("BADGE") || normalized.includes("EMOTE");
-}
-
-function dropHasBadgeOrEmote(drop: any): boolean {
-  const candidates: unknown[] = [];
-  const edgesRaw =
-    (Array.isArray(drop?.benefitEdges) ? drop.benefitEdges : drop?.benefitEdges?.edges) ??
-    drop?.benefitEdges?.nodes ??
-    [];
-  if (Array.isArray(edgesRaw)) {
-    for (const edge of edgesRaw) {
-      const node = edge?.node ?? edge?.benefit ?? edge;
-      if (!node) continue;
-      candidates.push(node?.distributionType, node?.type);
-      const benefit = node?.benefit;
-      if (benefit) {
-        candidates.push(benefit?.distributionType, benefit?.type);
-      }
-    }
-  }
-  candidates.push(drop?.benefit?.distributionType, drop?.benefit?.type);
-  return candidates.some(isBadgeOrEmoteType);
-}
-
-function extractDropImageUrl(drop: any): string | undefined {
-  const benefitEdgesRaw =
-    (Array.isArray(drop?.benefitEdges) ? drop.benefitEdges : drop?.benefitEdges?.edges) ??
-    drop?.benefitEdges?.nodes ??
-    [];
-  const benefitNodes = Array.isArray(benefitEdgesRaw)
-    ? benefitEdgesRaw.map((edge: any) => edge?.node ?? edge?.benefit ?? edge).filter(Boolean)
-    : [];
-  const benefitCandidates: unknown[] = [];
-  for (const node of benefitNodes) {
-    benefitCandidates.push(
-      node?.imageAssetURL,
-      node?.imageAssetUrl,
-      node?.imageURL,
-      node?.imageUrl,
-      node?.image?.url,
-      node?.image?.URL,
-      node?.benefit?.imageURL,
-      node?.benefit?.imageUrl,
-      node?.benefit?.image?.url,
-      node?.benefit?.image?.URL,
-      node?.benefit?.imageAssetURL,
-      node?.benefit?.imageAssetUrl,
-    );
-  }
-  const candidates = [
-    ...benefitCandidates,
-    drop?.benefit?.imageURL,
-    drop?.benefit?.imageUrl,
-    drop?.benefit?.image?.url,
-    drop?.benefit?.image?.URL,
-    drop?.imageURL,
-    drop?.imageUrl,
-    drop?.image?.url,
-    drop?.image?.URL,
-    drop?.artworkURL,
-    drop?.artworkUrl,
-    drop?.localizedContent?.imageURL,
-    drop?.localizedContent?.imageUrl,
-  ];
-  for (const value of candidates) {
-    if (typeof value === "string" && value.trim().length > 0) {
-      return value;
-    }
-  }
-  return undefined;
-}
-
-function mergePrimaryData(primary: any, secondary: any): any {
-  if (primary === undefined) return secondary;
-  if (secondary === undefined) return primary;
-  const primaryIsArray = Array.isArray(primary);
-  const secondaryIsArray = Array.isArray(secondary);
-  if (primaryIsArray || secondaryIsArray) {
-    return primary;
-  }
-  if (primary && secondary && typeof primary === "object" && typeof secondary === "object") {
-    const out: Record<string, unknown> = {};
-    const keys = new Set([...Object.keys(primary), ...Object.keys(secondary)]);
-    for (const key of keys) {
-      out[key] = mergePrimaryData((primary as any)[key], (secondary as any)[key]);
-    }
-    return out;
-  }
-  return primary;
-}
-
-function buildCampaignSummaries(nodes: CampaignNode[]): CampaignInfo[] {
-  const now = Date.now();
-  const campaigns: CampaignInfo[] = [];
-  for (const node of nodes) {
-    if (!node?.id || !node?.name) continue;
-    const game = node.game?.displayName?.trim() ?? "";
-    if (!game) continue;
-    const startsAt = typeof node.startAt === "string" ? node.startAt : undefined;
-    const endsAt = typeof node.endAt === "string" ? node.endAt : undefined;
-    const isActive = isCampaignActive({ startsAt, endsAt }, now);
-    const imageUrl = extractCampaignImageUrl(node);
-    const isAccountConnected =
-      typeof (node as any)?.self?.isAccountConnected === "boolean"
-        ? Boolean((node as any).self.isAccountConnected)
-        : undefined;
-    let drops: CampaignDropInfo[] | undefined = undefined;
-    let hasUnclaimedDrops: boolean | undefined = undefined;
-    if (Array.isArray(node.timeBasedDrops)) {
-      drops = [];
-      for (const drop of node.timeBasedDrops) {
-        if (!drop?.id) continue;
-        const self = (drop as any)?.self;
-        const rawStatus =
-          self?.status ?? (drop as any)?.status ?? (drop as any)?.state ?? undefined;
-        const requiredCandidates = [
-          // @ts-ignore
-          (drop as any).requiredMinutesWatched,
-          // @ts-ignore
-          (drop as any).required_minutes,
-          // @ts-ignore
-          (drop as any).requiredMinutes,
-          drop.minutesWatchedRequired,
-        ];
-        const requiredValid = requiredCandidates
-          .map((v) => Number(v))
-          .filter((n) => Number.isFinite(n) && n > 0);
-        const requiredMinutes = requiredValid.length ? Math.min(...requiredValid) : 0;
-        const watched = Number(self?.currentMinutesWatched ?? 0) || 0;
-        let status = mapStatus(rawStatus, drop);
-        if (isTruthyFlag(self?.isClaimed)) {
-          status = "claimed";
-        } else if (requiredMinutes > 0 && watched >= requiredMinutes) {
-          status = "progress";
-        } else if (watched > 0 && status === "locked") {
-          status = "progress";
-        }
-        let earnedMinutes = requiredMinutes > 0 ? Math.min(requiredMinutes, watched) : watched;
-        if (status === "claimed" && requiredMinutes > 0 && earnedMinutes === 0) {
-          earnedMinutes = requiredMinutes;
-        }
-        drops.push({
-          id: drop.id,
-          name: drop.name,
-          requiredMinutes,
-          earnedMinutes,
-          status,
-          imageUrl: extractDropImageUrl(drop),
-        });
-      }
-      if (drops.length === 0) {
-        hasUnclaimedDrops = false;
-      } else {
-        hasUnclaimedDrops = drops.some((drop) => drop.status !== "claimed");
-      }
-    } else {
-      hasUnclaimedDrops = false;
-    }
-    campaigns.push({
-      id: node.id,
-      name: node.name,
-      game,
-      imageUrl,
-      drops,
-      isAccountConnected,
-      startsAt,
-      endsAt,
-      status: node.status,
-      isActive,
-      hasUnclaimedDrops,
-    });
-  }
-  return campaigns;
-}
-
-function collectBenefitIds(drop: any): string[] {
-  const ids: string[] = [];
-  const pushId = (value: unknown) => {
-    if (typeof value !== "string") return;
-    const trimmed = value.trim();
-    if (trimmed) ids.push(trimmed);
-  };
-  pushId(drop?.benefit?.id);
-  const edgesRaw =
-    (Array.isArray(drop?.benefitEdges) ? drop.benefitEdges : drop?.benefitEdges?.edges) ??
-    drop?.benefitEdges?.nodes ??
-    [];
-  if (Array.isArray(edgesRaw)) {
-    for (const edge of edgesRaw) {
-      pushId(edge?.id);
-      pushId(edge?.node?.id);
-      pushId(edge?.benefit?.id);
-    }
-  }
-  return ids;
-}
-
-function hasClaimedBenefit(claimed: Set<string>, drop: any): boolean {
-  if (!claimed || claimed.size === 0) return false;
-  const ids = collectBenefitIds(drop);
-  if (ids.length === 0) return false;
-  return ids.some((id) => claimed.has(id));
-}
-
-function extractCampaignImageUrl(campaign: any): string | undefined {
-  const candidates = [
-    campaign?.game?.boxArtURL,
-    campaign?.game?.boxArtUrl,
-    campaign?.imageURL,
-    campaign?.imageUrl,
-  ];
-  for (const value of candidates) {
-    if (typeof value === "string" && value.trim().length > 0) {
-      return normalizeTwitchImageUrl(value.trim(), 88, 88);
-    }
-  }
-  return undefined;
-}
-
-function normalizeTwitchImageUrl(value: string, width: number, height: number): string {
-  return value
-    .replace("{width}", String(width))
-    .replace("{height}", String(height))
-    .replace("%7Bwidth%7D", String(width))
-    .replace("%7Bheight%7D", String(height));
-}
-
-type CampaignEdge = {
-  cursor?: string;
-  node?: {
-    id: string;
-    name: string;
-    game?: { displayName?: string };
-    startAt?: string;
-    endAt?: string;
-    status?: string;
-    timeBasedDrops?: Array<{
-      id: string;
-      name: string;
-      minutesWatchedRequired: number;
-      self?: { currentMinutesWatched?: number; status?: string };
-    }>;
-  };
-};
-
-type CampaignNode = CampaignEdge["node"];
-
-type CampaignsResponse = {
-  data?: {
-    currentUser?: {
-      dropCampaigns?: {
-        edges?: CampaignEdge[];
-        pageInfo?: { hasNextPage?: boolean; endCursor?: string | null };
-      };
-    };
-  };
-};
-
-type InventoryResponse = {
-  data?: {
-    currentUser?: {
-      inventory?: {
-        dropCampaignsInProgress?: CampaignEdge[];
-        dropCampaigns?: CampaignEdge[];
-      };
-    };
-  };
-};
-
-const parseIsoMs = (value?: string): number | null => {
-  if (!value) return null;
-  const ms = Date.parse(value);
-  return Number.isFinite(ms) ? ms : null;
-};
-
-const isCampaignActive = (
-  {
-    startsAt,
-    endsAt,
-  }: {
-    startsAt?: string;
-    endsAt?: string;
-  },
-  now = Date.now(),
-): boolean => {
-  const startMs = parseIsoMs(startsAt);
-  if (startMs !== null && now < startMs) return false;
-  const endMs = parseIsoMs(endsAt);
-  if (endMs !== null && now > endMs) return false;
-  return true;
-};
-
-function createPersistedQuery(
-  operationName: string,
-  sha: string,
-  variables: Record<string, unknown>,
-) {
-  return {
-    operationName,
-    extensions: {
-      persistedQuery: {
-        version: 1,
-        sha256Hash: sha,
-      },
-    },
-    variables,
-  };
-}

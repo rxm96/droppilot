@@ -153,13 +153,22 @@ export class TwitchClient {
     };
   }
 
-  async gqlRequest<T>(body: Record<string, unknown>): Promise<T> {
+  async gqlRequest<T>(
+    body: Record<string, unknown> | Record<string, unknown>[],
+  ): Promise<T> {
     const headers = await this.gqlHeaders();
+    const hasCookieHeader = typeof headers.Cookie === "string" && headers.Cookie.length > 0;
     this.log("GQL request", {
       headers: {
-        ...headers,
         Authorization: "<redacted>",
-        Cookie: headers.Cookie,
+        Cookie: hasCookieHeader ? "<redacted>" : "<missing>",
+        "Client-Id": headers["Client-Id"] ?? "<missing>",
+        "Client-Session-Id": headers["Client-Session-Id"] ? "<set>" : "<missing>",
+        "X-Device-Id": headers["X-Device-Id"] ? "<set>" : "<missing>",
+        "Client-Integrity": headers["Client-Integrity"] ? "<set>" : "<missing>",
+        "Client-Version": headers["Client-Version"] ? "<set>" : "<missing>",
+        Origin: headers.Origin ?? "<missing>",
+        Referer: headers.Referer ?? "<missing>",
       },
     });
     const res = await fetch("https://gql.twitch.tv/gql", {
@@ -354,9 +363,10 @@ export class TwitchClient {
       loginName: validate.login,
     });
     this.log("Final cookies", {
-      parts: finalParts,
-      deviceId: this.deviceId,
-      sessionId: this.sessionId,
+      cookieCount: finalParts.length,
+      hasAuthToken: cookieMap.has("auth-token"),
+      hasDeviceId: cookieMap.has("device_id"),
+      hasServerSessionId: cookieMap.has("server_session_id"),
     });
   }
 

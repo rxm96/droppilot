@@ -78,8 +78,14 @@ const toMessageText = (raw: unknown): string => {
 };
 
 const toFiniteNumber = (value: unknown): number | undefined => {
-  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
-  return value;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const normalized = value.trim();
+    if (!normalized) return undefined;
+    const parsed = Number(normalized);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
 };
 
 const toStringValue = (value: unknown): string | undefined => {
@@ -90,16 +96,20 @@ const toStringValue = (value: unknown): string | undefined => {
 
 export const parseUserPubSubEvent = (
   topic: string | undefined,
-  rawMessage: string | undefined,
+  rawMessage: string | Record<string, unknown> | undefined,
   at: number = Date.now(),
   notificationTypes: Set<string> = DEFAULT_NOTIFICATION_TYPES,
 ): UserPubSubEvent | null => {
   if (!topic || !rawMessage) return null;
   let payload: Record<string, unknown>;
-  try {
-    payload = JSON.parse(rawMessage) as Record<string, unknown>;
-  } catch {
-    return null;
+  if (typeof rawMessage === "string") {
+    try {
+      payload = JSON.parse(rawMessage) as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  } else {
+    payload = rawMessage;
   }
   const messageType = toStringValue(payload.type) ?? "";
   if (!messageType) return null;
@@ -507,7 +517,10 @@ export class UserPubSub {
     if (type === "RESPONSE") {
       const error = String(envelope.error ?? "").trim();
       if (error.length > 0) {
+        this.listening = false;
         this.markError(`PubSub listen failed: ${error}`);
+        this.disconnect("PubSub listen failed", false);
+        this.scheduleReconnect(this.reconnectMinMs);
       } else {
         this.listening = true;
         this.state = "ok";
