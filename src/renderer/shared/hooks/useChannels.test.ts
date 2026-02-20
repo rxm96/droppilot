@@ -4,6 +4,7 @@ import {
   applyLiveDiff,
   buildChannelDiff,
   computeAutoSwitchAction,
+  isManualPriorityOverrideActive,
   hasRecentInventory,
   isFreshCache,
   mergeChannelList,
@@ -164,6 +165,33 @@ describe("useChannels helpers", () => {
         inventoryFetchedAt: 1_000,
         now: 4_000,
         recentWindowMs: 2_000,
+      }),
+    ).toBe(false);
+  });
+
+  it("activates manual override only for matching game and time window", () => {
+    expect(
+      isManualPriorityOverrideActive({
+        manualWatchOverride: { at: 1_000, game: "Game" },
+        targetGame: "Game",
+        now: 1_500,
+        windowMs: 1_000,
+      }),
+    ).toBe(true);
+    expect(
+      isManualPriorityOverrideActive({
+        manualWatchOverride: { at: 1_000, game: "Other" },
+        targetGame: "Game",
+        now: 1_500,
+        windowMs: 1_000,
+      }),
+    ).toBe(false);
+    expect(
+      isManualPriorityOverrideActive({
+        manualWatchOverride: { at: 1_000, game: "Game" },
+        targetGame: "Game",
+        now: 3_000,
+        windowMs: 1_000,
       }),
     ).toBe(false);
   });

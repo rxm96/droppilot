@@ -41,6 +41,7 @@ type Params = {
   fetchInventory: (opts?: { forceLoading?: boolean }) => Promise<void>;
   isLinked: boolean;
   logout: () => Promise<void>;
+  onManualStartWatching?: (channel: ChannelEntry) => void;
   setUpdateStatus: Dispatch<SetStateAction<AppUpdateStatus>>;
   setFilter: (next: FilterKey) => void;
 };
@@ -80,6 +81,7 @@ export function useAppActions({
   fetchInventory,
   isLinked,
   logout,
+  onManualStartWatching,
   setUpdateStatus,
   setFilter,
 }: Params) {
@@ -102,6 +104,7 @@ export function useAppActions({
     fetchInventory,
     isLinked,
     logout,
+    onManualStartWatching,
   });
 
   const settingsActions = useSettingsActions({

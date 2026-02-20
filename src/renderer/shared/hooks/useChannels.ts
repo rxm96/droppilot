@@ -36,7 +36,10 @@ type Params = {
   demoMode?: boolean;
   onAuthError?: (message?: string) => void;
   channelAllowlist?: { ids: string[]; logins: string[] } | null;
+  manualWatchOverride?: { at: number; game: string } | null;
 };
+
+const MANUAL_PRIORITY_OVERRIDE_MS = 2 * 60_000;
 
 export const sameChannel = (left: ChannelEntry, right: ChannelEntry): boolean =>
   left.id === right.id &&
@@ -279,6 +282,22 @@ export const computeAutoSwitchAction = ({
   };
 };
 
+export const isManualPriorityOverrideActive = ({
+  manualWatchOverride,
+  targetGame,
+  now,
+  windowMs = MANUAL_PRIORITY_OVERRIDE_MS,
+}: {
+  manualWatchOverride?: { at: number; game: string } | null;
+  targetGame: string;
+  now: number;
+  windowMs?: number;
+}): boolean => {
+  if (!manualWatchOverride) return false;
+  if (manualWatchOverride.game !== targetGame) return false;
+  return now - manualWatchOverride.at < windowMs;
+};
+
 const normalizeAllowlist = (
   allowlist?: { ids: string[]; logins: string[] } | null,
 ): { ids: Set<string>; logins: Set<string> } | null => {
@@ -457,6 +476,7 @@ export function useChannels({
   demoMode,
   onAuthError,
   channelAllowlist,
+  manualWatchOverride,
 }: Params) {
   const TRACKER_REFRESH_WINDOW_MS =
     trackerMode && trackerMode !== "polling" ? 10 * 60_000 : 5 * 60_000;
@@ -848,12 +868,18 @@ export function useChannels({
 
   // Auto-switch if current channel disappears
   useEffect(() => {
+    const now = Date.now();
+    const manualPriorityOverrideActive = isManualPriorityOverrideActive({
+      manualWatchOverride,
+      targetGame,
+      now,
+    });
     const action = computeAutoSwitchAction({
       allowWatching,
       watching,
       channels,
       autoSwitchEnabled,
-      forcePrioritySwitch,
+      forcePrioritySwitch: forcePrioritySwitch && !manualPriorityOverrideActive,
       canWatchTarget,
       channelAllowlist,
     });
@@ -872,6 +898,8 @@ export function useChannels({
   }, [
     channels,
     watching,
+    targetGame,
+    manualWatchOverride,
     allowWatching,
     autoSwitchEnabled,
     forcePrioritySwitch,

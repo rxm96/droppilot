@@ -91,6 +91,10 @@ export function useAppModel() {
   const [gameFilter, setGameFilter] = useState<string>("all");
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [manualWatchOverride, setManualWatchOverride] = useState<{
+    at: number;
+    game: string;
+  } | null>(null);
   const { watching, setWatchingFromChannel, clearWatching } = useWatchingController();
   const [autoSelectEnabled, setAutoSelectEnabled] = useState<boolean>(true);
   const claimProbeInFlightRef = useRef(false);
@@ -242,6 +246,9 @@ export function useAppModel() {
     fetchInventory,
     isLinked,
     logout,
+    onManualStartWatching: (channel) => {
+      setManualWatchOverride({ at: Date.now(), game: channel.game });
+    },
     setUpdateStatus,
     setFilter,
   });
@@ -332,6 +339,7 @@ export function useAppModel() {
       demoMode,
       onAuthError: forwardAuthError,
       channelAllowlist,
+      manualWatchOverride,
     });
 
   const { autoSwitchInfo } = useAlertEffects({

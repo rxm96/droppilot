@@ -9,6 +9,7 @@ type Params = {
   fetchInventory: (opts?: { forceLoading?: boolean }) => Promise<void>;
   isLinked: boolean;
   logout: () => Promise<void>;
+  onManualStartWatching?: (channel: ChannelEntry) => void;
 };
 
 export type AuthErrorTracker = { count: number; lastAt: number };
@@ -50,6 +51,7 @@ export function useWatchingActions({
   fetchInventory,
   isLinked,
   logout,
+  onManualStartWatching,
 }: Params) {
   const authErrorRef = useRef<AuthErrorTracker>({ count: 0, lastAt: 0 });
   const revalidateInFlightRef = useRef<Promise<unknown> | null>(null);
@@ -57,9 +59,10 @@ export function useWatchingActions({
   const startWatching = useCallback(
     (ch: ChannelEntry) => {
       setAutoSelectEnabled(true);
+      onManualStartWatching?.(ch);
       setWatchingFromChannel(ch);
     },
-    [setAutoSelectEnabled, setWatchingFromChannel],
+    [onManualStartWatching, setAutoSelectEnabled, setWatchingFromChannel],
   );
 
   const stopWatching = useCallback(() => {
