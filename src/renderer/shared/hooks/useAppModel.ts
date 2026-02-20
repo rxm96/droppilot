@@ -4,6 +4,7 @@ import { useAppActions } from "./useAppActions";
 import { useAppBootstrap } from "./useAppBootstrap";
 import { useAuth } from "./useAuth";
 import { useCampaignWarmup } from "./useCampaignWarmup";
+import { buildChannelAllowlist } from "./channelAllowlist";
 import { useChannels } from "./useChannels";
 import { useDebugCpu } from "./useDebugCpu";
 import { useDebugSnapshot } from "./useDebugSnapshot";
@@ -20,6 +21,9 @@ import { useWatchingController } from "./useWatchingController";
 import { useTheme } from "@renderer/shared/theme";
 import type { FilterKey, View } from "@renderer/shared/types";
 import { isVerboseLoggingEnabled } from "@renderer/shared/utils/logger";
+
+const CLAIM_PROBE_NEAR_END_MINUTES = 1;
+const CLAIM_PROBE_INTERVAL_MS = 25_000;
 
 export function useAppModel() {
   const { auth, startLogin, logout } = useAuth();
@@ -89,6 +93,8 @@ export function useAppModel() {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const { watching, setWatchingFromChannel, clearWatching } = useWatchingController();
   const [autoSelectEnabled, setAutoSelectEnabled] = useState<boolean>(true);
+  const claimProbeInFlightRef = useRef(false);
+  const claimProbeLastAtRef = useRef(0);
 
   const isLinked = auth.status === "ok";
   const isLinkedOrDemo = isLinked || demoMode;
@@ -107,6 +113,24 @@ export function useAppModel() {
   const authErrorHandlerRef = useRef<(message?: string) => void>(() => {});
   const forwardAuthError = useCallback((message?: string) => {
     authErrorHandlerRef.current?.(message);
+  }, []);
+  const openAccountLink = useCallback((rawUrl?: string) => {
+    const fallbackUrl = "https://www.twitch.tv/settings/connections";
+    const url = typeof rawUrl === "string" && rawUrl.trim() ? rawUrl.trim() : fallbackUrl;
+    try {
+      const maybeApi = (globalThis as { electronAPI?: unknown }).electronAPI;
+      const maybeOpenExternal =
+        maybeApi && typeof maybeApi === "object"
+          ? (maybeApi as { openExternal?: unknown }).openExternal
+          : undefined;
+      if (typeof maybeOpenExternal === "function") {
+        void maybeOpenExternal(url);
+        return;
+      }
+    } catch {
+      // Fallback below.
+    }
+    globalThis.open(url, "_blank", "noopener,noreferrer");
   }, []);
 
   const { stats, bumpStats, resetStats } = useStats({ demoMode });
@@ -129,6 +153,7 @@ export function useAppModel() {
     inventoryRefreshing,
     inventoryChanges,
     inventoryFetchedAt,
+    progressAnchorByDropId,
     fetchInventory,
     uniqueGames,
     claimStatus,
@@ -163,6 +188,7 @@ export function useAppModel() {
     inventoryFetchedAt,
     withCategories,
     priorityGames,
+    allowUnlinkedGames,
     watching,
     fetchInventory,
     forwardAuthError,
@@ -254,6 +280,7 @@ export function useAppModel() {
     withCategories,
     priorityGames,
     obeyPriority,
+    allowUnlinkedGames,
     watching,
     stopWatching: actions.stopWatching,
   });
@@ -266,7 +293,6 @@ export function useAppModel() {
     totalRequiredMinutes,
     totalEarnedMinutes,
     targetProgress,
-    activeDropEta,
     activeDropInfo,
     canWatchTarget,
     showNoDropsHint,
@@ -275,9 +301,20 @@ export function useAppModel() {
     inventoryItems,
     withCategories,
     allowWatching,
+    allowUnlinkedGames,
     watching,
     inventoryFetchedAt,
+    progressAnchorByDropId,
   });
+  const channelAllowlist = useMemo(
+    () =>
+      buildChannelAllowlist({
+        targetGame,
+        withCategories,
+        allowUpcoming: allowUnlinkedGames,
+      }),
+    [allowUnlinkedGames, targetGame, withCategories],
+  );
 
   const { channels, channelDiff, channelError, channelsLoading, channelsRefreshing, autoSwitch } =
     useChannels({
@@ -294,6 +331,7 @@ export function useAppModel() {
       trackerMode: trackerStatus?.mode,
       demoMode,
       onAuthError: forwardAuthError,
+      channelAllowlist,
     });
 
   const { autoSwitchInfo } = useAlertEffects({
@@ -312,6 +350,51 @@ export function useAppModel() {
     activeDropInfo,
     watching,
   });
+
+  useEffect(() => {
+    if (!watching || !activeDropInfo) return;
+    const anchorAt = activeDropInfo.progressAnchorAt ?? inventoryFetchedAt;
+    const remainingBase = Math.max(
+      0,
+      activeDropInfo.requiredMinutes - activeDropInfo.earnedMinutes,
+    );
+    const elapsedMinutes =
+      typeof anchorAt === "number" && Number.isFinite(anchorAt)
+        ? Math.max(0, (Date.now() - anchorAt) / 60_000)
+        : 0;
+    const predictedRemainingMinutes = Math.max(0, remainingBase - elapsedMinutes);
+    if (predictedRemainingMinutes > CLAIM_PROBE_NEAR_END_MINUTES) return;
+
+    let cancelled = false;
+    const runProbe = async () => {
+      if (cancelled) return;
+      const now = Date.now();
+      if (claimProbeInFlightRef.current) return;
+      if (now - claimProbeLastAtRef.current < CLAIM_PROBE_INTERVAL_MS) return;
+      claimProbeInFlightRef.current = true;
+      claimProbeLastAtRef.current = now;
+      try {
+        await fetchInventory({ forceLoading: true });
+      } finally {
+        claimProbeInFlightRef.current = false;
+      }
+    };
+
+    void runProbe();
+    const timer = window.setInterval(() => {
+      void runProbe();
+    }, CLAIM_PROBE_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [
+    activeDropInfo,
+    fetchInventory,
+    inventoryFetchedAt,
+    watchStats.lastOk,
+    watching,
+  ]);
 
   const debugCpu = useDebugCpu({
     enabled: debugEnabled && view === "debug" && isVerboseLoggingEnabled(),
@@ -373,10 +456,10 @@ export function useAppModel() {
     campaigns,
     campaignsLoading,
     isLinked: isLinkedOrDemo,
-    allowUnlinkedBadgeEmotes: enableBadgesEmotes,
     allowUnlinkedGames,
     priorityGames,
     onAddPriorityGame: actions.addGameByName,
+    onOpenAccountLink: openAccountLink,
   };
   const priorityProps = {
     uniqueGames,

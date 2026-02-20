@@ -35,6 +35,7 @@ type Params = {
   trackerMode?: ChannelTrackerMode | null;
   demoMode?: boolean;
   onAuthError?: (message?: string) => void;
+  channelAllowlist?: { ids: string[]; logins: string[] } | null;
 };
 
 export const sameChannel = (left: ChannelEntry, right: ChannelEntry): boolean =>
@@ -191,16 +192,14 @@ export const isFreshCache = ({
   game,
   now,
   refreshWindowMs,
-  hasChannels,
 }: {
   fetchedAt: number | null;
   fetchedGame: string;
   game: string;
   now: number;
   refreshWindowMs: number;
-  hasChannels: boolean;
 }): boolean =>
-  fetchedAt !== null && fetchedGame === game && now - fetchedAt < refreshWindowMs && hasChannels;
+  fetchedAt !== null && fetchedGame === game && now - fetchedAt < refreshWindowMs;
 
 export const hasRecentInventory = ({
   inventoryFetchedAt,
@@ -234,6 +233,7 @@ export const computeAutoSwitchAction = ({
   autoSwitchEnabled,
   forcePrioritySwitch,
   canWatchTarget,
+  channelAllowlist,
 }: {
   allowWatching: boolean;
   watching: WatchingState;
@@ -241,23 +241,204 @@ export const computeAutoSwitchAction = ({
   autoSwitchEnabled: boolean;
   forcePrioritySwitch: boolean;
   canWatchTarget: boolean;
+  channelAllowlist?: { ids: string[]; logins: string[] } | null;
 }):
   | { action: "none" }
   | { action: "clear" }
   | { action: "switch"; reason: "priority" | "offline"; nextChannel: ChannelEntry } => {
   if (!allowWatching) return { action: "none" };
   if (!watching) return { action: "none" };
-  const stillThere = channels.some((c) => c.id === watching.id);
-  if (stillThere) return { action: "none" };
-  if (channels.length === 0) return { action: "clear" };
+  const normalizedAllowlist = normalizeAllowlist(channelAllowlist);
+  const isAllowed = (channel: ChannelEntry): boolean => {
+    if (!normalizedAllowlist) return false;
+    const channelId = channel.id?.trim();
+    if (channelId && normalizedAllowlist.ids.has(channelId)) return true;
+    const login = channel.login?.trim().toLowerCase();
+    if (login && normalizedAllowlist.logins.has(login)) return true;
+    return false;
+  };
+  const preferredChannel = normalizedAllowlist ? channels.find((channel) => isAllowed(channel)) : null;
   const shouldForceSwitch = forcePrioritySwitch && canWatchTarget;
+  const stillThere = channels.some((c) => c.id === watching.id);
+  if (stillThere) {
+    if (!shouldForceSwitch || !preferredChannel) return { action: "none" };
+    const current = channels.find((c) => c.id === watching.id) ?? null;
+    if (!current) return { action: "none" };
+    if (isAllowed(current)) return { action: "none" };
+    if (preferredChannel.id === current.id) return { action: "none" };
+    return { action: "switch", reason: "priority", nextChannel: preferredChannel };
+  }
+  if (channels.length === 0) return { action: "clear" };
   if (!autoSwitchEnabled && !shouldForceSwitch) return { action: "none" };
-  const nextChannel = channels[0];
+  const nextChannel = preferredChannel ?? channels[0];
   return {
     action: "switch",
     reason: shouldForceSwitch ? "priority" : "offline",
     nextChannel,
   };
+};
+
+const normalizeAllowlist = (
+  allowlist?: { ids: string[]; logins: string[] } | null,
+): { ids: Set<string>; logins: Set<string> } | null => {
+  if (!allowlist) return null;
+  const ids = new Set(
+    (allowlist.ids ?? []).map((value) => String(value).trim()).filter((value) => value.length > 0),
+  );
+  const logins = new Set(
+    (allowlist.logins ?? [])
+      .map((value) => value.trim().toLowerCase())
+      .filter((value) => value.length > 0),
+  );
+  if (ids.size === 0 && logins.size === 0) return null;
+  return { ids, logins };
+};
+
+const prioritizeChannelsByAllowlist = (
+  channels: ChannelEntry[],
+  allowlist?: { ids: string[]; logins: string[] } | null,
+): ChannelEntry[] => {
+  const normalized = normalizeAllowlist(allowlist);
+  if (!normalized) return channels;
+  const allowed: ChannelEntry[] = [];
+  const fallback: ChannelEntry[] = [];
+  let sawFallback = false;
+  let requiresReorder = false;
+  for (const channel of channels) {
+    const channelId = channel.id?.trim();
+    const idAllowed = !!channelId && normalized.ids.has(channelId);
+    const login = channel.login?.trim().toLowerCase();
+    const loginAllowed = !!login && normalized.logins.has(login);
+    if (idAllowed || loginAllowed) {
+      allowed.push(channel);
+      if (sawFallback) requiresReorder = true;
+    } else {
+      fallback.push(channel);
+      sawFallback = true;
+    }
+  }
+  if (!requiresReorder) return channels;
+  return [...allowed, ...fallback];
+};
+
+const buildAllowlistKey = (allowlist?: { ids: string[]; logins: string[] } | null): string => {
+  const normalized = normalizeAllowlist(allowlist);
+  if (!normalized) return "";
+  const ids = Array.from(normalized.ids).sort().join(",");
+  const logins = Array.from(normalized.logins).sort().join(",");
+  return `${ids}|${logins}`;
+};
+
+const getAllowlistMatchKind = (
+  channel: ChannelEntry,
+  normalized: { ids: Set<string>; logins: Set<string> } | null,
+): "id" | "login" | "none" => {
+  if (!normalized) return "none";
+  const channelId = channel.id?.trim();
+  if (channelId && normalized.ids.has(channelId)) return "id";
+  const login = channel.login?.trim().toLowerCase();
+  if (login && normalized.logins.has(login)) return "login";
+  return "none";
+};
+
+const countAllowlistedChannels = (
+  channels: ChannelEntry[],
+  normalized: { ids: Set<string>; logins: Set<string> } | null,
+): number => {
+  if (!normalized) return 0;
+  let count = 0;
+  for (const channel of channels) {
+    if (getAllowlistMatchKind(channel, normalized) !== "none") count += 1;
+  }
+  return count;
+};
+
+const findFirstAllowlistedIndex = (
+  channels: ChannelEntry[],
+  normalized: { ids: Set<string>; logins: Set<string> } | null,
+): number => {
+  if (!normalized) return -1;
+  return channels.findIndex((channel) => getAllowlistMatchKind(channel, normalized) !== "none");
+};
+
+const buildChannelPrioritySample = (
+  channels: ChannelEntry[],
+  normalized: { ids: Set<string>; logins: Set<string> } | null,
+  limit = 5,
+) =>
+  channels.slice(0, limit).map((channel) => ({
+    id: channel.id,
+    login: channel.login,
+    viewers: channel.viewers,
+    allowMatch: getAllowlistMatchKind(channel, normalized),
+  }));
+
+const isWatchingAllowlisted = (
+  watching: WatchingState,
+  normalized: { ids: Set<string>; logins: Set<string> } | null,
+): boolean | null => {
+  if (!watching || !normalized) return null;
+  const watchingId = String(watching.channelId ?? watching.id ?? "").trim();
+  if (watchingId && normalized.ids.has(watchingId)) return true;
+  const watchingLogin = String(watching.login ?? watching.name ?? "")
+    .trim()
+    .toLowerCase();
+  if (watchingLogin && normalized.logins.has(watchingLogin)) return true;
+  return false;
+};
+
+const logChannelPrioritySnapshot = ({
+  context,
+  game,
+  raw,
+  prioritized,
+  allowlist,
+  watching,
+  source,
+  reason,
+  force,
+}: {
+  context: "fetch" | "demo-fetch" | "live-diff";
+  game: string;
+  raw: ChannelEntry[];
+  prioritized: ChannelEntry[];
+  allowlist?: { ids: string[]; logins: string[] } | null;
+  watching: WatchingState;
+  source?: "ws" | "fetch";
+  reason?: "snapshot" | "stream-up" | "stream-down" | "viewers";
+  force?: boolean;
+}) => {
+  const normalized = normalizeAllowlist(allowlist);
+  const payload = {
+    game,
+    context,
+    source,
+    reason,
+    force,
+    totalRaw: raw.length,
+    totalPrioritized: prioritized.length,
+    allowlistActive: Boolean(normalized),
+    allowlistIds: normalized ? Array.from(normalized.ids).slice(0, 5) : [],
+    allowlistLogins: normalized ? Array.from(normalized.logins).slice(0, 5) : [],
+    allowlistedRawCount: countAllowlistedChannels(raw, normalized),
+    allowlistedPrioritizedCount: countAllowlistedChannels(prioritized, normalized),
+    firstAllowlistedRawIndex: findFirstAllowlistedIndex(raw, normalized),
+    firstAllowlistedPrioritizedIndex: findFirstAllowlistedIndex(prioritized, normalized),
+    watching: watching
+      ? {
+          id: watching.channelId ?? watching.id ?? "",
+          login: watching.login ?? watching.name ?? "",
+          allowlisted: isWatchingAllowlisted(watching, normalized),
+        }
+      : null,
+    topRaw: buildChannelPrioritySample(raw, normalized),
+    topPrioritized: buildChannelPrioritySample(prioritized, normalized),
+  };
+  if (normalized) {
+    logInfo("channels: priority snapshot", payload);
+    return;
+  }
+  logDebug("channels: priority snapshot", payload);
 };
 
 export function useChannels({
@@ -274,6 +455,7 @@ export function useChannels({
   trackerMode,
   demoMode,
   onAuthError,
+  channelAllowlist,
 }: Params) {
   const TRACKER_REFRESH_WINDOW_MS =
     trackerMode && trackerMode !== "polling" ? 10 * 60_000 : 5 * 60_000;
@@ -292,6 +474,7 @@ export function useChannels({
   const targetGameRef = useRef(targetGame);
   const pendingViewerDiffRef = useRef<ChannelLiveDiff | null>(null);
   const viewerFlushTimerRef = useRef<number | null>(null);
+  const allowlistKeyRef = useRef<string>("");
 
   useEffect(() => {
     targetGameRef.current = targetGame;
@@ -313,9 +496,8 @@ export function useChannels({
         game,
         now,
         refreshWindowMs: TRACKER_REFRESH_WINDOW_MS,
-        hasChannels: channels.length > 0,
       }),
-    [channels.length, fetchedAt, fetchedGame, TRACKER_REFRESH_WINDOW_MS],
+    [fetchedAt, fetchedGame, TRACKER_REFRESH_WINDOW_MS],
   );
   const fetchChannels = useCallback(
     async (gameName: string, { force }: { force?: boolean } = {}) => {
@@ -344,7 +526,8 @@ export function useChannels({
       setChannelError(null);
       try {
         if (demoMode) {
-          const list = getDemoChannels(gameName);
+          const rawList = getDemoChannels(gameName);
+          const prioritizedList = prioritizeChannelsByAllowlist(rawList, channelAllowlist);
           if (gameName !== targetGameRef.current || requestId < latestAppliedRequestRef.current) {
             logDebug("channels: ignore stale demo response", {
               game: gameName,
@@ -354,9 +537,18 @@ export function useChannels({
             return;
           }
           latestAppliedRequestRef.current = requestId;
-          const diff = buildChannelDiff(prevList, list, now);
+          logChannelPrioritySnapshot({
+            context: "demo-fetch",
+            game: gameName,
+            raw: rawList,
+            prioritized: prioritizedList,
+            allowlist: channelAllowlist,
+            watching,
+            force,
+          });
+          const diff = buildChannelDiff(prevList, prioritizedList, now);
           setChannelDiff(diff);
-          applyChannelsState(mergeChannelList(prevList, list));
+          applyChannelsState(mergeChannelList(prevList, prioritizedList));
           setFetchedAt(now);
           setFetchedGame(gameName);
           if (diff) {
@@ -410,7 +602,17 @@ export function useChannels({
           logWarn("channels: invalid response", res);
           return;
         }
-        const list = res;
+        const rawList = res;
+        const list = prioritizeChannelsByAllowlist(rawList, channelAllowlist);
+        logChannelPrioritySnapshot({
+          context: "fetch",
+          game: gameName,
+          raw: rawList,
+          prioritized: list,
+          allowlist: channelAllowlist,
+          watching,
+          force,
+        });
         logInfo("channels: fetch success", { game: gameName, count: list.length });
         logDebug("channels: sample", list.slice(0, 3));
         const diff = buildChannelDiff(prevList, list, now);
@@ -454,11 +656,11 @@ export function useChannels({
     [
       allowWatching,
       applyChannelsState,
-      autoSelectEnabled,
       demoMode,
       fetchedGame,
       isFresh,
       onAuthError,
+      channelAllowlist,
       watching,
     ],
   );
@@ -475,7 +677,20 @@ export function useChannels({
       if (payload.game !== targetGameRef.current) return;
       const prevList = channelsRef.current;
       const nextListRaw = applyLiveDiff(prevList, payload);
-      const nextList = mergeChannelList(prevList, nextListRaw);
+      const nextListPrioritized = prioritizeChannelsByAllowlist(nextListRaw, channelAllowlist);
+      if (payload.reason !== "viewers") {
+        logChannelPrioritySnapshot({
+          context: "live-diff",
+          game: payload.game,
+          raw: nextListRaw,
+          prioritized: nextListPrioritized,
+          allowlist: channelAllowlist,
+          watching,
+          source: payload.source,
+          reason: payload.reason,
+        });
+      }
+      const nextList = mergeChannelList(prevList, nextListPrioritized);
       const diff = buildChannelDiff(prevList, nextList, payload.at);
       if (!diff) return;
       applyChannelsState(nextList);
@@ -524,7 +739,7 @@ export function useChannels({
       pendingViewerDiffRef.current = null;
       if (typeof unsubscribe === "function") unsubscribe();
     };
-  }, [allowWatching, applyChannelsState, demoMode, shouldTrackChannels]);
+  }, [allowWatching, applyChannelsState, demoMode, shouldTrackChannels, channelAllowlist, watching]);
 
   // Reset when switching demo mode
   useEffect(() => {
@@ -542,6 +757,44 @@ export function useChannels({
   useEffect(() => {
     channelsRef.current = channels;
   }, [channels]);
+
+  useEffect(() => {
+    const prev = channelsRef.current;
+    const prioritized = prioritizeChannelsByAllowlist(prev, channelAllowlist);
+    const sameLength = prioritized.length === prev.length;
+    const sameIds =
+      sameLength && prioritized.every((channel, idx) => channel.id === prev[idx]?.id);
+    if (!sameIds) {
+      const diff = buildChannelDiff(prev, prioritized, Date.now());
+      if (diff) setChannelDiff(diff);
+      applyChannelsState(prioritized);
+    }
+
+    const key = buildAllowlistKey(channelAllowlist);
+    if (allowlistKeyRef.current === key) return;
+    logInfo("channels: allowlist changed", {
+      game: targetGame,
+      previousKey: allowlistKeyRef.current,
+      nextKey: key,
+      watching: watching
+        ? {
+            id: watching.channelId ?? watching.id ?? "",
+            login: watching.login ?? watching.name ?? "",
+          }
+        : null,
+    });
+    allowlistKeyRef.current = key;
+    if (!shouldTrackChannels || !targetGame || !allowWatching) return;
+    void fetchChannels(targetGame, { force: true });
+  }, [
+    allowWatching,
+    applyChannelsState,
+    channelAllowlist,
+    fetchChannels,
+    shouldTrackChannels,
+    targetGame,
+    watching,
+  ]);
 
   // Fetch when control view is active or auto-watch needs channel data (respect cache)
   useEffect(() => {
@@ -595,6 +848,7 @@ export function useChannels({
       autoSwitchEnabled,
       forcePrioritySwitch,
       canWatchTarget,
+      channelAllowlist,
     });
     if (action.action === "none") return;
     if (action.action === "clear") {
@@ -615,6 +869,7 @@ export function useChannels({
     autoSwitchEnabled,
     forcePrioritySwitch,
     canWatchTarget,
+    channelAllowlist,
     clearWatching,
     setWatchingFromChannel,
   ]);

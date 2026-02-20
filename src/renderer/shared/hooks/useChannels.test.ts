@@ -96,6 +96,46 @@ describe("useChannels helpers", () => {
     }
   });
 
+  it("switches to an allowlisted channel when current channel is not allowlisted", () => {
+    const channels = [
+      makeChannel({ id: "1", login: "alpha", displayName: "Alpha" }),
+      makeChannel({ id: "2", login: "beta", displayName: "Beta" }),
+    ];
+    const watching: WatchingState = { id: "1", name: "Alpha", game: "Game" };
+    const action = computeAutoSwitchAction({
+      allowWatching: true,
+      watching,
+      channels,
+      autoSwitchEnabled: true,
+      forcePrioritySwitch: true,
+      canWatchTarget: true,
+      channelAllowlist: { ids: ["2"], logins: [] },
+    });
+    expect(action.action).toBe("switch");
+    if (action.action === "switch") {
+      expect(action.reason).toBe("priority");
+      expect(action.nextChannel.id).toBe("2");
+    }
+  });
+
+  it("does not switch when current channel is already allowlisted", () => {
+    const channels = [
+      makeChannel({ id: "1", login: "alpha", displayName: "Alpha" }),
+      makeChannel({ id: "2", login: "beta", displayName: "Beta" }),
+    ];
+    const watching: WatchingState = { id: "1", name: "Alpha", game: "Game" };
+    const action = computeAutoSwitchAction({
+      allowWatching: true,
+      watching,
+      channels,
+      autoSwitchEnabled: true,
+      forcePrioritySwitch: true,
+      canWatchTarget: true,
+      channelAllowlist: { ids: ["1", "2"], logins: [] },
+    });
+    expect(action.action).toBe("none");
+  });
+
   it("clears watching when no channels remain", () => {
     const watching: WatchingState = { id: "1", name: "Alpha", game: "Game" };
     const action = computeAutoSwitchAction({
@@ -117,7 +157,6 @@ describe("useChannels helpers", () => {
         game: "Game",
         now: 1_500,
         refreshWindowMs: 1_000,
-        hasChannels: true,
       }),
     ).toBe(true);
     expect(
