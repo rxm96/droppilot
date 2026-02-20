@@ -123,4 +123,39 @@ describe("selectWarmupTarget", () => {
     });
     expect(result).toEqual({ game: "", reason: "campaigns-attempted" });
   });
+
+  it("can select known campaigns when explicitly allowed", () => {
+    const now = Date.parse("2026-02-14T00:00:00Z");
+    const campaigns = [makeCampaign({ id: "c1", game: "Pokemon" })];
+    const result = selectWarmupTarget({
+      campaigns,
+      priorityGames: ["Pokemon"],
+      knownCampaignIds: new Set(["c1"]),
+      knownActiveGames: new Set(["pokemon"]),
+      attemptedCampaignIds: new Set(),
+      allowKnownCampaigns: true,
+      now,
+    });
+    expect(result).toEqual({
+      game: "Pokemon",
+      campaignId: "c1",
+      campaignName: "Campaign 1",
+      reason: "ok",
+    });
+  });
+
+  it("still skips known campaigns when already attempted, even if known campaigns are allowed", () => {
+    const now = Date.parse("2026-02-14T00:00:00Z");
+    const campaigns = [makeCampaign({ id: "c1", game: "Pokemon" })];
+    const result = selectWarmupTarget({
+      campaigns,
+      priorityGames: ["Pokemon"],
+      knownCampaignIds: new Set(["c1"]),
+      knownActiveGames: new Set(["pokemon"]),
+      attemptedCampaignIds: new Set(["c1"]),
+      allowKnownCampaigns: true,
+      now,
+    });
+    expect(result).toEqual({ game: "", reason: "campaigns-attempted" });
+  });
 });

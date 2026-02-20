@@ -58,7 +58,6 @@ const WARMUP_PINGS = 3;
 const WARMUP_PING_INTERVAL_MS = 60_000;
 const WARMUP_COOLDOWN_MS = 5 * 60_000;
 const WARMUP_CAMPAIGN_COOLDOWN_MS = 24 * 60 * 60_000;
-const WARMUP_INVENTORY_REFRESH_MS = 60 * 60_000;
 const WARMUP_CAMPAIGN_STORAGE_KEY = "droppilot:warmup-campaign-attempts";
 
 const loadWarmupCampaignAttempts = (): Map<string, WarmupAttemptStored> => {
@@ -160,6 +159,7 @@ export const selectWarmupTarget = ({
   knownCampaignIds,
   knownActiveGames,
   attemptedCampaignIds,
+  allowKnownCampaigns = false,
   now = Date.now(),
 }: {
   campaigns: CampaignSummary[];
@@ -167,6 +167,7 @@ export const selectWarmupTarget = ({
   knownCampaignIds: Set<string>;
   knownActiveGames: Set<string>;
   attemptedCampaignIds: Set<string>;
+  allowKnownCampaigns?: boolean;
   now?: number;
 }): WarmupTargetResult => {
   const normalizedPriority = normalizePriorityGames(priorityGames);
@@ -196,7 +197,10 @@ export const selectWarmupTarget = ({
       skippedAttempted += 1;
       continue;
     }
-    if ((campaignId && knownCampaignIds.has(campaignId)) || knownActiveGames.has(gameKey)) {
+    if (
+      !allowKnownCampaigns &&
+      ((campaignId && knownCampaignIds.has(campaignId)) || knownActiveGames.has(gameKey))
+    ) {
       skippedKnown += 1;
       continue;
     }
@@ -415,6 +419,7 @@ export function useCampaignWarmup({
           knownCampaignIds,
           knownActiveGames,
           attemptedCampaignIds: new Set(attempts.keys()),
+          allowKnownCampaigns: true,
         });
         if (!selection.game) {
           updateWarmupState({ lastReason: selection.reason });
@@ -484,12 +489,8 @@ export function useCampaignWarmup({
           }
         }
         if (!cancelled) {
-          const now = Date.now();
-          const shouldRefresh =
-            !inventoryFetchedAt || now - inventoryFetchedAt > WARMUP_INVENTORY_REFRESH_MS;
-          if (shouldRefresh) {
-            void fetchInventory({ forceLoading: true });
-          }
+          // Always reconcile inventory after warmup pings to pick up newly unlocked progress.
+          void fetchInventory({ forceLoading: true });
           updateWarmupState({ lastReason: "complete" });
         }
       } catch (err) {
