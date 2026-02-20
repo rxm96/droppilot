@@ -5,18 +5,15 @@ type WithCategory = { item: InventoryItem; category: string };
 const isActionableCategory = (category: string, allowUpcoming: boolean): boolean =>
   category === "in-progress" || (allowUpcoming && category === "upcoming");
 const getRemainingMinutes = (item: InventoryItem): number =>
-  Math.max(0, Math.max(0, Number(item.requiredMinutes) || 0) - Math.max(0, Number(item.earnedMinutes) || 0));
-const normalizeIds = (values?: string[]): Set<string> =>
-  new Set(
-    (values ?? [])
-      .map((value) => String(value).trim())
-      .filter((value) => value.length > 0),
+  Math.max(
+    0,
+    Math.max(0, Number(item.requiredMinutes) || 0) - Math.max(0, Number(item.earnedMinutes) || 0),
   );
+const normalizeIds = (values?: string[]): Set<string> =>
+  new Set((values ?? []).map((value) => String(value).trim()).filter((value) => value.length > 0));
 const normalizeLogins = (values?: string[]): Set<string> =>
   new Set(
-    (values ?? [])
-      .map((value) => value.trim().toLowerCase())
-      .filter((value) => value.length > 0),
+    (values ?? []).map((value) => value.trim().toLowerCase()).filter((value) => value.length > 0),
   );
 const canDropProgressOnWatchingChannel = (
   item: InventoryItem,
@@ -117,7 +114,8 @@ export function computeTargetDrops({
       item.game === targetGame && isActionableCategory(category, allowUnlinkedGames),
   );
   const inProgressRelevant = withCategories.filter(
-    ({ item, category }) => item.game === targetGame && category === "in-progress" && !isExpired(item),
+    ({ item, category }) =>
+      item.game === targetGame && category === "in-progress" && !isExpired(item),
   );
   const sortCandidates = (candidates: WithCategory[]): WithCategory[] =>
     [...candidates].sort((a, b) => {
@@ -137,7 +135,8 @@ export function computeTargetDrops({
   const sortedActive = sortCandidates(activeRelevant);
   const sortedInProgress = sortCandidates(inProgressRelevant);
   const upcomingRelevant = withCategories.filter(
-    ({ item, category }) => item.game === targetGame && category === "upcoming" && item.blocked !== true,
+    ({ item, category }) =>
+      item.game === targetGame && category === "upcoming" && item.blocked !== true,
   );
   const sortedUpcoming = sortCandidates(upcomingRelevant);
   const sortedActiveItems = sortedActive.map((s) => s.item);
@@ -195,16 +194,18 @@ export function computeTargetDrops({
   const isWatchingAnyChannel = Boolean(watching);
   const isWatchingTargetGame = Boolean(watching && watching.game === targetGame);
   const farmableInProgress = isWatchingTargetGame
-    ? sortedInProgress.find(({ item }) => canDropProgressOnWatchingChannel(item, watching, targetGame))
-        ?.item ?? null
+    ? (sortedInProgress.find(({ item }) =>
+        canDropProgressOnWatchingChannel(item, watching, targetGame),
+      )?.item ?? null)
     : null;
   const farmableUpcoming = isWatchingTargetGame
-    ? sortedUpcoming.find(({ item }) => canDropProgressOnWatchingChannel(item, watching, targetGame))
-        ?.item ?? null
+    ? (sortedUpcoming.find(({ item }) =>
+        canDropProgressOnWatchingChannel(item, watching, targetGame),
+      )?.item ?? null)
     : null;
   const activeDrop = isWatchingAnyChannel
-    ? farmableInProgress ?? farmableUpcoming ?? null
-    : sortedInProgress[0]?.item ?? null;
+    ? (farmableInProgress ?? farmableUpcoming ?? null)
+    : (sortedInProgress[0]?.item ?? null);
   const activeDropAnchorAt = (() => {
     if (!activeDrop) return null;
     const byDrop = progressAnchorByDropId?.[activeDrop.id];

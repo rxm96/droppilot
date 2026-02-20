@@ -590,13 +590,11 @@ export class TwitchService {
         const availableRaw = Array.isArray(dropCampaigns)
           ? dropCampaigns
           : (dropCampaignConnection?.edges ?? []);
-        const available = availableRaw
-          .map(normalizeEdge)
-          .filter((edge) => {
-            if (availableStatuses.length === 0) return true;
-            const status = typeof edge.node?.status === "string" ? edge.node?.status : "";
-            return availableStatuses.includes(status.toUpperCase());
-          });
+        const available = availableRaw.map(normalizeEdge).filter((edge) => {
+          if (availableStatuses.length === 0) return true;
+          const status = typeof edge.node?.status === "string" ? edge.node?.status : "";
+          return availableStatuses.includes(status.toUpperCase());
+        });
         fetchedEdges += availableRaw.length;
         for (const edge of available) {
           const id = edge.node?.id;
@@ -1025,5 +1023,3 @@ export class TwitchService {
     }
   }
 }
-
-

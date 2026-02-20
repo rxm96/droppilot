@@ -198,8 +198,7 @@ export const isFreshCache = ({
   game: string;
   now: number;
   refreshWindowMs: number;
-}): boolean =>
-  fetchedAt !== null && fetchedGame === game && now - fetchedAt < refreshWindowMs;
+}): boolean => fetchedAt !== null && fetchedGame === game && now - fetchedAt < refreshWindowMs;
 
 export const hasRecentInventory = ({
   inventoryFetchedAt,
@@ -257,7 +256,9 @@ export const computeAutoSwitchAction = ({
     if (login && normalizedAllowlist.logins.has(login)) return true;
     return false;
   };
-  const preferredChannel = normalizedAllowlist ? channels.find((channel) => isAllowed(channel)) : null;
+  const preferredChannel = normalizedAllowlist
+    ? channels.find((channel) => isAllowed(channel))
+    : null;
   const shouldForceSwitch = forcePrioritySwitch && canWatchTarget;
   const stillThere = channels.some((c) => c.id === watching.id);
   if (stillThere) {
@@ -739,7 +740,14 @@ export function useChannels({
       pendingViewerDiffRef.current = null;
       if (typeof unsubscribe === "function") unsubscribe();
     };
-  }, [allowWatching, applyChannelsState, demoMode, shouldTrackChannels, channelAllowlist, watching]);
+  }, [
+    allowWatching,
+    applyChannelsState,
+    demoMode,
+    shouldTrackChannels,
+    channelAllowlist,
+    watching,
+  ]);
 
   // Reset when switching demo mode
   useEffect(() => {
@@ -762,8 +770,7 @@ export function useChannels({
     const prev = channelsRef.current;
     const prioritized = prioritizeChannelsByAllowlist(prev, channelAllowlist);
     const sameLength = prioritized.length === prev.length;
-    const sameIds =
-      sameLength && prioritized.every((channel, idx) => channel.id === prev[idx]?.id);
+    const sameIds = sameLength && prioritized.every((channel, idx) => channel.id === prev[idx]?.id);
     if (!sameIds) {
       const diff = buildChannelDiff(prev, prioritized, Date.now());
       if (diff) setChannelDiff(diff);

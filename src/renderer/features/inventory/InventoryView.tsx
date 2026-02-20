@@ -1,4 +1,9 @@
-import type { CampaignSummary, FilterKey, InventoryItem, InventoryState } from "@renderer/shared/types";
+import type {
+  CampaignSummary,
+  FilterKey,
+  InventoryItem,
+  InventoryState,
+} from "@renderer/shared/types";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { formatRange, categoryLabel, mapStatusLabel } from "@renderer/shared/utils";
 import { useI18n } from "@renderer/shared/i18n";
@@ -60,10 +65,7 @@ const CAMPAIGN_SKELETON = Array.from({ length: CAMPAIGN_PAGE_SIZE }, (_, idx) =>
 
 type CampaignPhase = "expired" | "in-progress" | "upcoming" | "finished";
 
-const getCampaignPhase = (
-  campaign: CampaignSummary,
-  now = Date.now(),
-): CampaignPhase => {
+const getCampaignPhase = (campaign: CampaignSummary, now = Date.now()): CampaignPhase => {
   const status = (campaign.status ?? "").toUpperCase();
   const endMs = parseIsoMs(campaign.endsAt);
   if (status === "EXPIRED" || (endMs !== null && endMs < now)) return "expired";
@@ -284,8 +286,8 @@ export function InventoryView({
         return (a.campaign.game ?? "").localeCompare(b.campaign.game ?? "");
       });
   })();
-  const hasUnlinkedCampaigns = visibleCampaigns.some(
-    ({ campaign }) => shouldShowLinkRequired(campaign),
+  const hasUnlinkedCampaigns = visibleCampaigns.some(({ campaign }) =>
+    shouldShowLinkRequired(campaign),
   );
   const toggleCampaign = (key: string) => {
     setExpandedCampaigns((prev) => {
@@ -320,10 +322,7 @@ export function InventoryView({
     return undefined;
   }, [showCampaignSkeleton]);
 
-  const totalCampaignPages = Math.max(
-    1,
-    Math.ceil(visibleCampaigns.length / CAMPAIGN_PAGE_SIZE),
-  );
+  const totalCampaignPages = Math.max(1, Math.ceil(visibleCampaigns.length / CAMPAIGN_PAGE_SIZE));
   const currentCampaignPage = Math.min(campaignPage, totalCampaignPages);
   const paginatedCampaigns = useMemo(
     () =>
@@ -439,216 +438,220 @@ export function InventoryView({
             </ul>
           </>
         )}
-        {!showCampaignSkeleton && !campaignsLoading && !isInventoryError && visibleCampaigns.length === 0 && (
-          <p className="meta">{campaignsEmptyText}</p>
-        )}
+        {!showCampaignSkeleton &&
+          !campaignsLoading &&
+          !isInventoryError &&
+          visibleCampaigns.length === 0 && <p className="meta">{campaignsEmptyText}</p>}
         {!showCampaignSkeleton && visibleCampaigns.length > 0 && (
           <ul className={`campaign-list${campaignsEntering ? " is-entering" : ""}`}>
             {paginatedCampaigns.map(
               ({ campaign, phase, derivedHasUnclaimedDrops, derivedHasExcludedDrops }) => {
-              const name = campaign.name ?? campaign.game ?? t("inventory.campaigns.unknown");
-              const game = campaign.game ?? "";
-              const imageUrl = typeof campaign.imageUrl === "string" ? campaign.imageUrl.trim() : "";
-              const accountLinkUrl =
-                typeof campaign.accountLinkUrl === "string" ? campaign.accountLinkUrl.trim() : "";
-              const campaignKey = campaign.id ?? `${game}:${name}`;
-              const phaseLabel = categoryLabel(phase, (key) => t(key));
-              const campaignDrops = Array.isArray(campaign.drops) ? campaign.drops : [];
-              const trimmedGame = game.trim();
-              const isPriority = trimmedGame ? priorityGames.includes(trimmedGame) : false;
-              const addPriorityLabel = isPriority
-                ? t("inventory.campaigns.inPriority")
-                : t("inventory.campaigns.addPriority");
-              const allClaimed = derivedHasUnclaimedDrops === false;
-              const hasExcludedDrops = derivedHasExcludedDrops === true;
-              const needsLink = shouldShowLinkRequired(campaign);
-              const drops = campaignDrops
-                .map((drop) => {
-                  const inventoryDrop = inventoryByDropId.get(drop.id);
-                  return {
-                    id: drop.id,
-                    title: drop.name ?? t("inventory.campaigns.dropFallback"),
-                    requiredMinutes: Math.max(
-                      0,
-                      Number(
-                        inventoryDrop?.requiredMinutes ?? drop.requiredMinutes,
-                      ) || 0,
-                    ),
-                    earnedMinutes: (() => {
-                      const raw =
-                        inventoryDrop?.earnedMinutes ?? drop.earnedMinutes ?? 0;
-                      const value = Math.max(0, Number(raw) || 0);
-                      return value;
-                    })(),
-                    status: inventoryDrop?.status ?? drop.status,
-                    imageUrl: drop.imageUrl,
-                    blocked:
-                      inventoryDrop?.blocked === true ||
-                      (inventoryDrop?.blockingReasonHints?.length ?? 0) > 0,
-                    blockingReasonHints: Array.isArray(inventoryDrop?.blockingReasonHints)
-                      ? inventoryDrop.blockingReasonHints
-                      : [],
-                  };
-                })
-                .sort((a, b) => a.title.localeCompare(b.title));
-              const isExpanded = expandedCampaigns.has(campaignKey);
-              const expandLabel = isExpanded
-                ? t("inventory.campaigns.hideDrops")
-                : t("inventory.campaigns.showDrops", { count: drops.length });
-              return (
-                <li key={campaignKey} className={`campaign-card ${phase}`}>
-                  <div className="campaign-card-top">
-                    <div className="campaign-card-main">
-                      {imageUrl ? (
-                        <img className="campaign-card-thumb" src={imageUrl} alt="" loading="lazy" />
-                      ) : null}
-                      <div className="campaign-card-body">
-                        <div className="campaign-card-heading">
-                          {game ? <div className="meta">{game}</div> : null}
-                          <div className="campaign-card-title">{name}</div>
-                        </div>
-                        <div className="meta">
-                          {formatRange(campaign.startsAt, campaign.endsAt, t)}
+                const name = campaign.name ?? campaign.game ?? t("inventory.campaigns.unknown");
+                const game = campaign.game ?? "";
+                const imageUrl =
+                  typeof campaign.imageUrl === "string" ? campaign.imageUrl.trim() : "";
+                const accountLinkUrl =
+                  typeof campaign.accountLinkUrl === "string" ? campaign.accountLinkUrl.trim() : "";
+                const campaignKey = campaign.id ?? `${game}:${name}`;
+                const phaseLabel = categoryLabel(phase, (key) => t(key));
+                const campaignDrops = Array.isArray(campaign.drops) ? campaign.drops : [];
+                const trimmedGame = game.trim();
+                const isPriority = trimmedGame ? priorityGames.includes(trimmedGame) : false;
+                const addPriorityLabel = isPriority
+                  ? t("inventory.campaigns.inPriority")
+                  : t("inventory.campaigns.addPriority");
+                const allClaimed = derivedHasUnclaimedDrops === false;
+                const hasExcludedDrops = derivedHasExcludedDrops === true;
+                const needsLink = shouldShowLinkRequired(campaign);
+                const drops = campaignDrops
+                  .map((drop) => {
+                    const inventoryDrop = inventoryByDropId.get(drop.id);
+                    return {
+                      id: drop.id,
+                      title: drop.name ?? t("inventory.campaigns.dropFallback"),
+                      requiredMinutes: Math.max(
+                        0,
+                        Number(inventoryDrop?.requiredMinutes ?? drop.requiredMinutes) || 0,
+                      ),
+                      earnedMinutes: (() => {
+                        const raw = inventoryDrop?.earnedMinutes ?? drop.earnedMinutes ?? 0;
+                        const value = Math.max(0, Number(raw) || 0);
+                        return value;
+                      })(),
+                      status: inventoryDrop?.status ?? drop.status,
+                      imageUrl: drop.imageUrl,
+                      blocked:
+                        inventoryDrop?.blocked === true ||
+                        (inventoryDrop?.blockingReasonHints?.length ?? 0) > 0,
+                      blockingReasonHints: Array.isArray(inventoryDrop?.blockingReasonHints)
+                        ? inventoryDrop.blockingReasonHints
+                        : [],
+                    };
+                  })
+                  .sort((a, b) => a.title.localeCompare(b.title));
+                const isExpanded = expandedCampaigns.has(campaignKey);
+                const expandLabel = isExpanded
+                  ? t("inventory.campaigns.hideDrops")
+                  : t("inventory.campaigns.showDrops", { count: drops.length });
+                return (
+                  <li key={campaignKey} className={`campaign-card ${phase}`}>
+                    <div className="campaign-card-top">
+                      <div className="campaign-card-main">
+                        {imageUrl ? (
+                          <img
+                            className="campaign-card-thumb"
+                            src={imageUrl}
+                            alt=""
+                            loading="lazy"
+                          />
+                        ) : null}
+                        <div className="campaign-card-body">
+                          <div className="campaign-card-heading">
+                            {game ? <div className="meta">{game}</div> : null}
+                            <div className="campaign-card-title">{name}</div>
+                          </div>
+                          <div className="meta">
+                            {formatRange(campaign.startsAt, campaign.endsAt, t)}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="campaign-card-meta">
-                      <span className="pill ghost small">{phaseLabel}</span>
-                      {allClaimed ? (
-                        <span className="pill ghost small success-chip">
-                          {t("inventory.campaigns.allClaimed")}
-                        </span>
-                      ) : null}
-                      {hasExcludedDrops ? (
-                        <span className="pill ghost small">
-                          {t("inventory.category.excluded")}
-                        </span>
-                      ) : null}
-                      {needsLink ? (
-                        accountLinkUrl ? (
+                      <div className="campaign-card-meta">
+                        <span className="pill ghost small">{phaseLabel}</span>
+                        {allClaimed ? (
+                          <span className="pill ghost small success-chip">
+                            {t("inventory.campaigns.allClaimed")}
+                          </span>
+                        ) : null}
+                        {hasExcludedDrops ? (
+                          <span className="pill ghost small">
+                            {t("inventory.category.excluded")}
+                          </span>
+                        ) : null}
+                        {needsLink ? (
+                          accountLinkUrl ? (
+                            <button
+                              type="button"
+                              className="pill ghost small danger-chip"
+                              onClick={() => onOpenAccountLink(accountLinkUrl)}
+                              title={accountLinkUrl}
+                            >
+                              {t("inventory.campaigns.linkRequiredAction")}
+                            </button>
+                          ) : (
+                            <span className="pill ghost small danger-chip">
+                              {t("inventory.campaigns.linkRequired")}
+                            </span>
+                          )
+                        ) : null}
+                        {trimmedGame ? (
                           <button
                             type="button"
-                            className="pill ghost small danger-chip"
-                            onClick={() => onOpenAccountLink(accountLinkUrl)}
-                            title={accountLinkUrl}
+                            className="pill ghost small campaign-card-action"
+                            disabled={isPriority}
+                            onClick={() => onAddPriorityGame(trimmedGame)}
                           >
-                            {t("inventory.campaigns.linkRequiredAction")}
+                            {addPriorityLabel}
                           </button>
-                        ) : (
-                          <span className="pill ghost small danger-chip">
-                            {t("inventory.campaigns.linkRequired")}
-                          </span>
-                        )
-                      ) : null}
-                      {trimmedGame ? (
+                        ) : null}
                         <button
                           type="button"
-                          className="pill ghost small campaign-card-action"
-                          disabled={isPriority}
-                          onClick={() => onAddPriorityGame(trimmedGame)}
+                          className="pill ghost small campaign-card-toggle"
+                          aria-expanded={isExpanded}
+                          onClick={() => toggleCampaign(campaignKey)}
                         >
-                          {addPriorityLabel}
+                          {expandLabel}
                         </button>
-                      ) : null}
-                      <button
-                        type="button"
-                        className="pill ghost small campaign-card-toggle"
-                        aria-expanded={isExpanded}
-                        onClick={() => toggleCampaign(campaignKey)}
-                      >
-                        {expandLabel}
-                      </button>
+                      </div>
                     </div>
-                  </div>
-                  {isExpanded && (
-                    <div className="campaign-card-drops">
-                      {drops.length === 0 ? (
-                        <p className="meta">{t("inventory.campaigns.noDrops")}</p>
-                      ) : (
-                        <ul className="campaign-drop-list">
-                          {drops.map((item) => {
-                            const req = Math.max(0, Number(item.requiredMinutes) || 0);
-                            let earned = Math.max(0, Number(item.earnedMinutes) || 0);
-                            let status = item.status;
-                            if (!status) {
-                              if (req > 0 && earned >= req) {
-                                status = "progress";
-                              } else if (earned > 0) {
-                                status = "progress";
-                              } else {
-                                status = "locked";
+                    {isExpanded && (
+                      <div className="campaign-card-drops">
+                        {drops.length === 0 ? (
+                          <p className="meta">{t("inventory.campaigns.noDrops")}</p>
+                        ) : (
+                          <ul className="campaign-drop-list">
+                            {drops.map((item) => {
+                              const req = Math.max(0, Number(item.requiredMinutes) || 0);
+                              let earned = Math.max(0, Number(item.earnedMinutes) || 0);
+                              let status = item.status;
+                              if (!status) {
+                                if (req > 0 && earned >= req) {
+                                  status = "progress";
+                                } else if (earned > 0) {
+                                  status = "progress";
+                                } else {
+                                  status = "locked";
+                                }
                               }
-                            }
-                            if (status === "claimed" && req > 0 && earned < req) {
-                              earned = req;
-                            }
-                            if (req > 0) {
-                              earned = Math.min(req, earned);
-                            }
-                            const displayBlockingReason = pickDisplayBlockingReason(
-                              item.blockingReasonHints,
-                              needsLink,
-                            );
-                            const blockingReasonLabel =
-                              item.blocked && displayBlockingReason
-                                ? formatBlockingReason(displayBlockingReason, t)
+                              if (status === "claimed" && req > 0 && earned < req) {
+                                earned = req;
+                              }
+                              if (req > 0) {
+                                earned = Math.min(req, earned);
+                              }
+                              const displayBlockingReason = pickDisplayBlockingReason(
+                                item.blockingReasonHints,
+                                needsLink,
+                              );
+                              const blockingReasonLabel =
+                                item.blocked && displayBlockingReason
+                                  ? formatBlockingReason(displayBlockingReason, t)
+                                  : null;
+                              const displayBlocked = item.blocked && !!displayBlockingReason;
+                              const statusLabel = status
+                                ? status === "progress" && displayBlocked
+                                  ? t("inventory.status.progressBlocked")
+                                  : mapStatusLabel(status, (key) => t(key))
                                 : null;
-                            const displayBlocked = item.blocked && !!displayBlockingReason;
-                            const statusLabel = status
-                              ? status === "progress" && displayBlocked
-                                ? t("inventory.status.progressBlocked")
-                                : mapStatusLabel(status, (key) => t(key))
-                              : null;
-                            const dropImage =
-                              typeof item.imageUrl === "string" ? item.imageUrl.trim() : "";
-                            return (
-                              <li key={item.id} className="campaign-drop">
-                                <div className="campaign-drop-main">
-                                  {dropImage ? (
-                                    <img
-                                      className="campaign-drop-thumb"
-                                      src={dropImage}
-                                      alt=""
-                                      loading="lazy"
-                                    />
-                                  ) : null}
-                                  <div className="campaign-drop-body">
-                                    <div className="campaign-drop-title">{item.title}</div>
-                                    {blockingReasonLabel ? (
-                                      <div
-                                        className="campaign-drop-reason"
-                                        title={blockingReasonLabel}
+                              const dropImage =
+                                typeof item.imageUrl === "string" ? item.imageUrl.trim() : "";
+                              return (
+                                <li key={item.id} className="campaign-drop">
+                                  <div className="campaign-drop-main">
+                                    {dropImage ? (
+                                      <img
+                                        className="campaign-drop-thumb"
+                                        src={dropImage}
+                                        alt=""
+                                        loading="lazy"
+                                      />
+                                    ) : null}
+                                    <div className="campaign-drop-body">
+                                      <div className="campaign-drop-title">{item.title}</div>
+                                      {blockingReasonLabel ? (
+                                        <div
+                                          className="campaign-drop-reason"
+                                          title={blockingReasonLabel}
+                                        >
+                                          {blockingReasonLabel}
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                  <div className="campaign-drop-meta">
+                                    {req > 0 ? (
+                                      <span className="meta">
+                                        {earned}/{req} {t("inventory.minutes")}
+                                      </span>
+                                    ) : null}
+                                    {statusLabel ? (
+                                      <span
+                                        className={`pill ghost small ${status === "progress" && displayBlocked ? "danger-chip" : ""}`}
+                                        title={blockingReasonLabel ?? undefined}
                                       >
-                                        {blockingReasonLabel}
-                                      </div>
+                                        {statusLabel}
+                                      </span>
                                     ) : null}
                                   </div>
-                                </div>
-                                <div className="campaign-drop-meta">
-                                  {req > 0 ? (
-                                    <span className="meta">
-                                      {earned}/{req} {t("inventory.minutes")}
-                                    </span>
-                                  ) : null}
-                                  {statusLabel ? (
-                                    <span
-                                      className={`pill ghost small ${status === "progress" && displayBlocked ? "danger-chip" : ""}`}
-                                      title={blockingReasonLabel ?? undefined}
-                                    >
-                                      {statusLabel}
-                                    </span>
-                                  ) : null}
-                                </div>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      )}
-                    </div>
-                  )}
-                </li>
-              );
-            },
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+                  </li>
+                );
+              },
             )}
           </ul>
         )}
@@ -669,9 +672,7 @@ export function InventoryView({
               type="button"
               className="ghost"
               disabled={currentCampaignPage === totalCampaignPages}
-              onClick={() =>
-                setCampaignPage(Math.min(totalCampaignPages, currentCampaignPage + 1))
-              }
+              onClick={() => setCampaignPage(Math.min(totalCampaignPages, currentCampaignPage + 1))}
             >
               {t("inventory.next")}
             </button>

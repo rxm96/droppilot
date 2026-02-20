@@ -706,7 +706,8 @@ export function buildCampaignSummaries(nodes: CampaignNode[]): CampaignInfo[] {
           imageUrl: extractDropImageUrl(drop),
         });
       }
-      hasUnclaimedDrops = drops.length === 0 ? false : drops.some((drop) => drop.status !== "claimed");
+      hasUnclaimedDrops =
+        drops.length === 0 ? false : drops.some((drop) => drop.status !== "claimed");
     } else {
       hasUnclaimedDrops = false;
     }

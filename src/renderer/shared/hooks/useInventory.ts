@@ -83,11 +83,7 @@ const buildClaimRetrySignature = (item: InventoryItem): string =>
     (item.blockingReasonHints ?? []).join("|"),
   ].join("#");
 
-const isCampaignActive = (
-  startsAt?: string,
-  endsAt?: string,
-  now = Date.now(),
-): boolean => {
+const isCampaignActive = (startsAt?: string, endsAt?: string, now = Date.now()): boolean => {
   const startMs = parseIsoMs(startsAt);
   if (startMs !== null && now < startMs) return false;
   const endMs = parseIsoMs(endsAt);
@@ -105,19 +101,17 @@ const buildCampaignsFromInventory = (
     if (!item || typeof item !== "object") continue;
     const game = typeof item.game === "string" ? item.game.trim() : "";
     if (!game) continue;
-    const campaignName =
-      typeof item.campaignName === "string" ? item.campaignName.trim() : "";
+    const campaignName = typeof item.campaignName === "string" ? item.campaignName.trim() : "";
     const rawId = typeof item.campaignId === "string" ? item.campaignId.trim() : "";
     const fallbackId = campaignName || game;
     const id = rawId || (fallbackId ? `campaign:${fallbackId.toLowerCase()}` : item.id);
     if (!id) continue;
-    const entry =
-      map.get(id) ?? {
-        id,
-        name: campaignName || `${game} Drops`,
-        game,
-        hasUnclaimedDrops: undefined,
-      };
+    const entry = map.get(id) ?? {
+      id,
+      name: campaignName || `${game} Drops`,
+      game,
+      hasUnclaimedDrops: undefined,
+    };
     if (!entry.name && campaignName) entry.name = campaignName;
     if (!entry.game) entry.game = game;
     const startMs = parseIsoMs(item.startsAt);
@@ -800,11 +794,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
       const eventAt =
         typeof event.at === "number" && Number.isFinite(event.at) ? event.at : Date.now();
       const idsToAnchor =
-        updatedIds && updatedIds.length > 0
-          ? updatedIds
-          : updatedId
-            ? [updatedId]
-            : [];
+        updatedIds && updatedIds.length > 0 ? updatedIds : updatedId ? [updatedId] : [];
       if (idsToAnchor.length > 0) {
         setProgressAnchorByDropId((prev) => {
           let changed = false;

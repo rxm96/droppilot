@@ -49,7 +49,6 @@ export function AppContent({
       <TopNav {...navProps} />
 
       <section className="panel inventory-panel">
-
         {view === "overview" && renderWithPerf("OverviewView", <OverviewView {...overviewProps} />)}
 
         {view === "inventory" &&

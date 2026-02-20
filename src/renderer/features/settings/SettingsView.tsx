@@ -156,10 +156,30 @@ export function SettingsView({
   const canInstall = updateStatus?.state === "downloaded" && typeof installUpdate === "function";
   const refreshPresets = [
     { key: "60-70", minMs: 60 * 60_000, maxMs: 70 * 60_000, label: t("settings.refreshPreset.1h") },
-    { key: "120-150", minMs: 120 * 60_000, maxMs: 150 * 60_000, label: t("settings.refreshPreset.2h") },
-    { key: "240-300", minMs: 240 * 60_000, maxMs: 300 * 60_000, label: t("settings.refreshPreset.4h") },
-    { key: "360-420", minMs: 360 * 60_000, maxMs: 420 * 60_000, label: t("settings.refreshPreset.6h") },
-    { key: "720-840", minMs: 720 * 60_000, maxMs: 840 * 60_000, label: t("settings.refreshPreset.12h") },
+    {
+      key: "120-150",
+      minMs: 120 * 60_000,
+      maxMs: 150 * 60_000,
+      label: t("settings.refreshPreset.2h"),
+    },
+    {
+      key: "240-300",
+      minMs: 240 * 60_000,
+      maxMs: 300 * 60_000,
+      label: t("settings.refreshPreset.4h"),
+    },
+    {
+      key: "360-420",
+      minMs: 360 * 60_000,
+      maxMs: 420 * 60_000,
+      label: t("settings.refreshPreset.6h"),
+    },
+    {
+      key: "720-840",
+      minMs: 720 * 60_000,
+      maxMs: 840 * 60_000,
+      label: t("settings.refreshPreset.12h"),
+    },
   ];
   const currentPreset =
     refreshPresets.find((preset) => preset.minMs === refreshMinMs && preset.maxMs === refreshMaxMs)

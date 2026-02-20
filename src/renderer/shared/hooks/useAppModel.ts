@@ -388,13 +388,7 @@ export function useAppModel() {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [
-    activeDropInfo,
-    fetchInventory,
-    inventoryFetchedAt,
-    watchStats.lastOk,
-    watching,
-  ]);
+  }, [activeDropInfo, fetchInventory, inventoryFetchedAt, watchStats.lastOk, watching]);
 
   const debugCpu = useDebugCpu({
     enabled: debugEnabled && view === "debug" && isVerboseLoggingEnabled(),

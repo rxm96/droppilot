@@ -314,7 +314,8 @@ export function ControlView({
                             const campaignLiveEarnedRaw = isInActiveCampaign
                               ? Math.max(
                                   0,
-                                  earned + Math.max(0, Number(liveProgress.activeElapsedMinutesRaw) || 0),
+                                  earned +
+                                    Math.max(0, Number(liveProgress.activeElapsedMinutesRaw) || 0),
                                 )
                               : earned;
                             const campaignLiveEarned = Math.floor(campaignLiveEarnedRaw);

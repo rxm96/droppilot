@@ -53,10 +53,7 @@ export const normalizePriorityGames = (priorityGames: string[]): string[] => {
   return order;
 };
 
-const buildLivePriorityPlan = (
-  items: InventoryItem[],
-  priorityGames: string[],
-): PriorityPlan => {
+const buildLivePriorityPlan = (items: InventoryItem[], priorityGames: string[]): PriorityPlan => {
   const activeItems = items.filter((i) => i.status !== "claimed");
   const availableGames = Array.from(new Set(activeItems.map((i) => i.game)));
   const order: string[] = [];

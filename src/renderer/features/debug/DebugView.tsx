@@ -108,7 +108,9 @@ const LogDetails = memo(function LogDetails({ args, label, highlightTerm = "" }:
       onToggle={(e) => setIsOpen((e.currentTarget as HTMLDetailsElement).open)}
     >
       <summary className="log-details-summary">{label}</summary>
-      {isOpen ? <pre className="log-details">{highlightMatches(detailsText, highlightTerm)}</pre> : null}
+      {isOpen ? (
+        <pre className="log-details">{highlightMatches(detailsText, highlightTerm)}</pre>
+      ) : null}
     </details>
   );
 });
@@ -137,7 +139,9 @@ const LogRow = memo(function LogRow({
         </Badge>
         <span className="log-time">{entry.timeLabel}</span>
       </div>
-      <div className={cn("log-message", style.text)}>{highlightMatches(logMessage, highlightTerm)}</div>
+      <div className={cn("log-message", style.text)}>
+        {highlightMatches(logMessage, highlightTerm)}
+      </div>
       {entry.args.length > 0 ? (
         <LogDetails args={entry.args} label={detailsLabel} highlightTerm={highlightTerm} />
       ) : null}

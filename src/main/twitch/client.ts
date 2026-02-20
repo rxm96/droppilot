@@ -50,12 +50,7 @@ export type RevalidateResult =
     }
   | {
       ok: false;
-      status:
-        | "missing_token"
-        | "unauthorized"
-        | "refresh_unavailable"
-        | "refresh_failed"
-        | "error";
+      status: "missing_token" | "unauthorized" | "refresh_unavailable" | "refresh_failed" | "error";
       message?: string;
     };
 
@@ -153,9 +148,7 @@ export class TwitchClient {
     };
   }
 
-  async gqlRequest<T>(
-    body: Record<string, unknown> | Record<string, unknown>[],
-  ): Promise<T> {
+  async gqlRequest<T>(body: Record<string, unknown> | Record<string, unknown>[]): Promise<T> {
     const headers = await this.gqlHeaders();
     const hasCookieHeader = typeof headers.Cookie === "string" && headers.Cookie.length > 0;
     this.log("GQL request", {
@@ -386,7 +379,9 @@ export class TwitchClient {
 
   private async requestValidateInfo(
     token: string,
-  ): Promise<{ ok: true; data: ValidateResponse } | { ok: false; status: number; message?: string }> {
+  ): Promise<
+    { ok: true; data: ValidateResponse } | { ok: false; status: number; message?: string }
+  > {
     try {
       const validateRes = await fetch("https://id.twitch.tv/oauth2/validate", {
         headers: { Authorization: `OAuth ${token}` },
@@ -530,7 +525,7 @@ export class TwitchClient {
         loginName: validateRes.data.login,
         scopes: Array.isArray(validateRes.data.scopes)
           ? validateRes.data.scopes
-          : session?.scopes ?? [],
+          : (session?.scopes ?? []),
       });
       return {
         ok: true,
@@ -561,8 +556,7 @@ export class TwitchClient {
         accessToken: refreshed.accessToken,
         refreshToken: refreshed.refreshToken ?? refreshToken,
         expiresAt,
-        scopes:
-          refreshed.scopes.length > 0 ? refreshed.scopes : session?.scopes ?? [],
+        scopes: refreshed.scopes.length > 0 ? refreshed.scopes : (session?.scopes ?? []),
       });
       return {
         ok: true,

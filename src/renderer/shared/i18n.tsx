@@ -93,8 +93,7 @@ const translations: Translations = {
     "inventory.campaigns.dropFallback": "Drop reward",
     "inventory.campaigns.linkRequired": "Account link required",
     "inventory.campaigns.linkRequiredAction": "Link account",
-    "inventory.campaigns.linkHint":
-      "Drops only progress after your game account is linked.",
+    "inventory.campaigns.linkHint": "Drops only progress after your game account is linked.",
     "inventory.campaigns.linkAction": "Open Twitch connections",
     "inventory.campaigns.addPriority": "Add to priorities",
     "inventory.campaigns.inPriority": "In priorities",
@@ -195,8 +194,7 @@ const translations: Translations = {
     "debug.title": "Debug",
     "debug.subtitle": "Live event log and current state snapshot.",
     "debug.snapshot": "State snapshot",
-    "debug.snapshotHelp":
-      "Current renderer state. Useful for bug reports and reproducing issues.",
+    "debug.snapshotHelp": "Current renderer state. Useful for bug reports and reproducing issues.",
     "debug.log": "Event log",
     "debug.logHelp":
       "Live renderer logs. In verbose mode, forwarded main-process logs also appear here.",
@@ -311,11 +309,9 @@ const translations: Translations = {
     "settings.warmupHint":
       "If no priority game is active, do a short warmup watch to discover drops.",
     "settings.badgesEmotes": "Allow unlinked badge/emote drops",
-    "settings.badgesEmotesHint":
-      "Mine unlinked campaigns if they only reward badges or emotes.",
+    "settings.badgesEmotesHint": "Mine unlinked campaigns if they only reward badges or emotes.",
     "settings.allowUnlinked": "Allow unlinked campaigns",
-    "settings.allowUnlinkedHint":
-      "Farm even when Twitch reports the account as not linked.",
+    "settings.allowUnlinkedHint": "Farm even when Twitch reports the account as not linked.",
     "settings.demoModeTitle": "Demo mode",
     "settings.demoMode": "Demo mode",
     "settings.demoModeHint": "Use demo data to explore the app without active drops.",
@@ -486,8 +482,7 @@ const translations: Translations = {
     "inventory.campaigns.dropFallback": "Drop-Belohnung",
     "inventory.campaigns.linkRequired": "Account-Verknüpfung nötig",
     "inventory.campaigns.linkRequiredAction": "Account verknüpfen",
-    "inventory.campaigns.linkHint":
-      "Drops laufen erst, wenn dein Spiel-Account verknüpft ist.",
+    "inventory.campaigns.linkHint": "Drops laufen erst, wenn dein Spiel-Account verknüpft ist.",
     "inventory.campaigns.linkAction": "Twitch-Verknüpfungen öffnen",
     "inventory.campaigns.addPriority": "Zu Prioritäten",
     "inventory.campaigns.inPriority": "In Prioritäten",
@@ -511,8 +506,7 @@ const translations: Translations = {
     "inventory.blockReason.campaignNotEligible":
       "Kampagne ist für diesen Account aktuell nicht freigeschaltet",
     "inventory.blockReason.preconditionsNotMet": "Drop-Voraussetzungen sind noch nicht erfüllt",
-    "inventory.blockReason.missingDropInstance":
-      "Claim-Instanz fehlt (Inventory neu laden)",
+    "inventory.blockReason.missingDropInstance": "Claim-Instanz fehlt (Inventory neu laden)",
     "inventory.blockReason.claimWindowClosed": "Claim-Fenster ist geschlossen",
     "inventory.blockReason.missingPrerequisites": "Pflicht-Drops fehlen: {ids}",
     "inventory.blockReason.unknown": "Aus unbekanntem Grund blockiert",
@@ -706,11 +700,9 @@ const translations: Translations = {
     "settings.warmupHint":
       "Wenn kein Priority-Game aktiv ist, kurz warmup schauen, um Drops zu finden.",
     "settings.badgesEmotes": "Unverknüpfte Badge/Emote-Drops erlauben",
-    "settings.badgesEmotesHint":
-      "Farmt unverknüpfte Kampagnen, wenn es nur Badges/Emotes sind.",
+    "settings.badgesEmotesHint": "Farmt unverknüpfte Kampagnen, wenn es nur Badges/Emotes sind.",
     "settings.allowUnlinked": "Unverknüpfte Kampagnen erlauben",
-    "settings.allowUnlinkedHint":
-      "Farmt auch, wenn Twitch den Account als nicht verknüpft meldet.",
+    "settings.allowUnlinkedHint": "Farmt auch, wenn Twitch den Account als nicht verknüpft meldet.",
     "settings.demoModeTitle": "Demo-Modus",
     "settings.demoMode": "Demo-Modus",
     "settings.refreshInterval": "Inventory Refresh Intervall",
