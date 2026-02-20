@@ -87,16 +87,16 @@ jobs:
             const isPrereleaseTag = /-(test|rc|beta|alpha)(?:[.-]\d+)?$/i.test(tag);
 
             let previousTagName;
-            if (isPrereleaseTag) {
-              const releases = await github.paginate(github.rest.repos.listReleases, {
-                owner,
-                repo,
-                per_page: 100,
-              });
-              const stable = releases.find((release) => !release.draft && !release.prerelease);
-              if (stable?.tag_name) {
-                previousTagName = stable.tag_name;
-              }
+            const releases = await github.paginate(github.rest.repos.listReleases, {
+              owner,
+              repo,
+              per_page: 100,
+            });
+            const stable = releases.find(
+              (release) => !release.draft && !release.prerelease && release.tag_name !== tag,
+            );
+            if (stable?.tag_name) {
+              previousTagName = stable.tag_name;
             }
 
             const params = {
