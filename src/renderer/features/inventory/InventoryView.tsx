@@ -133,7 +133,10 @@ export function InventoryView({
     [inventory],
   );
   const campaignLinkMap = useMemo(() => {
-    const map = new Map<string, { anyTrue: boolean; anyFalse: boolean; anyAccountNotLinkedHint: boolean }>();
+    const map = new Map<
+      string,
+      { anyTrue: boolean; anyFalse: boolean; anyAccountNotLinkedHint: boolean }
+    >();
     for (const item of inventoryItems) {
       const campaignId = item.campaignId?.trim();
       if (!campaignId) continue;
@@ -300,7 +303,9 @@ export function InventoryView({
         return (a.campaign.game ?? "").localeCompare(b.campaign.game ?? "");
       });
   })();
-  const hasUnlinkedCampaigns = visibleCampaigns.some(({ campaign }) => shouldShowLinkAction(campaign));
+  const hasUnlinkedCampaigns = visibleCampaigns.some(({ campaign }) =>
+    shouldShowLinkAction(campaign),
+  );
   const toggleCampaign = (key: string) => {
     setExpandedCampaigns((prev) => {
       const next = new Set(prev);

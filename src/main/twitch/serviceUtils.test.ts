@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildCampaignSummaries, extractAllowedChannelFilters, mergePrimaryData } from "./serviceUtils";
+import {
+  buildCampaignSummaries,
+  extractAllowedChannelFilters,
+  mergePrimaryData,
+} from "./serviceUtils";
 
 describe("mergePrimaryData", () => {
   it("keeps inventory watch progress when secondary drop payload reports zero", () => {
