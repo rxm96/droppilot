@@ -133,13 +133,20 @@ export function InventoryView({
     [inventory],
   );
   const campaignLinkMap = useMemo(() => {
-    const map = new Map<string, { anyTrue: boolean; anyFalse: boolean }>();
+    const map = new Map<string, { anyTrue: boolean; anyFalse: boolean; anyAccountNotLinkedHint: boolean }>();
     for (const item of inventoryItems) {
       const campaignId = item.campaignId?.trim();
       if (!campaignId) continue;
-      const entry = map.get(campaignId) ?? { anyTrue: false, anyFalse: false };
+      const entry = map.get(campaignId) ?? {
+        anyTrue: false,
+        anyFalse: false,
+        anyAccountNotLinkedHint: false,
+      };
       if (item.linked === true) entry.anyTrue = true;
       if (item.linked === false) entry.anyFalse = true;
+      if ((item.blockingReasonHints ?? []).some((reason) => reason === "account_not_linked")) {
+        entry.anyAccountNotLinkedHint = true;
+      }
       map.set(campaignId, entry);
     }
     return map;
@@ -231,8 +238,15 @@ export function InventoryView({
   };
   const isCampaignUnlinked = (campaign: CampaignSummary): boolean =>
     resolveAccountLinked(campaign) === false;
+  const hasAccountNotLinkedHint = (campaign: CampaignSummary): boolean => {
+    const id = campaign.id?.trim();
+    if (!id) return false;
+    return campaignLinkMap.get(id)?.anyAccountNotLinkedHint === true;
+  };
+  const shouldShowLinkAction = (campaign: CampaignSummary): boolean =>
+    isCampaignUnlinked(campaign) || hasAccountNotLinkedHint(campaign);
   const shouldShowLinkRequired = (campaign: CampaignSummary): boolean =>
-    isCampaignUnlinked(campaign) && !allowUnlinkedGames;
+    !allowUnlinkedGames && shouldShowLinkAction(campaign);
   const visibleCampaigns = (() => {
     const now = Date.now();
     const withPhase = campaigns.map((campaign) => {
@@ -286,9 +300,7 @@ export function InventoryView({
         return (a.campaign.game ?? "").localeCompare(b.campaign.game ?? "");
       });
   })();
-  const hasUnlinkedCampaigns = visibleCampaigns.some(({ campaign }) =>
-    shouldShowLinkRequired(campaign),
-  );
+  const hasUnlinkedCampaigns = visibleCampaigns.some(({ campaign }) => shouldShowLinkAction(campaign));
   const toggleCampaign = (key: string) => {
     setExpandedCampaigns((prev) => {
       const next = new Set(prev);
@@ -462,7 +474,26 @@ export function InventoryView({
                   : t("inventory.campaigns.addPriority");
                 const allClaimed = derivedHasUnclaimedDrops === false;
                 const hasExcludedDrops = derivedHasExcludedDrops === true;
+                const showLinkAction = shouldShowLinkAction(campaign);
                 const needsLink = shouldShowLinkRequired(campaign);
+                const showAddPriorityAction = Boolean(trimmedGame) && !isPriority;
+                const showCampaignActions = showLinkAction || showAddPriorityAction || isPriority;
+                const statusChip = allClaimed
+                  ? {
+                      className: "pill ghost small success-chip",
+                      label: t("inventory.campaigns.allClaimed"),
+                    }
+                  : needsLink
+                    ? {
+                        className: "pill ghost small danger-chip",
+                        label: t("inventory.campaigns.linkRequired"),
+                      }
+                    : hasExcludedDrops
+                      ? {
+                          className: "pill ghost small",
+                          label: t("inventory.category.excluded"),
+                        }
+                      : null;
                 const drops = campaignDrops
                   .map((drop) => {
                     const inventoryDrop = inventoryByDropId.get(drop.id);
@@ -517,41 +548,8 @@ export function InventoryView({
                       </div>
                       <div className="campaign-card-meta">
                         <span className="pill ghost small">{phaseLabel}</span>
-                        {allClaimed ? (
-                          <span className="pill ghost small success-chip">
-                            {t("inventory.campaigns.allClaimed")}
-                          </span>
-                        ) : null}
-                        {hasExcludedDrops ? (
-                          <span className="pill ghost small">
-                            {t("inventory.category.excluded")}
-                          </span>
-                        ) : null}
-                        {needsLink ? (
-                          accountLinkUrl ? (
-                            <button
-                              type="button"
-                              className="pill ghost small danger-chip"
-                              onClick={() => onOpenAccountLink(accountLinkUrl)}
-                              title={accountLinkUrl}
-                            >
-                              {t("inventory.campaigns.linkRequiredAction")}
-                            </button>
-                          ) : (
-                            <span className="pill ghost small danger-chip">
-                              {t("inventory.campaigns.linkRequired")}
-                            </span>
-                          )
-                        ) : null}
-                        {trimmedGame ? (
-                          <button
-                            type="button"
-                            className="pill ghost small campaign-card-action"
-                            disabled={isPriority}
-                            onClick={() => onAddPriorityGame(trimmedGame)}
-                          >
-                            {addPriorityLabel}
-                          </button>
+                        {statusChip ? (
+                          <span className={statusChip.className}>{statusChip.label}</span>
                         ) : null}
                         <button
                           type="button"
@@ -565,6 +563,32 @@ export function InventoryView({
                     </div>
                     {isExpanded && (
                       <div className="campaign-card-drops">
+                        {showCampaignActions ? (
+                          <div className="campaign-card-actions">
+                            {showLinkAction ? (
+                              <button
+                                type="button"
+                                className={`pill ghost small ${needsLink ? "danger-chip" : ""}`}
+                                onClick={() => onOpenAccountLink(accountLinkUrl || undefined)}
+                                title={accountLinkUrl || undefined}
+                              >
+                                {t("inventory.campaigns.linkRequiredAction")}
+                              </button>
+                            ) : null}
+                            {isPriority ? (
+                              <span className="pill ghost small">{addPriorityLabel}</span>
+                            ) : null}
+                            {showAddPriorityAction ? (
+                              <button
+                                type="button"
+                                className="pill ghost small campaign-card-action"
+                                onClick={() => onAddPriorityGame(trimmedGame)}
+                              >
+                                {addPriorityLabel}
+                              </button>
+                            ) : null}
+                          </div>
+                        ) : null}
                         {drops.length === 0 ? (
                           <p className="meta">{t("inventory.campaigns.noDrops")}</p>
                         ) : (
