@@ -251,6 +251,7 @@ jobs:
             if (!raw) {
               core.warning("No model output for user notes; using fallback.");
               core.setOutput("notes", fallback);
+              core.setOutput("used_fallback", "true");
               return;
             }
 
@@ -279,17 +280,125 @@ jobs:
             if (!validCount || hasBanned) {
               core.warning("Generated notes were invalid or too vague; using fallback.");
               core.setOutput("notes", fallback);
+              core.setOutput("used_fallback", "true");
               return;
             }
 
             core.setOutput("notes", bullets.join("\n"));
+            core.setOutput("used_fallback", "false");
+
+      - name: Retry user-friendly notes (strict mode)
+        id: user_notes_retry
+        if: steps.validated_user_notes.outputs.used_fallback == 'true'
+        uses: actions/ai-inference@v1
+        continue-on-error: true
+        with:
+          model: openai/gpt-4o-mini
+          prompt: |
+            Rewrite release notes for DropPilot.
+            Output only markdown bullets (3 to 5 lines), each line starting with "- ".
+            Do not use any of these words or phrases: improved, enhancing, better, smoother, seamless, performance, reliability, stability, experience.
+            Do not mention file paths, commits, CI, architecture, refactoring, or implementation details.
+            Do not claim in-app video playback or "watch streams in the app".
+            Use concrete user-visible outcomes only.
+            If evidence is mostly internal/technical, output exactly:
+            - Internal maintenance and stability improvements.
+
+            Version tag: ${{ steps.generated_notes.outputs.tag }}
+            Pre-release: ${{ steps.generated_notes.outputs.is_prerelease }}
+
+            Technical changelog:
+            ${{ steps.generated_notes.outputs.notes }}
+
+            Comparison context:
+            ${{ steps.release_context.outputs.context }}
+
+      - name: Validate retried user notes
+        id: validated_user_notes_retry
+        if: steps.validated_user_notes.outputs.used_fallback == 'true'
+        uses: actions/github-script@v7
+        env:
+          RAW_USER_NOTES: ${{ steps.user_notes_retry.outputs.response }}
+        with:
+          script: |
+            const fallback = "- Internal maintenance and stability improvements.";
+            const raw = String(process.env.RAW_USER_NOTES ?? "").trim();
+
+            if (!raw) {
+              core.warning("Retry output missing; keeping fallback.");
+              core.setOutput("notes", fallback);
+              core.setOutput("used_fallback", "true");
+              return;
+            }
+
+            const lines = raw
+              .split(/\r?\n/)
+              .map((line) => line.trim())
+              .filter((line) => line.length > 0);
+            const bullets = lines.filter((line) => line.startsWith("- "));
+
+            const bannedPatterns = [
+              /\bmore smoothly\b/i,
+              /\benhancing your viewing experience\b/i,
+              /\bviewing experience\b/i,
+              /\bwatch streams? in the app\b/i,
+              /\bwatching got smoother\b/i,
+              /\bvideo playback\b/i,
+              /\bbetter (performance|reliability|stability|experience)\b/i,
+              /\bimproved (performance|reliability|stability|experience)\b/i,
+              /\bseamless(ly)?\b/i,
+            ];
+            const hasBanned = bullets.some((line) =>
+              bannedPatterns.some((pattern) => pattern.test(line)),
+            );
+
+            const validCount = bullets.length >= 1 && bullets.length <= 6;
+            if (!validCount || hasBanned) {
+              core.warning("Retry notes were invalid; keeping fallback.");
+              core.setOutput("notes", fallback);
+              core.setOutput("used_fallback", "true");
+              return;
+            }
+
+            core.setOutput("notes", bullets.join("\n"));
+            core.setOutput("used_fallback", "false");
+
+      - name: Resolve final user notes
+        id: final_user_notes
+        uses: actions/github-script@v7
+        env:
+          PRIMARY_NOTES: ${{ steps.validated_user_notes.outputs.notes }}
+          PRIMARY_USED_FALLBACK: ${{ steps.validated_user_notes.outputs.used_fallback }}
+          RETRY_NOTES: ${{ steps.validated_user_notes_retry.outputs.notes }}
+          RETRY_USED_FALLBACK: ${{ steps.validated_user_notes_retry.outputs.used_fallback }}
+        with:
+          script: |
+            const primaryNotes = String(process.env.PRIMARY_NOTES ?? "").trim();
+            const primaryUsedFallback =
+              String(process.env.PRIMARY_USED_FALLBACK ?? "false").toLowerCase() === "true";
+            const retryNotes = String(process.env.RETRY_NOTES ?? "").trim();
+            const retryUsedFallback =
+              String(process.env.RETRY_USED_FALLBACK ?? "true").toLowerCase() === "true";
+
+            if (primaryUsedFallback === false && primaryNotes) {
+              core.setOutput("notes", primaryNotes);
+              return;
+            }
+            if (retryUsedFallback === false && retryNotes) {
+              core.setOutput("notes", retryNotes);
+              return;
+            }
+            core.setOutput(
+              "notes",
+              primaryNotes || retryNotes || "- Internal maintenance and stability improvements.",
+            );
 
       - name: Build release body
         run: |
           cat <<'EOF' > release_body.md
           ## What's new for users
 
-          ${{ steps.validated_user_notes.outputs.notes || '- No major user-facing changes in this release.' }}
+          ${{ steps.final_user_notes.outputs.notes || '- No major user-facing changes in this release.' }}
 
           ## Full changelog
 
