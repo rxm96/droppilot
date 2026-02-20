@@ -364,10 +364,8 @@ app.whenReady().then(() => {
         win.webContents.send("main-log", { scope, args });
       }
     };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (twitchService as any).debug = (...args: unknown[]) => forwardLog("TwitchService", ...args);
   } else {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (twitchService as any).debug = () => {};
   }
 

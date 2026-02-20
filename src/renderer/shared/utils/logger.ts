@@ -51,7 +51,6 @@ const log =
   (...args: unknown[]) => {
     if (!shouldEmit(level)) return;
     const timestamp = new Date().toISOString();
-    // eslint-disable-next-line no-console
     consoleByLevel[level](`${prefix} ${timestamp}`, ...args);
     pushLog(level, args);
   };
