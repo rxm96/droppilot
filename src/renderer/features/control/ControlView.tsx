@@ -16,6 +16,83 @@ import { useControlViewState } from "./useControlViewState";
 
 const CHANNEL_SKELETON = Array.from({ length: 4 }, (_, idx) => ({ key: `sk-${idx}` }));
 
+const formatBlockingReason = (
+  reason: string | undefined,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): string => {
+  if (!reason) return t("inventory.blockReason.unknown");
+  if (reason.startsWith("missing_prerequisite_drops:")) {
+    const ids = reason.slice("missing_prerequisite_drops:".length).trim();
+    return t("inventory.blockReason.missingPrerequisites", {
+      ids: ids || "?",
+    });
+  }
+  switch (reason) {
+    case "account_not_linked":
+      return t("inventory.blockReason.accountNotLinked");
+    case "campaign_not_started":
+      return t("inventory.blockReason.campaignNotStarted");
+    case "campaign_expired":
+      return t("inventory.blockReason.campaignExpired");
+    case "campaign_allow_disabled":
+      return t("inventory.blockReason.campaignNotEligible");
+    case "preconditions_not_met":
+      return t("inventory.blockReason.preconditionsNotMet");
+    case "missing_drop_instance_id":
+      return t("inventory.blockReason.missingDropInstance");
+    case "claim_window_closed":
+      return t("inventory.blockReason.claimWindowClosed");
+    default:
+      return t("inventory.blockReason.unknown");
+  }
+};
+
+const pickDisplayBlockingReason = (reasons: string[]): string | undefined => {
+  const cleaned = reasons
+    .map((reason) => (typeof reason === "string" ? reason.trim() : ""))
+    .filter(Boolean);
+  return cleaned[0];
+};
+
+const normalizeIds = (values?: string[]) =>
+  new Set((values ?? []).map((value) => String(value).trim()).filter((value) => value.length > 0));
+
+const normalizeLogins = (values?: string[]) =>
+  new Set(
+    (values ?? []).map((value) => value.trim().toLowerCase()).filter((value) => value.length > 0),
+  );
+
+const canDropProgressOnWatchingChannel = (
+  drop: InventoryItem,
+  watching: WatchingState,
+): boolean => {
+  if (!watching) return true;
+  const allowedIds = normalizeIds(drop.allowedChannelIds);
+  const allowedLogins = normalizeLogins(drop.allowedChannelLogins);
+  if (allowedIds.size === 0 && allowedLogins.size === 0) return true;
+  const watchingId = String(watching.channelId ?? watching.id ?? "").trim();
+  if (watchingId.length > 0 && allowedIds.has(watchingId)) return true;
+  const watchingLogin = String(watching.login ?? watching.name ?? "")
+    .trim()
+    .toLowerCase();
+  if (watchingLogin.length > 0 && allowedLogins.has(watchingLogin)) return true;
+  return false;
+};
+
+const formatChannelRestrictionReason = (
+  drop: InventoryItem,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): string => {
+  const allowedLogins = (drop.allowedChannelLogins ?? [])
+    .map((login) => login.trim())
+    .filter((login) => login.length > 0);
+  if (allowedLogins.length > 0) {
+    const preview = allowedLogins.slice(0, 3).map((login) => `@${login}`).join(", ");
+    return t("control.dropReason.channelRestrictedChannels", { channels: preview });
+  }
+  return t("control.dropReason.channelRestricted");
+};
+
 type ControlProps = {
   priorityPlan: PriorityPlan | null;
   priorityGames: string[];
@@ -345,6 +422,27 @@ export function ControlView({
                                 ? d.campaignImageUrl.trim()
                                 : "";
                             const imageSrc = dropImage || campaignImage;
+                            const blockingReasonCode = pickDisplayBlockingReason(
+                              d.blockingReasonHints ?? [],
+                            );
+                            const blockingReasonLabel = blockingReasonCode
+                              ? formatBlockingReason(blockingReasonCode, t)
+                              : null;
+                            const watchingWrongGame =
+                              Boolean(watching && targetGame && watching.game !== targetGame) &&
+                              d.status !== "claimed";
+                            const channelRestricted =
+                              Boolean(watching) &&
+                              !watchingWrongGame &&
+                              d.status !== "claimed" &&
+                              !canDropProgressOnWatchingChannel(d, watching);
+                            const channelRestrictionLabel = channelRestricted
+                              ? formatChannelRestrictionReason(d, t)
+                              : null;
+                            const dropReasonLabel =
+                              blockingReasonLabel ??
+                              (watchingWrongGame ? t("control.dropReason.wrongGame") : null) ??
+                              channelRestrictionLabel;
                             return (
                               <li
                                 key={d.id}
@@ -383,6 +481,11 @@ export function ControlView({
                                       {Math.floor(earnedDisplay)}/{req} min
                                     </span>
                                   </div>
+                                  {dropReasonLabel ? (
+                                    <div className="drop-reason" title={dropReasonLabel}>
+                                      {dropReasonLabel}
+                                    </div>
+                                  ) : null}
                                   <div className="progress-bar small">
                                     <span style={{ width: `${pct}%` }} />
                                   </div>
