@@ -29,10 +29,10 @@ export default defineConfig({
     renderer(),
     electron({
       main: {
-        entry: "src/main/index.ts",
+        entry: resolve(__dirname, "src/main/index.ts"),
         vite: {
           build: {
-            outDir: "dist-electron/main",
+            outDir: resolve(__dirname, "dist-electron/main"),
             rollupOptions: {
               external: ["electron-updater", "ws"],
             },
@@ -41,11 +41,11 @@ export default defineConfig({
       },
       preload: {
         input: {
-          preload: "src/preload/index.ts",
+          preload: resolve(__dirname, "src/preload/index.ts"),
         },
         vite: {
           build: {
-            outDir: "dist-electron/preload",
+            outDir: resolve(__dirname, "dist-electron/preload"),
           },
         },
       },
