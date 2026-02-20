@@ -15,6 +15,7 @@ type ActiveDropInfo = {
   virtualEarned: number;
   remainingMinutes: number;
   eta: number | null;
+  progressAnchorAt?: number;
   dropInstanceId?: string;
   campaignId?: string;
 } | null;
@@ -85,6 +86,8 @@ export function useControlViewState({
   const [isPageVisible, setIsPageVisible] = useState(
     () => typeof document === "undefined" || !document.hidden,
   );
+  const watchSessionKeyRef = useRef<string | null>(null);
+  const [watchStartedAt, setWatchStartedAt] = useState<number | null>(null);
 
   const dropChangedIds = useMemo(() => {
     const prev = prevDropsRef.current;
@@ -222,6 +225,18 @@ export function useControlViewState({
   }, [channelDiff, channels, isPageVisible]);
 
   useEffect(() => {
+    if (!watching) {
+      watchSessionKeyRef.current = null;
+      setWatchStartedAt(null);
+      return;
+    }
+    const watchSessionKey = `${watching.id}:${watching.streamId ?? ""}`;
+    if (watchSessionKeyRef.current === watchSessionKey) return;
+    watchSessionKeyRef.current = watchSessionKey;
+    setWatchStartedAt(Date.now());
+  }, [watching]);
+
+  useEffect(() => {
     const next = new Map<string, { earned: number; status: string }>();
     for (const d of targetDrops) {
       next.set(d.id, { earned: Number(d.earnedMinutes) || 0, status: d.status });
@@ -291,10 +306,16 @@ export function useControlViewState({
   }, [channels, exitingChannels]);
 
   const [progressNow, setProgressNow] = useState(() => Date.now());
+  const progressAnchorAtRaw = activeDropInfo?.progressAnchorAt ?? inventoryFetchedAt;
+  const progressAnchorAt = (() => {
+    if (!progressAnchorAtRaw) return null;
+    if (!watchStartedAt) return progressAnchorAtRaw;
+    return Math.max(progressAnchorAtRaw, watchStartedAt);
+  })();
   const shouldTickProgress = Boolean(
     isPageVisible &&
     watching &&
-    inventoryFetchedAt &&
+    progressAnchorAt &&
     activeDropInfo &&
     activeDropInfo.requiredMinutes > activeDropInfo.earnedMinutes,
   );
@@ -303,25 +324,26 @@ export function useControlViewState({
     setProgressNow(Date.now());
     const timer = window.setInterval(() => setProgressNow(Date.now()), 1_000);
     return () => window.clearInterval(timer);
-  }, [shouldTickProgress, activeDropInfo?.id, inventoryFetchedAt]);
+  }, [shouldTickProgress, activeDropInfo?.id, progressAnchorAt]);
   const liveProgress = useMemo(() => {
-    if (!activeDropInfo || !watching || !inventoryFetchedAt) {
+    if (!activeDropInfo || !watching || !progressAnchorAt) {
       return {
         activeRemainingMinutes: activeDropInfo?.remainingMinutes ?? 0,
         activeEta: activeDropInfo?.eta ?? null,
+        activeElapsedMinutesRaw: 0,
       };
     }
     const activeRemainingBase = Math.max(
       0,
       activeDropInfo.requiredMinutes - activeDropInfo.earnedMinutes,
     );
-    const elapsedMinutesRaw = Math.max(0, (progressNow - inventoryFetchedAt) / 60_000);
+    const elapsedMinutesRaw = Math.max(0, (progressNow - progressAnchorAt) / 60_000);
     const elapsedApplied = Math.min(elapsedMinutesRaw, activeRemainingBase);
     const activeRemainingMinutes = Math.max(0, activeRemainingBase - elapsedApplied);
     const activeEta =
       activeRemainingMinutes > 0 ? progressNow + activeRemainingMinutes * 60_000 : null;
-    return { activeRemainingMinutes, activeEta };
-  }, [activeDropInfo, inventoryFetchedAt, progressNow, watching]);
+    return { activeRemainingMinutes, activeEta, activeElapsedMinutesRaw: elapsedMinutesRaw };
+  }, [activeDropInfo, progressAnchorAt, progressNow, watching]);
 
   const formatCampaignId = (value?: string) => {
     const normalized = value?.trim();

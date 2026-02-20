@@ -49,6 +49,26 @@ const safeStringify = (value: unknown) => {
 const formatArgs = (args: unknown[]) =>
   args.map((arg, idx) => `${idx + 1}. ${safeStringify(arg)}`).join("\n");
 
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const highlightMatches = (text: string, term: string) => {
+  if (!term) return text;
+  const source = term.trim();
+  if (!source) return text;
+  const pattern = new RegExp(`(${escapeRegExp(source)})`, "ig");
+  const parts = text.split(pattern);
+  if (parts.length === 1) return text;
+  return parts.map((part, idx) =>
+    part.toLowerCase() === source.toLowerCase() ? (
+      <mark key={`${idx}:${part}`} className="log-highlight">
+        {part}
+      </mark>
+    ) : (
+      <span key={`${idx}:${part}`}>{part}</span>
+    ),
+  );
+};
+
 const LEVEL_STYLES: Record<LogLevel, { badge: string; border: string; text: string }> = {
   debug: {
     badge: "border-border bg-muted text-muted-foreground",
@@ -75,9 +95,10 @@ const LEVEL_STYLES: Record<LogLevel, { badge: string; border: string; text: stri
 type LogDetailsProps = {
   args: unknown[];
   label: string;
+  highlightTerm?: string;
 };
 
-const LogDetails = memo(function LogDetails({ args, label }: LogDetailsProps) {
+const LogDetails = memo(function LogDetails({ args, label, highlightTerm = "" }: LogDetailsProps) {
   const [isOpen, setIsOpen] = useState(false);
   const detailsText = useMemo(() => (isOpen ? formatArgs(args) : ""), [args, isOpen]);
 
@@ -87,7 +108,7 @@ const LogDetails = memo(function LogDetails({ args, label }: LogDetailsProps) {
       onToggle={(e) => setIsOpen((e.currentTarget as HTMLDetailsElement).open)}
     >
       <summary className="log-details-summary">{label}</summary>
-      {isOpen ? <pre className="log-details">{detailsText}</pre> : null}
+      {isOpen ? <pre className="log-details">{highlightMatches(detailsText, highlightTerm)}</pre> : null}
     </details>
   );
 });
@@ -96,21 +117,30 @@ type LogRowProps = {
   entry: LogEntry;
   emptyMessage: string;
   detailsLabel: string;
+  highlightTerm?: string;
 };
 
-const LogRow = memo(function LogRow({ entry, emptyMessage, detailsLabel }: LogRowProps) {
+const LogRow = memo(function LogRow({
+  entry,
+  emptyMessage,
+  detailsLabel,
+  highlightTerm = "",
+}: LogRowProps) {
   const style = LEVEL_STYLES[entry.level];
+  const logMessage = entry.message || emptyMessage;
 
   return (
     <li className={cn("log-item", `level-${entry.level}`)}>
       <div className="log-head">
         <Badge className={style.badge} variant="outline">
-          {entry.level}
+          {highlightMatches(entry.level, highlightTerm)}
         </Badge>
         <span className="log-time">{entry.timeLabel}</span>
       </div>
-      <div className={cn("log-message", style.text)}>{entry.message || emptyMessage}</div>
-      {entry.args.length > 0 ? <LogDetails args={entry.args} label={detailsLabel} /> : null}
+      <div className={cn("log-message", style.text)}>{highlightMatches(logMessage, highlightTerm)}</div>
+      {entry.args.length > 0 ? (
+        <LogDetails args={entry.args} label={detailsLabel} highlightTerm={highlightTerm} />
+      ) : null}
     </li>
   );
 });
@@ -226,6 +256,7 @@ export function DebugView({ snapshot }: DebugViewProps) {
       return entry.messageLc.includes(needle) || entry.level.includes(needle);
     });
   }, [logs, levels, deferredQuery]);
+  const highlightTerm = deferredQuery.trim();
   const trackerStatus = useMemo<ChannelTrackerStatus | null>(() => {
     const candidate = snapshot["tracker"];
     return isChannelTrackerStatus(candidate) ? candidate : null;
@@ -327,7 +358,10 @@ export function DebugView({ snapshot }: DebugViewProps) {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
         <Card>
           <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
-            <CardTitle>{t("debug.snapshot")}</CardTitle>
+            <div>
+              <CardTitle>{t("debug.snapshot")}</CardTitle>
+              <p className="text-xs text-muted-foreground">{t("debug.snapshotHelp")}</p>
+            </div>
             <Button variant="outline" size="sm" onClick={copySnapshot}>
               {copied ? t("debug.copied") : t("debug.copy")}
             </Button>
@@ -338,6 +372,8 @@ export function DebugView({ snapshot }: DebugViewProps) {
                 <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   {t("debug.trackerShards")}
                 </div>
+                <p className="mb-2 text-xs text-muted-foreground">{t("debug.trackerShardsHelp")}</p>
+                <p className="mb-2 text-xs text-muted-foreground">{t("debug.websocketHelp")}</p>
                 <ul className="space-y-1.5">
                   {trackerShards.map((shard) => (
                     <li
@@ -369,6 +405,7 @@ export function DebugView({ snapshot }: DebugViewProps) {
               <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 {t("debug.sim.title")}
               </div>
+              <p className="mb-2 text-xs text-muted-foreground">{t("debug.sim.help")}</p>
               <div className="grid gap-2 sm:grid-cols-2">
                 <Input
                   type="text"
@@ -422,7 +459,10 @@ export function DebugView({ snapshot }: DebugViewProps) {
         </Card>
         <Card>
           <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
-            <CardTitle>{t("debug.log")}</CardTitle>
+            <div>
+              <CardTitle>{t("debug.log")}</CardTitle>
+              <p className="text-xs text-muted-foreground">{t("debug.logHelp")}</p>
+            </div>
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant={paused ? "outline" : "muted"}>
                 {paused ? t("debug.status.paused") : t("debug.status.live")}
@@ -454,6 +494,7 @@ export function DebugView({ snapshot }: DebugViewProps) {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
+            <p className="text-xs text-muted-foreground">{t("debug.logControlsHelp")}</p>
             <div className="flex flex-wrap items-center gap-2">
               <div className="min-w-[180px] flex-1">
                 <Input
@@ -477,6 +518,7 @@ export function DebugView({ snapshot }: DebugViewProps) {
                 ))}
               </div>
             </div>
+            <p className="text-xs text-muted-foreground">{t("debug.searchHelp")}</p>
             <div
               ref={listRef}
               className="max-h-[460px] overflow-auto rounded-lg border border-border bg-background p-3"
@@ -491,6 +533,7 @@ export function DebugView({ snapshot }: DebugViewProps) {
                       entry={entry}
                       emptyMessage={t("debug.emptyMessage")}
                       detailsLabel={t("debug.details")}
+                      highlightTerm={highlightTerm}
                     />
                   ))}
                 </ul>

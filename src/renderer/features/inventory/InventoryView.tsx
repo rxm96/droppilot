@@ -10,6 +10,49 @@ const parseIsoMs = (value?: string): number | null => {
   return Number.isFinite(ms) ? ms : null;
 };
 
+const formatBlockingReason = (
+  reason: string | undefined,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): string => {
+  if (!reason) return t("inventory.blockReason.unknown");
+  if (reason.startsWith("missing_prerequisite_drops:")) {
+    const ids = reason.slice("missing_prerequisite_drops:".length).trim();
+    return t("inventory.blockReason.missingPrerequisites", {
+      ids: ids || "?",
+    });
+  }
+  switch (reason) {
+    case "account_not_linked":
+      return t("inventory.blockReason.accountNotLinked");
+    case "campaign_not_started":
+      return t("inventory.blockReason.campaignNotStarted");
+    case "campaign_expired":
+      return t("inventory.blockReason.campaignExpired");
+    case "campaign_allow_disabled":
+      return t("inventory.blockReason.campaignNotEligible");
+    case "preconditions_not_met":
+      return t("inventory.blockReason.preconditionsNotMet");
+    case "missing_drop_instance_id":
+      return t("inventory.blockReason.missingDropInstance");
+    case "claim_window_closed":
+      return t("inventory.blockReason.claimWindowClosed");
+    default:
+      return t("inventory.blockReason.unknown");
+  }
+};
+
+const pickDisplayBlockingReason = (
+  reasons: string[],
+  suppressAccountNotLinked: boolean,
+): string | undefined => {
+  const cleaned = reasons
+    .map((reason) => (typeof reason === "string" ? reason.trim() : ""))
+    .filter(Boolean);
+  if (cleaned.length === 0) return undefined;
+  if (!suppressAccountNotLinked) return cleaned[0];
+  return cleaned.find((reason) => reason !== "account_not_linked");
+};
+
 const CAMPAIGN_PAGE_SIZE = 8;
 const CAMPAIGN_SKELETON = Array.from({ length: CAMPAIGN_PAGE_SIZE }, (_, idx) => ({
   key: `campaign-sk-${idx}`,
@@ -42,10 +85,10 @@ type InventoryProps = {
   campaigns: CampaignSummary[];
   campaignsLoading: boolean;
   isLinked: boolean;
-  allowUnlinkedBadgeEmotes: boolean;
   allowUnlinkedGames: boolean;
   priorityGames: string[];
   onAddPriorityGame: (game: string) => void;
+  onOpenAccountLink: (url?: string) => void;
 };
 
 export function InventoryView({
@@ -60,10 +103,10 @@ export function InventoryView({
   campaigns,
   campaignsLoading,
   isLinked,
-  allowUnlinkedBadgeEmotes,
   allowUnlinkedGames,
   priorityGames,
   onAddPriorityGame,
+  onOpenAccountLink,
 }: InventoryProps) {
   const { t } = useI18n();
   const isInventoryLoading = inventory.status === "loading";
@@ -100,27 +143,27 @@ export function InventoryView({
     return map;
   }, [inventoryItems]);
   const campaignInventoryStats = useMemo(() => {
-    const map = new Map<string, { anyUnclaimed: boolean; anyClaimed: boolean }>();
+    const map = new Map<
+      string,
+      { anyUnclaimed: boolean; anyClaimed: boolean; anyExcluded: boolean }
+    >();
     for (const item of inventoryItems) {
       const campaignId = item.campaignId?.trim();
       if (!campaignId) continue;
-      const entry = map.get(campaignId) ?? { anyUnclaimed: false, anyClaimed: false };
+      const entry = map.get(campaignId) ?? {
+        anyUnclaimed: false,
+        anyClaimed: false,
+        anyExcluded: false,
+      };
       if (item.status === "claimed") {
         entry.anyClaimed = true;
       } else {
         entry.anyUnclaimed = true;
       }
+      if (item.excluded === true) {
+        entry.anyExcluded = true;
+      }
       map.set(campaignId, entry);
-    }
-    return map;
-  }, [inventoryItems]);
-  const campaignBadgeEmoteMap = useMemo(() => {
-    const map = new Map<string, boolean>();
-    for (const item of inventoryItems) {
-      const campaignId = item.campaignId?.trim();
-      if (!campaignId) continue;
-      if (!item.campaignHasBadgeOrEmote) continue;
-      map.set(campaignId, true);
     }
     return map;
   }, [inventoryItems]);
@@ -165,32 +208,50 @@ export function InventoryView({
     }
     return campaign.hasUnclaimedDrops;
   };
-  const resolveCampaignHasBadgeOrEmote = (campaign: CampaignSummary): boolean => {
+  const resolveHasExcludedDrops = (campaign: CampaignSummary): boolean => {
+    const drops = Array.isArray(campaign.drops) ? campaign.drops : [];
+    let anyKnown = false;
+    for (const drop of drops) {
+      const inv = inventoryByDropId.get(drop.id);
+      if (!inv) continue;
+      anyKnown = true;
+      if (inv.excluded === true) {
+        return true;
+      }
+    }
     const id = campaign.id?.trim();
-    if (id && campaignBadgeEmoteMap.get(id)) return true;
+    if (id) {
+      const stats = campaignInventoryStats.get(id);
+      if (stats) return stats.anyExcluded;
+    }
+    if (anyKnown) return false;
     return false;
   };
-  const shouldShowLinkRequired = (campaign: CampaignSummary): boolean => {
-    if (resolveAccountLinked(campaign) !== false) return false;
-    if (allowUnlinkedGames) return false;
-    const allowUnlinked =
-      allowUnlinkedBadgeEmotes && resolveCampaignHasBadgeOrEmote(campaign);
-    return !allowUnlinked;
-  };
+  const isCampaignUnlinked = (campaign: CampaignSummary): boolean =>
+    resolveAccountLinked(campaign) === false;
+  const shouldShowLinkRequired = (campaign: CampaignSummary): boolean =>
+    isCampaignUnlinked(campaign) && !allowUnlinkedGames;
   const visibleCampaigns = (() => {
     const now = Date.now();
-    const withPhase = campaigns.map((campaign) => ({
-      campaign,
-      phase: getCampaignPhase(campaign, now),
-      startMs: parseIsoMs(campaign.startsAt) ?? Number.POSITIVE_INFINITY,
-    }));
+    const withPhase = campaigns.map((campaign) => {
+      const derivedHasUnclaimedDrops = resolveHasUnclaimedDrops(campaign);
+      const derivedHasExcludedDrops = resolveHasExcludedDrops(campaign);
+      const basePhase = getCampaignPhase(campaign, now);
+      const phase =
+        basePhase !== "expired" && derivedHasUnclaimedDrops === false ? "finished" : basePhase;
+      return {
+        campaign,
+        phase,
+        startMs: parseIsoMs(campaign.startsAt) ?? Number.POSITIVE_INFINITY,
+        derivedHasUnclaimedDrops,
+        derivedHasExcludedDrops,
+      };
+    });
     return withPhase
       .filter((entry) => {
-        const isEligible = !shouldShowLinkRequired(entry.campaign);
         if (filter === "not-linked") {
-          if (isEligible) return false;
+          if (!isCampaignUnlinked(entry.campaign)) return false;
         } else {
-          if (!isEligible) return false;
           switch (filter) {
             case "all":
               if (entry.phase === "expired") return false;
@@ -202,6 +263,8 @@ export function InventoryView({
               if (entry.phase !== filter) return false;
               break;
             case "excluded":
+              if (!entry.derivedHasExcludedDrops) return false;
+              break;
             default:
               return false;
           }
@@ -342,7 +405,12 @@ export function InventoryView({
           )}
         </div>
         {!showCampaignSkeleton && hasUnlinkedCampaigns && (
-          <p className="meta">{t("inventory.campaigns.linkHint")}</p>
+          <div className="campaign-link-hint">
+            <p className="meta">{t("inventory.campaigns.linkHint")}</p>
+            <button type="button" className="ghost subtle-btn" onClick={onOpenAccountLink}>
+              {t("inventory.campaigns.linkAction")}
+            </button>
+          </div>
         )}
         {showCampaignSkeleton && (
           <>
@@ -376,10 +444,13 @@ export function InventoryView({
         )}
         {!showCampaignSkeleton && visibleCampaigns.length > 0 && (
           <ul className={`campaign-list${campaignsEntering ? " is-entering" : ""}`}>
-            {paginatedCampaigns.map(({ campaign, phase }) => {
+            {paginatedCampaigns.map(
+              ({ campaign, phase, derivedHasUnclaimedDrops, derivedHasExcludedDrops }) => {
               const name = campaign.name ?? campaign.game ?? t("inventory.campaigns.unknown");
               const game = campaign.game ?? "";
               const imageUrl = typeof campaign.imageUrl === "string" ? campaign.imageUrl.trim() : "";
+              const accountLinkUrl =
+                typeof campaign.accountLinkUrl === "string" ? campaign.accountLinkUrl.trim() : "";
               const campaignKey = campaign.id ?? `${game}:${name}`;
               const phaseLabel = categoryLabel(phase, (key) => t(key));
               const campaignDrops = Array.isArray(campaign.drops) ? campaign.drops : [];
@@ -388,8 +459,8 @@ export function InventoryView({
               const addPriorityLabel = isPriority
                 ? t("inventory.campaigns.inPriority")
                 : t("inventory.campaigns.addPriority");
-              const derivedHasUnclaimedDrops = resolveHasUnclaimedDrops(campaign);
               const allClaimed = derivedHasUnclaimedDrops === false;
+              const hasExcludedDrops = derivedHasExcludedDrops === true;
               const needsLink = shouldShowLinkRequired(campaign);
               const drops = campaignDrops
                 .map((drop) => {
@@ -411,6 +482,12 @@ export function InventoryView({
                     })(),
                     status: inventoryDrop?.status ?? drop.status,
                     imageUrl: drop.imageUrl,
+                    blocked:
+                      inventoryDrop?.blocked === true ||
+                      (inventoryDrop?.blockingReasonHints?.length ?? 0) > 0,
+                    blockingReasonHints: Array.isArray(inventoryDrop?.blockingReasonHints)
+                      ? inventoryDrop.blockingReasonHints
+                      : [],
                   };
                 })
                 .sort((a, b) => a.title.localeCompare(b.title));
@@ -442,10 +519,26 @@ export function InventoryView({
                           {t("inventory.campaigns.allClaimed")}
                         </span>
                       ) : null}
-                      {needsLink ? (
-                        <span className="pill ghost small danger-chip">
-                          {t("inventory.campaigns.linkRequired")}
+                      {hasExcludedDrops ? (
+                        <span className="pill ghost small">
+                          {t("inventory.category.excluded")}
                         </span>
+                      ) : null}
+                      {needsLink ? (
+                        accountLinkUrl ? (
+                          <button
+                            type="button"
+                            className="pill ghost small danger-chip"
+                            onClick={() => onOpenAccountLink(accountLinkUrl)}
+                            title={accountLinkUrl}
+                          >
+                            {t("inventory.campaigns.linkRequiredAction")}
+                          </button>
+                        ) : (
+                          <span className="pill ghost small danger-chip">
+                            {t("inventory.campaigns.linkRequired")}
+                          </span>
+                        )
                       ) : null}
                       {trimmedGame ? (
                         <button
@@ -492,8 +585,19 @@ export function InventoryView({
                             if (req > 0) {
                               earned = Math.min(req, earned);
                             }
+                            const displayBlockingReason = pickDisplayBlockingReason(
+                              item.blockingReasonHints,
+                              needsLink,
+                            );
+                            const blockingReasonLabel =
+                              item.blocked && displayBlockingReason
+                                ? formatBlockingReason(displayBlockingReason, t)
+                                : null;
+                            const displayBlocked = item.blocked && !!displayBlockingReason;
                             const statusLabel = status
-                              ? mapStatusLabel(status, (key) => t(key))
+                              ? status === "progress" && displayBlocked
+                                ? t("inventory.status.progressBlocked")
+                                : mapStatusLabel(status, (key) => t(key))
                               : null;
                             const dropImage =
                               typeof item.imageUrl === "string" ? item.imageUrl.trim() : "";
@@ -510,6 +614,14 @@ export function InventoryView({
                                   ) : null}
                                   <div className="campaign-drop-body">
                                     <div className="campaign-drop-title">{item.title}</div>
+                                    {blockingReasonLabel ? (
+                                      <div
+                                        className="campaign-drop-reason"
+                                        title={blockingReasonLabel}
+                                      >
+                                        {blockingReasonLabel}
+                                      </div>
+                                    ) : null}
                                   </div>
                                 </div>
                                 <div className="campaign-drop-meta">
@@ -519,7 +631,12 @@ export function InventoryView({
                                     </span>
                                   ) : null}
                                   {statusLabel ? (
-                                    <span className="pill ghost small">{statusLabel}</span>
+                                    <span
+                                      className={`pill ghost small ${status === "progress" && displayBlocked ? "danger-chip" : ""}`}
+                                      title={blockingReasonLabel ?? undefined}
+                                    >
+                                      {statusLabel}
+                                    </span>
                                   ) : null}
                                 </div>
                               </li>
@@ -531,7 +648,8 @@ export function InventoryView({
                   )}
                 </li>
               );
-            })}
+            },
+            )}
           </ul>
         )}
         {!showCampaignSkeleton && visibleCampaigns.length > paginatedCampaigns.length && (

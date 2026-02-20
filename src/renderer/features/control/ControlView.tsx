@@ -45,6 +45,7 @@ type ControlProps = {
     virtualEarned: number;
     remainingMinutes: number;
     eta: number | null;
+    progressAnchorAt?: number;
     dropInstanceId?: string;
     campaignId?: string;
   } | null;
@@ -141,6 +142,7 @@ export function ControlView({
     new Intl.NumberFormat(language === "de" ? "de-DE" : "en-US").format(Math.max(0, val ?? 0));
   const formatViewers = (val: number) => formatNumber(val);
   const activeViewers = activeViewerCount !== null ? formatViewers(activeViewerCount) : null;
+  const hasOpenTargetDrops = targetDrops.some((drop) => drop.status !== "claimed");
   return (
     <>
       <div className="panel-head control-head">
@@ -275,7 +277,11 @@ export function ControlView({
                   </div>
                 ) : (
                   <p className="meta muted" style={{ marginTop: 6 }}>
-                    {showNoDropsHint ? t("control.noDropsHint") : t("control.allDone")}
+                    {showNoDropsHint
+                      ? t("control.noDropsHint")
+                      : watching && hasOpenTargetDrops
+                        ? t("control.noFarmableDrop")
+                        : t("control.allDone")}
                   </p>
                 )}
                 {campaignGroups.length > 0 && (
@@ -298,15 +304,36 @@ export function ControlView({
                             const req = Math.max(0, Number(d.requiredMinutes) || 0);
                             const earned = Math.max(0, Number(d.earnedMinutes) || 0);
                             const isActive = activeDropInfo?.id === d.id;
-                            const earnedDisplay = Math.min(req, earned);
+                            const isInActiveCampaign =
+                              !!watching &&
+                              !!activeDropInfo &&
+                              (isActive ||
+                                (!!activeDropInfo.campaignId &&
+                                  !!d.campaignId &&
+                                  activeDropInfo.campaignId === d.campaignId));
+                            const campaignLiveEarnedRaw = isInActiveCampaign
+                              ? Math.max(
+                                  0,
+                                  earned + Math.max(0, Number(liveProgress.activeElapsedMinutesRaw) || 0),
+                                )
+                              : earned;
+                            const campaignLiveEarned = Math.floor(campaignLiveEarnedRaw);
+                            const earnedDisplay = Math.min(
+                              req,
+                              Math.max(earned, campaignLiveEarned),
+                            );
                             const pct = req
                               ? Math.min(100, Math.round((earnedDisplay / req) * 100))
                               : 0;
-                            const statusLabel = mapStatusLabel(d.status, (key) => t(key));
+                            const liveProgressVisible =
+                              isInActiveCampaign && !!watching && earnedDisplay > earned;
+                            const displayStatus =
+                              liveProgressVisible && d.status === "locked" ? "progress" : d.status;
+                            const statusLabel = mapStatusLabel(displayStatus, (key) => t(key));
                             const statusClass =
-                              d.status === "claimed"
+                              displayStatus === "claimed"
                                 ? "claimed"
-                                : d.status === "progress"
+                                : displayStatus === "progress"
                                   ? "progress"
                                   : "locked";
                             const animate = !firstRenderRef.current && dropChangedIds.has(d.id);
@@ -352,7 +379,7 @@ export function ControlView({
                                   </div>
                                   <div className="meta muted drop-meta-line">
                                     <span className="drop-meta-item">
-                                      {earnedDisplay}/{req} min
+                                      {Math.floor(earnedDisplay)}/{req} min
                                     </span>
                                   </div>
                                   <div className="progress-bar small">

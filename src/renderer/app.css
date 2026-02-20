@@ -1116,6 +1116,14 @@ a {
   white-space: pre-wrap;
 }
 
+.log-highlight {
+  background: rgba(245, 158, 11, 0.28);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 2px;
+  font-weight: 600;
+}
+
 .log-details-summary {
   cursor: pointer;
   display: flex;
@@ -1255,6 +1263,18 @@ a {
   color: var(--muted-foreground);
 }
 
+.campaign-link-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.campaign-link-hint .meta {
+  margin: 0;
+}
+
 .campaign-list {
   list-style: none;
   padding: 0;
@@ -1383,6 +1403,7 @@ a {
   align-items: center;
   gap: 10px;
   min-width: 0;
+  flex: 1 1 auto;
 }
 
 .campaign-drop-thumb {
@@ -1416,6 +1437,15 @@ a {
   gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
+  flex: 0 0 auto;
+}
+
+.campaign-drop-reason {
+  font-size: 12px;
+  color: #ffcbd6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .inv-card {

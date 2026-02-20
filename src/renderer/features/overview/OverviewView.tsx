@@ -34,6 +34,19 @@ export function OverviewView({ inventory, stats, resetStats }: OverviewProps) {
   const claimedDrops = items.filter((i) => i.status === "claimed").length;
   const inProgressDrops = items.filter((i) => i.status === "progress").length;
   const excludedDrops = items.filter((i) => i.excluded).length;
+  const excludedCampaigns = new Set(
+    items
+      .filter((i) => i.excluded)
+      .map((i) => {
+        const campaignId = i.campaignId?.trim();
+        if (campaignId) return `id:${campaignId}`;
+        const campaignName = i.campaignName?.trim();
+        if (campaignName) return `name:${campaignName.toLowerCase()}`;
+        const game = i.game?.trim();
+        if (game) return `game:${game.toLowerCase()}`;
+        return `drop:${i.id}`;
+      }),
+  ).size;
   const upcomingDrops = items.filter((i) => i.status === "locked" && !i.excluded).length;
   const statsData = stats.status === "ready" ? stats.data : null;
   const topGameEntries = statsData?.claimsByGame
@@ -154,8 +167,17 @@ export function OverviewView({ inventory, stats, resetStats }: OverviewProps) {
               {excludedDrops > 0 ? (
                 <div className="overview-breakdown-item excluded">
                   <span className="overview-breakdown-dot" />
-                  <span>{t("inventory.category.excluded")}</span>
+                  <span>{t("overview.excludedDrops")}</span>
                   <span className="overview-breakdown-value">{formatNumber(excludedDrops)}</span>
+                </div>
+              ) : null}
+              {excludedCampaigns > 0 ? (
+                <div className="overview-breakdown-item excluded">
+                  <span className="overview-breakdown-dot" />
+                  <span>{t("overview.excludedCampaigns")}</span>
+                  <span className="overview-breakdown-value">
+                    {formatNumber(excludedCampaigns)}
+                  </span>
                 </div>
               ) : null}
             </div>
