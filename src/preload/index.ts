@@ -95,6 +95,7 @@ const api = {
       ipcRenderer.invoke("twitch/priorityPlan", payload),
     channels: (payload: { game: string }) => ipcRenderer.invoke("twitch/channels", payload),
     trackerStatus: () => ipcRenderer.invoke("twitch/trackerStatus"),
+    trackerClearChannels: () => ipcRenderer.invoke("twitch/trackerClearChannels"),
     userPubSubStatus: () => ipcRenderer.invoke("twitch/userPubSubStatus"),
     debugEmitUserPubSubEvent: (payload: DebugUserPubSubEmitPayload) =>
       ipcRenderer.invoke("twitch/debugEmitUserPubSubEvent", payload),

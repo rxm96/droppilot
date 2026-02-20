@@ -242,6 +242,11 @@ export function registerIpcHandlers(deps: {
     return channelTracker.getStatus();
   });
 
+  ipcMain.handle("twitch/trackerClearChannels", async () => {
+    channelTracker.clearTrackedChannels();
+    return { ok: true };
+  });
+
   ipcMain.handle("twitch/userPubSubStatus", async () => {
     return userPubSub?.getStatus() ?? null;
   });

@@ -496,6 +496,8 @@ export function useChannels({
   const pendingViewerDiffRef = useRef<ChannelLiveDiff | null>(null);
   const viewerFlushTimerRef = useRef<number | null>(null);
   const allowlistKeyRef = useRef<string>("");
+  const trackerClearedRef = useRef(false);
+  const lastTrackedGameRef = useRef<string>("");
 
   useEffect(() => {
     targetGameRef.current = targetGame;
@@ -686,8 +688,25 @@ export function useChannels({
     ],
   );
 
+  const hasTrackableTarget = Boolean(targetGame) && (canWatchTarget || Boolean(watching));
   const shouldTrackChannels =
-    allowWatching && (view === "control" || autoSelectEnabled || watching || autoSwitchEnabled);
+    allowWatching &&
+    hasTrackableTarget &&
+    (view === "control" || autoSelectEnabled || watching || autoSwitchEnabled);
+
+  useEffect(() => {
+    if (!allowWatching || !targetGame || !shouldTrackChannels) return;
+    const previous = lastTrackedGameRef.current;
+    if (previous && previous !== targetGame) {
+      void window.electronAPI.twitch.trackerClearChannels?.();
+      applyChannelsState([]);
+      setChannelDiff(null);
+      setChannelError(null);
+      setFetchedAt(null);
+      setFetchedGame("");
+    }
+    lastTrackedGameRef.current = targetGame;
+  }, [allowWatching, applyChannelsState, shouldTrackChannels, targetGame]);
 
   useEffect(() => {
     if (demoMode) return;
@@ -910,7 +929,10 @@ export function useChannels({
   ]);
 
   useEffect(() => {
-    if (allowWatching) return;
+    if (shouldTrackChannels) {
+      trackerClearedRef.current = false;
+      return;
+    }
     applyChannelsState([]);
     setChannelDiff(null);
     setChannelError(null);
@@ -919,7 +941,11 @@ export function useChannels({
     setFetchedAt(null);
     setFetchedGame("");
     setAutoSwitch(null);
-  }, [allowWatching, applyChannelsState]);
+    if (!trackerClearedRef.current) {
+      trackerClearedRef.current = true;
+      void window.electronAPI.twitch.trackerClearChannels?.();
+    }
+  }, [applyChannelsState, shouldTrackChannels]);
 
   return {
     channels,

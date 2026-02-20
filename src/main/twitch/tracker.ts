@@ -50,6 +50,7 @@ export interface ChannelTracker {
   mode: ChannelTrackerMode;
   getChannelsForGame(gameName: string): Promise<ChannelInfo[]>;
   getStatus(): ChannelTrackerStatus;
+  clearTrackedChannels(): void;
   onDiff(listener: ChannelTrackerDiffListener): () => void;
   dispose?(): void;
 }
@@ -101,6 +102,10 @@ export class PollingChannelTracker implements ChannelTracker {
       requests: this.requests,
       failures: this.failures,
     };
+  }
+
+  clearTrackedChannels() {
+    this.gameChannels.clear();
   }
 
   onDiff(listener: ChannelTrackerDiffListener): () => void {
@@ -432,6 +437,23 @@ export class WsChannelTracker implements ChannelTracker {
       fallbackUntil: fallbackActive ? this.wsFallbackUntil : null,
       shards: this.getShardStatuses(),
     };
+  }
+
+  clearTrackedChannels() {
+    for (const timer of this.offlinePruneTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.offlinePruneTimers.clear();
+    this.offlineSinceByChannelId.clear();
+    this.gameChannels.clear();
+    this.gameRefreshedAt.clear();
+    this.gameChannelIds.clear();
+    this.channelDetails.clear();
+    this.channelToGames.clear();
+    this.desiredChannelIds.clear();
+    this.desiredChannelIdsByShard.clear();
+    this.channelShardById.clear();
+    this.syncSubscriptions();
   }
 
   onDiff(listener: ChannelTrackerDiffListener): () => void {

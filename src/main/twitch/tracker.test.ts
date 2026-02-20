@@ -143,4 +143,33 @@ describe("WsChannelTracker", () => {
     expect(status.fallbackActive).toBe(true);
     expect(status.reconnectAttempts).toBeGreaterThanOrEqual(1);
   });
+
+  it("clears shard subscriptions when tracking is disabled", async () => {
+    const game = "ClearGame";
+    const { server, wsUrl } = await createServer();
+    serversToClose.push(server);
+
+    const tracker = new WsChannelTracker(makeTwitchService({ [game]: makeChannels(80, game) }), {
+      mode: "ws",
+      wsUrl,
+      maxSockets: 2,
+      maxTrackedTopics: 55,
+      refreshMs: 60_000,
+    });
+    trackersToDispose.push(tracker);
+
+    await tracker.getChannelsForGame(game);
+    await waitFor(() => tracker.getStatus().subscriptions === 55);
+
+    tracker.clearTrackedChannels();
+    await waitFor(() => {
+      const status = tracker.getStatus();
+      return status.subscriptions === 0 && status.desiredSubscriptions === 0;
+    });
+
+    const status = tracker.getStatus();
+    expect(status.subscriptions).toBe(0);
+    expect(status.desiredSubscriptions).toBe(0);
+    expect((status.shards ?? []).every((shard) => shard.subscriptions === 0)).toBe(true);
+  });
 });
