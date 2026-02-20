@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractAllowedChannelFilters, mergePrimaryData } from "./serviceUtils";
+import { buildCampaignSummaries, extractAllowedChannelFilters, mergePrimaryData } from "./serviceUtils";
 
 describe("mergePrimaryData", () => {
   it("keeps inventory watch progress when secondary drop payload reports zero", () => {
@@ -94,5 +94,33 @@ describe("extractAllowedChannelFilters", () => {
 
     expect(result.ids).toEqual([]);
     expect(result.logins).toEqual([]);
+  });
+});
+
+describe("buildCampaignSummaries", () => {
+  it("keeps absolute account link urls", () => {
+    const campaigns = buildCampaignSummaries([
+      {
+        id: "camp-1",
+        name: "Campaign",
+        game: { displayName: "Game" },
+        accountLinkURL: "https://www.twitch.tv/settings/connections",
+      },
+    ]);
+
+    expect(campaigns[0]?.accountLinkUrl).toBe("https://www.twitch.tv/settings/connections");
+  });
+
+  it("normalizes relative and lower-camel account link urls", () => {
+    const campaigns = buildCampaignSummaries([
+      {
+        id: "camp-2",
+        name: "Campaign",
+        game: { displayName: "Game" },
+        accountLinkUrl: "/settings/connections",
+      },
+    ]);
+
+    expect(campaigns[0]?.accountLinkUrl).toBe("https://www.twitch.tv/settings/connections");
   });
 });

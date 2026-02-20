@@ -99,6 +99,7 @@ export type CampaignNode = {
   id: string;
   name: string;
   accountLinkURL?: string;
+  accountLinkUrl?: string;
   game?: { displayName?: string; boxArtURL?: string; boxArtUrl?: string };
   startAt?: string;
   endAt?: string;
@@ -536,9 +537,15 @@ export function hasClaimedBenefit(claimed: Set<string>, drop: CampaignDropNode):
 }
 
 function extractAccountLinkUrl(campaign: CampaignNode): string | undefined {
-  const trimmed = campaign.accountLinkURL?.trim();
-  if (!trimmed) return undefined;
-  return /^https?:\/\//i.test(trimmed) ? trimmed : undefined;
+  const candidates = [campaign.accountLinkURL, campaign.accountLinkUrl];
+  for (const raw of candidates) {
+    const trimmed = raw?.trim();
+    if (!trimmed) continue;
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    if (/^www\.twitch\.tv\//i.test(trimmed)) return `https://${trimmed}`;
+    if (trimmed.startsWith("/")) return `https://www.twitch.tv${trimmed}`;
+  }
+  return undefined;
 }
 
 export function extractCampaignImageUrl(campaign: CampaignNode): string | undefined {
