@@ -493,7 +493,7 @@ export function useCampaignWarmup({
           void fetchInventory({ forceLoading: true });
           updateWarmupState({ lastReason: "complete" });
         }
-      } catch (err) {
+      } catch (_err) {
         if (!cancelled) {
           updateWarmupState({ lastReason: "campaigns-throw" });
         }

@@ -18,12 +18,20 @@ import { useStats } from "./useStats";
 import { useTargetDrops } from "./useTargetDrops";
 import { useWatchPing } from "./useWatchPing";
 import { useWatchingController } from "./useWatchingController";
+import {
+  buildWatchStallTrackerKey,
+  evaluateNoProgressStall,
+  pickStallRecoveryChannel,
+  type WatchStallTracker,
+} from "./watchStallRecovery";
 import { useTheme } from "@renderer/shared/theme";
 import type { FilterKey, View } from "@renderer/shared/types";
 import { isVerboseLoggingEnabled } from "@renderer/shared/utils/logger";
 
 const CLAIM_PROBE_NEAR_END_MINUTES = 1;
 const CLAIM_PROBE_INTERVAL_MS = 25_000;
+const STALL_NO_PROGRESS_WINDOW_MS = 15 * 60_000;
+const STALL_RECOVERY_COOLDOWN_MS = 60_000;
 
 export function useAppModel() {
   const { auth, startLogin, logout } = useAuth();
@@ -91,6 +99,7 @@ export function useAppModel() {
   const [gameFilter, setGameFilter] = useState<string>("all");
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [suppressedTargetGame, setSuppressedTargetGame] = useState<string>("");
   const [manualWatchOverride, setManualWatchOverride] = useState<{
     at: number;
     game: string;
@@ -99,6 +108,7 @@ export function useAppModel() {
   const [autoSelectEnabled, setAutoSelectEnabled] = useState<boolean>(true);
   const claimProbeInFlightRef = useRef(false);
   const claimProbeLastAtRef = useRef(0);
+  const watchStallTrackerRef = useRef<WatchStallTracker | null>(null);
 
   const isLinked = auth.status === "ok";
   const isLinkedOrDemo = isLinked || demoMode;
@@ -292,7 +302,29 @@ export function useAppModel() {
     stopWatching: actions.stopWatching,
   });
 
-  const targetGame = activeTargetGame || "";
+  const isTargetSuppressed = Boolean(
+    suppressedTargetGame && activeTargetGame && suppressedTargetGame === activeTargetGame,
+  );
+  const targetGame = isTargetSuppressed ? "" : activeTargetGame || "";
+  const handleSetActiveTargetGame = useCallback(
+    (next: string) => {
+      setSuppressedTargetGame("");
+      setActiveTargetGame(next);
+    },
+    [setActiveTargetGame],
+  );
+
+  useEffect(() => {
+    if (!suppressedTargetGame) return;
+    if (watching) {
+      setSuppressedTargetGame("");
+      return;
+    }
+    if (!activeTargetGame || activeTargetGame !== suppressedTargetGame) {
+      setSuppressedTargetGame("");
+    }
+  }, [activeTargetGame, suppressedTargetGame, watching]);
+
   const {
     targetDrops,
     totalDrops,
@@ -397,6 +429,57 @@ export function useAppModel() {
       window.clearInterval(timer);
     };
   }, [activeDropInfo, fetchInventory, inventoryFetchedAt, watchStats.lastOk, watching]);
+
+  useEffect(() => {
+    if (!watching || !activeDropInfo) {
+      watchStallTrackerRef.current = null;
+      return;
+    }
+    const dropId = activeDropInfo.id?.trim();
+    if (!dropId) {
+      watchStallTrackerRef.current = null;
+      return;
+    }
+    const earnedMinutes = Math.max(0, Number(activeDropInfo.earnedMinutes) || 0);
+    const key = buildWatchStallTrackerKey(watching, dropId);
+    const now = Date.now();
+    const evaluation = evaluateNoProgressStall({
+      tracker: watchStallTrackerRef.current,
+      key,
+      earnedMinutes,
+      now,
+      noProgressWindowMs: STALL_NO_PROGRESS_WINDOW_MS,
+      actionCooldownMs: STALL_RECOVERY_COOLDOWN_MS,
+    });
+    watchStallTrackerRef.current = evaluation.tracker;
+    if (!evaluation.shouldRecover) return;
+
+    const nextChannel = pickStallRecoveryChannel({
+      channels,
+      watching,
+      drop: {
+        id: activeDropInfo.id,
+        earnedMinutes: activeDropInfo.earnedMinutes,
+        allowedChannelIds: activeDropInfo.allowedChannelIds,
+        allowedChannelLogins: activeDropInfo.allowedChannelLogins,
+      },
+    });
+    if (nextChannel) {
+      setWatchingFromChannel(nextChannel);
+      return;
+    }
+    clearWatching();
+    if (activeTargetGame) {
+      setSuppressedTargetGame(activeTargetGame);
+    }
+  }, [
+    activeTargetGame,
+    activeDropInfo,
+    channels,
+    clearWatching,
+    setWatchingFromChannel,
+    watching,
+  ]);
 
   const debugCpu = useDebugCpu({
     enabled: debugEnabled && view === "debug" && isVerboseLoggingEnabled(),
@@ -546,7 +629,7 @@ export function useAppModel() {
     priorityPlan: effectivePriorityPlan,
     priorityGames,
     targetGame,
-    setActiveTargetGame,
+    setActiveTargetGame: handleSetActiveTargetGame,
     targetDrops,
     targetProgress,
     totalDrops,
