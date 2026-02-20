@@ -32,6 +32,7 @@ const CLAIM_PROBE_NEAR_END_MINUTES = 1;
 const CLAIM_PROBE_INTERVAL_MS = 25_000;
 const STALL_NO_PROGRESS_WINDOW_MS = 15 * 60_000;
 const STALL_RECOVERY_COOLDOWN_MS = 60_000;
+const NO_FARMABLE_DROP_GRACE_MS = 30_000;
 
 export function useAppModel() {
   const { auth, startLogin, logout } = useAuth();
@@ -109,6 +110,7 @@ export function useAppModel() {
   const claimProbeInFlightRef = useRef(false);
   const claimProbeLastAtRef = useRef(0);
   const watchStallTrackerRef = useRef<WatchStallTracker | null>(null);
+  const noFarmableDropRef = useRef<{ key: string; sinceAt: number } | null>(null);
 
   const isLinked = auth.status === "ok";
   const isLinkedOrDemo = isLinked || demoMode;
@@ -313,17 +315,38 @@ export function useAppModel() {
     },
     [setActiveTargetGame],
   );
+  const handleStopWatching = actions.handleStopWatching;
+  const startWatching = actions.startWatching;
+  const handleStartWatching = useCallback(
+    (channel: Parameters<typeof startWatching>[0]) => {
+      if (suppressedTargetGame && channel.game === suppressedTargetGame) {
+        setSuppressedTargetGame("");
+      }
+      startWatching(channel);
+    },
+    [startWatching, suppressedTargetGame],
+  );
+  const handleStopWatchingWithSuppressedTarget = useCallback(() => {
+    handleStopWatching();
+    if (activeTargetGame) {
+      setSuppressedTargetGame(activeTargetGame);
+    }
+  }, [handleStopWatching, activeTargetGame]);
 
   useEffect(() => {
     if (!suppressedTargetGame) return;
-    if (watching) {
+    if (watching?.game === suppressedTargetGame) {
+      clearWatching();
+      return;
+    }
+    if (watching?.game && watching.game !== suppressedTargetGame) {
       setSuppressedTargetGame("");
       return;
     }
-    if (!activeTargetGame || activeTargetGame !== suppressedTargetGame) {
+    if (activeTargetGame && activeTargetGame !== suppressedTargetGame) {
       setSuppressedTargetGame("");
     }
-  }, [activeTargetGame, suppressedTargetGame, watching]);
+  }, [activeTargetGame, clearWatching, suppressedTargetGame, watching]);
 
   const {
     targetDrops,
@@ -431,7 +454,54 @@ export function useAppModel() {
   }, [activeDropInfo, fetchInventory, inventoryFetchedAt, watchStats.lastOk, watching]);
 
   useEffect(() => {
-    if (!watching || !activeDropInfo) {
+    if (!watching) {
+      watchStallTrackerRef.current = null;
+      noFarmableDropRef.current = null;
+      return;
+    }
+    if (!activeDropInfo && targetGame && watching.game === targetGame) {
+      const noFarmableKey = `${watching.channelId ?? watching.id ?? ""}:${watching.streamId ?? ""}:${targetGame}`;
+      const now = Date.now();
+      const noFarmable = noFarmableDropRef.current;
+      if (!noFarmable || noFarmable.key !== noFarmableKey) {
+        noFarmableDropRef.current = { key: noFarmableKey, sinceAt: now };
+        return;
+      }
+      if (now - noFarmable.sinceAt < NO_FARMABLE_DROP_GRACE_MS) {
+        return;
+      }
+      if (channelsLoading || channelsRefreshing) {
+        return;
+      }
+      const fallbackProgressDrop =
+        targetDrops.find((drop) => drop.status === "progress" && drop.blocked !== true) ?? null;
+      if (fallbackProgressDrop) {
+        const nextChannel = pickStallRecoveryChannel({
+          channels,
+          watching,
+          drop: {
+            id: fallbackProgressDrop.id,
+            earnedMinutes: fallbackProgressDrop.earnedMinutes,
+            allowedChannelIds: fallbackProgressDrop.allowedChannelIds,
+            allowedChannelLogins: fallbackProgressDrop.allowedChannelLogins,
+          },
+        });
+        if (nextChannel) {
+          setWatchingFromChannel(nextChannel);
+          noFarmableDropRef.current = null;
+          return;
+        }
+      }
+      clearWatching();
+      if (activeTargetGame) {
+        setSuppressedTargetGame(activeTargetGame);
+      }
+      watchStallTrackerRef.current = null;
+      noFarmableDropRef.current = null;
+      return;
+    }
+    noFarmableDropRef.current = null;
+    if (!activeDropInfo) {
       watchStallTrackerRef.current = null;
       return;
     }
@@ -476,8 +546,12 @@ export function useAppModel() {
     activeTargetGame,
     activeDropInfo,
     channels,
+    channelsLoading,
+    channelsRefreshing,
     clearWatching,
     setWatchingFromChannel,
+    targetDrops,
+    targetGame,
     watching,
   ]);
 
@@ -641,13 +715,13 @@ export function useAppModel() {
     fetchInventory: actions.handleFetchInventory,
     refreshPriorityPlan,
     watching,
-    stopWatching: actions.handleStopWatching,
+    stopWatching: handleStopWatchingWithSuppressedTarget,
     channels,
     channelsLoading,
     channelsRefreshing,
     channelDiff,
     channelError,
-    startWatching: actions.startWatching,
+    startWatching: handleStartWatching,
     activeDropInfo,
     claimStatus,
     canWatchTarget,
@@ -663,7 +737,7 @@ export function useAppModel() {
     profile,
     nextWatchAt: watchStats.nextAt || undefined,
     watchError: watchStats.lastError,
-    activeGame: targetGame,
+    activeGame: watching ? targetGame : "",
     dropsTotal: totalDrops,
     dropsClaimed: claimedDrops,
     targetProgress,
