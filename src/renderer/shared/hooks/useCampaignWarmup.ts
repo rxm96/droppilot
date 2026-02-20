@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CampaignSummary, InventoryState, WatchingState } from "@renderer/shared/types";
 import {
   isArrayOf,
+  isCampaignSummary,
   isChannelEntry,
   isIpcAuthErrorResponse,
   isIpcErrorResponse,
@@ -20,6 +21,7 @@ type Params = {
   inventoryFetchedAt: number | null;
   withCategories: WithCategory[];
   priorityGames: string[];
+  allowUnlinkedGames: boolean;
   watching: WatchingState;
   fetchInventory: (opts?: { forceLoading?: boolean }) => Promise<void>;
   forwardAuthError: (message?: string) => void;
@@ -248,6 +250,7 @@ export function useCampaignWarmup({
   inventoryFetchedAt,
   withCategories,
   priorityGames,
+  allowUnlinkedGames,
   watching,
   fetchInventory,
   forwardAuthError,
@@ -271,8 +274,11 @@ export function useCampaignWarmup({
 
   const normalizedPriority = useMemo(() => normalizePriorityGames(priorityGames), [priorityGames]);
   const hasPriorityMatch = useMemo(
-    () => normalizedPriority.some((game) => isGameActionable(game, withCategories)),
-    [normalizedPriority, withCategories],
+    () =>
+      normalizedPriority.some((game) =>
+        isGameActionable(game, withCategories, { allowUpcoming: allowUnlinkedGames }),
+      ),
+    [normalizedPriority, withCategories, allowUnlinkedGames],
   );
   const knownCampaignIds = useMemo(() => {
     const ids = new Set<string>();
@@ -388,7 +394,7 @@ export function useCampaignWarmup({
           });
           return;
         }
-        const campaigns = Array.isArray(res) ? (res as CampaignSummary[]) : [];
+        const campaigns = isArrayOf(res, isCampaignSummary) ? res : [];
         const attempts = warmupAttemptedRef.current;
         let attemptsChanged = false;
         const now = Date.now();

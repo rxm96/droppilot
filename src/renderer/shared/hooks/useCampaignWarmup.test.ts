@@ -4,6 +4,7 @@ import type { CampaignSummary } from "@renderer/shared/types";
 
 const makeCampaign = (overrides: Partial<CampaignSummary> = {}): CampaignSummary => ({
   id: "c1",
+  name: "Campaign 1",
   game: "Game A",
   startsAt: "2026-02-01T00:00:00Z",
   endsAt: "2026-03-01T00:00:00Z",
@@ -25,7 +26,12 @@ describe("selectWarmupTarget", () => {
       attemptedCampaignIds: new Set(),
       now,
     });
-    expect(result).toEqual({ game: "Pokemon", campaignId: "c1", reason: "ok" });
+    expect(result).toEqual({
+      game: "Pokemon",
+      campaignId: "c1",
+      campaignName: "Campaign 1",
+      reason: "ok",
+    });
   });
 
   it("skips campaigns already known by id", () => {

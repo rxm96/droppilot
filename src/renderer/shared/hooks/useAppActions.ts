@@ -88,6 +88,7 @@ export function useAppActions({
     setNewGame,
     selectedGame,
     priorityGames,
+    setAutoSelectEnabled,
     dragIndex,
     setDragIndex,
     setDragOverIndex,

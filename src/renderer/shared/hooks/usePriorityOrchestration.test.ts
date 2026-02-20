@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { InventoryItem } from "@renderer/shared/types";
 import {
   computeBestActionableGame,
@@ -33,7 +33,7 @@ describe("priority orchestration helpers", () => {
       { item: makeItem({ id: "a2", game: "A" }), category: "upcoming" },
       { item: makeItem({ id: "c1", game: "C" }), category: "finished" },
     ];
-    expect(computeFallbackOrder(withCategories)).toEqual(["A", "B"]);
+    expect(computeFallbackOrder(withCategories)).toEqual(["A"]);
   });
 
   it("computes priority order with strict mode", () => {
@@ -97,7 +97,7 @@ describe("priority orchestration helpers", () => {
       { item: makeItem({ id: "b1", game: "B" }), category: "upcoming" },
     ];
     const result = computeBestActionableGame(["B", "A"], ["A"], withCategories, false);
-    expect(result).toBe("B");
+    expect(result).toBe("A");
   });
 
   it("falls back to actionable drops when priority list has no matches", () => {
@@ -106,7 +106,7 @@ describe("priority orchestration helpers", () => {
       { item: makeItem({ id: "b1", game: "B" }), category: "upcoming" },
     ];
     const result = computeBestActionableGame(["C"], ["B", "A"], withCategories, false);
-    expect(result).toBe("B");
+    expect(result).toBe("A");
   });
 
   it("keeps strict priority even if fallback has drops", () => {
@@ -176,23 +176,40 @@ describe("priority orchestration helpers", () => {
     expect(result).toBe("");
   });
 
-  it("treats upcoming drops as actionable only after start time", () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-02-14T00:00:00Z"));
+  it("does not treat upcoming drops as actionable", () => {
     const withCategories: WithCategory[] = [
       {
         item: makeItem({
           id: "a1",
           game: "A",
           status: "locked",
-          startsAt: "2026-02-15T00:00:00Z",
+          startsAt: "2026-02-14T00:00:00Z",
         }),
         category: "upcoming",
       },
     ];
     expect(isGameActionable("A", withCategories)).toBe(false);
-    vi.setSystemTime(new Date("2026-02-15T01:00:00Z"));
-    expect(isGameActionable("A", withCategories)).toBe(true);
-    vi.useRealTimers();
+  });
+
+  it("treats upcoming drops as actionable when allowed", () => {
+    const withCategories: WithCategory[] = [
+      {
+        item: makeItem({
+          id: "a1",
+          game: "A",
+          status: "locked",
+        }),
+        category: "upcoming",
+      },
+    ];
+    expect(isGameActionable("A", withCategories, { allowUpcoming: true })).toBe(true);
+  });
+
+  it("includes upcoming games in fallback when allowed", () => {
+    const withCategories: WithCategory[] = [
+      { item: makeItem({ id: "a1", game: "A" }), category: "in-progress" },
+      { item: makeItem({ id: "b1", game: "B", status: "locked" }), category: "upcoming" },
+    ];
+    expect(computeFallbackOrder(withCategories, { allowUpcoming: true })).toEqual(["A", "B"]);
   });
 });

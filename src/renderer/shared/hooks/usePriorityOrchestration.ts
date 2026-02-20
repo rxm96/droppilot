@@ -9,31 +9,30 @@ import type {
 
 export type WithCategory = { item: InventoryItem; category: string };
 
-const ACTIONABLE_CATEGORIES = new Set(["in-progress", "upcoming"]);
+const isActionableCategory = (category: string, allowUpcoming = false): boolean =>
+  category === "in-progress" || (allowUpcoming && category === "upcoming");
 
-const parseIsoMs = (value?: string): number | null => {
-  if (!value) return null;
-  const ms = Date.parse(value);
-  return Number.isFinite(ms) ? ms : null;
-};
-
-export const isGameActionable = (game: string, withCategories: WithCategory[]): boolean => {
-  const now = Date.now();
+export const isGameActionable = (
+  game: string,
+  withCategories: WithCategory[],
+  opts?: { allowUpcoming?: boolean },
+): boolean => {
+  const allowUpcoming = opts?.allowUpcoming === true;
   return withCategories.some(({ item, category }) => {
     if (item.game !== game) return false;
-    if (category === "in-progress") return true;
-    if (category !== "upcoming" || !ACTIONABLE_CATEGORIES.has(category)) return false;
-    const startMs = parseIsoMs(item.startsAt);
-    if (startMs === null) return true;
-    return now >= startMs;
+    return isActionableCategory(category, allowUpcoming);
   });
 };
 
-export const computeFallbackOrder = (withCategories: WithCategory[]): string[] => {
+export const computeFallbackOrder = (
+  withCategories: WithCategory[],
+  opts?: { allowUpcoming?: boolean },
+): string[] => {
+  const allowUpcoming = opts?.allowUpcoming === true;
   const seen = new Set<string>();
   const order: string[] = [];
   for (const { item, category } of withCategories) {
-    if (!ACTIONABLE_CATEGORIES.has(category)) continue;
+    if (!isActionableCategory(category, allowUpcoming)) continue;
     const game = item.game;
     if (!game || seen.has(game)) continue;
     seen.add(game);
@@ -112,11 +111,18 @@ export const computeBestActionableGame = (
   fallbackOrder: string[],
   withCategories: WithCategory[],
   obeyPriority: boolean,
+  allowUpcomingActionable = false,
 ): string => {
-  const primary = priorityOrder.find((game) => isGameActionable(game, withCategories));
+  const primary = priorityOrder.find((game) =>
+    isGameActionable(game, withCategories, { allowUpcoming: allowUpcomingActionable }),
+  );
   if (primary) return primary;
   if (obeyPriority) return "";
-  return fallbackOrder.find((game) => isGameActionable(game, withCategories)) ?? "";
+  return (
+    fallbackOrder.find((game) =>
+      isGameActionable(game, withCategories, { allowUpcoming: allowUpcomingActionable }),
+    ) ?? ""
+  );
 };
 
 export const computeNextActiveTargetGame = ({
@@ -125,16 +131,20 @@ export const computeNextActiveTargetGame = ({
   bestActionableGame,
   obeyPriority,
   withCategories,
+  allowUpcomingActionable = false,
 }: {
   inventoryStatus: InventoryState["status"];
   activeTargetGame: string;
   bestActionableGame: string;
   obeyPriority: boolean;
   withCategories: WithCategory[];
+  allowUpcomingActionable?: boolean;
 }): string => {
   if (inventoryStatus !== "ready") return activeTargetGame;
   const currentHasDrops = activeTargetGame
-    ? isGameActionable(activeTargetGame, withCategories)
+    ? isGameActionable(activeTargetGame, withCategories, {
+        allowUpcoming: allowUpcomingActionable,
+      })
     : false;
   if (!bestActionableGame) {
     return currentHasDrops ? activeTargetGame : "";
@@ -151,6 +161,7 @@ type Params = {
   withCategories: WithCategory[];
   priorityGames: string[];
   obeyPriority: boolean;
+  allowUnlinkedGames: boolean;
   watching: WatchingState;
   stopWatching: (opts?: { skipRefresh?: boolean }) => void;
 };
@@ -162,6 +173,7 @@ export function usePriorityOrchestration({
   withCategories,
   priorityGames,
   obeyPriority,
+  allowUnlinkedGames,
   watching,
   stopWatching,
 }: Params) {
@@ -185,8 +197,8 @@ export function usePriorityOrchestration({
   }, [demoMode, inventoryItems, inventoryStatus, priorityGames, priorityPlan]);
 
   const fallbackOrder = useMemo(() => {
-    return computeFallbackOrder(withCategories);
-  }, [withCategories]);
+    return computeFallbackOrder(withCategories, { allowUpcoming: allowUnlinkedGames });
+  }, [allowUnlinkedGames, withCategories]);
 
   const strictPriorityGames = useMemo(() => {
     return normalizePriorityGames(priorityGames);
@@ -203,8 +215,15 @@ export function usePriorityOrchestration({
   }, [effectivePriorityPlan, priorityGames, fallbackOrder, obeyPriority, strictPriorityGames]);
 
   const bestActionableGame = useMemo(
-    () => computeBestActionableGame(priorityOrder, fallbackOrder, withCategories, obeyPriority),
-    [priorityOrder, fallbackOrder, withCategories, obeyPriority],
+    () =>
+      computeBestActionableGame(
+        priorityOrder,
+        fallbackOrder,
+        withCategories,
+        obeyPriority,
+        allowUnlinkedGames,
+      ),
+    [priorityOrder, fallbackOrder, withCategories, obeyPriority, allowUnlinkedGames],
   );
 
   useEffect(() => {
@@ -233,11 +252,19 @@ export function usePriorityOrchestration({
       bestActionableGame,
       obeyPriority,
       withCategories,
+      allowUpcomingActionable: allowUnlinkedGames,
     });
     if (nextTarget !== activeTargetGame) {
       setActiveTargetGame(nextTarget);
     }
-  }, [activeTargetGame, bestActionableGame, inventoryStatus, obeyPriority, withCategories]);
+  }, [
+    activeTargetGame,
+    bestActionableGame,
+    inventoryStatus,
+    obeyPriority,
+    withCategories,
+    allowUnlinkedGames,
+  ]);
 
   return {
     activeTargetGame,

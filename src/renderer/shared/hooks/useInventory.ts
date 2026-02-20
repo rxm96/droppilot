@@ -22,16 +22,19 @@ import {
 import { RENDERER_ERROR_CODES, TWITCH_ERROR_CODES } from "../../../shared/errorCodes";
 
 const CLAIM_RETRY_MS = 90_000;
+const CLAIM_RETRY_MAX_MS = 30 * 60_000;
 const CLAIM_WINDOW_MS = 24 * 60 * 60 * 1000;
 const NOOP = () => {};
 const NOOP_CLAIM = () => {};
 const NOOP_AUTH = (_message?: string) => {};
 type FetchInventoryOpts = { forceLoading?: boolean };
+type ClaimRetryState = { attempts: number; nextAllowedAt: number; signature: string };
 
 type InventoryPatchResult = {
   changed: boolean;
   items: InventoryItem[];
   updatedId?: string;
+  updatedIds?: string[];
   deltaMinutes: number;
   totalMinutes: number;
   claimedItem?: InventoryItem;
@@ -39,6 +42,19 @@ type InventoryPatchResult = {
 
 const getTotalEarnedMinutes = (items: InventoryItem[]): number =>
   items.reduce((acc, item) => acc + Math.max(0, Number(item.earnedMinutes) || 0), 0);
+
+const buildProgressAnchorByDropId = (
+  items: InventoryItem[],
+  at: number,
+): Record<string, number> => {
+  const next: Record<string, number> = {};
+  for (const item of items) {
+    const id = typeof item.id === "string" ? item.id.trim() : "";
+    if (!id) continue;
+    next[id] = at;
+  }
+  return next;
+};
 
 const parseIsoMs = (value?: string): number | null => {
   if (!value) return null;
@@ -52,6 +68,20 @@ const isWithinClaimWindow = (item: InventoryItem, now = Date.now()): boolean => 
   if (!Number.isFinite(endMs)) return true;
   return now < endMs + CLAIM_WINDOW_MS;
 };
+
+const getClaimRetryDelay = (attempts: number): number =>
+  Math.min(CLAIM_RETRY_MAX_MS, CLAIM_RETRY_MS * 2 ** Math.max(0, attempts - 1));
+
+const buildClaimRetrySignature = (item: InventoryItem): string =>
+  [
+    item.status,
+    String(Math.max(0, Number(item.earnedMinutes) || 0)),
+    String(Math.max(0, Number(item.requiredMinutes) || 0)),
+    item.dropInstanceId ?? "",
+    item.campaignId ?? "",
+    typeof item.isClaimable === "boolean" ? String(item.isClaimable) : "",
+    (item.blockingReasonHints ?? []).join("|"),
+  ].join("#");
 
 const isCampaignActive = (
   startsAt?: string,
@@ -177,6 +207,7 @@ export const applyDropProgressToInventoryItems = (
   let deltaMinutes = 0;
   const nextItems = [...items];
   let updatedId: string | undefined;
+  const updatedIds = new Set<string>();
 
   for (const idx of candidateIndexes) {
     const current = nextItems[idx];
@@ -197,6 +228,7 @@ export const applyDropProgressToInventoryItems = (
     }
     changed = true;
     deltaMinutes += Math.max(0, nextEarned - prevEarned);
+    updatedIds.add(current.id);
     if (!updatedId || current.id === target.id) {
       updatedId = current.id;
     }
@@ -215,6 +247,7 @@ export const applyDropProgressToInventoryItems = (
     changed: true,
     items: nextItems,
     updatedId,
+    updatedIds: Array.from(updatedIds),
     deltaMinutes,
     totalMinutes: getTotalEarnedMinutes(nextItems),
   };
@@ -261,6 +294,7 @@ export const applyDropClaimToInventoryItems = (
     changed: true,
     items: nextItems,
     updatedId: nextItem.id,
+    updatedIds: [nextItem.id],
     deltaMinutes: Math.max(0, nextEarned - prevEarned),
     totalMinutes: getTotalEarnedMinutes(nextItems),
     claimedItem: nextItem,
@@ -300,9 +334,11 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
     updated: new Set(),
   });
   const [inventoryFetchedAt, setInventoryFetchedAt] = useState<number | null>(null);
+  const [progressAnchorByDropId, setProgressAnchorByDropId] = useState<Record<string, number>>({});
   const [claimStatus, setClaimStatus] = useState<ClaimStatus | null>(null);
   const totalMinutesRef = useRef<number | null>(null);
   const claimAttemptsRef = useRef<Map<string, number>>(new Map());
+  const claimRetryByDropRef = useRef<Map<string, ClaimRetryState>>(new Map());
   const fetchInFlightRef = useRef(false);
   const pendingFetchOptsRef = useRef<FetchInventoryOpts | null>(null);
   const fetchInventoryRef = useRef<(opts?: FetchInventoryOpts) => Promise<void>>(() =>
@@ -327,7 +363,9 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
       setCampaignsLoading(false);
       totalMinutesRef.current = null;
       claimAttemptsRef.current.clear();
+      claimRetryByDropRef.current.clear();
       progressByDropIdRef.current.clear();
+      setProgressAnchorByDropId({});
       pendingFetchOptsRef.current = null;
     }
   }, [demoMode, isLinked]);
@@ -363,7 +401,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
               : [];
         const hadItems = prevItems.length > 0;
         logInfo("inventory: fetch start", { forceLoading: opts?.forceLoading, hadItems });
-        if (!hadItems || opts?.forceLoading) {
+        if (!hadItems) {
           setInventory({ status: "loading" });
         } else {
           setInventoryRefreshing(true);
@@ -427,6 +465,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
           }
           setInventory({ status: "ready", items: nextItems });
           setInventoryFetchedAt(now);
+          setProgressAnchorByDropId(buildProgressAnchorByDropId(nextItems, now));
           setInventoryChanges({ added, updated });
           setInventoryRefreshing(false);
           setCampaigns(buildCampaignsFromInventory(nextItems, now));
@@ -502,7 +541,9 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
             }
           }
           setInventory({ status: "ready", items: nextItems });
-          setInventoryFetchedAt(Date.now());
+          const fetchedAt = Date.now();
+          setInventoryFetchedAt(fetchedAt);
+          setProgressAnchorByDropId(buildProgressAnchorByDropId(nextItems, fetchedAt));
           setInventoryChanges({ added, updated });
           setCampaignsLoading(false);
 
@@ -512,17 +553,42 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
             const claimable = items.filter((item) => {
               if (item.status === "claimed") return false;
               if (!isWithinClaimWindow(item, now)) return false;
-              if (typeof item.isClaimable === "boolean") return item.isClaimable;
-              if (!item.dropInstanceId) return false;
+              const blockingHints = item.blockingReasonHints ?? [];
               const req = Math.max(0, Number(item.requiredMinutes) || 0);
               const earned = Math.max(0, Number(item.earnedMinutes) || 0);
               const progressDone = req === 0 || earned >= req;
-              return progressDone;
+              if (!progressDone) return false;
+
+              const hasClaimIdCandidate = Boolean(
+                item.dropInstanceId || (item.campaignId && item.id),
+              );
+              if (!hasClaimIdCandidate) return false;
+
+              if (item.isClaimable === true) return true;
+              if (item.isClaimable === false) {
+                const hardBlockingHints = blockingHints.filter(
+                  (reason) =>
+                    reason !== "missing_drop_instance_id" &&
+                    reason !== "account_not_linked" &&
+                    reason !== "campaign_allow_disabled",
+                );
+                if (hardBlockingHints.length > 0) return false;
+              }
+
+              // Accept fallback claim path when Twitch has progress but no explicit claimable flag yet.
+              return true;
             });
 
             for (const drop of claimable) {
-              const last = claimAttemptsRef.current.get(drop.id) ?? 0;
-              if (now - last < CLAIM_RETRY_MS) continue;
+              const retrySignature = buildClaimRetrySignature(drop);
+              const retryState = claimRetryByDropRef.current.get(drop.id);
+              if (
+                retryState &&
+                retryState.signature === retrySignature &&
+                now < retryState.nextAllowedAt
+              ) {
+                continue;
+              }
               claimAttemptsRef.current.set(drop.id, now);
               try {
                 const claimRes: unknown = await window.electronAPI.twitch.claimDrop({
@@ -548,6 +614,8 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
                   });
                 }
                 onClaimed({ title: drop.title, game: drop.game });
+                claimRetryByDropRef.current.delete(drop.id);
+                claimAttemptsRef.current.delete(drop.id);
                 logInfo("inventory: auto-claimed", {
                   title: drop.title,
                   game: drop.game,
@@ -560,6 +628,16 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
                 });
               } catch (err) {
                 logWarn("inventory: claim error", { title: drop.title, err });
+                const prevRetryState = claimRetryByDropRef.current.get(drop.id);
+                const attempts =
+                  prevRetryState && prevRetryState.signature === retrySignature
+                    ? prevRetryState.attempts + 1
+                    : 1;
+                claimRetryByDropRef.current.set(drop.id, {
+                  attempts,
+                  nextAllowedAt: now + getClaimRetryDelay(attempts),
+                  signature: retrySignature,
+                });
                 const errInfo = errorInfoFromUnknown(err, {
                   code: TWITCH_ERROR_CODES.CLAIM_FAILED,
                   message: "Drop claim failed",
@@ -665,9 +743,11 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
     ): {
       patched: boolean;
       hasUnclaimedInCampaign?: boolean;
+      claimedItem?: InventoryItem;
     } => {
       let patched = false;
       let updatedId: string | undefined;
+      let updatedIds: string[] | undefined;
       let deltaMinutes = 0;
       let nextTotal = totalMinutesRef.current ?? 0;
       let claimedItem: InventoryItem | undefined;
@@ -690,6 +770,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
         if (!patch || !patch.changed) return prev;
         patched = true;
         updatedId = patch.updatedId;
+        updatedIds = patch.updatedIds;
         deltaMinutes = patch.deltaMinutes;
         nextTotal = patch.totalMinutes;
         claimedItem = patch.claimedItem;
@@ -716,6 +797,30 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
       if (claimedItem && autoClaimEnabled) {
         onClaimed({ title: claimedItem.title, game: claimedItem.game });
       }
+      const eventAt =
+        typeof event.at === "number" && Number.isFinite(event.at) ? event.at : Date.now();
+      const idsToAnchor =
+        updatedIds && updatedIds.length > 0
+          ? updatedIds
+          : updatedId
+            ? [updatedId]
+            : [];
+      if (idsToAnchor.length > 0) {
+        setProgressAnchorByDropId((prev) => {
+          let changed = false;
+          const next = { ...prev };
+          for (const rawId of idsToAnchor) {
+            const id = rawId.trim();
+            if (!id) continue;
+            const prevAt = next[id] ?? 0;
+            if (eventAt > prevAt) {
+              next[id] = eventAt;
+              changed = true;
+            }
+          }
+          return changed ? next : prev;
+        });
+      }
       if (updatedId) {
         const id = updatedId;
         setInventoryChanges((prev) => {
@@ -724,7 +829,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
           return { added: prev.added, updated };
         });
       }
-      return { patched: true, hasUnclaimedInCampaign };
+      return { patched: true, hasUnclaimedInCampaign, claimedItem };
     };
 
     const unsubscribe = window.electronAPI.twitch.onUserPubSubEvent((payload: unknown) => {
@@ -755,13 +860,72 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
       if (payload.kind === "drop-claim") {
         const result = applyPatch(payload);
         if (!result.patched) return;
-        if (result.hasUnclaimedInCampaign === false || result.hasUnclaimedInCampaign === undefined) {
-          scheduleReconcile({
-            forceLoading: true,
-            minGapMs: 2_000,
-            baseDelayMs: 450,
-          });
+        if (autoClaimEnabled) {
+          const dropInstanceIdFromEvent = payload.dropInstanceId?.trim();
+          const dropIdFromEvent = payload.dropId?.trim();
+          const claimedItem = result.claimedItem;
+          const claimId = dropIdFromEvent || claimedItem?.id || dropInstanceIdFromEvent;
+          const claimPayload = {
+            dropInstanceId: dropInstanceIdFromEvent || claimedItem?.dropInstanceId,
+            dropId: dropIdFromEvent || claimedItem?.id,
+            campaignId: claimedItem?.campaignId,
+          };
+          if (claimId) {
+            const now = Date.now();
+            const last = claimAttemptsRef.current.get(claimId) ?? 0;
+            if (now - last >= CLAIM_RETRY_MS) {
+              claimAttemptsRef.current.set(claimId, now);
+              void (async () => {
+                try {
+                  const claimRes: unknown = await window.electronAPI.twitch.claimDrop(claimPayload);
+                  if (isIpcErrorResponse(claimRes)) {
+                    if (isIpcAuthErrorResponse(claimRes)) {
+                      logWarn("inventory: claim auth error", claimRes);
+                      onAuthError(claimRes.message);
+                      return;
+                    }
+                    throw errorInfoFromIpc(claimRes, {
+                      code: TWITCH_ERROR_CODES.CLAIM_FAILED,
+                      message: "Drop claim failed",
+                    });
+                  }
+                  if (isIpcOkFalseResponse(claimRes)) {
+                    throw errorInfoFromIpc(claimRes, {
+                      code: TWITCH_ERROR_CODES.CLAIM_FAILED,
+                      message: "Drop claim failed",
+                    });
+                  }
+                  if (claimedItem) {
+                    setClaimStatus({
+                      kind: "success",
+                      message: `Auto-claimed: ${claimedItem.title}`,
+                      at: Date.now(),
+                    });
+                  }
+                } catch (err) {
+                  const errInfo = errorInfoFromUnknown(err, {
+                    code: TWITCH_ERROR_CODES.CLAIM_FAILED,
+                    message: "Drop claim failed",
+                  });
+                  setClaimStatus({
+                    kind: "error",
+                    message: errInfo.message,
+                    code: errInfo.code,
+                    title: claimedItem?.title ?? dropIdFromEvent,
+                    at: Date.now(),
+                  });
+                }
+              })();
+            }
+          }
         }
+        // Claim availability and prerequisite unlocks can lag for a few seconds after the event.
+        // Reconcile after a short delay so next-drop state becomes visible quickly.
+        scheduleReconcile({
+          forceLoading: true,
+          minGapMs: 2_000,
+          baseDelayMs: 4_000,
+        });
         return;
       }
 
@@ -776,7 +940,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
       clearReconcileTimer();
       if (typeof unsubscribe === "function") unsubscribe();
     };
-  }, [demoMode, isLinked, onClaimed, onMinutesEarned, autoClaimEnabled]);
+  }, [demoMode, isLinked, onClaimed, onMinutesEarned, onAuthError, autoClaimEnabled]);
 
   useEffect(() => {
     if (inventoryChanges.added.size === 0 && inventoryChanges.updated.size === 0) return;
@@ -818,6 +982,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
     uniqueGames,
     setInventoryChanges,
     setInventoryFetchedAt,
+    progressAnchorByDropId,
     withCategories,
     claimStatus,
     setClaimStatus,

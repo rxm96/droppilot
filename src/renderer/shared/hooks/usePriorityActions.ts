@@ -5,6 +5,7 @@ type Params = {
   setNewGame: (val: string) => void;
   selectedGame: string;
   priorityGames: string[];
+  setAutoSelectEnabled: (next: boolean) => void;
   dragIndex: number | null;
   setDragIndex: (val: number | null) => void;
   setDragOverIndex: (val: number | null) => void;
@@ -16,6 +17,7 @@ export function usePriorityActions({
   setNewGame,
   selectedGame,
   priorityGames,
+  setAutoSelectEnabled,
   dragIndex,
   setDragIndex,
   setDragOverIndex,
@@ -30,8 +32,9 @@ export function usePriorityActions({
     }
     const updated = [...priorityGames, name];
     setNewGame("");
+    setAutoSelectEnabled(true);
     void savePriorityGames(updated);
-  }, [newGame, priorityGames, savePriorityGames, setNewGame]);
+  }, [newGame, priorityGames, savePriorityGames, setAutoSelectEnabled, setNewGame]);
 
   const removeGame = useCallback(
     (name: string) => {
@@ -75,17 +78,19 @@ export function usePriorityActions({
     const name = selectedGame.trim();
     if (!name) return;
     if (priorityGames.includes(name)) return;
+    setAutoSelectEnabled(true);
     void savePriorityGames([...priorityGames, name]);
-  }, [priorityGames, savePriorityGames, selectedGame]);
+  }, [priorityGames, savePriorityGames, selectedGame, setAutoSelectEnabled]);
 
   const addGameByName = useCallback(
     (name: string) => {
       const trimmed = name.trim();
       if (!trimmed) return;
       if (priorityGames.includes(trimmed)) return;
+      setAutoSelectEnabled(true);
       void savePriorityGames([...priorityGames, trimmed]);
     },
-    [priorityGames, savePriorityGames],
+    [priorityGames, savePriorityGames, setAutoSelectEnabled],
   );
 
   return {

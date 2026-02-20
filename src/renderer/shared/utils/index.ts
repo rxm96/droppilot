@@ -16,7 +16,6 @@ export function getCategory(
   const campaignStatus = (item.campaignStatus ?? "").toUpperCase();
   const endsAt = item.endsAt ? Date.parse(item.endsAt) : undefined;
   if (campaignStatus === "EXPIRED" || (endsAt && endsAt < now)) return "expired";
-  const earned = Math.max(0, Number(item.earnedMinutes) || 0);
   switch (item.status) {
     case "progress":
       return "in-progress";
