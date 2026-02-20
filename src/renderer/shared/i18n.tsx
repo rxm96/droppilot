@@ -67,7 +67,7 @@ const translations: Translations = {
     "settings.language.en": "English",
 
     "inventory.title": "Inventory",
-    "inventory.filterHint": "Filters: Not linked, Upcoming, Expired, Excluded, Finished.",
+    "inventory.filterHint": "Filters: Not linked, Upcoming, Expired, Finished.",
     "inventory.refresh": "Refresh",
     "inventory.refreshing": "Refreshing...",
     "inventory.filter.all": "All",
@@ -456,7 +456,7 @@ const translations: Translations = {
     "settings.language.en": "Englisch",
 
     "inventory.title": "Inventory",
-    "inventory.filterHint": "Filter: Not linked, Upcoming, Expired, Excluded, Finished.",
+    "inventory.filterHint": "Filter: Not linked, Upcoming, Expired, Finished.",
     "inventory.refresh": "Aktualisieren",
     "inventory.refreshing": "Aktualisiere...",
     "inventory.filter.all": "Alle",

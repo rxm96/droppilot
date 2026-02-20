@@ -11,7 +11,6 @@ export function getCategory(
     allowUnlinkedGames || (allowUnlinkedBadgeEmotes && item.campaignHasBadgeOrEmote === true);
   if (!isLinked) return "not-linked";
   if (item.linked === false && !allowUnlinked) return "not-linked";
-  if (item.excluded) return "excluded";
   if (item.status === "claimed") return "finished";
   const campaignStatus = (item.campaignStatus ?? "").toUpperCase();
   const endsAt = item.endsAt ? Date.parse(item.endsAt) : undefined;
