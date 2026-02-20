@@ -34,6 +34,10 @@ export type InventoryItem = {
   dropInstanceId?: string;
   campaignId?: string;
   isClaimable?: boolean;
+  blocked?: boolean;
+  blockingReasonHints?: string[];
+  allowedChannelIds?: string[];
+  allowedChannelLogins?: string[];
 };
 
 export type CampaignDropSummary = {
@@ -46,10 +50,11 @@ export type CampaignDropSummary = {
 };
 
 export type CampaignSummary = {
-  id?: string;
-  name?: string;
-  game?: string;
+  id: string;
+  name: string;
+  game: string;
   imageUrl?: string;
+  accountLinkUrl?: string;
   drops?: CampaignDropSummary[];
   isAccountConnected?: boolean;
   startsAt?: string;

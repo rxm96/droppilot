@@ -47,6 +47,15 @@ const isFiniteNumber = (value: unknown): value is number =>
 const isNullableFiniteNumber = (value: unknown): value is number | null =>
   value === null || isFiniteNumber(value);
 
+const isOptionalString = (value: unknown): value is string | undefined =>
+  value === undefined || isString(value);
+
+const isOptionalFiniteNumber = (value: unknown): value is number | undefined =>
+  value === undefined || isFiniteNumber(value);
+
+const isOptionalBoolean = (value: unknown): value is boolean | undefined =>
+  value === undefined || typeof value === "boolean";
+
 const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === "string");
 
@@ -228,12 +237,36 @@ export const isInventoryItem = (value: unknown): value is InventoryItem => {
   );
 };
 
+const isInventoryStatus = (value: unknown): value is InventoryItem["status"] =>
+  value === "locked" || value === "progress" || value === "claimed";
+
+const isCampaignDropSummary = (value: unknown): boolean => {
+  if (!isRecord(value)) return false;
+  return (
+    isString(value.id) &&
+    isOptionalString(value.name) &&
+    isOptionalFiniteNumber(value.requiredMinutes) &&
+    isOptionalFiniteNumber(value.earnedMinutes) &&
+    (value.status === undefined || isInventoryStatus(value.status)) &&
+    isOptionalString(value.imageUrl)
+  );
+};
+
 export const isCampaignSummary = (value: unknown): value is CampaignSummary => {
   if (!isRecord(value)) return false;
   return (
-    (value.id === undefined || isString(value.id)) &&
-    (value.name === undefined || isString(value.name)) &&
-    (value.game === undefined || isString(value.game))
+    isString(value.id) &&
+    isString(value.name) &&
+    isString(value.game) &&
+    isOptionalString(value.imageUrl) &&
+    isOptionalString(value.accountLinkUrl) &&
+    (value.drops === undefined || isArrayOf(value.drops, isCampaignDropSummary)) &&
+    isOptionalBoolean(value.isAccountConnected) &&
+    isOptionalString(value.startsAt) &&
+    isOptionalString(value.endsAt) &&
+    isOptionalBoolean(value.isActive) &&
+    isOptionalString(value.status) &&
+    isOptionalBoolean(value.hasUnclaimedDrops)
   );
 };
 
