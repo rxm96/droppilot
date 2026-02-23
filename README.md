@@ -69,6 +69,14 @@ See `CONTRIBUTING.md` for local dev and release details.
 - `icons` - app icons
 - `dist` / `dist-electron` - build output
 
+## Watch engine
+
+Target suppression and stall recovery behavior is documented here:
+
+- `docs/watch-engine.md`
+- `docs/watch-flow.puml` (PlantUML sequence diagram of end-to-end watch flow)
+- implementation: `src/renderer/shared/hooks/watch/watchEngine.ts`
+
 ## Debug tools
 
 The Debug tab is disabled by default to keep background work minimal.

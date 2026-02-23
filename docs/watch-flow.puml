@@ -1,0 +1,83 @@
+@startuml
+title DropPilot Watch Runtime Flow
+
+actor User
+participant "useAppModel" as App
+participant "usePriorityOrchestration" as Prio
+participant "watchEngine\nreducer" as Engine
+participant "useTargetDrops\n(inventory view)" as Drops
+participant "useChannels" as Channels
+participant "useWatchPing" as Ping
+participant "watchStallRecovery\nhelpers" as Stall
+participant "electronAPI.twitch\n(IPC)" as Twitch
+
+== Target + Priority ==
+App -> Prio: computeNextActiveTargetGame(...)
+note right of Prio
+Strict priority guard:
+if current target is actively watched
+and still actionable, do not preempt
+immediately.
+end note
+Prio --> App: activeTargetGame
+App -> Engine: selectVisibleTargetGame(activeTargetGame)
+Engine --> App: targetGame (hidden when suppressed)
+App -> Drops: computeTargetDrops(targetGame, watching, inventory)
+Drops --> App: activeDropInfo + canWatchTarget
+
+== Channels ==
+App -> Channels: fetchChannels(targetGame)
+Channels -> Twitch: tracker channels request
+Twitch --> Channels: channel list
+Channels --> App: prioritized channels + auto-switch decision
+App -> Channels: setWatchingFromChannel(...)
+
+== Watch Ping Loop ==
+loop every ~59s (+ jitter)
+  Ping -> Twitch: watch(channelId, login, streamId)
+  Twitch --> Ping: ok / error
+  Ping --> App: watchStats + bumpStats(minutes)
+end
+
+== Stall Detection ==
+App -> Stall: evaluateNoProgressStall(...)
+alt shouldRecover == false
+  Stall --> App: keep/reset tracker only
+else shouldRecover == true
+  alt channel-level recovery possible
+    App -> Stall: pickStallRecoveryChannel(...)
+    Stall --> App: nextChannel
+    App -> Channels: setWatchingFromChannel(nextChannel)
+  else no channel or retry budget exhausted
+    App -> Prio: getNextPriorityTargetGame(current)
+    Prio --> App: next game (actionable-first, fallback to next priority)
+    App -> App: clearWatching + setAutoSelectEnabled(true)
+    App -> Engine: dispatch(watch/stall_stop, activeTargetGame)
+  end
+end
+
+== Suppression Lifecycle ==
+loop on sync + hold-expire timer
+  App -> Engine: dispatch(sync(activeTargetGame, watchingGame, now))
+  alt suppressionReason == manual-stop
+    Engine --> App: clear when another game is watched
+  else suppressionReason == stall-stop
+    alt hold window active
+      Engine --> App: keep suppressed
+    else hold expired
+      alt still watching same stalled game
+        Engine --> App: keep suppressed
+      else idle or watching different game
+        Engine --> App: clear suppressed target
+      end
+    end
+  end
+end
+
+== Manual Actions ==
+User -> App: manual start watching(channel)
+App -> Engine: dispatch(watch/manual_start)
+User -> App: stop watching
+App -> Engine: dispatch(watch/stop, activeTargetGame)
+
+@enduml
