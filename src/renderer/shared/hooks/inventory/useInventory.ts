@@ -338,9 +338,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
       hasUnclaimedInCampaign?: boolean;
       claimedItem?: InventoryItem;
     } => {
-      let patchResult:
-        | ReturnType<typeof applyPubSubEventToInventoryState>
-        | null = null;
+      let patchResult: ReturnType<typeof applyPubSubEventToInventoryState> | null = null;
 
       setInventory((prev) => {
         const result = applyPubSubEventToInventoryState(prev, event);
@@ -387,7 +385,11 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
           Number.isFinite(payload.currentProgressMin)
             ? Math.max(0, payload.currentProgressMin)
             : null;
-        if (dropId && progress !== null && !pubSubReconciler.shouldApplyProgress(dropId, progress)) {
+        if (
+          dropId &&
+          progress !== null &&
+          !pubSubReconciler.shouldApplyProgress(dropId, progress)
+        ) {
           return;
         }
         applyPatch(payload);

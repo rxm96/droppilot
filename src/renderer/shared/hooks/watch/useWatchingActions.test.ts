@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  shouldLogoutForAuthError,
-  updateAuthErrorTracker,
-} from "./useWatchingActions";
+import { shouldLogoutForAuthError, updateAuthErrorTracker } from "./useWatchingActions";
 
 describe("useWatchingActions helpers", () => {
   it("increments auth error count inside the window", () => {

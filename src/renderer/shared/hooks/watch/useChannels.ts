@@ -1,8 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  DropChannelRestriction,
-  type ChannelAllowlist,
-} from "@renderer/shared/domain/dropDomain";
+import { DropChannelRestriction, type ChannelAllowlist } from "@renderer/shared/domain/dropDomain";
 import type {
   AutoSwitchInfo,
   ChannelDiff,
@@ -296,9 +293,7 @@ export const isManualPriorityOverrideActive = ({
   return now - manualWatchOverride.at < windowMs;
 };
 
-const normalizeAllowlist = (
-  allowlist?: ChannelAllowlist | null,
-): DropChannelRestriction | null => {
+const normalizeAllowlist = (allowlist?: ChannelAllowlist | null): DropChannelRestriction | null => {
   const restriction = DropChannelRestriction.fromAllowlist(allowlist);
   return restriction.hasConstraints ? restriction : null;
 };

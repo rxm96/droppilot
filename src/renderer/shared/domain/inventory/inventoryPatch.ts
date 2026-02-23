@@ -144,4 +144,3 @@ export const applyDropClaimToInventoryItems = (
     claimedItem: nextItem,
   };
 };
-

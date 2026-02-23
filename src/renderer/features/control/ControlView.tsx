@@ -70,7 +70,10 @@ const formatChannelRestrictionReason = (
 ): string => {
   const allowedLogins = Array.from(DropChannelRestriction.fromInventoryItem(drop).logins);
   if (allowedLogins.length > 0) {
-    const preview = allowedLogins.slice(0, 3).map((login) => `@${login}`).join(", ");
+    const preview = allowedLogins
+      .slice(0, 3)
+      .map((login) => `@${login}`)
+      .join(", ");
     return t("control.dropReason.channelRestrictedChannels", { channels: preview });
   }
   return t("control.dropReason.channelRestricted");

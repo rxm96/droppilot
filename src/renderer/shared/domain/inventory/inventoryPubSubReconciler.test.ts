@@ -110,4 +110,3 @@ describe("InventoryPubSubReconciler", () => {
     expect(reconciler.shouldApplyProgress("drop-1", 3)).toBe(true);
   });
 });
-

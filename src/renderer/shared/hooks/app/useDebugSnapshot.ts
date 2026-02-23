@@ -10,7 +10,11 @@ import type {
   UserPubSubStatus,
   WatchingState,
 } from "@renderer/shared/types";
-import type { ActiveDropInfo, InventoryRefreshState, WarmupState } from "@renderer/shared/hooks/inventory";
+import type {
+  ActiveDropInfo,
+  InventoryRefreshState,
+  WarmupState,
+} from "@renderer/shared/hooks/inventory";
 import type { WatchStats } from "@renderer/shared/hooks/watch";
 import { getPerfSnapshot } from "@renderer/shared/utils/perfStore";
 import type { CpuSample } from "./useDebugCpu";

@@ -51,13 +51,16 @@ export class InventoryPubSubReconciler {
     }
     this.clearTimer();
     this.scheduledAt = nextAt;
-    this.timerId = this.timers.setTimeout(() => {
-      this.timerId = null;
-      this.lastReconcileAt = this.timers.now();
-      const force = this.pendingForce;
-      this.pendingForce = false;
-      run(force);
-    }, Math.max(0, nextAt - now));
+    this.timerId = this.timers.setTimeout(
+      () => {
+        this.timerId = null;
+        this.lastReconcileAt = this.timers.now();
+        const force = this.pendingForce;
+        this.pendingForce = false;
+        run(force);
+      },
+      Math.max(0, nextAt - now),
+    );
   }
 
   private clearTimer(): void {

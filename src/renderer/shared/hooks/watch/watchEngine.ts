@@ -80,7 +80,8 @@ export const watchEngineReducer = (
       if (!state.suppressedTargetGame) return state;
       const watchingGame = normalize(event.watchingGame);
       if (state.suppressionReason === "stall-stop") {
-        const now = typeof event.now === "number" && Number.isFinite(event.now) ? event.now : Date.now();
+        const now =
+          typeof event.now === "number" && Number.isFinite(event.now) ? event.now : Date.now();
         const suppressedAt = state.suppressedAt ?? now;
         // Keep suppression fixed during the hold window to prevent immediate bounce-back.
         if (now - suppressedAt < STALL_STOP_SUPPRESSION_HOLD_MS) {

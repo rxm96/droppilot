@@ -140,4 +140,3 @@ describe("progress anchors and change highlights", () => {
     ).toBe(123);
   });
 });
-

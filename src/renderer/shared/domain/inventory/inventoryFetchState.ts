@@ -76,4 +76,3 @@ export const advanceDemoInventoryItems = ({
     return { ...item, earnedMinutes: nextEarned, status: nextStatus };
   });
 };
-

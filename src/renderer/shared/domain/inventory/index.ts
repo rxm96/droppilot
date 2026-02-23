@@ -5,4 +5,3 @@ export * from "./inventoryPatch";
 export * from "./inventoryPubSubPatch";
 export * from "./inventoryPubSubReconciler";
 export * from "./inventoryRules";
-

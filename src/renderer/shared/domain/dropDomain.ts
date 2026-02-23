@@ -2,7 +2,10 @@ import type { ChannelEntry, InventoryItem, WatchingState } from "@renderer/share
 
 const normalizeId = (value: unknown): string => String(value ?? "").trim();
 
-const normalizeLogin = (value: unknown): string => String(value ?? "").trim().toLowerCase();
+const normalizeLogin = (value: unknown): string =>
+  String(value ?? "")
+    .trim()
+    .toLowerCase();
 
 export type ChannelAllowlist = {
   ids: string[];
@@ -33,7 +36,9 @@ export class DropChannelRestriction {
     );
   }
 
-  static fromInventoryItem(item: Pick<InventoryItem, "allowedChannelIds" | "allowedChannelLogins">) {
+  static fromInventoryItem(
+    item: Pick<InventoryItem, "allowedChannelIds" | "allowedChannelLogins">,
+  ) {
     return new DropChannelRestriction({
       ids: item.allowedChannelIds,
       logins: item.allowedChannelLogins,

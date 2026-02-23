@@ -82,4 +82,3 @@ describe("advanceDemoInventoryItems", () => {
     expect(next[2]).toBe(items[2]);
   });
 });
-

@@ -1,5 +1,8 @@
 import type { InventoryItem, InventoryState, UserPubSubEvent } from "@renderer/shared/types";
-import { applyDropClaimToInventoryItems, applyDropProgressToInventoryItems } from "./inventoryPatch";
+import {
+  applyDropClaimToInventoryItems,
+  applyDropProgressToInventoryItems,
+} from "./inventoryPatch";
 
 export type InventoryPatchHighlightState = {
   added: Set<string>;
@@ -120,4 +123,3 @@ export const markUpdatedInventoryChange = (
   updated.add(id);
   return { added: previous.added, updated };
 };
-

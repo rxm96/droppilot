@@ -3,7 +3,13 @@ import { useAlertEffects } from "./useAlertEffects";
 import { useAppActions } from "./useAppActions";
 import { useAppBootstrap } from "./useAppBootstrap";
 import { useAuth } from "./useAuth";
-import { useCampaignWarmup, useDropClaimAlerts, useInventory, useInventoryRefresh, useTargetDrops } from "@renderer/shared/hooks/inventory";
+import {
+  useCampaignWarmup,
+  useDropClaimAlerts,
+  useInventory,
+  useInventoryRefresh,
+  useTargetDrops,
+} from "@renderer/shared/hooks/inventory";
 import {
   buildChannelAllowlist,
   useChannels,
@@ -350,7 +356,9 @@ export function useAppModel() {
         })()
       : priorityGames;
   const stallSuppressedGame =
-    watchEngineState.suppressionReason === "stall-stop" ? watchEngineState.suppressedTargetGame : "";
+    watchEngineState.suppressionReason === "stall-stop"
+      ? watchEngineState.suppressedTargetGame
+      : "";
   const orchestrationCategories = useMemo(() => {
     if (!stallSuppressedGame) return withCategories;
     return withCategories.filter(({ item }) => item.game !== stallSuppressedGame);
@@ -402,7 +410,10 @@ export function useAppModel() {
   );
   const handleSetActiveTargetGame = useCallback(
     (next: string) => {
-      dispatchWatchEngineEvent({ type: "target/manual_set", nextTargetGame: next }, "manual-target");
+      dispatchWatchEngineEvent(
+        { type: "target/manual_set", nextTargetGame: next },
+        "manual-target",
+      );
       setActiveTargetGame(next);
     },
     [dispatchWatchEngineEvent, setActiveTargetGame],
@@ -670,10 +681,7 @@ export function useAppModel() {
       }
       setAutoSelectEnabled(true);
       clearWatching();
-      dispatchWatchEngineEvent(
-        { type: "watch/stall_stop", activeTargetGame },
-        "stall-no-farmable",
-      );
+      dispatchWatchEngineEvent({ type: "watch/stall_stop", activeTargetGame }, "stall-no-farmable");
       watchStallTrackerRef.current = null;
       noFarmableDropRef.current = null;
       return;

@@ -152,7 +152,11 @@ export const computeNextActiveTargetGame = ({
   if (!obeyPriority) return activeTargetGame;
   // Avoid preempting an actively watched, still-actionable target just because a higher
   // priority game reappeared (e.g. stall suppression expiry); switch only after this session ends.
-  if (watchingGame && watchingGame === activeTargetGame && bestActionableGame !== activeTargetGame) {
+  if (
+    watchingGame &&
+    watchingGame === activeTargetGame &&
+    bestActionableGame !== activeTargetGame
+  ) {
     return activeTargetGame;
   }
   return bestActionableGame !== activeTargetGame ? bestActionableGame : activeTargetGame;
