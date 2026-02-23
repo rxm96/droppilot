@@ -9,7 +9,7 @@ import {
   isFreshCache,
   mergeChannelList,
   shouldAutoSelectChannel,
-} from "@renderer/shared/hooks/useChannels";
+} from "./useChannels";
 
 const makeChannel = (overrides: Partial<ChannelEntry> = {}): ChannelEntry => ({
   id: "1",

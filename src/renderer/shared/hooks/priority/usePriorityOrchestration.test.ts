@@ -8,7 +8,7 @@ import {
   isGameActionable,
   normalizePriorityGames,
   type WithCategory,
-} from "@renderer/shared/hooks/usePriorityOrchestration";
+} from "./usePriorityOrchestration";
 
 const makeItem = (overrides: Partial<InventoryItem> = {}): InventoryItem => ({
   id: "drop-1",
@@ -149,6 +149,22 @@ describe("priority orchestration helpers", () => {
       withCategories,
     });
     expect(strictSwitch).toBe("B");
+  });
+
+  it("does not preempt an actively watched actionable target in strict mode", () => {
+    const withCategories: WithCategory[] = [
+      { item: makeItem({ id: "a1", game: "A" }), category: "in-progress" },
+      { item: makeItem({ id: "b1", game: "B" }), category: "in-progress" },
+    ];
+    const result = computeNextActiveTargetGame({
+      inventoryStatus: "ready",
+      activeTargetGame: "B",
+      bestActionableGame: "A",
+      obeyPriority: true,
+      withCategories,
+      watchingGame: "B",
+    });
+    expect(result).toBe("B");
   });
 
   it("does not change target when inventory is not ready", () => {

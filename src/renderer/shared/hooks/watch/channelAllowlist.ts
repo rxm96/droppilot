@@ -1,3 +1,8 @@
+import {
+  DropChannelRestriction,
+  InventoryDrop,
+  type ChannelAllowlist,
+} from "@renderer/shared/domain/dropDomain";
 import type { InventoryItem } from "@renderer/shared/types";
 
 export type WithCategory = { item: InventoryItem; category: string };
@@ -13,29 +18,21 @@ export const buildChannelAllowlist = ({
   targetGame: string;
   withCategories: WithCategory[];
   allowUpcoming?: boolean;
-}): { ids: string[]; logins: string[] } | null => {
+}): ChannelAllowlist | null => {
   const game = targetGame.trim();
   if (!game) return null;
 
-  const ids = new Set<string>();
-  const logins = new Set<string>();
+  let combinedRestriction = new DropChannelRestriction();
 
   for (const { item, category } of withCategories) {
-    if (item.game !== game) continue;
+    const drop = new InventoryDrop(item);
+    if (drop.game !== game) continue;
     if (!isActionableCategory(category, allowUpcoming)) continue;
     if (item.status === "claimed") continue;
-    if (item.blocked === true) continue;
-
-    for (const rawId of item.allowedChannelIds ?? []) {
-      const id = String(rawId).trim();
-      if (id) ids.add(id);
-    }
-    for (const rawLogin of item.allowedChannelLogins ?? []) {
-      const login = rawLogin.trim().toLowerCase();
-      if (login) logins.add(login);
-    }
+    if (drop.isBlocked) continue;
+    if (!drop.restriction.hasConstraints) continue;
+    combinedRestriction = combinedRestriction.mergedWith(drop.restriction);
   }
 
-  if (ids.size === 0 && logins.size === 0) return null;
-  return { ids: Array.from(ids), logins: Array.from(logins) };
+  return combinedRestriction.toAllowlist();
 };

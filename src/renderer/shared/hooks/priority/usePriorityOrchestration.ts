@@ -128,6 +128,7 @@ export const computeNextActiveTargetGame = ({
   bestActionableGame,
   obeyPriority,
   withCategories,
+  watchingGame = "",
   allowUpcomingActionable = false,
 }: {
   inventoryStatus: InventoryState["status"];
@@ -135,6 +136,7 @@ export const computeNextActiveTargetGame = ({
   bestActionableGame: string;
   obeyPriority: boolean;
   withCategories: WithCategory[];
+  watchingGame?: string;
   allowUpcomingActionable?: boolean;
 }): string => {
   if (inventoryStatus !== "ready") return activeTargetGame;
@@ -148,6 +150,11 @@ export const computeNextActiveTargetGame = ({
   }
   if (!activeTargetGame || !currentHasDrops) return bestActionableGame;
   if (!obeyPriority) return activeTargetGame;
+  // Avoid preempting an actively watched, still-actionable target just because a higher
+  // priority game reappeared (e.g. stall suppression expiry); switch only after this session ends.
+  if (watchingGame && watchingGame === activeTargetGame && bestActionableGame !== activeTargetGame) {
+    return activeTargetGame;
+  }
   return bestActionableGame !== activeTargetGame ? bestActionableGame : activeTargetGame;
 };
 
@@ -249,6 +256,7 @@ export function usePriorityOrchestration({
       bestActionableGame,
       obeyPriority,
       withCategories,
+      watchingGame: watching?.game ?? "",
       allowUpcomingActionable: allowUnlinkedGames,
     });
     if (nextTarget !== activeTargetGame) {
@@ -261,6 +269,7 @@ export function usePriorityOrchestration({
     obeyPriority,
     withCategories,
     allowUnlinkedGames,
+    watching?.game,
   ]);
 
   return {

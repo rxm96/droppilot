@@ -1,1 +1,1 @@
-export { useAppModel } from "./useAppModel";
+export { useAppModel } from "./app";

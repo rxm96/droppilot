@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   shouldLogoutForAuthError,
   updateAuthErrorTracker,
-} from "@renderer/shared/hooks/useWatchingActions";
+} from "./useWatchingActions";
 
 describe("useWatchingActions helpers", () => {
   it("increments auth error count inside the window", () => {

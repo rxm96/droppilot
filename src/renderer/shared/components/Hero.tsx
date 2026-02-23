@@ -2,7 +2,7 @@ import type { ErrorInfo, ProfileState } from "@renderer/shared/types";
 import { formatRemaining } from "@renderer/shared/utils";
 import { useI18n } from "@renderer/shared/i18n";
 import { useEffect, useState } from "react";
-import { WATCH_INTERVAL_MS } from "@renderer/shared/hooks/useWatchPing";
+import { WATCH_INTERVAL_MS } from "@renderer/shared/hooks/watch";
 
 type HeroProps = {
   demoMode?: boolean;

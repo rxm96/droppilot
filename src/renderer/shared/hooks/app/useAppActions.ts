@@ -1,10 +1,10 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { ChannelEntry, FilterKey } from "@renderer/shared/types";
-import { usePriorityActions } from "./usePriorityActions";
+import { usePriorityActions } from "@renderer/shared/hooks/priority";
 import { useSettingsActions } from "./useSettingsActions";
 import type { AppUpdateStatus } from "./useAppBootstrap";
 import { useUpdateActions } from "./useUpdateActions";
-import { useWatchingActions } from "./useWatchingActions";
+import { useWatchingActions } from "@renderer/shared/hooks/watch";
 
 type Params = {
   newGame: string;

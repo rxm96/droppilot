@@ -7,7 +7,7 @@ import {
   isIpcOkFalseResponse,
 } from "@renderer/shared/utils/ipc";
 import { logInfo, logWarn } from "@renderer/shared/utils/logger";
-import { TWITCH_ERROR_CODES } from "../../../shared/errorCodes";
+import { TWITCH_ERROR_CODES } from "../../../../shared/errorCodes";
 
 export const WATCH_INTERVAL_MS = 59_000;
 const WATCH_JITTER_MS = 8_000;

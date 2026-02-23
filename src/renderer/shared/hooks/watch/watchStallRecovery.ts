@@ -1,4 +1,5 @@
 import type { ChannelEntry, WatchingState } from "@renderer/shared/types";
+import { DropChannelRestriction } from "@renderer/shared/domain/dropDomain";
 
 export type StallRecoveryDrop = {
   id: string;
@@ -12,15 +13,8 @@ export type WatchStallTracker = {
   lastEarnedMinutes: number;
   lastProgressAt: number;
   lastActionAt: number;
+  recoveryCount: number;
 };
-
-const normalizeIds = (values?: string[]): Set<string> =>
-  new Set((values ?? []).map((value) => String(value).trim()).filter((value) => value.length > 0));
-
-const normalizeLogins = (values?: string[]): Set<string> =>
-  new Set(
-    (values ?? []).map((value) => value.trim().toLowerCase()).filter((value) => value.length > 0),
-  );
 
 const resolveWatchingId = (watching: WatchingState): string =>
   String(watching?.channelId ?? watching?.id ?? "").trim();
@@ -39,19 +33,18 @@ const isSameAsWatching = (channel: ChannelEntry, watching: WatchingState): boole
   return false;
 };
 
-const canFarmDropOnChannel = (channel: ChannelEntry, drop: StallRecoveryDrop): boolean => {
-  const allowedIds = normalizeIds(drop.allowedChannelIds);
-  const allowedLogins = normalizeLogins(drop.allowedChannelLogins);
-  if (allowedIds.size === 0 && allowedLogins.size === 0) return true;
-  if (allowedIds.has(channel.id.trim())) return true;
-  if (allowedLogins.has(channel.login.trim().toLowerCase())) return true;
-  return false;
+const canFarmDropOnChannel = (
+  channel: ChannelEntry,
+  restriction: DropChannelRestriction,
+): boolean => {
+  return restriction.allowsChannel(channel);
 };
 
 export const buildWatchStallTrackerKey = (watching: WatchingState, dropId: string): string => {
-  const watchingId = resolveWatchingId(watching);
-  const streamId = String(watching?.streamId ?? "").trim();
-  return `${watchingId}:${streamId}:${dropId}`;
+  const gameKey = String(watching?.game ?? watching?.channelId ?? watching?.id ?? "")
+    .trim()
+    .toLowerCase();
+  return `${gameKey}:${dropId}`;
 };
 
 export const evaluateNoProgressStall = ({
@@ -71,7 +64,13 @@ export const evaluateNoProgressStall = ({
 }): { tracker: WatchStallTracker; shouldRecover: boolean } => {
   if (!tracker || tracker.key !== key) {
     return {
-      tracker: { key, lastEarnedMinutes: earnedMinutes, lastProgressAt: now, lastActionAt: 0 },
+      tracker: {
+        key,
+        lastEarnedMinutes: earnedMinutes,
+        lastProgressAt: now,
+        lastActionAt: 0,
+        recoveryCount: 0,
+      },
       shouldRecover: false,
     };
   }
@@ -82,6 +81,7 @@ export const evaluateNoProgressStall = ({
         ...tracker,
         lastEarnedMinutes: earnedMinutes,
         lastProgressAt: now,
+        recoveryCount: 0,
       },
       shouldRecover: false,
     };
@@ -98,6 +98,7 @@ export const evaluateNoProgressStall = ({
     tracker: {
       ...tracker,
       lastActionAt: now,
+      recoveryCount: tracker.recoveryCount + 1,
     },
     shouldRecover: true,
   };
@@ -113,9 +114,13 @@ export const pickStallRecoveryChannel = ({
   drop: StallRecoveryDrop;
 }): ChannelEntry | null => {
   if (!watching) return null;
+  const restriction = new DropChannelRestriction({
+    ids: drop.allowedChannelIds,
+    logins: drop.allowedChannelLogins,
+  });
   for (const channel of channels) {
     if (isSameAsWatching(channel, watching)) continue;
-    if (!canFarmDropOnChannel(channel, drop)) continue;
+    if (!canFarmDropOnChannel(channel, restriction)) continue;
     return channel;
   }
   return null;

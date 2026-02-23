@@ -1,37 +1,10 @@
 import { useMemo } from "react";
+import { InventoryDrop, InventoryDropCollection } from "@renderer/shared/domain/dropDomain";
 import type { InventoryItem, WatchingState } from "@renderer/shared/types";
 
 type WithCategory = { item: InventoryItem; category: string };
 const isActionableCategory = (category: string, allowUpcoming: boolean): boolean =>
   category === "in-progress" || (allowUpcoming && category === "upcoming");
-const getRemainingMinutes = (item: InventoryItem): number =>
-  Math.max(
-    0,
-    Math.max(0, Number(item.requiredMinutes) || 0) - Math.max(0, Number(item.earnedMinutes) || 0),
-  );
-const normalizeIds = (values?: string[]): Set<string> =>
-  new Set((values ?? []).map((value) => String(value).trim()).filter((value) => value.length > 0));
-const normalizeLogins = (values?: string[]): Set<string> =>
-  new Set(
-    (values ?? []).map((value) => value.trim().toLowerCase()).filter((value) => value.length > 0),
-  );
-const canDropProgressOnWatchingChannel = (
-  item: InventoryItem,
-  watching: WatchingState,
-  targetGame: string,
-): boolean => {
-  if (!watching || watching.game !== targetGame) return false;
-  const allowedIds = normalizeIds(item.allowedChannelIds);
-  const allowedLogins = normalizeLogins(item.allowedChannelLogins);
-  if (allowedIds.size === 0 && allowedLogins.size === 0) return true;
-  const watchingId = String(watching.channelId ?? watching.id ?? "").trim();
-  if (watchingId.length > 0 && allowedIds.has(watchingId)) return true;
-  const watchingLogin = String(watching.login ?? watching.name ?? "")
-    .trim()
-    .toLowerCase();
-  if (watchingLogin.length > 0 && allowedLogins.has(watchingLogin)) return true;
-  return false;
-};
 
 export type ActiveDropInfo = {
   id: string;
@@ -102,83 +75,86 @@ export function computeTargetDrops({
     };
   }
   const now = providedNow ?? Date.now();
-  const allForGame = inventoryItems.filter((i) => i.game === targetGame);
-  const isExpired = (item: InventoryItem) => {
-    const status = (item.campaignStatus ?? "").toUpperCase();
-    const endsAt = item.endsAt ? Date.parse(item.endsAt) : undefined;
-    return status === "EXPIRED" || (endsAt !== undefined && endsAt < now);
-  };
-  const nonExpiredForGame = allForGame.filter((i) => !isExpired(i));
-  const activeRelevant = withCategories.filter(
-    ({ item, category }) =>
-      item.game === targetGame && isActionableCategory(category, allowUnlinkedGames),
+  const collection = new InventoryDropCollection(inventoryItems);
+  const withCategoryDrops = withCategories.map(({ item, category }) => ({
+    drop: new InventoryDrop(item),
+    category,
+  }));
+  const nonExpiredForGame = collection.forGame(targetGame).filter((drop) => !drop.isExpired(now));
+  const activeRelevant = withCategoryDrops.filter(
+    ({ drop, category }) =>
+      drop.game === targetGame && isActionableCategory(category, allowUnlinkedGames),
   );
-  const inProgressRelevant = withCategories.filter(
-    ({ item, category }) =>
-      item.game === targetGame && category === "in-progress" && !isExpired(item),
+  const inProgressRelevant = withCategoryDrops.filter(
+    ({ drop, category }) =>
+      drop.game === targetGame && category === "in-progress" && !drop.isExpired(now),
   );
-  const sortCandidates = (candidates: WithCategory[]): WithCategory[] =>
+  const sortCandidates = (
+    candidates: Array<{ drop: InventoryDrop; category: string }>,
+  ): Array<{ drop: InventoryDrop; category: string }> =>
     [...candidates].sort((a, b) => {
-      const remainingA = getRemainingMinutes(a.item);
-      const remainingB = getRemainingMinutes(b.item);
+      const remainingA = a.drop.remainingMinutes;
+      const remainingB = b.drop.remainingMinutes;
       if (remainingA !== remainingB) return remainingA - remainingB;
-      const endA = a.item.endsAt ? Date.parse(a.item.endsAt) : null;
-      const endB = b.item.endsAt ? Date.parse(b.item.endsAt) : null;
+      const endA = a.drop.raw.endsAt ? Date.parse(a.drop.raw.endsAt) : null;
+      const endB = b.drop.raw.endsAt ? Date.parse(b.drop.raw.endsAt) : null;
       const safeEndA = endA && endA > now ? endA : Number.POSITIVE_INFINITY;
       const safeEndB = endB && endB > now ? endB : Number.POSITIVE_INFINITY;
       if (safeEndA !== safeEndB) return safeEndA - safeEndB;
-      const startA = a.item.startsAt ? Date.parse(a.item.startsAt) : 0;
-      const startB = b.item.startsAt ? Date.parse(b.item.startsAt) : 0;
+      const startA = a.drop.raw.startsAt ? Date.parse(a.drop.raw.startsAt) : 0;
+      const startB = b.drop.raw.startsAt ? Date.parse(b.drop.raw.startsAt) : 0;
       if (startA !== startB) return startA - startB;
-      return (a.item.title || "").localeCompare(b.item.title || "");
+      return a.drop.title.localeCompare(b.drop.title);
     });
   const sortedActive = sortCandidates(activeRelevant);
   const sortedInProgress = sortCandidates(inProgressRelevant);
-  const upcomingRelevant = withCategories.filter(
-    ({ item, category }) =>
-      item.game === targetGame && category === "upcoming" && item.blocked !== true,
+  const upcomingRelevant = withCategoryDrops.filter(
+    ({ drop, category }) =>
+      drop.game === targetGame && category === "upcoming" && drop.isBlocked !== true,
   );
   const sortedUpcoming = sortCandidates(upcomingRelevant);
-  const sortedActiveItems = sortedActive.map((s) => s.item);
-  const remaining = nonExpiredForGame.filter((i) => !sortedActiveItems.includes(i));
-  const compareByCampaignAndDrop = (a: InventoryItem, b: InventoryItem) => {
+  const sortedActiveItems = sortedActive.map((s) => s.drop);
+  const sortedActiveIds = new Set(sortedActiveItems.map((drop) => drop.id));
+  const remaining = nonExpiredForGame.filter((drop) => !sortedActiveIds.has(drop.id));
+  const compareByCampaignAndDrop = (a: InventoryDrop, b: InventoryDrop) => {
     const campaignLabelA =
-      a.campaignName?.trim().toLocaleLowerCase() ||
-      a.campaignId?.trim().toLocaleLowerCase() ||
+      a.raw.campaignName?.trim().toLocaleLowerCase() ||
+      a.raw.campaignId?.trim().toLocaleLowerCase() ||
       `drop-${a.id}`;
     const campaignLabelB =
-      b.campaignName?.trim().toLocaleLowerCase() ||
-      b.campaignId?.trim().toLocaleLowerCase() ||
+      b.raw.campaignName?.trim().toLocaleLowerCase() ||
+      b.raw.campaignId?.trim().toLocaleLowerCase() ||
       `drop-${b.id}`;
     if (campaignLabelA !== campaignLabelB) {
       return campaignLabelA.localeCompare(campaignLabelB);
     }
-    const requiredA = Math.max(0, Number(a.requiredMinutes) || 0);
-    const requiredB = Math.max(0, Number(b.requiredMinutes) || 0);
+    const requiredA = a.requiredMinutes;
+    const requiredB = b.requiredMinutes;
     if (requiredA !== requiredB) return requiredA - requiredB;
-    const earnedA = Math.max(0, Number(a.earnedMinutes) || 0);
-    const earnedB = Math.max(0, Number(b.earnedMinutes) || 0);
+    const earnedA = a.earnedMinutes;
+    const earnedB = b.earnedMinutes;
     if (earnedA !== earnedB) return earnedA - earnedB;
-    return (a.title || "").localeCompare(b.title || "");
+    return a.title.localeCompare(b.title);
   };
-  const targetDrops = [
+  const targetDropEntries = [
     ...[...sortedActiveItems].sort(compareByCampaignAndDrop),
     ...[...remaining].sort(compareByCampaignAndDrop),
   ];
+  const targetDrops = targetDropEntries.map((drop) => drop.raw);
 
   const totalDrops = targetDrops.length;
-  const claimedDrops = targetDrops.filter((i) => i.status === "claimed").length;
-  const hasUnclaimedTarget = withCategories.some(
-    ({ item, category }) =>
-      item.game === targetGame && isActionableCategory(category, allowUnlinkedGames),
+  const claimedDrops = targetDropEntries.filter((drop) => drop.raw.status === "claimed").length;
+  const hasUnclaimedTarget = withCategoryDrops.some(
+    ({ drop, category }) =>
+      drop.game === targetGame && isActionableCategory(category, allowUnlinkedGames),
   );
   const canWatchTarget = allowWatching && !!targetGame && hasUnclaimedTarget;
   const showNoDropsHint = !!targetGame && !hasUnclaimedTarget;
 
-  const campaignMinutes = targetDrops.reduce((map, drop) => {
-    const key = drop.campaignId || `drop-${drop.id}`;
-    const req = Math.max(0, Number(drop.requiredMinutes) || 0);
-    const earned = Math.min(req, Math.max(0, Number(drop.earnedMinutes) || 0));
+  const campaignMinutes = targetDropEntries.reduce((map, drop) => {
+    const key = drop.raw.campaignId || `drop-${drop.id}`;
+    const req = drop.requiredMinutes;
+    const earned = Math.min(req, drop.earnedMinutes);
     const existing = map.get(key) ?? { req: 0, earned: 0 };
     map.set(key, { req: Math.max(existing.req, req), earned: Math.max(existing.earned, earned) });
     return map;
@@ -194,18 +170,16 @@ export function computeTargetDrops({
   const isWatchingAnyChannel = Boolean(watching);
   const isWatchingTargetGame = Boolean(watching && watching.game === targetGame);
   const farmableInProgress = isWatchingTargetGame
-    ? (sortedInProgress.find(({ item }) =>
-        canDropProgressOnWatchingChannel(item, watching, targetGame),
-      )?.item ?? null)
+    ? (sortedInProgress.find(({ drop }) => drop.canProgressOnWatchingChannel(watching, targetGame))
+        ?.drop ?? null)
     : null;
   const farmableUpcoming = isWatchingTargetGame
-    ? (sortedUpcoming.find(({ item }) =>
-        canDropProgressOnWatchingChannel(item, watching, targetGame),
-      )?.item ?? null)
+    ? (sortedUpcoming.find(({ drop }) => drop.canProgressOnWatchingChannel(watching, targetGame))
+        ?.drop ?? null)
     : null;
   const activeDrop = isWatchingAnyChannel
     ? (farmableInProgress ?? farmableUpcoming ?? null)
-    : (sortedInProgress[0]?.item ?? null);
+    : (sortedInProgress[0]?.drop ?? null);
   const activeDropAnchorAt = (() => {
     if (!activeDrop) return null;
     const byDrop = progressAnchorByDropId?.[activeDrop.id];
@@ -218,8 +192,8 @@ export function computeTargetDrops({
     liveDeltaMinutesRaw,
     Math.max(0, totalRequiredMinutes - totalEarnedMinutes),
   );
-  const activeDropRequired = activeDrop ? Math.max(0, Number(activeDrop.requiredMinutes) || 0) : 0;
-  const activeDropEarned = activeDrop ? Math.max(0, Number(activeDrop.earnedMinutes) || 0) : 0;
+  const activeDropRequired = activeDrop ? activeDrop.requiredMinutes : 0;
+  const activeDropEarned = activeDrop ? activeDrop.earnedMinutes : 0;
   const liveDeltaApplied = activeDrop
     ? Math.min(liveDeltaMinutes, Math.max(0, activeDropRequired - activeDropEarned))
     : 0;
@@ -244,10 +218,10 @@ export function computeTargetDrops({
         remainingMinutes: activeDropRemainingMinutes,
         eta: activeDropEta,
         progressAnchorAt: activeDropAnchorAt ?? undefined,
-        dropInstanceId: activeDrop.dropInstanceId,
-        campaignId: activeDrop.campaignId,
-        allowedChannelIds: activeDrop.allowedChannelIds,
-        allowedChannelLogins: activeDrop.allowedChannelLogins,
+        dropInstanceId: activeDrop.raw.dropInstanceId,
+        campaignId: activeDrop.raw.campaignId,
+        allowedChannelIds: activeDrop.raw.allowedChannelIds,
+        allowedChannelLogins: activeDrop.raw.allowedChannelLogins,
       }
     : null;
 

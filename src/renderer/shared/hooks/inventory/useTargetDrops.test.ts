@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { InventoryItem, WatchingState } from "@renderer/shared/types";
-import { computeTargetDrops } from "@renderer/shared/hooks/useTargetDrops";
+import { computeTargetDrops } from "./useTargetDrops";
 
 const makeItem = (overrides: Partial<InventoryItem> = {}): InventoryItem => ({
   id: "drop-1",

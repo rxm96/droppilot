@@ -12,7 +12,7 @@ import {
   isGameActionable,
   normalizePriorityGames,
   type WithCategory,
-} from "./usePriorityOrchestration";
+} from "@renderer/shared/hooks/priority";
 
 type Params = {
   allowWatching: boolean;

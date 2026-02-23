@@ -4,7 +4,7 @@ import {
   buildWatchStallTrackerKey,
   evaluateNoProgressStall,
   pickStallRecoveryChannel,
-} from "@renderer/shared/hooks/watchStallRecovery";
+} from "./watchStallRecovery";
 
 const makeChannel = (overrides: Partial<ChannelEntry> = {}): ChannelEntry => ({
   id: "1",
@@ -26,7 +26,28 @@ describe("watchStallRecovery helpers", () => {
       game: "Game",
       streamId: "stream-1",
     };
-    expect(buildWatchStallTrackerKey(watching, "drop-1")).toBe("chan-1:stream-1:drop-1");
+    expect(buildWatchStallTrackerKey(watching, "drop-1")).toBe("game:drop-1");
+  });
+
+  it("keeps the same stall key across channel switches within the same game", () => {
+    const first: WatchingState = {
+      id: "chan-1",
+      channelId: "chan-1",
+      login: "alpha",
+      name: "Alpha",
+      game: "Game",
+      streamId: "stream-1",
+    };
+    const second: WatchingState = {
+      id: "chan-2",
+      channelId: "chan-2",
+      login: "beta",
+      name: "Beta",
+      game: "Game",
+      streamId: "stream-2",
+    };
+    expect(buildWatchStallTrackerKey(first, "drop-1")).toBe("game:drop-1");
+    expect(buildWatchStallTrackerKey(second, "drop-1")).toBe("game:drop-1");
   });
 
   it("does not trigger recovery before the no-progress window", () => {
@@ -67,6 +88,7 @@ describe("watchStallRecovery helpers", () => {
       actionCooldownMs: 5_000,
     });
     expect(firstRecovery.shouldRecover).toBe(true);
+    expect(firstRecovery.tracker.recoveryCount).toBe(1);
     const duringCooldown = evaluateNoProgressStall({
       tracker: firstRecovery.tracker,
       key: "k",
@@ -76,6 +98,45 @@ describe("watchStallRecovery helpers", () => {
       actionCooldownMs: 5_000,
     });
     expect(duringCooldown.shouldRecover).toBe(false);
+  });
+
+  it("increments recovery count on repeated stall recoveries and resets on progress", () => {
+    const init = evaluateNoProgressStall({
+      tracker: null,
+      key: "k",
+      earnedMinutes: 5,
+      now: 0,
+      noProgressWindowMs: 10_000,
+      actionCooldownMs: 1_000,
+    });
+    const firstRecovery = evaluateNoProgressStall({
+      tracker: init.tracker,
+      key: "k",
+      earnedMinutes: 5,
+      now: 10_001,
+      noProgressWindowMs: 10_000,
+      actionCooldownMs: 1_000,
+    });
+    const secondRecovery = evaluateNoProgressStall({
+      tracker: firstRecovery.tracker,
+      key: "k",
+      earnedMinutes: 5,
+      now: 11_002,
+      noProgressWindowMs: 10_000,
+      actionCooldownMs: 1_000,
+    });
+    expect(secondRecovery.shouldRecover).toBe(true);
+    expect(secondRecovery.tracker.recoveryCount).toBe(2);
+    const progressed = evaluateNoProgressStall({
+      tracker: secondRecovery.tracker,
+      key: "k",
+      earnedMinutes: 6,
+      now: 12_000,
+      noProgressWindowMs: 10_000,
+      actionCooldownMs: 1_000,
+    });
+    expect(progressed.shouldRecover).toBe(false);
+    expect(progressed.tracker.recoveryCount).toBe(0);
   });
 
   it("resets stall tracking when earned minutes increase", () => {

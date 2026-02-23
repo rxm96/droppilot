@@ -7,8 +7,8 @@ import type {
   InventoryState,
   WatchingState,
 } from "@renderer/shared/types";
-import type { ActiveDropInfo } from "./useTargetDrops";
-import type { WatchStats } from "./useWatchPing";
+import type { ActiveDropInfo } from "@renderer/shared/hooks/inventory";
+import type { WatchStats } from "@renderer/shared/hooks/watch";
 import { resolveErrorMessage } from "@renderer/shared/utils/errors";
 
 type NotifyFn = (payload: {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { InventoryItem } from "@renderer/shared/types";
-import { buildChannelAllowlist, type WithCategory } from "@renderer/shared/hooks/channelAllowlist";
+import { buildChannelAllowlist, type WithCategory } from "./channelAllowlist";
 
 const makeItem = (overrides: Partial<InventoryItem> = {}): InventoryItem => ({
   id: "drop-1",

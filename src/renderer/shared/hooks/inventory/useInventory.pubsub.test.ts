@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { InventoryItem, UserPubSubEvent } from "@renderer/shared/types";
-import { applyDropClaimToInventoryItems, applyDropProgressToInventoryItems } from "./useInventory";
+import {
+  applyDropClaimToInventoryItems,
+  applyDropProgressToInventoryItems,
+  shouldDeduplicateInFlightForceFetch,
+} from "./useInventory";
 
 const makeItem = (overrides: Partial<InventoryItem> = {}): InventoryItem => ({
   id: "drop-1",
@@ -138,5 +142,49 @@ describe("applyDropClaimToInventoryItems", () => {
     expect(patched.changed).toBe(false);
     expect(patched.items[0].status).toBe("claimed");
     expect(patched.items[0].earnedMinutes).toBe(60);
+  });
+});
+
+describe("shouldDeduplicateInFlightForceFetch", () => {
+  it("returns true when a second forced fetch arrives shortly after a forced in-flight fetch", () => {
+    const dedupe = shouldDeduplicateInFlightForceFetch({
+      now: 10_000,
+      inFlightStartedAt: 5_000,
+      inFlightForceLoading: true,
+      nextForceLoading: true,
+      dedupeWindowMs: 8_000,
+    });
+    expect(dedupe).toBe(true);
+  });
+
+  it("returns false when outside dedupe window", () => {
+    const dedupe = shouldDeduplicateInFlightForceFetch({
+      now: 20_000,
+      inFlightStartedAt: 5_000,
+      inFlightForceLoading: true,
+      nextForceLoading: true,
+      dedupeWindowMs: 8_000,
+    });
+    expect(dedupe).toBe(false);
+  });
+
+  it("returns false when either request is not forced", () => {
+    const noIncomingForce = shouldDeduplicateInFlightForceFetch({
+      now: 10_000,
+      inFlightStartedAt: 5_000,
+      inFlightForceLoading: true,
+      nextForceLoading: false,
+      dedupeWindowMs: 8_000,
+    });
+    expect(noIncomingForce).toBe(false);
+
+    const noInFlightForce = shouldDeduplicateInFlightForceFetch({
+      now: 10_000,
+      inFlightStartedAt: 5_000,
+      inFlightForceLoading: false,
+      nextForceLoading: true,
+      dedupeWindowMs: 8_000,
+    });
+    expect(noInFlightForce).toBe(false);
   });
 });

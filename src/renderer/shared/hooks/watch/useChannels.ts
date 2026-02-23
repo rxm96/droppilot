@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  DropChannelRestriction,
+  type ChannelAllowlist,
+} from "@renderer/shared/domain/dropDomain";
 import type {
   AutoSwitchInfo,
   ChannelDiff,
@@ -19,7 +23,7 @@ import {
   isIpcErrorResponse,
 } from "@renderer/shared/utils/ipc";
 import { logDebug, logInfo, logWarn } from "@renderer/shared/utils/logger";
-import { RENDERER_ERROR_CODES } from "../../../shared/errorCodes";
+import { RENDERER_ERROR_CODES } from "../../../../shared/errorCodes";
 
 type Params = {
   targetGame: string;
@@ -35,7 +39,7 @@ type Params = {
   trackerMode?: ChannelTrackerMode | null;
   demoMode?: boolean;
   onAuthError?: (message?: string) => void;
-  channelAllowlist?: { ids: string[]; logins: string[] } | null;
+  channelAllowlist?: ChannelAllowlist | null;
   manualWatchOverride?: { at: number; game: string } | null;
 };
 
@@ -243,7 +247,7 @@ export const computeAutoSwitchAction = ({
   autoSwitchEnabled: boolean;
   forcePrioritySwitch: boolean;
   canWatchTarget: boolean;
-  channelAllowlist?: { ids: string[]; logins: string[] } | null;
+  channelAllowlist?: ChannelAllowlist | null;
 }):
   | { action: "none" }
   | { action: "clear" }
@@ -251,14 +255,8 @@ export const computeAutoSwitchAction = ({
   if (!allowWatching) return { action: "none" };
   if (!watching) return { action: "none" };
   const normalizedAllowlist = normalizeAllowlist(channelAllowlist);
-  const isAllowed = (channel: ChannelEntry): boolean => {
-    if (!normalizedAllowlist) return false;
-    const channelId = channel.id?.trim();
-    if (channelId && normalizedAllowlist.ids.has(channelId)) return true;
-    const login = channel.login?.trim().toLowerCase();
-    if (login && normalizedAllowlist.logins.has(login)) return true;
-    return false;
-  };
+  const isAllowed = (channel: ChannelEntry): boolean =>
+    normalizedAllowlist ? normalizedAllowlist.allowsChannel(channel) : false;
   const preferredChannel = normalizedAllowlist
     ? channels.find((channel) => isAllowed(channel))
     : null;
@@ -299,24 +297,15 @@ export const isManualPriorityOverrideActive = ({
 };
 
 const normalizeAllowlist = (
-  allowlist?: { ids: string[]; logins: string[] } | null,
-): { ids: Set<string>; logins: Set<string> } | null => {
-  if (!allowlist) return null;
-  const ids = new Set(
-    (allowlist.ids ?? []).map((value) => String(value).trim()).filter((value) => value.length > 0),
-  );
-  const logins = new Set(
-    (allowlist.logins ?? [])
-      .map((value) => value.trim().toLowerCase())
-      .filter((value) => value.length > 0),
-  );
-  if (ids.size === 0 && logins.size === 0) return null;
-  return { ids, logins };
+  allowlist?: ChannelAllowlist | null,
+): DropChannelRestriction | null => {
+  const restriction = DropChannelRestriction.fromAllowlist(allowlist);
+  return restriction.hasConstraints ? restriction : null;
 };
 
 const prioritizeChannelsByAllowlist = (
   channels: ChannelEntry[],
-  allowlist?: { ids: string[]; logins: string[] } | null,
+  allowlist?: ChannelAllowlist | null,
 ): ChannelEntry[] => {
   const normalized = normalizeAllowlist(allowlist);
   if (!normalized) return channels;
@@ -325,11 +314,8 @@ const prioritizeChannelsByAllowlist = (
   let sawFallback = false;
   let requiresReorder = false;
   for (const channel of channels) {
-    const channelId = channel.id?.trim();
-    const idAllowed = !!channelId && normalized.ids.has(channelId);
-    const login = channel.login?.trim().toLowerCase();
-    const loginAllowed = !!login && normalized.logins.has(login);
-    if (idAllowed || loginAllowed) {
+    const allowedMatch = normalized.allowsChannel(channel);
+    if (allowedMatch) {
       allowed.push(channel);
       if (sawFallback) requiresReorder = true;
     } else {
@@ -341,7 +327,7 @@ const prioritizeChannelsByAllowlist = (
   return [...allowed, ...fallback];
 };
 
-const buildAllowlistKey = (allowlist?: { ids: string[]; logins: string[] } | null): string => {
+const buildAllowlistKey = (allowlist?: ChannelAllowlist | null): string => {
   const normalized = normalizeAllowlist(allowlist);
   if (!normalized) return "";
   const ids = Array.from(normalized.ids).sort().join(",");
@@ -351,19 +337,17 @@ const buildAllowlistKey = (allowlist?: { ids: string[]; logins: string[] } | nul
 
 const getAllowlistMatchKind = (
   channel: ChannelEntry,
-  normalized: { ids: Set<string>; logins: Set<string> } | null,
+  normalized: DropChannelRestriction | null,
 ): "id" | "login" | "none" => {
   if (!normalized) return "none";
-  const channelId = channel.id?.trim();
-  if (channelId && normalized.ids.has(channelId)) return "id";
-  const login = channel.login?.trim().toLowerCase();
-  if (login && normalized.logins.has(login)) return "login";
+  if (normalized.matchesId(channel.id)) return "id";
+  if (normalized.matchesLogin(channel.login)) return "login";
   return "none";
 };
 
 const countAllowlistedChannels = (
   channels: ChannelEntry[],
-  normalized: { ids: Set<string>; logins: Set<string> } | null,
+  normalized: DropChannelRestriction | null,
 ): number => {
   if (!normalized) return 0;
   let count = 0;
@@ -375,7 +359,7 @@ const countAllowlistedChannels = (
 
 const findFirstAllowlistedIndex = (
   channels: ChannelEntry[],
-  normalized: { ids: Set<string>; logins: Set<string> } | null,
+  normalized: DropChannelRestriction | null,
 ): number => {
   if (!normalized) return -1;
   return channels.findIndex((channel) => getAllowlistMatchKind(channel, normalized) !== "none");
@@ -383,7 +367,7 @@ const findFirstAllowlistedIndex = (
 
 const buildChannelPrioritySample = (
   channels: ChannelEntry[],
-  normalized: { ids: Set<string>; logins: Set<string> } | null,
+  normalized: DropChannelRestriction | null,
   limit = 5,
 ) =>
   channels.slice(0, limit).map((channel) => ({
@@ -395,16 +379,10 @@ const buildChannelPrioritySample = (
 
 const isWatchingAllowlisted = (
   watching: WatchingState,
-  normalized: { ids: Set<string>; logins: Set<string> } | null,
+  normalized: DropChannelRestriction | null,
 ): boolean | null => {
   if (!watching || !normalized) return null;
-  const watchingId = String(watching.channelId ?? watching.id ?? "").trim();
-  if (watchingId && normalized.ids.has(watchingId)) return true;
-  const watchingLogin = String(watching.login ?? watching.name ?? "")
-    .trim()
-    .toLowerCase();
-  if (watchingLogin && normalized.logins.has(watchingLogin)) return true;
-  return false;
+  return normalized.allowsWatching(watching);
 };
 
 const logChannelPrioritySnapshot = ({
@@ -422,7 +400,7 @@ const logChannelPrioritySnapshot = ({
   game: string;
   raw: ChannelEntry[];
   prioritized: ChannelEntry[];
-  allowlist?: { ids: string[]; logins: string[] } | null;
+  allowlist?: ChannelAllowlist | null;
   watching: WatchingState;
   source?: "ws" | "fetch";
   reason?: "snapshot" | "stream-up" | "stream-down" | "viewers";

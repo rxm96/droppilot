@@ -17,7 +17,7 @@ import {
 } from "@renderer/shared/utils/ipc";
 import { isVerboseLoggingEnabled, logDebug } from "@renderer/shared/utils/logger";
 import { setLogCollectionEnabled } from "@renderer/shared/utils/logStore";
-import { RENDERER_ERROR_CODES, TWITCH_ERROR_CODES } from "../../../shared/errorCodes";
+import { RENDERER_ERROR_CODES, TWITCH_ERROR_CODES } from "../../../../shared/errorCodes";
 
 type FetchInventory = (opts?: { forceLoading?: boolean }) => Promise<void>;
 

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { StatsData, StatsState } from "@renderer/shared/types";
 import { isIpcErrorResponse, isStatsData } from "@renderer/shared/utils/ipc";
 import { errorInfoFromIpc, errorInfoFromUnknown } from "@renderer/shared/utils/errors";
-import { RENDERER_ERROR_CODES } from "../../../shared/errorCodes";
+import { RENDERER_ERROR_CODES } from "../../../../shared/errorCodes";
 
 const computeNext = (
   current: StatsData,
