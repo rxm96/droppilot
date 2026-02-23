@@ -9,6 +9,7 @@ import type {
   InventoryItem,
   WatchingState,
 } from "@renderer/shared/types";
+import { DropChannelRestriction } from "@renderer/shared/domain/dropDomain";
 import { mapStatusLabel } from "@renderer/shared/utils";
 import { useI18n } from "@renderer/shared/i18n";
 import { resolveErrorMessage } from "@renderer/shared/utils/errors";
@@ -54,38 +55,20 @@ const pickDisplayBlockingReason = (reasons: string[]): string | undefined => {
   return cleaned[0];
 };
 
-const normalizeIds = (values?: string[]) =>
-  new Set((values ?? []).map((value) => String(value).trim()).filter((value) => value.length > 0));
-
-const normalizeLogins = (values?: string[]) =>
-  new Set(
-    (values ?? []).map((value) => value.trim().toLowerCase()).filter((value) => value.length > 0),
-  );
-
 const canDropProgressOnWatchingChannel = (
   drop: InventoryItem,
   watching: WatchingState,
 ): boolean => {
   if (!watching) return true;
-  const allowedIds = normalizeIds(drop.allowedChannelIds);
-  const allowedLogins = normalizeLogins(drop.allowedChannelLogins);
-  if (allowedIds.size === 0 && allowedLogins.size === 0) return true;
-  const watchingId = String(watching.channelId ?? watching.id ?? "").trim();
-  if (watchingId.length > 0 && allowedIds.has(watchingId)) return true;
-  const watchingLogin = String(watching.login ?? watching.name ?? "")
-    .trim()
-    .toLowerCase();
-  if (watchingLogin.length > 0 && allowedLogins.has(watchingLogin)) return true;
-  return false;
+  const restriction = DropChannelRestriction.fromInventoryItem(drop);
+  return restriction.allowsWatching(watching);
 };
 
 const formatChannelRestrictionReason = (
   drop: InventoryItem,
   t: (key: string, vars?: Record<string, string | number>) => string,
 ): string => {
-  const allowedLogins = (drop.allowedChannelLogins ?? [])
-    .map((login) => login.trim())
-    .filter((login) => login.length > 0);
+  const allowedLogins = Array.from(DropChannelRestriction.fromInventoryItem(drop).logins);
   if (allowedLogins.length > 0) {
     const preview = allowedLogins.slice(0, 3).map((login) => `@${login}`).join(", ");
     return t("control.dropReason.channelRestrictedChannels", { channels: preview });
