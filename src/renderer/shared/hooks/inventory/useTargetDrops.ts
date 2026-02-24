@@ -106,8 +106,15 @@ export function computeTargetDrops({
       if (startA !== startB) return startA - startB;
       return a.drop.title.localeCompare(b.drop.title);
     });
+  const isWatchableInProgress = ({ drop, category }: { drop: InventoryDrop; category: string }) =>
+    drop.game === targetGame &&
+    category === "in-progress" &&
+    !drop.isExpired(now) &&
+    drop.isBlocked !== true &&
+    drop.remainingMinutes > 0 &&
+    drop.raw.isClaimable !== true;
   const sortedActive = sortCandidates(activeRelevant);
-  const sortedInProgress = sortCandidates(inProgressRelevant);
+  const sortedInProgress = sortCandidates(inProgressRelevant.filter(isWatchableInProgress));
   const upcomingRelevant = withCategoryDrops.filter(
     ({ drop, category }) =>
       drop.game === targetGame && category === "upcoming" && drop.isBlocked !== true,
@@ -148,7 +155,9 @@ export function computeTargetDrops({
     ({ drop, category }) =>
       drop.game === targetGame && isActionableCategory(category, allowUnlinkedGames),
   );
-  const canWatchTarget = allowWatching && !!targetGame && hasUnclaimedTarget;
+  const hasWatchableTarget =
+    sortedInProgress.length > 0 || (allowUnlinkedGames && sortedUpcoming.length > 0);
+  const canWatchTarget = allowWatching && !!targetGame && hasWatchableTarget;
   const showNoDropsHint = !!targetGame && !hasUnclaimedTarget;
 
   const campaignMinutes = targetDropEntries.reduce((map, drop) => {

@@ -39,9 +39,21 @@ import { isVerboseLoggingEnabled, logDebug, logInfo } from "@renderer/shared/uti
 const CLAIM_PROBE_NEAR_END_MINUTES = 1;
 const CLAIM_PROBE_INTERVAL_MS = 25_000;
 const STALL_NO_PROGRESS_WINDOW_MS = 15 * 60_000;
+const STALL_NO_PROGRESS_WINDOW_NEAR_END_MS = 3 * 60_000;
 const STALL_RECOVERY_COOLDOWN_MS = 60_000;
 const STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS = 2;
+const STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS_NEAR_END = 1;
 const NO_FARMABLE_DROP_GRACE_MS = 30_000;
+const NO_FARMABLE_GAME_COOLDOWN_MS = 10 * 60_000;
+const NO_PROGRESS_GAME_COOLDOWN_MS = 30 * 60_000;
+
+const toConsoleSnapshot = <T>(value: T): T => {
+  try {
+    return JSON.parse(JSON.stringify(value)) as T;
+  } catch {
+    return value;
+  }
+};
 
 export function useAppModel() {
   const { auth, startLogin, logout } = useAuth();
@@ -124,6 +136,10 @@ export function useAppModel() {
   const claimProbeLastAtRef = useRef(0);
   const watchStallTrackerRef = useRef<WatchStallTracker | null>(null);
   const noFarmableDropRef = useRef<{ key: string; sinceAt: number } | null>(null);
+  const [stalledGameCooldownUntil, setStalledGameCooldownUntil] = useState<Record<string, number>>(
+    {},
+  );
+  const activeCampaignDebugSignatureRef = useRef<string>("");
 
   const isLinked = auth.status === "ok";
   const isLinkedOrDemo = isLinked || demoMode;
@@ -193,6 +209,78 @@ export function useAppModel() {
     },
     [dispatchWatchEngine],
   );
+  const setStalledGameCooldown = useCallback(
+    (rawGame: string, durationMs: number, reason: "stall-no-farmable" | "stall-no-progress") => {
+      const game = rawGame.trim();
+      if (!game) return;
+      const now = Date.now();
+      const until = now + durationMs;
+      setStalledGameCooldownUntil((prev) => {
+        const current = prev[game] ?? 0;
+        if (current >= until) return prev;
+        logInfo("watch-engine: cooldown", {
+          reason,
+          game,
+          durationMs,
+          until,
+        });
+        return { ...prev, [game]: until };
+      });
+    },
+    [],
+  );
+  const clearStalledGameCooldown = useCallback((rawGame: string, context: string) => {
+    const game = rawGame.trim();
+    if (!game) return;
+    setStalledGameCooldownUntil((prev) => {
+      if (!(game in prev)) return prev;
+      const next = { ...prev };
+      delete next[game];
+      logInfo("watch-engine: cooldown clear", { context, game });
+      return next;
+    });
+  }, []);
+  useEffect(() => {
+    const entries = Object.entries(stalledGameCooldownUntil);
+    if (entries.length === 0) return;
+    const now = Date.now();
+    const expiredGames = entries
+      .filter(([, until]) => !Number.isFinite(until) || until <= now)
+      .map(([game]) => game);
+    if (expiredGames.length > 0) {
+      setStalledGameCooldownUntil((prev) => {
+        const next = { ...prev };
+        let changed = false;
+        for (const game of expiredGames) {
+          if (!(game in next)) continue;
+          delete next[game];
+          changed = true;
+        }
+        return changed ? next : prev;
+      });
+      return;
+    }
+    const nextExpiry = Math.min(...entries.map(([, until]) => until));
+    const timer = window.setTimeout(
+      () => {
+        setStalledGameCooldownUntil((prev) => {
+          const cutoff = Date.now();
+          let changed = false;
+          const next: Record<string, number> = {};
+          for (const [game, until] of Object.entries(prev)) {
+            if (Number.isFinite(until) && until > cutoff) {
+              next[game] = until;
+              continue;
+            }
+            changed = true;
+          }
+          return changed ? next : prev;
+        });
+      },
+      Math.max(0, nextExpiry - now) + 32,
+    );
+    return () => window.clearTimeout(timer);
+  }, [stalledGameCooldownUntil]);
   const forwardAuthError = useCallback((message?: string) => {
     authErrorHandlerRef.current?.(message);
   }, []);
@@ -359,10 +447,27 @@ export function useAppModel() {
     watchEngineState.suppressionReason === "stall-stop"
       ? watchEngineState.suppressedTargetGame
       : "";
+  const isGameInStallCooldown = useCallback(
+    (rawGame: string, now = Date.now()): boolean => {
+      const game = rawGame.trim();
+      if (!game) return false;
+      const until = stalledGameCooldownUntil[game];
+      return typeof until === "number" && Number.isFinite(until) && until > now;
+    },
+    [stalledGameCooldownUntil],
+  );
   const orchestrationCategories = useMemo(() => {
-    if (!stallSuppressedGame) return withCategories;
-    return withCategories.filter(({ item }) => item.game !== stallSuppressedGame);
-  }, [stallSuppressedGame, withCategories]);
+    if (!stallSuppressedGame && Object.keys(stalledGameCooldownUntil).length === 0) {
+      return withCategories;
+    }
+    const now = Date.now();
+    return withCategories.filter(({ item }) => {
+      const game = item.game.trim();
+      if (!game) return true;
+      if (stallSuppressedGame && game === stallSuppressedGame) return false;
+      return !isGameInStallCooldown(game, now);
+    });
+  }, [isGameInStallCooldown, stallSuppressedGame, stalledGameCooldownUntil, withCategories]);
 
   const {
     activeTargetGame,
@@ -399,36 +504,38 @@ export function useAppModel() {
         currentIndex >= 0
           ? [...ordered.slice(currentIndex + 1), ...ordered.slice(0, currentIndex)]
           : ordered;
-      const candidates = rotated.filter((game) => game !== current);
+      const candidates = rotated.filter((game) => game !== current && !isGameInStallCooldown(game));
       if (candidates.length === 0) return "";
       const actionable = candidates.find((game) =>
-        isGameActionable(game, withCategories, { allowUpcoming: allowUnlinkedGames }),
+        isGameActionable(game, orchestrationCategories, { allowUpcoming: allowUnlinkedGames }),
       );
       return actionable ?? candidates[0] ?? "";
     },
-    [allowUnlinkedGames, priorityOrder, withCategories],
+    [allowUnlinkedGames, isGameInStallCooldown, orchestrationCategories, priorityOrder],
   );
   const handleSetActiveTargetGame = useCallback(
     (next: string) => {
+      clearStalledGameCooldown(next, "manual-target");
       dispatchWatchEngineEvent(
         { type: "target/manual_set", nextTargetGame: next },
         "manual-target",
       );
       setActiveTargetGame(next);
     },
-    [dispatchWatchEngineEvent, setActiveTargetGame],
+    [clearStalledGameCooldown, dispatchWatchEngineEvent, setActiveTargetGame],
   );
   const handleStopWatching = actions.handleStopWatching;
   const startWatching = actions.startWatching;
   const handleStartWatching = useCallback(
     (channel: Parameters<typeof startWatching>[0]) => {
+      clearStalledGameCooldown(channel.game, "manual-watch-start");
       dispatchWatchEngineEvent(
         { type: "watch/manual_start", watchingGame: channel.game },
         "manual-watch-start",
       );
       startWatching(channel);
     },
-    [dispatchWatchEngineEvent, startWatching],
+    [clearStalledGameCooldown, dispatchWatchEngineEvent, startWatching],
   );
   const handleStopWatchingWithSuppressedTarget = useCallback(() => {
     handleStopWatching();
@@ -533,6 +640,50 @@ export function useAppModel() {
     inventoryFetchedAt,
     progressAnchorByDropId,
   });
+
+  useEffect(() => {
+    const activeDropId = activeDropInfo?.id?.trim() ?? "";
+    const activeCampaignId = activeDropInfo?.campaignId?.trim() ?? "";
+    const watchingId = watching?.channelId ?? watching?.id ?? "";
+    const signature = [
+      activeDropId,
+      activeCampaignId,
+      targetGame,
+      watchingId,
+      inventoryFetchedAt ?? "",
+    ].join("|");
+    if (activeCampaignDebugSignatureRef.current === signature) return;
+    activeCampaignDebugSignatureRef.current = signature;
+
+    const activeDropRaw =
+      (activeDropId ? inventoryItems.find((item) => item.id === activeDropId) : null) ?? null;
+    const activeCampaignSummary =
+      (activeCampaignId ? campaigns.find((campaign) => campaign.id === activeCampaignId) : null) ??
+      null;
+    const activeCampaignDropsFromInventory = activeCampaignId
+      ? inventoryItems.filter((item) => item.campaignId === activeCampaignId)
+      : activeDropRaw?.campaignId
+        ? inventoryItems.filter((item) => item.campaignId === activeDropRaw.campaignId)
+        : [];
+
+    console.log(
+      "[DropPilot] active-campaign-debug",
+      toConsoleSnapshot({
+        at: new Date().toISOString(),
+        targetGame,
+        watching,
+        inventoryFetchedAt,
+        activeDropInfo,
+        activeDropRaw,
+        activeCampaignSummary,
+        activeCampaignDropsFromSummary: activeCampaignSummary?.drops ?? null,
+        activeCampaignDropsFromInventory,
+        inventoryItemsCount: inventoryItems.length,
+        campaignsCount: campaigns.length,
+      }),
+    );
+  }, [activeDropInfo, campaigns, inventoryFetchedAt, inventoryItems, targetGame, watching]);
+
   const channelAllowlist = useMemo(
     () =>
       buildChannelAllowlist({
@@ -646,7 +797,12 @@ export function useAppModel() {
         return;
       }
       const candidateDrops = targetDrops.filter(
-        (drop) => drop.status === "progress" && drop.blocked !== true,
+        (drop) =>
+          drop.status === "progress" &&
+          drop.blocked !== true &&
+          Math.max(0, Number(drop.requiredMinutes) || 0) >
+            Math.max(0, Number(drop.earnedMinutes) || 0) &&
+          drop.isClaimable !== true,
       );
       for (const candidate of candidateDrops) {
         const nextChannel = pickStallRecoveryChannel({
@@ -670,6 +826,8 @@ export function useAppModel() {
         noFarmableDropRef.current = null;
         return;
       }
+      const stalledGame = activeTargetGame.trim() || targetGame.trim() || watching.game.trim();
+      setStalledGameCooldown(stalledGame, NO_FARMABLE_GAME_COOLDOWN_MS, "stall-no-farmable");
       const nextTargetGame = activeTargetGame ? getNextPriorityTargetGame(activeTargetGame) : "";
       if (nextTargetGame) {
         logInfo("watch-engine: retarget", {
@@ -681,7 +839,10 @@ export function useAppModel() {
       }
       setAutoSelectEnabled(true);
       clearWatching();
-      dispatchWatchEngineEvent({ type: "watch/stall_stop", activeTargetGame }, "stall-no-farmable");
+      dispatchWatchEngineEvent(
+        { type: "watch/stall_stop", activeTargetGame: stalledGame || activeTargetGame },
+        "stall-no-farmable",
+      );
       watchStallTrackerRef.current = null;
       noFarmableDropRef.current = null;
       return;
@@ -699,18 +860,24 @@ export function useAppModel() {
     const earnedMinutes = Math.max(0, Number(activeDropInfo.earnedMinutes) || 0);
     const key = buildWatchStallTrackerKey(watching, dropId);
     const now = Date.now();
+    const nearEndNoProgressProbe = activeDropInfo.remainingMinutes <= CLAIM_PROBE_NEAR_END_MINUTES;
+    const noProgressWindowMs = nearEndNoProgressProbe
+      ? STALL_NO_PROGRESS_WINDOW_NEAR_END_MS
+      : STALL_NO_PROGRESS_WINDOW_MS;
     const evaluation = evaluateNoProgressStall({
       tracker: watchStallTrackerRef.current,
       key,
       earnedMinutes,
       now,
-      noProgressWindowMs: STALL_NO_PROGRESS_WINDOW_MS,
+      noProgressWindowMs,
       actionCooldownMs: STALL_RECOVERY_COOLDOWN_MS,
     });
     watchStallTrackerRef.current = evaluation.tracker;
     if (!evaluation.shouldRecover) return;
-    const allowChannelRecovery =
-      evaluation.tracker.recoveryCount <= STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS;
+    const maxChannelRecoveryAttempts = nearEndNoProgressProbe
+      ? STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS_NEAR_END
+      : STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS;
+    const allowChannelRecovery = evaluation.tracker.recoveryCount <= maxChannelRecoveryAttempts;
 
     if (allowChannelRecovery) {
       const nextChannel = pickStallRecoveryChannel({
@@ -733,7 +900,10 @@ export function useAppModel() {
       logInfo("watch-engine: no-progress refresh", {
         reason: "stall-no-progress-refresh",
         game: recoveryGame || null,
+        nearEndProbe: nearEndNoProgressProbe,
+        noProgressWindowMs,
         attempts: evaluation.tracker.recoveryCount,
+        maxChannelRecoveryAttempts,
       });
       if (recoveryGame) {
         void fetchChannels(recoveryGame, { force: true });
@@ -744,9 +914,14 @@ export function useAppModel() {
       logInfo("watch-engine: retarget escalation", {
         reason: "stall-no-progress-recovery-budget",
         from: activeTargetGame || null,
+        nearEndProbe: nearEndNoProgressProbe,
+        noProgressWindowMs,
         attempts: evaluation.tracker.recoveryCount,
+        maxChannelRecoveryAttempts,
       });
     }
+    const stalledGame = activeTargetGame.trim() || targetGame.trim() || watching.game.trim();
+    setStalledGameCooldown(stalledGame, NO_PROGRESS_GAME_COOLDOWN_MS, "stall-no-progress");
     const nextTargetGame = activeTargetGame ? getNextPriorityTargetGame(activeTargetGame) : "";
     if (nextTargetGame) {
       logInfo("watch-engine: retarget", {
@@ -758,7 +933,10 @@ export function useAppModel() {
     }
     setAutoSelectEnabled(true);
     clearWatching();
-    dispatchWatchEngineEvent({ type: "watch/stall_stop", activeTargetGame }, "stall-no-progress");
+    dispatchWatchEngineEvent(
+      { type: "watch/stall_stop", activeTargetGame: stalledGame || activeTargetGame },
+      "stall-no-progress",
+    );
   }, [
     activeTargetGame,
     activeDropInfo,
@@ -772,6 +950,7 @@ export function useAppModel() {
     fetchInventory,
     setAutoSelectEnabled,
     setActiveTargetGame,
+    setStalledGameCooldown,
     setWatchingFromChannel,
     stallCheckHeartbeat,
     targetDrops,

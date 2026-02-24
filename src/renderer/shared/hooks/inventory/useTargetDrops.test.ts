@@ -248,6 +248,37 @@ describe("computeTargetDrops", () => {
     expect(result.liveDeltaApplied).toBe(0);
   });
 
+  it("does not treat an already claimable in-progress drop as watchable progress", () => {
+    const now = 10_500_000;
+    const claimable = makeItem({
+      id: "drop-claimable",
+      title: "Claimable",
+      status: "progress",
+      requiredMinutes: 60,
+      earnedMinutes: 60,
+      isClaimable: true,
+    });
+    const watching: WatchingState = {
+      id: "channel-current",
+      channelId: "channel-current",
+      login: "currentlogin",
+      name: "Current",
+      game: "Game",
+    };
+    const result = computeTargetDrops({
+      targetGame: "Game",
+      inventoryItems: [claimable],
+      withCategories: [{ item: claimable, category: "in-progress" }],
+      allowWatching: true,
+      watching,
+      inventoryFetchedAt: now - 60_000,
+      now,
+    });
+    expect(result.activeDropInfo).toBeNull();
+    expect(result.canWatchTarget).toBe(false);
+    expect(result.showNoDropsHint).toBe(false);
+  });
+
   it("does not fall back to global fastest drop while watching a non-target game", () => {
     const now = 11_000_000;
     const fastest = makeItem({
