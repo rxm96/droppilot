@@ -99,6 +99,48 @@ describe("extractAllowedChannelFilters", () => {
     expect(result.ids).toEqual([]);
     expect(result.logins).toEqual([]);
   });
+
+  it("prefers drop-level allow channels when available", () => {
+    const campaign = {
+      id: "camp-3",
+      name: "Campaign 3",
+      allow: {
+        isEnabled: true,
+        channels: [{ id: "111", login: "campaignonly" }],
+      },
+    };
+    const drop = {
+      id: "drop-1",
+      name: "Drop",
+      allow: {
+        channels: [{ channel: { id: "222", login: "dropspecific" } }],
+      },
+    };
+
+    const result = extractAllowedChannelFilters(campaign, drop);
+
+    expect(result.ids).toEqual(["222"]);
+    expect(result.logins).toEqual(["dropspecific"]);
+  });
+
+  it("supports direct allow channel shape without channels array", () => {
+    const campaign = {
+      id: "camp-4",
+      name: "Campaign 4",
+    };
+    const drop = {
+      id: "drop-2",
+      name: "Drop 2",
+      allow: {
+        channel: { id: "333", login: "singlechannel" },
+      },
+    };
+
+    const result = extractAllowedChannelFilters(campaign, drop);
+
+    expect(result.ids).toEqual(["333"]);
+    expect(result.logins).toEqual(["singlechannel"]);
+  });
 });
 
 describe("buildCampaignSummaries", () => {

@@ -71,7 +71,26 @@ type CampaignDropNode = {
   status?: string;
   state?: string;
   self?: CampaignDropSelf;
-  allow?: { isEnabled?: boolean };
+  allow?: {
+    isEnabled?: boolean;
+    channels?: AllowChannelNode[];
+    id?: string | number;
+    login?: string;
+    name?: string;
+    displayName?: string;
+    broadcaster?: {
+      id?: string | number;
+      login?: string;
+      name?: string;
+      displayName?: string;
+    };
+    channel?: {
+      id?: string | number;
+      login?: string;
+      name?: string;
+      displayName?: string;
+    };
+  };
   benefitEdges?: BenefitEdgesField;
   preconditionDrops?: Array<string | CampaignDropReference>;
 };
@@ -421,17 +440,60 @@ const normalizeLogin = (value: unknown): string | undefined => {
   return normalized.length > 0 ? normalized : undefined;
 };
 
-export function extractAllowedChannelFilters(campaign: CampaignNode): {
-  ids: string[];
-  logins: string[];
-} {
-  const channels = campaign.allow?.channels;
-  if (!Array.isArray(channels) || channels.length === 0) {
-    return { ids: [], logins: [] };
+type AllowContainer = {
+  channels?: AllowChannelNode[];
+  id?: string | number;
+  login?: string;
+  name?: string;
+  displayName?: string;
+  broadcaster?: {
+    id?: string | number;
+    login?: string;
+    name?: string;
+    displayName?: string;
+  };
+  channel?: {
+    id?: string | number;
+    login?: string;
+    name?: string;
+    displayName?: string;
+  };
+};
+
+const collectAllowEntries = (allow: unknown): AllowChannelNode[] => {
+  if (!allow || typeof allow !== "object") return [];
+  const container = allow as AllowContainer;
+  const entries: AllowChannelNode[] = [];
+  if (Array.isArray(container.channels)) {
+    entries.push(...container.channels.filter((entry) => !!entry));
   }
+  const hasDirectChannelShape =
+    container.id !== undefined ||
+    container.login !== undefined ||
+    container.name !== undefined ||
+    container.displayName !== undefined ||
+    container.broadcaster !== undefined ||
+    container.channel !== undefined;
+  if (hasDirectChannelShape) {
+    entries.push({
+      id: container.id,
+      login: container.login,
+      name: container.name,
+      displayName: container.displayName,
+      broadcaster: container.broadcaster,
+      channel: container.channel,
+    });
+  }
+  return entries;
+};
+
+const collectFiltersFromEntries = (
+  entries: AllowChannelNode[],
+): { ids: string[]; logins: string[] } => {
+  if (entries.length === 0) return { ids: [], logins: [] };
   const idSet = new Set<string>();
   const loginSet = new Set<string>();
-  for (const entry of channels) {
+  for (const entry of entries) {
     if (!entry || typeof entry !== "object") continue;
     const candidates = [
       entry.id,
@@ -460,6 +522,20 @@ export function extractAllowedChannelFilters(campaign: CampaignNode): {
     ids: Array.from(idSet),
     logins: Array.from(loginSet),
   };
+};
+
+export function extractAllowedChannelFilters(
+  campaign: CampaignNode,
+  drop?: CampaignDropNode,
+): {
+  ids: string[];
+  logins: string[];
+} {
+  const dropFilters = drop ? collectFiltersFromEntries(collectAllowEntries(drop.allow)) : null;
+  if (dropFilters && (dropFilters.ids.length > 0 || dropFilters.logins.length > 0)) {
+    return dropFilters;
+  }
+  return collectFiltersFromEntries(collectAllowEntries(campaign.allow));
 }
 
 function normalizeBenefitType(value?: string | null): string {

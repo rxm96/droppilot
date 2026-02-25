@@ -787,7 +787,7 @@ export class TwitchService {
         return endMs !== null && now > endMs;
       })();
       const campaignImageUrl = extractCampaignImageUrl(campaign);
-      const allowChannelFilters = extractAllowedChannelFilters(campaign);
+      const campaignAllowChannelFilters = extractAllowedChannelFilters(campaign);
       const campaignHasBadgeOrEmote = campaign.timeBasedDrops.some((drop) =>
         dropHasBadgeOrEmote(drop),
       );
@@ -818,6 +818,7 @@ export class TwitchService {
         endsAt,
         linked,
         allowDisabled,
+        allowChannelFilters: campaignAllowChannelFilters,
         campaignNotStarted,
         campaignExpired,
         withinClaimWindow,
@@ -833,6 +834,7 @@ export class TwitchService {
         drops: [] as Array<Record<string, unknown>>,
       };
       for (const drop of campaign.timeBasedDrops) {
+        const allowChannelFilters = extractAllowedChannelFilters(campaign, drop);
         dropsCount += 1;
         let watched = Number(drop.self?.currentMinutesWatched ?? 0) || 0;
         const rawStatus =
@@ -946,6 +948,7 @@ export class TwitchService {
           missingPrerequisiteDropIds,
           lockedReasonHints,
           unlockGuidance,
+          allowChannelFilters,
           dropAllow: drop.allow ?? null,
           dropSelf: drop.self ?? null,
           dropKeySample: drop ? Object.keys(drop) : [],
