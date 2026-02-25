@@ -14,6 +14,9 @@ import {
   isWithinClaimWindow,
 } from "./inventoryRules";
 
+const MAX_FALLBACK_AUTO_CLAIMS_PER_RUN = 1;
+const MAX_CLAIM_ERROR_LOGS_PER_RUN = 3;
+
 export type ClaimRetryState = { attempts: number; nextAllowedAt: number; signature: string };
 
 export type ClaimDropPayload = {
@@ -118,7 +121,19 @@ export class InventoryClaimEngine {
 
   async autoClaimFromInventory(items: InventoryItem[], deps: AutoClaimDeps): Promise<void> {
     const now = deps.now?.() ?? Date.now();
-    const claimable = this.getAutoClaimCandidates(items, now);
+    const candidates = this.getAutoClaimCandidates(items, now);
+    const explicitClaimable = candidates.filter((drop) => drop.isClaimable === true);
+    const fallbackClaimable = candidates.filter((drop) => drop.isClaimable !== true);
+    const fallbackQueue = fallbackClaimable.slice(0, MAX_FALLBACK_AUTO_CLAIMS_PER_RUN);
+    const claimable = [...explicitClaimable, ...fallbackQueue];
+    if (fallbackClaimable.length > fallbackQueue.length) {
+      logInfo("inventory: fallback auto-claim capped", {
+        totalFallbackCandidates: fallbackClaimable.length,
+        processedFallbackCandidates: fallbackQueue.length,
+      });
+    }
+    let suppressedClaimErrorLogs = 0;
+    let emittedClaimErrorLogs = 0;
     for (const drop of claimable) {
       const retrySignature = buildClaimRetrySignature(drop);
       const retryState = this.claimRetryByDropId.get(drop.id);
@@ -155,7 +170,12 @@ export class InventoryClaimEngine {
           return;
         }
 
-        logWarn("inventory: claim error", { title: drop.title, err });
+        if (emittedClaimErrorLogs < MAX_CLAIM_ERROR_LOGS_PER_RUN) {
+          emittedClaimErrorLogs += 1;
+          logWarn("inventory: claim error", { title: drop.title, err });
+        } else {
+          suppressedClaimErrorLogs += 1;
+        }
         const prevRetryState = this.claimRetryByDropId.get(drop.id);
         const attempts =
           prevRetryState && prevRetryState.signature === retrySignature
@@ -176,6 +196,12 @@ export class InventoryClaimEngine {
           at: Date.now(),
         });
       }
+    }
+    if (suppressedClaimErrorLogs > 0) {
+      logInfo("inventory: claim errors suppressed", {
+        suppressed: suppressedClaimErrorLogs,
+        emitted: emittedClaimErrorLogs,
+      });
     }
   }
 

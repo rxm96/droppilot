@@ -90,6 +90,32 @@ describe("InventoryClaimEngine.autoClaimFromInventory", () => {
       expect.objectContaining({ kind: "error", message: "try later" }),
     );
   });
+
+  it("caps fallback auto-claim attempts per run", async () => {
+    const engine = new InventoryClaimEngine();
+    const claimDrop = vi.fn(async () => ({ ok: true }));
+    const base = {
+      requiredMinutes: 30,
+      earnedMinutes: 30,
+      isClaimable: false as const,
+      blockingReasonHints: ["missing_drop_instance_id"],
+    };
+    const items = [
+      makeItem({ ...base, id: "drop-a", dropInstanceId: undefined, campaignId: "camp-a" }),
+      makeItem({ ...base, id: "drop-b", dropInstanceId: undefined, campaignId: "camp-b" }),
+      makeItem({ ...base, id: "drop-c", dropInstanceId: undefined, campaignId: "camp-c" }),
+    ];
+
+    await engine.autoClaimFromInventory(items, {
+      claimDrop,
+      onAuthError: vi.fn(),
+      onClaimed: vi.fn(),
+      setClaimStatus: vi.fn<(status: ClaimStatus) => void>(),
+      now: () => 5_000,
+    });
+
+    expect(claimDrop).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("InventoryClaimEngine.claimFromPubSubDropClaim", () => {
