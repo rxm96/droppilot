@@ -5,7 +5,6 @@ import type {
   ChannelTrackerStatus,
   ClaimStatus,
   ErrorInfo,
-  PriorityPlan,
   InventoryItem,
   WatchingState,
 } from "@renderer/shared/types";
@@ -13,6 +12,12 @@ import { DropChannelRestriction } from "@renderer/shared/domain/dropDomain";
 import { mapStatusLabel } from "@renderer/shared/utils";
 import { useI18n } from "@renderer/shared/i18n";
 import { resolveErrorMessage } from "@renderer/shared/utils/errors";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@renderer/shared/components/ui/hover-card";
+import { useRef } from "react";
 import { useControlViewState } from "./useControlViewState";
 
 const CHANNEL_SKELETON = Array.from({ length: 4 }, (_, idx) => ({ key: `sk-${idx}` }));
@@ -79,11 +84,159 @@ const formatChannelRestrictionReason = (
   return t("control.dropReason.channelRestricted");
 };
 
-type ControlProps = {
-  priorityPlan: PriorityPlan | null;
-  priorityGames: string[];
+type WatchEngineDecision =
+  | "no-target"
+  | "suppressed"
+  | "cooldown"
+  | "watching-progress"
+  | "watching-no-farmable"
+  | "watching-no-watchable"
+  | "idle-loading-channels"
+  | "idle-no-channels"
+  | "idle-ready"
+  | "idle-no-watchable-drops";
+
+type WatchEngineSnapshot = {
+  decision: WatchEngineDecision;
   targetGame: string;
-  setActiveTargetGame: (val: string) => void;
+  activeTargetGame: string;
+  suppression: {
+    game: string;
+    reason: "manual-stop" | "stall-stop";
+    sinceAt: number | null;
+    holdRemainingMs: number;
+  } | null;
+  activeCooldowns: Array<{
+    game: string;
+    until: number;
+    remainingMs: number;
+  }>;
+  allowlistActive: boolean;
+  allowlistedLiveChannels: number;
+  totalLiveChannels: number;
+  noProgressTracker: {
+    recoveryCount: number;
+    sinceProgressMs: number;
+  } | null;
+};
+
+const mapWatchEngineDecisionLabel = (
+  decision: WatchEngineDecision,
+  suppressionReason: "manual-stop" | "stall-stop" | null,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): string => {
+  switch (decision) {
+    case "no-target":
+      return t("control.watchEngineDecision.noTarget");
+    case "suppressed":
+      if (suppressionReason === "manual-stop") {
+        return t("control.watchEngineDecision.suppressedManualStop");
+      }
+      return t("control.watchEngineDecision.suppressed");
+    case "cooldown":
+      return t("control.watchEngineDecision.cooldown");
+    case "watching-progress":
+      return t("control.watchEngineDecision.watchingProgress");
+    case "watching-no-farmable":
+      return t("control.watchEngineDecision.watchingNoFarmable");
+    case "watching-no-watchable":
+      return t("control.watchEngineDecision.watchingNoWatchable");
+    case "idle-loading-channels":
+      return t("control.watchEngineDecision.idleLoadingChannels");
+    case "idle-no-channels":
+      return t("control.watchEngineDecision.idleNoChannels");
+    case "idle-ready":
+      return t("control.watchEngineDecision.idleReady");
+    case "idle-no-watchable-drops":
+      return t("control.watchEngineDecision.idleNoWatchableDrops");
+    default:
+      return decision;
+  }
+};
+
+const mapWatchEngineSuppressionReasonLabel = (
+  reason: "manual-stop" | "stall-stop",
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): string => {
+  switch (reason) {
+    case "manual-stop":
+      return t("control.watchEngineSuppression.manualStop");
+    case "stall-stop":
+      return t("control.watchEngineSuppression.stallStop");
+    default:
+      return reason;
+  }
+};
+
+const mapWatchEngineDecisionDetails = (
+  decision: WatchEngineDecision,
+  suppressionReason: "manual-stop" | "stall-stop" | null,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): { why: string; next: string } => {
+  switch (decision) {
+    case "no-target":
+      return {
+        why: t("control.watchEngineWhy.noTarget"),
+        next: t("control.watchEngineNext.noTarget"),
+      };
+    case "suppressed":
+      if (suppressionReason === "manual-stop") {
+        return {
+          why: t("control.watchEngineWhy.suppressedManualStop"),
+          next: t("control.watchEngineNext.suppressedManualStop"),
+        };
+      }
+      return {
+        why: t("control.watchEngineWhy.suppressed"),
+        next: t("control.watchEngineNext.suppressed"),
+      };
+    case "cooldown":
+      return {
+        why: t("control.watchEngineWhy.cooldown"),
+        next: t("control.watchEngineNext.cooldown"),
+      };
+    case "watching-progress":
+      return {
+        why: t("control.watchEngineWhy.watchingProgress"),
+        next: t("control.watchEngineNext.watchingProgress"),
+      };
+    case "watching-no-farmable":
+      return {
+        why: t("control.watchEngineWhy.watchingNoFarmable"),
+        next: t("control.watchEngineNext.watchingNoFarmable"),
+      };
+    case "watching-no-watchable":
+      return {
+        why: t("control.watchEngineWhy.watchingNoWatchable"),
+        next: t("control.watchEngineNext.watchingNoWatchable"),
+      };
+    case "idle-loading-channels":
+      return {
+        why: t("control.watchEngineWhy.idleLoadingChannels"),
+        next: t("control.watchEngineNext.idleLoadingChannels"),
+      };
+    case "idle-no-channels":
+      return {
+        why: t("control.watchEngineWhy.idleNoChannels"),
+        next: t("control.watchEngineNext.idleNoChannels"),
+      };
+    case "idle-ready":
+      return {
+        why: t("control.watchEngineWhy.idleReady"),
+        next: t("control.watchEngineNext.idleReady"),
+      };
+    case "idle-no-watchable-drops":
+      return {
+        why: t("control.watchEngineWhy.idleNoWatchableDrops"),
+        next: t("control.watchEngineNext.idleNoWatchableDrops"),
+      };
+    default:
+      return { why: decision, next: decision };
+  }
+};
+
+type ControlProps = {
+  targetGame: string;
   targetDrops: InventoryItem[];
   targetProgress: number;
   totalDrops: number;
@@ -93,6 +246,10 @@ type ControlProps = {
   fetchInventory: () => void;
   refreshPriorityPlan: () => void;
   watching: WatchingState;
+  lastWatchedChannelIdentity: {
+    id: string;
+    login: string;
+  } | null;
   stopWatching: () => void;
   channels: ChannelEntry[];
   channelsLoading: boolean;
@@ -119,18 +276,17 @@ type ControlProps = {
   watchError?: ErrorInfo | null;
   autoSwitchInfo?: AutoSwitchInfo | null;
   trackerStatus?: ChannelTrackerStatus | null;
+  watchEngineSnapshot: WatchEngineSnapshot;
 };
 
 export function ControlView({
-  priorityPlan,
-  priorityGames,
   targetGame,
-  setActiveTargetGame,
   targetDrops,
   inventoryRefreshing,
   inventoryFetchedAt,
   fetchInventory,
   watching,
+  lastWatchedChannelIdentity,
   stopWatching,
   channels,
   channelsLoading,
@@ -146,6 +302,7 @@ export function ControlView({
   watchError,
   autoSwitchInfo,
   trackerStatus,
+  watchEngineSnapshot,
 }: ControlProps) {
   const { t, language } = useI18n();
   const {
@@ -160,8 +317,8 @@ export function ControlView({
     liveProgress,
     activeEtaText,
     activeChannel,
+    resumeChannel,
     activeThumb,
-    activeViewerCount,
     activeLoginMismatch,
     campaignGroups,
     trackerFallbackRemainingMs,
@@ -172,6 +329,7 @@ export function ControlView({
     channelsRefreshing,
     targetGame,
     watching,
+    lastWatchedChannelIdentity,
     targetDrops,
     activeDropInfo,
     inventoryFetchedAt,
@@ -190,7 +348,6 @@ export function ControlView({
       : claimErrorText
         ? `${claimErrorText}${claimStatus?.title ? `: ${claimStatus.title}` : ""}`
         : "";
-
   const formatDuration = (ms: number) => {
     const totalSeconds = Math.max(0, Math.round(ms / 1000));
     const hours = Math.floor(totalSeconds / 3600);
@@ -201,11 +358,283 @@ export function ControlView({
     }
     return `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
   };
+  const watchEngineSuppression = watchEngineSnapshot.suppression;
+  const watchEngineSuppressionReason = watchEngineSuppression?.reason ?? null;
+  const watchEngineDecisionLabel = mapWatchEngineDecisionLabel(
+    watchEngineSnapshot.decision,
+    watchEngineSuppressionReason,
+    t,
+  );
+  const watchEngineDecisionDetails = mapWatchEngineDecisionDetails(
+    watchEngineSnapshot.decision,
+    watchEngineSuppressionReason,
+    t,
+  );
+  const watchEngineDecisionMotionKey = watchEngineSnapshot.decision;
+  const watchEngineAllowlistMode = watchEngineSnapshot.allowlistActive
+    ? t("control.watchEngineAllowlistOn")
+    : t("control.watchEngineAllowlistOff");
+  const watchEngineAllowlistHint = t("control.watchEngineAllowlistHint");
+  const watchEngineChannelsHint = t("control.watchEngineChannelsHint", {
+    eligible: watchEngineSnapshot.allowlistedLiveChannels,
+    total: watchEngineSnapshot.totalLiveChannels,
+  });
+  const watchEngineTargetText =
+    watchEngineSnapshot.targetGame ||
+    (watchEngineSuppression &&
+    watchEngineSnapshot.activeTargetGame &&
+    !watchEngineSnapshot.targetGame
+      ? `${watchEngineSnapshot.activeTargetGame} (${t("control.watchEngineTargetSuppressed")})`
+      : watchEngineSnapshot.activeTargetGame) ||
+    t("control.noTarget");
+  const watchEngineSuppressionText = watchEngineSuppression
+    ? `${watchEngineSuppression.game} (${mapWatchEngineSuppressionReasonLabel(
+        watchEngineSuppression.reason,
+        t,
+      )})${
+        watchEngineSuppression.holdRemainingMs > 0
+          ? `, ${t("control.watchEngineHold", {
+              time: formatDuration(watchEngineSuppression.holdRemainingMs),
+            })}`
+          : ""
+      }`
+    : t("control.watchEngineNoSuppression");
+  const watchEngineCooldownText =
+    watchEngineSnapshot.activeCooldowns.length > 0
+      ? watchEngineSnapshot.activeCooldowns
+          .slice(0, 3)
+          .map((cooldown) => `${cooldown.game} (${formatDuration(cooldown.remainingMs)})`)
+          .join(" | ")
+      : t("control.watchEngineNoCooldowns");
+  const watchEngineNoProgressText = watchEngineSnapshot.noProgressTracker
+    ? t("control.watchEngineNoProgressValue", {
+        attempts: watchEngineSnapshot.noProgressTracker.recoveryCount,
+        time: formatDuration(watchEngineSnapshot.noProgressTracker.sinceProgressMs),
+      })
+    : null;
+  const watchEngineTone: "ok" | "warn" | "neutral" | "hold" = (() => {
+    switch (watchEngineSnapshot.decision) {
+      case "watching-progress":
+      case "idle-ready":
+        return "ok";
+      case "suppressed":
+      case "cooldown":
+        return "hold";
+      case "idle-loading-channels":
+      case "no-target":
+        return "neutral";
+      default:
+        return "warn";
+    }
+  })();
+  const watchEngineDetailsRef = useRef<HTMLDetailsElement | null>(null);
+  const watchEngineSummaryRef = useRef<HTMLElement | null>(null);
+  const watchEngineCollapseTopRef = useRef<number | null>(null);
+  const handleWatchEngineSummaryClickCapture = () => {
+    const details = watchEngineDetailsRef.current;
+    const summary = watchEngineSummaryRef.current;
+    if (!details || !summary || !details.open) {
+      watchEngineCollapseTopRef.current = null;
+      return;
+    }
+    watchEngineCollapseTopRef.current = summary.getBoundingClientRect().top;
+  };
+  const handleWatchEnginePanelToggle = () => {
+    const details = watchEngineDetailsRef.current;
+    const summary = watchEngineSummaryRef.current;
+    const collapseTop = watchEngineCollapseTopRef.current;
+    if (!details || !summary) {
+      watchEngineCollapseTopRef.current = null;
+      return;
+    }
+    if (!details.open && collapseTop !== null) {
+      const nextTop = summary.getBoundingClientRect().top;
+      const delta = nextTop - collapseTop;
+      if (Math.abs(delta) > 0.5) {
+        window.scrollBy({ top: delta, behavior: "auto" });
+      }
+    }
+    watchEngineCollapseTopRef.current = null;
+  };
+  const watchEnginePanel = (
+    <details
+      ref={watchEngineDetailsRef}
+      className={`control-watch-engine-disclosure tone-${watchEngineTone}`}
+      onToggle={handleWatchEnginePanelToggle}
+    >
+      <summary
+        ref={watchEngineSummaryRef}
+        className="control-watch-engine-summary"
+        onClickCapture={handleWatchEngineSummaryClickCapture}
+      >
+        <span className="control-watch-engine-summary-main">
+          <span className="control-watch-engine-summary-k">{t("control.watchEngineTitle")}</span>
+          <span className="control-watch-engine-summary-v">{watchEngineDecisionLabel}</span>
+        </span>
+        <span className="control-watch-engine-summary-chevron" aria-hidden="true">
+          <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+            <path
+              d="M3.5 6.5 8 11l4.5-4.5"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="1.8"
+            />
+          </svg>
+        </span>
+      </summary>
+      <div className={`control-watch-engine tone-${watchEngineTone}`}>
+        <div className="control-watch-engine-head">
+          <div className="control-watch-engine-title-row">
+            <span className="control-watch-engine-led" aria-hidden="true" />
+            <div className="label">{t("control.watchEngineTitle")}</div>
+          </div>
+        </div>
+        <p className="meta muted control-watch-engine-intro">{t("control.watchEngineIntro")}</p>
+        <div className="control-watch-engine-main">
+          <div className="control-watch-engine-item is-now">
+            <span className="control-watch-engine-item-label">{t("control.watchEngineNow")}</span>
+            <span
+              key={`watch-engine-now-${watchEngineDecisionMotionKey}`}
+              className="control-watch-engine-item-value control-watch-engine-animated-value"
+            >
+              {watchEngineDecisionLabel}
+            </span>
+          </div>
+          <div className="control-watch-engine-item">
+            <span className="control-watch-engine-item-label">
+              {t("control.watchEngineWhyLabel")}
+            </span>
+            <span
+              key={`watch-engine-why-${watchEngineDecisionMotionKey}`}
+              className="control-watch-engine-item-value control-watch-engine-animated-value"
+            >
+              {watchEngineDecisionDetails.why}
+            </span>
+          </div>
+          <div className="control-watch-engine-item">
+            <span className="control-watch-engine-item-label">
+              {t("control.watchEngineNextLabel")}
+            </span>
+            <span
+              key={`watch-engine-next-${watchEngineDecisionMotionKey}`}
+              className="control-watch-engine-item-value control-watch-engine-animated-value"
+            >
+              {watchEngineDecisionDetails.next}
+            </span>
+          </div>
+        </div>
+        <div className="control-watch-engine-meta">
+          <HoverCard openDelay={120} closeDelay={120}>
+            <HoverCardTrigger asChild>
+              <span
+                className="pill ghost small control-watch-engine-help-trigger"
+                aria-label={watchEngineAllowlistHint}
+                tabIndex={0}
+              >
+                {t("control.watchEngineAllowlist")}: {watchEngineAllowlistMode}
+              </span>
+            </HoverCardTrigger>
+            <HoverCardContent
+              align="start"
+              sideOffset={8}
+              className="control-watch-engine-hovercard"
+            >
+              <p className="meta">{watchEngineAllowlistHint}</p>
+            </HoverCardContent>
+          </HoverCard>
+          <HoverCard openDelay={120} closeDelay={120}>
+            <HoverCardTrigger asChild>
+              <span
+                className="pill ghost small control-watch-engine-help-trigger"
+                aria-label={watchEngineChannelsHint}
+                tabIndex={0}
+              >
+                {t("control.watchEngineChannels")}: {watchEngineSnapshot.allowlistedLiveChannels}/
+                {watchEngineSnapshot.totalLiveChannels}
+              </span>
+            </HoverCardTrigger>
+            <HoverCardContent
+              align="start"
+              sideOffset={8}
+              className="control-watch-engine-hovercard"
+            >
+              <p className="meta">{watchEngineChannelsHint}</p>
+            </HoverCardContent>
+          </HoverCard>
+        </div>
+        <div className="control-watch-engine-details" role="list">
+          <p className="meta control-watch-engine-kv" role="listitem">
+            <span className="control-watch-engine-k">{t("control.watchEngineTarget")}</span>
+            <span className="control-watch-engine-v">{watchEngineTargetText}</span>
+          </p>
+          <p className="meta control-watch-engine-kv" role="listitem">
+            <span className="control-watch-engine-k">{t("control.watchEngineSuppression")}</span>
+            <span className="control-watch-engine-v">{watchEngineSuppressionText}</span>
+          </p>
+          <p className="meta control-watch-engine-kv" role="listitem">
+            <span className="control-watch-engine-k">{t("control.watchEngineCooldowns")}</span>
+            <span className="control-watch-engine-v">{watchEngineCooldownText}</span>
+          </p>
+          {watchEngineNoProgressText ? (
+            <p className="meta control-watch-engine-kv" role="listitem">
+              <span className="control-watch-engine-k">{t("control.watchEngineNoProgress")}</span>
+              <span className="control-watch-engine-v">{watchEngineNoProgressText}</span>
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </details>
+  );
+  const watchControlLabel = watching ? t("control.stop") : t("control.resume");
+  const watchControlClass = watching ? "ghost danger" : "ghost";
+  const canToggleWatchControl = Boolean(watching || resumeChannel);
+  const handleWatchControlToggle = () => {
+    if (watching) {
+      stopWatching();
+      return;
+    }
+    if (resumeChannel) {
+      startWatching(resumeChannel);
+    }
+  };
   const formatNumber = (val: number) =>
     new Intl.NumberFormat(language === "de" ? "de-DE" : "en-US").format(Math.max(0, val ?? 0));
   const formatViewers = (val: number) => formatNumber(val);
-  const activeViewers = activeViewerCount !== null ? formatViewers(activeViewerCount) : null;
+  const pausedThumb = resumeChannel?.thumbnail
+    ? resumeChannel.thumbnail.replace("{width}", "640").replace("{height}", "360")
+    : null;
+  const streamCardChannel = watching ? activeChannel : resumeChannel;
+  const streamCardThumb = watching ? activeThumb : pausedThumb;
+  const streamCardViewers = streamCardChannel
+    ? formatViewers(animatedViewersById[streamCardChannel.id] ?? streamCardChannel.viewers)
+    : null;
+  const streamCardLogin = streamCardChannel?.login ?? lastWatchedChannelIdentity?.login ?? "";
+  const streamCardName = watching
+    ? watching.name
+    : (streamCardChannel?.displayName ??
+      lastWatchedChannelIdentity?.login ??
+      t("control.noChannel"));
+  const streamCardGame = watching ? watching.game : (streamCardChannel?.game ?? targetGame);
+  const streamStateNode = watching ? (
+    <span className="live-dot" aria-label={t("control.live")} title={t("control.live")} />
+  ) : streamCardChannel ? (
+    <span className="pill ghost small">{t("control.streamPaused")}</span>
+  ) : null;
+  const streamCardNote = watching
+    ? t("control.streamWatchingActive")
+    : showNoDropsHint
+      ? t("control.noDropsHint")
+      : resumeChannel
+        ? t("control.resumeHint", { channel: resumeChannel.displayName })
+        : t("control.pickStream");
   const hasOpenTargetDrops = targetDrops.some((drop) => drop.status !== "claimed");
+  const inactiveDropText = showNoDropsHint
+    ? t("control.noDropsHint")
+    : watching && hasOpenTargetDrops
+      ? t("control.noFarmableDrop")
+      : t("control.allDone");
   return (
     <>
       <div className="panel-head control-head">
@@ -250,60 +679,39 @@ export function ControlView({
                 </div>
               ) : null}
             </div>
-            {watching ? (
+            <div className={`active-stream-bar${watching ? "" : " is-paused"}`}>
               <div
-                className="active-stream-bar"
-                style={
-                  activeThumb
-                    ? {
-                        backgroundImage: `var(--active-stream-overlay), url(${activeThumb})`,
-                      }
-                    : undefined
-                }
-              >
-                <div
-                  className="active-stream-thumb"
-                  style={activeThumb ? { backgroundImage: `url(${activeThumb})` } : undefined}
-                />
-                <div className="active-stream-info">
-                  <div className="label">{t("control.activeStream")}</div>
-                  <div className="active-stream-name">
-                    <span>{watching.name}</span>
-                    <span
-                      className="live-dot"
-                      aria-label={t("control.live")}
-                      title={t("control.live")}
-                    />
-                  </div>
-                  <div className="meta">
-                    {watching.game}
-                    {activeLoginMismatch ? `  @${activeLoginMismatch}` : ""}
-                  </div>
+                className="active-stream-thumb"
+                style={streamCardThumb ? { backgroundImage: `url(${streamCardThumb})` } : undefined}
+              />
+              <div className="active-stream-info">
+                <div className="label">{t("control.activeStream")}</div>
+                <div className="active-stream-name">
+                  <span>{streamCardName}</span>
+                  {streamStateNode}
                 </div>
-                <div className="active-stream-actions">
-                  {activeChannel ? (
-                    <span className="pill viewers-chip small">
-                      {activeViewers} {t("control.viewers")}
-                    </span>
-                  ) : (
-                    <span className="pill ghost small">Channel-Metadaten fehlen</span>
-                  )}
-                  <button type="button" className="ghost danger" onClick={stopWatching}>
-                    {t("control.stop")}
-                  </button>
+                <div className="meta">
+                  {streamCardGame || t("control.noTarget")}
+                  {watching
+                    ? activeLoginMismatch
+                      ? ` | @${activeLoginMismatch}`
+                      : ""
+                    : streamCardLogin
+                      ? ` | @${streamCardLogin}`
+                      : ""}
                 </div>
+                <p className="meta muted">{streamCardNote}</p>
               </div>
-            ) : (
-              <div className="active-stream-bar empty">
-                <div>
-                  <div className="label">{t("control.activeStream")}</div>
-                  <p className="meta">{t("control.noChannel")}</p>
-                  <p className="meta muted">
-                    {showNoDropsHint ? t("control.noDropsHint") : t("control.pickStream")}
-                  </p>
-                </div>
+              <div className="active-stream-actions">
+                {streamCardChannel && streamCardViewers ? (
+                  <span className="pill viewers-chip small">
+                    {streamCardViewers} {t("control.viewers")}
+                  </span>
+                ) : (
+                  <span className="pill ghost small">{t("control.streamInfoUnavailable")}</span>
+                )}
               </div>
-            )}
+            </div>
             {autoSwitchInfo ? (
               <p className="meta muted">
                 Auto-Switch ({autoSwitchInfo.reason}): {autoSwitchInfo.from?.name ?? "Unknown"} -
@@ -317,12 +725,17 @@ export function ControlView({
             ) : null}
             {targetGame ? (
               <>
-                {activeDropInfo ? (
-                  <div className="active-drop-row">
-                    <div>
-                      <div className="meta">{t("control.currentDrop")}</div>
-                      <div className="active-drop-title">{activeDropInfo.title}</div>
+                <div className={`active-drop-row${activeDropInfo ? "" : " is-empty"}`}>
+                  <div className="active-drop-main">
+                    <div className="meta">{t("control.currentDrop")}</div>
+                    <div
+                      className={`active-drop-title${activeDropInfo ? "" : " active-drop-placeholder"}`}
+                      title={activeDropInfo?.title ?? inactiveDropText}
+                    >
+                      {activeDropInfo?.title ?? inactiveDropText}
                     </div>
+                  </div>
+                  {activeDropInfo ? (
                     <div className="pill-row">
                       <span className="pill ghost small">
                         {liveProgress.activeRemainingMinutes > 0
@@ -337,16 +750,13 @@ export function ControlView({
                         </span>
                       ) : null}
                     </div>
-                  </div>
-                ) : (
-                  <p className="meta muted" style={{ marginTop: 6 }}>
-                    {showNoDropsHint
-                      ? t("control.noDropsHint")
-                      : watching && hasOpenTargetDrops
-                        ? t("control.noFarmableDrop")
-                        : t("control.allDone")}
-                  </p>
-                )}
+                  ) : (
+                    <div className="pill-row active-drop-pill-placeholder" aria-hidden="true">
+                      <span className="pill ghost small">--</span>
+                    </div>
+                  )}
+                </div>
+                {watchEnginePanel}
                 {campaignGroups.length > 0 && (
                   <div className="drop-campaigns">
                     {campaignGroups.map((group, groupIdx) => (
@@ -493,22 +903,15 @@ export function ControlView({
 
         <div className="card control-target">
           <div className="control-target-head">
-            <div className="label">{t("control.targetTitle")}</div>
+            <div className="label">{t("control.watchControlsTitle")}</div>
             <div className="control-target-actions">
-              <select
-                className="select"
-                value={targetGame}
-                onChange={(e) => setActiveTargetGame(e.target.value)}
+              <button
+                type="button"
+                className={watchControlClass}
+                onClick={handleWatchControlToggle}
+                disabled={!canToggleWatchControl}
               >
-                <option value="">{t("control.noTarget")}</option>
-                {(priorityPlan?.order.length ? priorityPlan.order : priorityGames).map((g) => (
-                  <option key={g} value={g}>
-                    {g}
-                  </option>
-                ))}
-              </select>
-              <button type="button" onClick={() => setActiveTargetGame("")} className="ghost">
-                {t("control.reset")}
+                {watchControlLabel}
               </button>
             </div>
           </div>

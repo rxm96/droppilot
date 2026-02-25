@@ -46,11 +46,17 @@ type Params = {
   channelsRefreshing: boolean;
   targetGame: string;
   watching: WatchingState;
+  lastWatchedChannelIdentity: ResumeChannelIdentity | null;
   targetDrops: InventoryItem[];
   activeDropInfo: ActiveDropInfo;
   inventoryFetchedAt: number | null;
   trackerStatus?: ChannelTrackerStatus | null;
   t: (key: string, vars?: Record<string, string | number>) => string;
+};
+
+type ResumeChannelIdentity = {
+  id: string;
+  login: string;
 };
 
 export function useControlViewState({
@@ -60,6 +66,7 @@ export function useControlViewState({
   channelsRefreshing,
   targetGame,
   watching,
+  lastWatchedChannelIdentity,
   targetDrops,
   activeDropInfo,
   inventoryFetchedAt,
@@ -312,24 +319,25 @@ export function useControlViewState({
     if (!watchStartedAt) return progressAnchorAtRaw;
     return Math.max(progressAnchorAtRaw, watchStartedAt);
   })();
-  const shouldTickProgress = Boolean(
-    isPageVisible &&
-    watching &&
-    progressAnchorAt &&
-    activeDropInfo &&
-    activeDropInfo.requiredMinutes > activeDropInfo.earnedMinutes,
-  );
+  const hasPredictiveEta =
+    typeof activeDropInfo?.eta === "number" && Number.isFinite(activeDropInfo.eta);
+  const shouldTickProgress = Boolean(isPageVisible && hasPredictiveEta);
   useEffect(() => {
     if (!shouldTickProgress) return;
     setProgressNow(Date.now());
     const timer = window.setInterval(() => setProgressNow(Date.now()), 1_000);
     return () => window.clearInterval(timer);
-  }, [shouldTickProgress, activeDropInfo?.id, progressAnchorAt]);
+  }, [shouldTickProgress, activeDropInfo?.id, activeDropInfo?.eta]);
   const liveProgress = useMemo(() => {
-    if (!activeDropInfo || !watching || !progressAnchorAt) {
+    const activeEta = hasPredictiveEta && activeDropInfo ? activeDropInfo.eta : null;
+    const activeRemainingFromEta =
+      activeEta !== null
+        ? Math.max(0, (activeEta - progressNow) / 60_000)
+        : (activeDropInfo?.remainingMinutes ?? 0);
+    if (!activeDropInfo || !watching || !progressAnchorAt || !hasPredictiveEta) {
       return {
-        activeRemainingMinutes: activeDropInfo?.remainingMinutes ?? 0,
-        activeEta: activeDropInfo?.eta ?? null,
+        activeRemainingMinutes: activeRemainingFromEta,
+        activeEta,
         activeElapsedMinutesRaw: 0,
       };
     }
@@ -338,12 +346,10 @@ export function useControlViewState({
       activeDropInfo.requiredMinutes - activeDropInfo.earnedMinutes,
     );
     const elapsedMinutesRaw = Math.max(0, (progressNow - progressAnchorAt) / 60_000);
-    const elapsedApplied = Math.min(elapsedMinutesRaw, activeRemainingBase);
-    const activeRemainingMinutes = Math.max(0, activeRemainingBase - elapsedApplied);
-    const activeEta =
-      activeRemainingMinutes > 0 ? progressNow + activeRemainingMinutes * 60_000 : null;
-    return { activeRemainingMinutes, activeEta, activeElapsedMinutesRaw: elapsedMinutesRaw };
-  }, [activeDropInfo, progressAnchorAt, progressNow, watching]);
+    const activeElapsedMinutesRaw = Math.min(elapsedMinutesRaw, activeRemainingBase);
+    const activeRemainingMinutes = activeRemainingFromEta;
+    return { activeRemainingMinutes, activeEta, activeElapsedMinutesRaw };
+  }, [activeDropInfo, hasPredictiveEta, progressAnchorAt, progressNow, watching]);
 
   const formatCampaignId = (value?: string) => {
     const normalized = value?.trim();
@@ -400,6 +406,18 @@ export function useControlViewState({
     watching && channels.length
       ? channels.find((c) => c.id === watching.id || c.login === watching.login)
       : null;
+  const resumeChannel = useMemo(() => {
+    if (watching) return null;
+    const last = lastWatchedChannelIdentity;
+    if (!last) return null;
+    return (
+      channels.find((channel) => {
+        if (channel.id === last.id) return true;
+        const normalizedLogin = channel.login.trim().toLowerCase();
+        return normalizedLogin.length > 0 && normalizedLogin === last.login;
+      }) ?? null
+    );
+  }, [channels, lastWatchedChannelIdentity, watching]);
   const activeThumb = activeChannel?.thumbnail
     ? activeChannel.thumbnail.replace("{width}", "640").replace("{height}", "360")
     : null;
@@ -516,6 +534,7 @@ export function useControlViewState({
     liveProgress,
     activeEtaText,
     activeChannel,
+    resumeChannel,
     activeThumb,
     activeViewerCount,
     activeLoginMismatch,

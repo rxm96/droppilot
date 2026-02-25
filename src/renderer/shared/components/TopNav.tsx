@@ -1,4 +1,4 @@
-import type { AuthState, View } from "@renderer/shared/types";
+import type { AuthState, ProfileState, View } from "@renderer/shared/types";
 import { useI18n } from "@renderer/shared/i18n";
 import { cn } from "@renderer/shared/lib/utils";
 
@@ -6,14 +6,26 @@ type TopNavProps = {
   view: View;
   setView: (v: View) => void;
   auth: AuthState;
+  profile: ProfileState;
   startLogin: () => void;
   logout: () => void;
   showDebug: boolean;
 };
 
-export function TopNav({ view, setView, auth, startLogin, logout, showDebug }: TopNavProps) {
+export function TopNav({
+  view,
+  setView,
+  auth,
+  profile,
+  startLogin,
+  logout,
+  showDebug,
+}: TopNavProps) {
   const { t } = useI18n();
   const isLinked = auth.status === "ok";
+  const sessionDisplayName = profile.status === "ready" ? profile.displayName : "";
+  const sessionAvatar = profile.status === "ready" ? profile.avatar : "";
+  const sessionInitial = sessionDisplayName.trim().charAt(0).toUpperCase() || "U";
   let navItems: Array<{ key: View; label: string; caption: string }> = [
     { key: "overview", label: t("nav.overview"), caption: t("nav.overview.caption") },
     { key: "inventory", label: t("nav.inventory"), caption: t("nav.inventory.caption") },
@@ -64,6 +76,24 @@ export function TopNav({ view, setView, auth, startLogin, logout, showDebug }: T
         })}
       </div>
       <div className="top-nav-session">
+        {isLinked && profile.status === "ready" ? (
+          <div className="inline-flex max-w-[220px] items-center gap-2 rounded-lg border border-border bg-background px-2 py-1">
+            {sessionAvatar ? (
+              <img
+                src={sessionAvatar}
+                alt=""
+                className="h-7 w-7 rounded-full border border-border object-cover"
+              />
+            ) : (
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold text-foreground">
+                {sessionInitial}
+              </span>
+            )}
+            <span className="truncate text-sm font-medium text-foreground">
+              {sessionDisplayName}
+            </span>
+          </div>
+        ) : null}
         <span className={cn("status-pill", isLinked ? "ok" : "warn")}>
           {isLinked ? t("session.connected") : t("session.disconnected")}
         </span>

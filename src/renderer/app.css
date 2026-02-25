@@ -71,6 +71,8 @@
   --panel-strong: #fbfaf8;
   --text: var(--foreground);
   --accent-soft: rgba(28, 27, 26, 0.08);
+  --signal-accent: #3b82f6;
+  --signal-accent-soft: rgba(59, 130, 246, 0.14);
   --bg-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='1' cy='1' r='1' fill='%23b8b2aa' fill-opacity='0.2'/%3E%3C/svg%3E");
   --titlebar-bg: var(--background);
   --titlebar-border: var(--border);
@@ -159,6 +161,8 @@
   --panel-strong: #1a1a1d;
   --text: var(--foreground);
   --accent-soft: rgba(244, 243, 239, 0.08);
+  --signal-accent: #7caeff;
+  --signal-accent-soft: rgba(124, 174, 255, 0.2);
   --bg-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='1' cy='1' r='1' fill='%23665f59' fill-opacity='0.12'/%3E%3C/svg%3E");
   --titlebar-bg: #111112;
   --titlebar-border: #232326;
@@ -1900,6 +1904,327 @@ code {
   justify-content: flex-start;
 }
 
+.control-watch-engine-disclosure {
+  --ops-accent: var(--signal-accent);
+  margin-top: 8px;
+}
+
+.control-watch-engine-disclosure.tone-ok {
+  --ops-accent: color-mix(in srgb, var(--signal-accent) 62%, var(--foreground));
+}
+
+.control-watch-engine-disclosure.tone-warn {
+  --ops-accent: var(--danger-chip-text);
+}
+
+.control-watch-engine-disclosure.tone-neutral {
+  --ops-accent: var(--signal-accent);
+}
+
+.control-watch-engine-disclosure.tone-hold {
+  --ops-accent: #f97316;
+}
+
+.control-watch-engine-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--background) 86%, var(--panel));
+  padding: 8px 10px;
+  cursor: pointer;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+
+.control-watch-engine-summary::-webkit-details-marker {
+  display: none;
+}
+
+.control-watch-engine-summary::marker {
+  content: "";
+}
+
+.control-watch-engine-summary-main {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.control-watch-engine-summary-k {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--ops-accent) 42%, var(--muted-foreground));
+}
+
+.control-watch-engine-summary-v {
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.control-watch-engine-summary-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted-foreground);
+  transition: transform 180ms ease;
+}
+
+.control-watch-engine-summary-chevron svg {
+  width: 14px;
+  height: 14px;
+}
+
+.control-watch-engine-disclosure[open] .control-watch-engine-summary {
+  border-color: color-mix(in srgb, var(--ops-accent) 24%, var(--border-strong));
+}
+
+.control-watch-engine-disclosure[open] .control-watch-engine-summary-chevron {
+  transform: rotate(180deg);
+}
+
+.control-watch-engine {
+  --ops-accent: var(--signal-accent);
+  position: relative;
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel-strong) 88%, var(--secondary));
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  overflow: hidden;
+  color: var(--foreground);
+  font-family: inherit;
+  transition:
+    background-color 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    color 180ms ease;
+}
+
+.control-watch-engine.tone-ok {
+  --ops-accent: color-mix(in srgb, var(--signal-accent) 62%, var(--foreground));
+}
+
+.control-watch-engine.tone-warn {
+  --ops-accent: var(--danger-chip-text);
+}
+
+.control-watch-engine.tone-neutral {
+  --ops-accent: var(--signal-accent);
+}
+
+.control-watch-engine.tone-hold {
+  --ops-accent: #f97316;
+}
+
+.control-watch-engine::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: color-mix(in srgb, var(--ops-accent) 42%, transparent);
+  pointer-events: none;
+  transition: background-color 220ms ease;
+}
+
+.control-watch-engine-head {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.control-watch-engine-title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.control-watch-engine-led {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ops-accent) 66%, var(--foreground));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ops-accent) 28%, transparent);
+  transition:
+    background-color 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.control-watch-engine-head .label {
+  margin: 0;
+  font-family: inherit;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--ops-accent) 42%, var(--muted-foreground));
+  transition: color 220ms ease;
+}
+
+.control-watch-engine-intro {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.control-watch-engine-main {
+  display: grid;
+  gap: 7px;
+}
+
+.control-watch-engine-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--background) 88%, var(--panel));
+  padding: 8px 9px;
+  transition:
+    border-color 220ms ease,
+    background-color 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.control-watch-engine-item.is-now {
+  border-color: color-mix(in srgb, var(--ops-accent) 24%, var(--border-strong));
+  background: color-mix(in srgb, var(--signal-accent-soft) 68%, var(--panel));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ops-accent) 8%, transparent);
+}
+
+.control-watch-engine-item-label {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ops-accent) 44%, var(--muted-foreground));
+  background: var(--secondary);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 8px;
+  line-height: 1.35;
+  transition:
+    color 220ms ease,
+    border-color 220ms ease,
+    background-color 220ms ease;
+}
+
+.control-watch-engine-item-value {
+  font-size: 13px;
+  line-height: 1.42;
+  color: var(--foreground);
+  width: 100%;
+  min-height: calc(1.42em * 2);
+}
+
+.control-watch-engine-animated-value {
+  animation: watch-engine-text-enter 220ms cubic-bezier(0.2, 0.75, 0.2, 1);
+  transform-origin: left center;
+}
+
+@keyframes watch-engine-text-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.control-watch-engine-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 1px;
+}
+
+.control-watch-engine-help-trigger {
+  cursor: help;
+}
+
+.control-watch-engine-meta .pill {
+  transition:
+    color 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease,
+    transform 180ms ease;
+}
+
+.control-watch-engine-meta .pill:hover {
+  transform: translateY(-1px);
+}
+
+.control-watch-engine-hovercard {
+  border-color: var(--border);
+  background: var(--panel);
+  color: var(--foreground);
+  box-shadow: var(--shadow);
+}
+
+.control-watch-engine-hovercard .meta {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.control-watch-engine-details {
+  display: grid;
+  gap: 0;
+  margin-top: 1px;
+  border-top: 1px dashed var(--border);
+  padding-top: 7px;
+  transition: border-color 220ms ease;
+}
+
+.control-watch-engine-kv {
+  display: grid;
+  grid-template-columns: 102px minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+  margin: 0;
+  padding: 3px 0;
+}
+
+.control-watch-engine-k {
+  margin: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted-foreground);
+  transition: color 220ms ease;
+}
+
+.control-watch-engine-v {
+  margin: 0;
+  min-width: 0;
+  color: var(--foreground);
+  font-size: 12px;
+  line-height: 1.35;
+  transition: color 220ms ease;
+}
+
 .control-target-head {
   display: flex;
   align-items: center;
@@ -2276,6 +2601,519 @@ code {
 
 .live-dot + button {
   margin-left: 2px;
+}
+
+.hero-shell {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  border-radius: 14px;
+  padding: 14px;
+  background:
+    radial-gradient(
+      circle at 8% -12%,
+      color-mix(in srgb, var(--signal-accent-soft) 58%, transparent),
+      transparent 58%
+    ),
+    linear-gradient(
+      150deg,
+      color-mix(in srgb, var(--panel-strong) 96%, transparent),
+      color-mix(in srgb, var(--panel) 92%, transparent)
+    );
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.dark .hero-shell {
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.32);
+}
+
+.hero-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(
+    112deg,
+    color-mix(in srgb, var(--signal-accent-soft) 14%, transparent) 0%,
+    transparent 52%,
+    color-mix(in srgb, var(--accent-soft) 34%, transparent) 100%
+  );
+  opacity: 0.72;
+}
+
+.hero-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.hero-title {
+  margin: 0;
+  font-size: clamp(1.32rem, 1.04rem + 0.72vw, 1.78rem);
+  line-height: 1.05;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.hero-flags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  padding: 3px 9px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  background: color-mix(in srgb, var(--panel) 72%, var(--muted) 28%);
+  letter-spacing: 0.01em;
+}
+
+.hero-badge.warmup {
+  border-color: color-mix(in srgb, #f59e0b 48%, var(--border));
+  background: color-mix(in srgb, #f59e0b 14%, transparent);
+  color: color-mix(in srgb, #f59e0b 68%, var(--foreground));
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  align-items: stretch;
+}
+
+.hero-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--border) 84%, transparent);
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, var(--panel-strong) 94%, transparent),
+    color-mix(in srgb, var(--panel) 88%, transparent)
+  );
+}
+
+.hero-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 10px;
+  right: 10px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--signal-accent-soft) 34%, transparent),
+    transparent
+  );
+  opacity: 0.78;
+}
+
+.hero-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hero-card-label {
+  display: inline-flex;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  font-weight: 700;
+}
+
+.hero-status-chip {
+  --hero-status-accent: color-mix(in srgb, var(--muted-foreground) 52%, var(--foreground));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 20px;
+  padding: 1px 9px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--hero-status-accent) 38%, var(--border));
+  background: color-mix(in srgb, var(--hero-status-accent) 14%, transparent);
+  color: color-mix(in srgb, var(--hero-status-accent) 72%, var(--foreground));
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.hero-status-chip.tone-standby {
+  --hero-status-accent: color-mix(in srgb, var(--muted-foreground) 52%, var(--foreground));
+}
+
+.hero-status-chip.tone-scan {
+  --hero-status-accent: var(--signal-accent);
+}
+
+.hero-status-chip.tone-watch {
+  --hero-status-accent: color-mix(in srgb, var(--signal-accent) 70%, var(--foreground));
+}
+
+.hero-status-chip.tone-recover {
+  --hero-status-accent: #f59e0b;
+}
+
+.hero-status-chip.tone-hold {
+  --hero-status-accent: #f97316;
+}
+
+.hero-campaign-name {
+  margin-top: 0;
+  font-size: clamp(1.2rem, 1rem + 0.66vw, 1.62rem);
+  line-height: 1.15;
+  font-weight: 700;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+
+.hero-campaign-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.hero-campaign-progress-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hero-micro-label {
+  font-size: 10px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  font-weight: 600;
+}
+
+.hero-micro-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.hero-campaign-progress-track {
+  height: 6px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border) 84%, transparent);
+  background: color-mix(in srgb, var(--muted) 80%, transparent);
+  overflow: hidden;
+}
+
+.hero-campaign-progress-fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--signal-accent) 76%, var(--foreground) 12%),
+    color-mix(in srgb, var(--signal-accent) 42%, var(--foreground) 24%)
+  );
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--signal-accent) 30%, transparent);
+  transition: width 220ms ease;
+}
+
+.hero-campaign-progress-fill.is-empty {
+  width: 100%;
+  background: color-mix(in srgb, var(--muted) 90%, transparent);
+  box-shadow: none;
+}
+
+.hero-card-campaign .hero-engine-rail {
+  margin-top: 1px;
+}
+
+.hero-campaign-foot {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.hero-foot-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--border) 84%, transparent);
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+}
+
+.hero-foot-k {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  font-weight: 600;
+}
+
+.hero-foot-v {
+  font-size: 12px;
+  line-height: 1.2;
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.hero-stat-label {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  font-weight: 600;
+}
+
+.hero-ops-progress {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.hero-ops-progress-value {
+  font-size: clamp(1.4rem, 1.15rem + 0.52vw, 1.78rem);
+  line-height: 1;
+  letter-spacing: -0.01em;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.hero-ops-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.hero-kpi {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-height: 52px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--border) 84%, transparent);
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+}
+
+.hero-kpi-label {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  font-weight: 600;
+}
+
+.hero-kpi-value {
+  font-size: 15px;
+  line-height: 1.1;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.hero-current-drop {
+  margin-top: 6px;
+  padding: 8px 9px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  flex: 1 1 auto;
+  gap: 5px;
+  min-height: 46px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--border) 84%, transparent);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--panel-strong) 92%, transparent),
+    color-mix(in srgb, var(--panel) 90%, transparent)
+  );
+}
+
+.hero-current-drop-head {
+  display: block;
+  min-width: 0;
+}
+
+.hero-current-drop-title {
+  margin-top: 1px;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hero-current-drop-meta {
+  margin-top: auto;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+  min-width: 0;
+}
+
+.hero-current-drop .pill.small {
+  padding: 2px 7px;
+  font-size: 10px;
+}
+
+.hero-engine-rail {
+  --hero-rail-accent: var(--signal-accent);
+  border: 1px solid color-mix(in srgb, var(--border) 84%, transparent);
+  border-radius: 9px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--panel-strong) 94%, transparent),
+    color-mix(in srgb, var(--panel) 92%, transparent)
+  );
+  padding: 7px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hero-engine-rail.tone-standby {
+  --hero-rail-accent: color-mix(in srgb, var(--muted-foreground) 52%, var(--foreground));
+}
+
+.hero-engine-rail.tone-scan {
+  --hero-rail-accent: var(--signal-accent);
+}
+
+.hero-engine-rail.tone-watch {
+  --hero-rail-accent: color-mix(in srgb, var(--signal-accent) 70%, var(--foreground));
+}
+
+.hero-engine-rail.tone-recover {
+  --hero-rail-accent: #f59e0b;
+}
+
+.hero-engine-rail.tone-hold {
+  --hero-rail-accent: #f97316;
+}
+
+.hero-engine-rail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hero-engine-rail-title {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.hero-engine-rail-status {
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--hero-rail-accent) 70%, var(--foreground));
+}
+
+.hero-engine-rail-status-wrap {
+  min-width: 9ch;
+  display: inline-flex;
+  justify-content: flex-end;
+  align-items: center;
+  overflow: hidden;
+}
+
+.hero-engine-rail-status-animated {
+  animation: heroRailStatusEnter 220ms cubic-bezier(0.2, 0.75, 0.2, 1);
+}
+
+.hero-engine-rail-segments {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.hero-engine-rail-segment {
+  height: 6px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  background: color-mix(in srgb, var(--muted) 78%, transparent);
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.hero-engine-rail-segment.is-complete {
+  border-color: color-mix(in srgb, var(--hero-rail-accent) 32%, var(--border));
+  background: color-mix(in srgb, var(--hero-rail-accent) 28%, transparent);
+}
+
+.hero-engine-rail-segment.is-active {
+  border-color: color-mix(in srgb, var(--hero-rail-accent) 70%, transparent);
+  background: color-mix(in srgb, var(--hero-rail-accent) 72%, var(--foreground) 6%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--hero-rail-accent) 18%, transparent);
+}
+
+.hero-engine-rail-labels {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.hero-engine-rail-label {
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--muted-foreground) 88%, var(--foreground) 12%);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hero-engine-rail-label.is-active {
+  color: color-mix(in srgb, var(--hero-rail-accent) 72%, var(--foreground));
+}
+
+@keyframes heroRailStatusEnter {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .active-stream-bar {
@@ -3034,9 +3872,41 @@ code {
   .campaign-list.is-entering .campaign-card {
     animation: none;
   }
+
+  .hero-campaign-progress-fill {
+    transition: none;
+  }
+
+  .control-watch-engine,
+  .control-watch-engine::before,
+  .control-watch-engine-led,
+  .control-watch-engine-head .label,
+  .control-watch-engine-item,
+  .control-watch-engine-item-label,
+  .control-watch-engine-meta .pill,
+  .control-watch-engine-details,
+  .control-watch-engine-k,
+  .control-watch-engine-v {
+    transition: none;
+  }
+
+  .control-watch-engine-animated-value,
+  .hero-engine-rail-status-animated {
+    animation: none;
+  }
 }
 
 @media (max-width: 960px) {
+  .hero-shell {
+    padding: 12px;
+  }
+  .hero-grid {
+    grid-template-columns: 1fr;
+  }
+  .hero-card {
+    padding: 10px;
+    min-height: 0;
+  }
   .layout {
     margin-top: 12px;
   }
@@ -3060,6 +3930,17 @@ code {
   }
   .control-target-actions .select {
     min-width: 100%;
+  }
+  .control-watch-engine-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .control-watch-engine-kv {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+  .control-watch-engine-k {
+    font-size: 10px;
   }
   .priority-split {
     grid-template-columns: 1fr;
@@ -3105,6 +3986,30 @@ code {
 }
 
 @media (max-width: 560px) {
+  .hero-title {
+    font-size: 1.2rem;
+  }
+  .hero-shell {
+    padding: 10px;
+  }
+  .hero-card {
+    padding: 8px;
+  }
+  .hero-current-drop {
+    min-height: 0;
+  }
+  .hero-current-drop-meta {
+    flex-wrap: wrap;
+  }
+  .hero-campaign-foot {
+    grid-template-columns: 1fr;
+  }
+  .hero-engine-rail-labels {
+    display: none;
+  }
+  .hero-ops-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
   .drop-grid {
     grid-template-columns: 1fr;
   }
