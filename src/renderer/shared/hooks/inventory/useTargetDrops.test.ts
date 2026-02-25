@@ -175,7 +175,8 @@ describe("computeTargetDrops", () => {
       now,
     });
     expect(result.activeDropInfo?.id).toBe(item.id);
-    expect(result.liveDeltaApplied).toBe(5);
+    expect(result.liveDeltaApplied).toBe(0);
+    expect(result.activeDropInfo?.eta).toBeNull();
   });
 
   it("prefers an in-progress drop that is farmable on the current channel", () => {

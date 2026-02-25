@@ -179,33 +179,41 @@ export function computeTargetDrops({
   const isWatchingAnyChannel = Boolean(watching);
   const isWatchingTargetGame = Boolean(watching && watching.game === targetGame);
   const farmableInProgress = isWatchingTargetGame
-    ? (sortedInProgress.find(({ drop }) => drop.canProgressOnWatchingChannel(watching, targetGame))
-        ?.drop ?? null)
+    ? (sortedInProgress.find(({ drop }) =>
+        drop.canProgressOnWatchingChannel(watching, targetGame),
+      ) ?? null)
     : null;
   const farmableUpcoming = isWatchingTargetGame
-    ? (sortedUpcoming.find(({ drop }) => drop.canProgressOnWatchingChannel(watching, targetGame))
-        ?.drop ?? null)
+    ? (sortedUpcoming.find(({ drop }) => drop.canProgressOnWatchingChannel(watching, targetGame)) ??
+      null)
     : null;
-  const activeDrop = isWatchingAnyChannel
+  const activeDropEntry = isWatchingAnyChannel
     ? (farmableInProgress ?? farmableUpcoming ?? null)
-    : (sortedInProgress[0]?.drop ?? null);
+    : (sortedInProgress[0] ?? null);
+  const activeDrop = activeDropEntry?.drop ?? null;
+  const activeDropCategory = activeDropEntry?.category ?? null;
+  const canPredictActiveDropProgress =
+    Boolean(watching) && isWatchingTargetGame && activeDropCategory === "in-progress";
   const activeDropAnchorAt = (() => {
-    if (!activeDrop) return null;
+    if (!activeDrop || !canPredictActiveDropProgress) return null;
     const byDrop = progressAnchorByDropId?.[activeDrop.id];
     if (typeof byDrop === "number" && Number.isFinite(byDrop)) return byDrop;
     return inventoryFetchedAt;
   })();
   const liveDeltaMinutesRaw =
-    watching && activeDropAnchorAt ? Math.max(0, (now - activeDropAnchorAt) / 60000) : 0;
+    canPredictActiveDropProgress && activeDropAnchorAt
+      ? Math.max(0, (now - activeDropAnchorAt) / 60000)
+      : 0;
   const liveDeltaMinutes = Math.min(
     liveDeltaMinutesRaw,
     Math.max(0, totalRequiredMinutes - totalEarnedMinutes),
   );
   const activeDropRequired = activeDrop ? activeDrop.requiredMinutes : 0;
   const activeDropEarned = activeDrop ? activeDrop.earnedMinutes : 0;
-  const liveDeltaApplied = activeDrop
-    ? Math.min(liveDeltaMinutes, Math.max(0, activeDropRequired - activeDropEarned))
-    : 0;
+  const liveDeltaApplied =
+    activeDrop && canPredictActiveDropProgress
+      ? Math.min(liveDeltaMinutes, Math.max(0, activeDropRequired - activeDropEarned))
+      : 0;
   const targetProgress = totalRequiredMinutes
     ? Math.min(100, Math.round((totalEarnedMinutes / totalRequiredMinutes) * 100))
     : 0;
@@ -216,7 +224,9 @@ export function computeTargetDrops({
     ? Math.max(0, activeDropRequired - activeDropVirtualEarned)
     : 0;
   const activeDropEta =
-    activeDropRemainingMinutes > 0 ? now + activeDropRemainingMinutes * 60_000 : null;
+    canPredictActiveDropProgress && activeDropRemainingMinutes > 0
+      ? now + activeDropRemainingMinutes * 60_000
+      : null;
   const activeDropInfo = activeDrop
     ? {
         id: activeDrop.id,
