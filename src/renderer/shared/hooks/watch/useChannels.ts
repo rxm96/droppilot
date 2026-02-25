@@ -220,14 +220,28 @@ export const shouldAutoSelectChannel = ({
   canWatchTarget,
   channels,
   watching,
+  channelAllowlist,
 }: {
   allowWatching: boolean;
   autoSelectEnabled: boolean;
   canWatchTarget: boolean;
   channels: ChannelEntry[];
   watching: WatchingState;
-}): boolean =>
-  allowWatching && autoSelectEnabled && canWatchTarget && channels.length > 0 && !watching;
+  channelAllowlist?: ChannelAllowlist | null;
+}): boolean => {
+  if (
+    !allowWatching ||
+    !autoSelectEnabled ||
+    !canWatchTarget ||
+    watching ||
+    channels.length === 0
+  ) {
+    return false;
+  }
+  const normalized = normalizeAllowlist(channelAllowlist);
+  if (!normalized) return true;
+  return channels.some((channel) => normalized.allowsChannel(channel));
+};
 
 export const computeAutoSwitchAction = ({
   allowWatching,
@@ -252,22 +266,25 @@ export const computeAutoSwitchAction = ({
   if (!allowWatching) return { action: "none" };
   if (!watching) return { action: "none" };
   const normalizedAllowlist = normalizeAllowlist(channelAllowlist);
+  const allowlistActive = Boolean(normalizedAllowlist);
   const isAllowed = (channel: ChannelEntry): boolean =>
-    normalizedAllowlist ? normalizedAllowlist.allowsChannel(channel) : false;
+    normalizedAllowlist ? normalizedAllowlist.allowsChannel(channel) : true;
   const preferredChannel = normalizedAllowlist
     ? channels.find((channel) => isAllowed(channel))
     : null;
   const shouldForceSwitch = forcePrioritySwitch && canWatchTarget;
   const stillThere = channels.some((c) => c.id === watching.id);
   if (stillThere) {
-    if (!shouldForceSwitch || !preferredChannel) return { action: "none" };
     const current = channels.find((c) => c.id === watching.id) ?? null;
     if (!current) return { action: "none" };
+    if (allowlistActive && !isAllowed(current) && !preferredChannel) return { action: "clear" };
+    if (!shouldForceSwitch || !preferredChannel) return { action: "none" };
     if (isAllowed(current)) return { action: "none" };
     if (preferredChannel.id === current.id) return { action: "none" };
     return { action: "switch", reason: "priority", nextChannel: preferredChannel };
   }
   if (channels.length === 0) return { action: "clear" };
+  if (allowlistActive && !preferredChannel) return { action: "clear" };
   if (!autoSwitchEnabled && !shouldForceSwitch) return { action: "none" };
   const nextChannel = preferredChannel ?? channels[0];
   return {
@@ -843,10 +860,15 @@ export function useChannels({
         canWatchTarget,
         channels,
         watching,
+        channelAllowlist,
       })
     )
       return;
-    const first = channels[0];
+    const normalizedAllowlist = normalizeAllowlist(channelAllowlist);
+    const first = normalizedAllowlist
+      ? channels.find((channel) => normalizedAllowlist.allowsChannel(channel))
+      : channels[0];
+    if (!first) return;
     setWatchingFromChannel(first);
   }, [
     channels,
@@ -855,6 +877,7 @@ export function useChannels({
     autoSelectEnabled,
     allowWatching,
     canWatchTarget,
+    channelAllowlist,
     setWatchingFromChannel,
   ]);
 

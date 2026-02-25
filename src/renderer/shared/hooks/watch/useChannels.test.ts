@@ -79,6 +79,21 @@ describe("useChannels helpers", () => {
     ).toBe(true);
   });
 
+  it("does not auto-select when allowlist is active and no channel matches", () => {
+    const channels = [makeChannel({ id: "1", login: "alpha" })];
+    const watching: WatchingState = null;
+    expect(
+      shouldAutoSelectChannel({
+        allowWatching: true,
+        autoSelectEnabled: true,
+        canWatchTarget: true,
+        channels,
+        watching,
+        channelAllowlist: { ids: ["999"], logins: [] },
+      }),
+    ).toBe(false);
+  });
+
   it("computes auto-switch actions", () => {
     const channels = [makeChannel({ id: "2", displayName: "Beta" })];
     const watching: WatchingState = { id: "1", name: "Alpha", game: "Game" };
@@ -146,6 +161,34 @@ describe("useChannels helpers", () => {
       autoSwitchEnabled: true,
       forcePrioritySwitch: false,
       canWatchTarget: true,
+    });
+    expect(action.action).toBe("clear");
+  });
+
+  it("clears watching when allowlist is active but no channel matches", () => {
+    const watching: WatchingState = { id: "1", name: "Alpha", game: "Game" };
+    const action = computeAutoSwitchAction({
+      allowWatching: true,
+      watching,
+      channels: [makeChannel({ id: "2", login: "beta", displayName: "Beta" })],
+      autoSwitchEnabled: true,
+      forcePrioritySwitch: false,
+      canWatchTarget: true,
+      channelAllowlist: { ids: ["999"], logins: [] },
+    });
+    expect(action.action).toBe("clear");
+  });
+
+  it("clears when forced priority switch is active and current channel is not allowlisted", () => {
+    const watching: WatchingState = { id: "1", name: "Alpha", game: "Game" };
+    const action = computeAutoSwitchAction({
+      allowWatching: true,
+      watching,
+      channels: [makeChannel({ id: "1", login: "alpha", displayName: "Alpha" })],
+      autoSwitchEnabled: true,
+      forcePrioritySwitch: true,
+      canWatchTarget: true,
+      channelAllowlist: { ids: ["999"], logins: [] },
     });
     expect(action.action).toBe("clear");
   });
