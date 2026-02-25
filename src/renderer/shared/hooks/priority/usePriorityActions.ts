@@ -69,9 +69,17 @@ export function usePriorityActions({
       updated.splice(clampedTargetIndex, 0, item);
       setDragIndex(null);
       setDragOverIndex(null);
+      setAutoSelectEnabled(true);
       void savePriorityGames(updated);
     },
-    [dragIndex, priorityGames, savePriorityGames, setDragIndex, setDragOverIndex],
+    [
+      dragIndex,
+      priorityGames,
+      savePriorityGames,
+      setAutoSelectEnabled,
+      setDragIndex,
+      setDragOverIndex,
+    ],
   );
 
   const addGameFromSelect = useCallback(() => {

@@ -1,5 +1,5 @@
 import { buildDemoPriorityPlan } from "@renderer/shared/demoData";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   InventoryItem,
   InventoryState,
@@ -130,6 +130,8 @@ export const computeNextActiveTargetGame = ({
   withCategories,
   watchingGame = "",
   allowUpcomingActionable = false,
+  allowStrictPreemptionWhileWatching = false,
+  allowPriorityListPreemption = false,
 }: {
   inventoryStatus: InventoryState["status"];
   activeTargetGame: string;
@@ -138,6 +140,8 @@ export const computeNextActiveTargetGame = ({
   withCategories: WithCategory[];
   watchingGame?: string;
   allowUpcomingActionable?: boolean;
+  allowStrictPreemptionWhileWatching?: boolean;
+  allowPriorityListPreemption?: boolean;
 }): string => {
   if (inventoryStatus !== "ready") return activeTargetGame;
   const currentHasDrops = activeTargetGame
@@ -149,13 +153,19 @@ export const computeNextActiveTargetGame = ({
     return currentHasDrops ? activeTargetGame : "";
   }
   if (!activeTargetGame || !currentHasDrops) return bestActionableGame;
-  if (!obeyPriority) return activeTargetGame;
+  if (!obeyPriority) {
+    if (allowPriorityListPreemption && bestActionableGame !== activeTargetGame) {
+      return bestActionableGame;
+    }
+    return activeTargetGame;
+  }
   // Avoid preempting an actively watched, still-actionable target just because a higher
   // priority game reappeared (e.g. stall suppression expiry); switch only after this session ends.
   if (
     watchingGame &&
     watchingGame === activeTargetGame &&
-    bestActionableGame !== activeTargetGame
+    bestActionableGame !== activeTargetGame &&
+    !allowStrictPreemptionWhileWatching
   ) {
     return activeTargetGame;
   }
@@ -211,6 +221,10 @@ export function usePriorityOrchestration({
   const strictPriorityGames = useMemo(() => {
     return normalizePriorityGames(priorityGames);
   }, [priorityGames]);
+  const priorityListKey = strictPriorityGames.join("|");
+  const lastPriorityListKeyRef = useRef<string>(priorityListKey);
+  const priorityListChanged = lastPriorityListKeyRef.current !== priorityListKey;
+  const strictPriorityOrderChanged = obeyPriority && priorityListChanged;
 
   const priorityOrder = useMemo(() => {
     return computePriorityOrder({
@@ -262,6 +276,8 @@ export function usePriorityOrchestration({
       withCategories,
       watchingGame: watching?.game ?? "",
       allowUpcomingActionable: allowUnlinkedGames,
+      allowStrictPreemptionWhileWatching: strictPriorityOrderChanged,
+      allowPriorityListPreemption: priorityListChanged,
     });
     if (nextTarget !== activeTargetGame) {
       setActiveTargetGame(nextTarget);
@@ -273,8 +289,13 @@ export function usePriorityOrchestration({
     obeyPriority,
     withCategories,
     allowUnlinkedGames,
+    priorityListChanged,
+    strictPriorityOrderChanged,
     watching?.game,
   ]);
+  useEffect(() => {
+    lastPriorityListKeyRef.current = priorityListKey;
+  }, [priorityListKey]);
 
   return {
     activeTargetGame,

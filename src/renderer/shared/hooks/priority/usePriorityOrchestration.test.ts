@@ -141,6 +141,16 @@ describe("priority orchestration helpers", () => {
     });
     expect(keepCurrent).toBe("A");
 
+    const nonStrictPreemptOnPriorityEdit = computeNextActiveTargetGame({
+      inventoryStatus: "ready",
+      activeTargetGame: "A",
+      bestActionableGame: "B",
+      obeyPriority: false,
+      withCategories,
+      allowPriorityListPreemption: true,
+    });
+    expect(nonStrictPreemptOnPriorityEdit).toBe("B");
+
     const strictSwitch = computeNextActiveTargetGame({
       inventoryStatus: "ready",
       activeTargetGame: "A",
@@ -165,6 +175,23 @@ describe("priority orchestration helpers", () => {
       watchingGame: "B",
     });
     expect(result).toBe("B");
+  });
+
+  it("preempts an actively watched target in strict mode when forced by priority reorder", () => {
+    const withCategories: WithCategory[] = [
+      { item: makeItem({ id: "a1", game: "A" }), category: "in-progress" },
+      { item: makeItem({ id: "b1", game: "B" }), category: "in-progress" },
+    ];
+    const result = computeNextActiveTargetGame({
+      inventoryStatus: "ready",
+      activeTargetGame: "B",
+      bestActionableGame: "A",
+      obeyPriority: true,
+      withCategories,
+      watchingGame: "B",
+      allowStrictPreemptionWhileWatching: true,
+    });
+    expect(result).toBe("A");
   });
 
   it("does not change target when inventory is not ready", () => {
