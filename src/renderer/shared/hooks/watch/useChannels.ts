@@ -310,6 +310,15 @@ export const isManualPriorityOverrideActive = ({
   return now - manualWatchOverride.at < windowMs;
 };
 
+export const shouldClearTrackerAfterStaleResponse = ({
+  shouldTrackChannels,
+}: {
+  shouldTrackChannels: boolean;
+}): boolean => {
+  // If tracking is currently disabled, stale responses must not revive tracker subscriptions.
+  return !shouldTrackChannels;
+};
+
 const normalizeAllowlist = (allowlist?: ChannelAllowlist | null): DropChannelRestriction | null => {
   const restriction = DropChannelRestriction.fromAllowlist(allowlist);
   return restriction.hasConstraints ? restriction : null;
@@ -512,6 +521,34 @@ export function useChannels({
       }),
     [fetchedAt, fetchedGame, TRACKER_REFRESH_WINDOW_MS],
   );
+  const hasTrackableTarget = Boolean(targetGame) && (canWatchTarget || Boolean(watching));
+  const shouldTrackChannels =
+    allowWatching &&
+    hasTrackableTarget &&
+    (view === "control" || autoSelectEnabled || watching || autoSwitchEnabled);
+  const shouldTrackChannelsRef = useRef(shouldTrackChannels);
+  useEffect(() => {
+    shouldTrackChannelsRef.current = shouldTrackChannels;
+  }, [shouldTrackChannels]);
+  const clearTrackerIfTrackingDisabled = useCallback(
+    (
+      context: "stale-demo-response" | "stale-response" | "stale-failure",
+      requestedGame: string,
+      requestId: number,
+    ) => {
+      const shouldTrack = shouldTrackChannelsRef.current;
+      if (!shouldClearTrackerAfterStaleResponse({ shouldTrackChannels: shouldTrack })) return;
+      logInfo("channels: clear tracker after stale response", {
+        context,
+        requestedGame,
+        currentTargetGame: targetGameRef.current,
+        requestId,
+        shouldTrackChannels: shouldTrack,
+      });
+      void window.electronAPI.twitch.trackerClearChannels?.();
+    },
+    [],
+  );
   const fetchChannels = useCallback(
     async (gameName: string, { force }: { force?: boolean } = {}) => {
       if (!allowWatching) return;
@@ -547,6 +584,7 @@ export function useChannels({
               current: targetGameRef.current,
               requestId,
             });
+            clearTrackerIfTrackingDisabled("stale-demo-response", gameName, requestId);
             return;
           }
           latestAppliedRequestRef.current = requestId;
@@ -582,6 +620,7 @@ export function useChannels({
             current: targetGameRef.current,
             requestId,
           });
+          clearTrackerIfTrackingDisabled("stale-response", gameName, requestId);
           return;
         }
         latestAppliedRequestRef.current = requestId;
@@ -648,6 +687,7 @@ export function useChannels({
             current: targetGameRef.current,
             requestId,
           });
+          clearTrackerIfTrackingDisabled("stale-failure", gameName, requestId);
           return;
         }
         setChannelError(
@@ -674,15 +714,10 @@ export function useChannels({
       isFresh,
       onAuthError,
       channelAllowlist,
+      clearTrackerIfTrackingDisabled,
       watching,
     ],
   );
-
-  const hasTrackableTarget = Boolean(targetGame) && (canWatchTarget || Boolean(watching));
-  const shouldTrackChannels =
-    allowWatching &&
-    hasTrackableTarget &&
-    (view === "control" || autoSelectEnabled || watching || autoSwitchEnabled);
 
   useEffect(() => {
     if (!allowWatching || !targetGame || !shouldTrackChannels) return;

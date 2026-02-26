@@ -205,6 +205,20 @@ describe("priority orchestration helpers", () => {
     expect(result).toBe("A");
   });
 
+  it("clears strict target when no strict actionable game exists even if current target has drops", () => {
+    const withCategories: WithCategory[] = [
+      { item: makeItem({ id: "a1", game: "A", status: "progress" }), category: "in-progress" },
+    ];
+    const result = computeNextActiveTargetGame({
+      inventoryStatus: "ready",
+      activeTargetGame: "A",
+      bestActionableGame: "",
+      obeyPriority: true,
+      withCategories,
+    });
+    expect(result).toBe("");
+  });
+
   it("clears target when no actionable drops remain", () => {
     const withCategories: WithCategory[] = [
       { item: makeItem({ id: "a1", game: "A", status: "claimed" }), category: "finished" },

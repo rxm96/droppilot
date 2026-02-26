@@ -150,6 +150,11 @@ export const computeNextActiveTargetGame = ({
       })
     : false;
   if (!bestActionableGame) {
+    if (obeyPriority) {
+      // In strict mode an empty actionable set means "no allowed target".
+      // Keeping the previous target can cause watch clear/reselect loops.
+      return "";
+    }
     return currentHasDrops ? activeTargetGame : "";
   }
   if (!activeTargetGame || !currentHasDrops) return bestActionableGame;

@@ -8,6 +8,7 @@ import {
   hasRecentInventory,
   isFreshCache,
   mergeChannelList,
+  shouldClearTrackerAfterStaleResponse,
   shouldAutoSelectChannel,
 } from "./useChannels";
 
@@ -235,6 +236,19 @@ describe("useChannels helpers", () => {
         targetGame: "Game",
         now: 3_000,
         windowMs: 1_000,
+      }),
+    ).toBe(false);
+  });
+
+  it("clears tracker subscriptions when stale responses arrive while tracking is disabled", () => {
+    expect(
+      shouldClearTrackerAfterStaleResponse({
+        shouldTrackChannels: false,
+      }),
+    ).toBe(true);
+    expect(
+      shouldClearTrackerAfterStaleResponse({
+        shouldTrackChannels: true,
       }),
     ).toBe(false);
   });
