@@ -1,4 +1,5 @@
 import { buildDemoPriorityPlan } from "@renderer/shared/demoData";
+import { canEarnDrop } from "@renderer/shared/domain/inventory";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   InventoryItem,
@@ -9,8 +10,11 @@ import type {
 
 export type WithCategory = { item: InventoryItem; category: string };
 
-const isActionableCategory = (category: string, allowUpcoming = false): boolean =>
-  category === "in-progress" || (allowUpcoming && category === "upcoming");
+const isActionableInventoryItem = (
+  item: InventoryItem,
+  category: string,
+  allowUpcoming = false,
+): boolean => canEarnDrop(item, { category, allowUpcoming });
 
 export const isGameActionable = (
   game: string,
@@ -20,7 +24,7 @@ export const isGameActionable = (
   const allowUpcoming = opts?.allowUpcoming === true;
   return withCategories.some(({ item, category }) => {
     if (item.game !== game) return false;
-    return isActionableCategory(category, allowUpcoming);
+    return isActionableInventoryItem(item, category, allowUpcoming);
   });
 };
 
@@ -32,7 +36,7 @@ export const computeFallbackOrder = (
   const seen = new Set<string>();
   const order: string[] = [];
   for (const { item, category } of withCategories) {
-    if (!isActionableCategory(category, allowUpcoming)) continue;
+    if (!isActionableInventoryItem(item, category, allowUpcoming)) continue;
     const game = item.game;
     if (!game || seen.has(game)) continue;
     seen.add(game);

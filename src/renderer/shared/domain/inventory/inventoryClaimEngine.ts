@@ -9,9 +9,9 @@ import {
 import { TWITCH_ERROR_CODES } from "../../../../shared/errorCodes";
 import {
   buildClaimRetrySignature,
+  canClaimDrop,
   CLAIM_ATTEMPT_RETRY_MS,
   getClaimRetryDelay,
-  isWithinClaimWindow,
 } from "./inventoryRules";
 
 const MAX_FALLBACK_AUTO_CLAIMS_PER_RUN = 1;
@@ -42,29 +42,7 @@ type PubSubClaimDeps = ClaimEngineBaseDeps & {
 };
 
 export const isAutoClaimCandidate = (item: InventoryItem, now = Date.now()): boolean => {
-  if (item.status === "claimed") return false;
-  if (!isWithinClaimWindow(item, now)) return false;
-  const req = Math.max(0, Number(item.requiredMinutes) || 0);
-  const earned = Math.max(0, Number(item.earnedMinutes) || 0);
-  const progressDone = req === 0 || earned >= req;
-  if (!progressDone) return false;
-
-  const hasClaimIdCandidate = Boolean(item.dropInstanceId || (item.campaignId && item.id));
-  if (!hasClaimIdCandidate) return false;
-
-  if (item.isClaimable === true) return true;
-  if (item.isClaimable === false) {
-    const hardBlockingHints = (item.blockingReasonHints ?? []).filter(
-      (reason) =>
-        reason !== "missing_drop_instance_id" &&
-        reason !== "account_not_linked" &&
-        reason !== "campaign_allow_disabled",
-    );
-    if (hardBlockingHints.length > 0) return false;
-  }
-
-  // Accept fallback claim path when Twitch has progress but no explicit claimable flag yet.
-  return true;
+  return canClaimDrop(item, { now, allowFallbackWhenNotExplicit: true });
 };
 
 const throwIfClaimErrorResponse = (response: unknown): void => {

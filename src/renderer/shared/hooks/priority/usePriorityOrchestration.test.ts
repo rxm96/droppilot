@@ -262,6 +262,37 @@ describe("priority orchestration helpers", () => {
     expect(isGameActionable("A", withCategories, { allowUpcoming: true })).toBe(true);
   });
 
+  it("does not treat zero-minute upcoming drops as actionable even when allowed", () => {
+    const withCategories: WithCategory[] = [
+      {
+        item: makeItem({
+          id: "a1",
+          game: "A",
+          status: "locked",
+          requiredMinutes: 0,
+        }),
+        category: "upcoming",
+      },
+    ];
+    expect(isGameActionable("A", withCategories, { allowUpcoming: true })).toBe(false);
+  });
+
+  it("does not treat hard-blocked upcoming drops as actionable", () => {
+    const withCategories: WithCategory[] = [
+      {
+        item: makeItem({
+          id: "a1",
+          game: "A",
+          status: "locked",
+          requiredMinutes: 60,
+          blockingReasonHints: ["preconditions_not_met"],
+        }),
+        category: "upcoming",
+      },
+    ];
+    expect(isGameActionable("A", withCategories, { allowUpcoming: true })).toBe(false);
+  });
+
   it("includes upcoming games in fallback when allowed", () => {
     const withCategories: WithCategory[] = [
       { item: makeItem({ id: "a1", game: "A" }), category: "in-progress" },

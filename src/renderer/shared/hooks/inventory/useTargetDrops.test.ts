@@ -59,6 +59,39 @@ describe("computeTargetDrops", () => {
     expect(result.totalEarnedMinutes).toBe(20);
   });
 
+  it("keeps claimed campaign minutes while showing remaining open-drop campaign progress", () => {
+    const claimed = makeItem({
+      id: "drop-claimed",
+      campaignId: "camp-1",
+      requiredMinutes: 240,
+      earnedMinutes: 240,
+      status: "claimed",
+    });
+    const open = makeItem({
+      id: "drop-open",
+      campaignId: "camp-1",
+      requiredMinutes: 240,
+      earnedMinutes: 0,
+      status: "locked",
+    });
+    const result = computeTargetDrops({
+      targetGame: "Game",
+      inventoryItems: [claimed, open],
+      withCategories: [
+        { item: claimed, category: "finished" },
+        { item: open, category: "upcoming" },
+      ],
+      allowWatching: true,
+      allowUnlinkedGames: true,
+      watching: null,
+      inventoryFetchedAt: null,
+      now: 1_000_000,
+    });
+    expect(result.totalRequiredMinutes).toBe(480);
+    expect(result.totalEarnedMinutes).toBe(240);
+    expect(result.targetProgress).toBe(50);
+  });
+
   it("selects active drop by least remaining minutes", () => {
     const now = 2_000_000;
     const slower = makeItem({
@@ -177,6 +210,78 @@ describe("computeTargetDrops", () => {
     expect(result.activeDropInfo?.id).toBe(item.id);
     expect(result.liveDeltaApplied).toBe(0);
     expect(result.activeDropInfo?.eta).toBeNull();
+  });
+
+  it("does not treat eligibility-blocked upcoming drops as watchable active targets", () => {
+    const now = 8_500_000;
+    const item = makeItem({
+      status: "locked",
+      earnedMinutes: 0,
+      requiredMinutes: 60,
+      blockingReasonHints: ["preconditions_not_met"],
+    });
+    const watching: WatchingState = { id: "1", name: "Streamer", game: "Game" };
+    const result = computeTargetDrops({
+      targetGame: "Game",
+      inventoryItems: [item],
+      withCategories: [{ item, category: "upcoming" }],
+      allowWatching: true,
+      allowUnlinkedGames: true,
+      watching,
+      inventoryFetchedAt: now - 5 * 60_000,
+      now,
+    });
+    expect(result.activeDropInfo).toBeNull();
+    expect(result.canWatchTarget).toBe(false);
+    expect(result.showNoDropsHint).toBe(true);
+  });
+
+  it("keeps account-not-linked upcoming drops watchable when unlinked games are allowed", () => {
+    const now = 8_600_000;
+    const item = makeItem({
+      status: "locked",
+      earnedMinutes: 0,
+      requiredMinutes: 60,
+      blockingReasonHints: ["account_not_linked"],
+    });
+    const watching: WatchingState = { id: "1", name: "Streamer", game: "Game" };
+    const result = computeTargetDrops({
+      targetGame: "Game",
+      inventoryItems: [item],
+      withCategories: [{ item, category: "upcoming" }],
+      allowWatching: true,
+      allowUnlinkedGames: true,
+      watching,
+      inventoryFetchedAt: now - 5 * 60_000,
+      now,
+    });
+    expect(result.canWatchTarget).toBe(true);
+    expect(result.showNoDropsHint).toBe(false);
+    expect(result.activeDropInfo?.id).toBe(item.id);
+  });
+
+  it("ignores zero-minute upcoming drops as non-watchable targets", () => {
+    const now = 8_700_000;
+    const item = makeItem({
+      status: "locked",
+      earnedMinutes: 0,
+      requiredMinutes: 0,
+      blockingReasonHints: ["account_not_linked"],
+    });
+    const watching: WatchingState = { id: "1", name: "Streamer", game: "Game" };
+    const result = computeTargetDrops({
+      targetGame: "Game",
+      inventoryItems: [item],
+      withCategories: [{ item, category: "upcoming" }],
+      allowWatching: true,
+      allowUnlinkedGames: true,
+      watching,
+      inventoryFetchedAt: now - 5 * 60_000,
+      now,
+    });
+    expect(result.activeDropInfo).toBeNull();
+    expect(result.canWatchTarget).toBe(false);
+    expect(result.showNoDropsHint).toBe(true);
   });
 
   it("prefers an in-progress drop that is farmable on the current channel", () => {

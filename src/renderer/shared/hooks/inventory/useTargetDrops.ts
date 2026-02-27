@@ -1,10 +1,9 @@
 import { useMemo } from "react";
 import { InventoryDrop, InventoryDropCollection } from "@renderer/shared/domain/dropDomain";
+import { canEarnDrop, hasHardWatchingBlockers } from "@renderer/shared/domain/inventory";
 import type { InventoryItem, WatchingState } from "@renderer/shared/types";
 
 type WithCategory = { item: InventoryItem; category: string };
-const isActionableCategory = (category: string, allowUpcoming: boolean): boolean =>
-  category === "in-progress" || (allowUpcoming && category === "upcoming");
 
 export type ActiveDropInfo = {
   id: string;
@@ -81,13 +80,30 @@ export function computeTargetDrops({
     category,
   }));
   const nonExpiredForGame = collection.forGame(targetGame).filter((drop) => !drop.isExpired(now));
-  const activeRelevant = withCategoryDrops.filter(
-    ({ drop, category }) =>
-      drop.game === targetGame && isActionableCategory(category, allowUnlinkedGames),
+  const isWatchableUpcomingDrop = (drop: InventoryDrop): boolean => {
+    return canEarnDrop(drop.raw, {
+      category: "upcoming",
+      allowUpcoming: true,
+    });
+  };
+  const isWatchableInProgress = (drop: InventoryDrop): boolean =>
+    !drop.isExpired(now) &&
+    canEarnDrop(drop.raw, {
+      category: "in-progress",
+      allowUpcoming: false,
+    });
+  const isActionableForTarget = ({ drop, category }: { drop: InventoryDrop; category: string }) =>
+    drop.game === targetGame &&
+    canEarnDrop(drop.raw, {
+      category,
+      allowUpcoming: allowUnlinkedGames,
+    });
+  const activeRelevant = withCategoryDrops.filter(({ drop, category }) =>
+    isActionableForTarget({ drop, category }),
   );
   const inProgressRelevant = withCategoryDrops.filter(
     ({ drop, category }) =>
-      drop.game === targetGame && category === "in-progress" && !drop.isExpired(now),
+      drop.game === targetGame && category === "in-progress" && isWatchableInProgress(drop),
   );
   const sortCandidates = (
     candidates: Array<{ drop: InventoryDrop; category: string }>,
@@ -106,18 +122,11 @@ export function computeTargetDrops({
       if (startA !== startB) return startA - startB;
       return a.drop.title.localeCompare(b.drop.title);
     });
-  const isWatchableInProgress = ({ drop, category }: { drop: InventoryDrop; category: string }) =>
-    drop.game === targetGame &&
-    category === "in-progress" &&
-    !drop.isExpired(now) &&
-    drop.isBlocked !== true &&
-    drop.remainingMinutes > 0 &&
-    drop.raw.isClaimable !== true;
   const sortedActive = sortCandidates(activeRelevant);
-  const sortedInProgress = sortCandidates(inProgressRelevant.filter(isWatchableInProgress));
+  const sortedInProgress = sortCandidates(inProgressRelevant);
   const upcomingRelevant = withCategoryDrops.filter(
     ({ drop, category }) =>
-      drop.game === targetGame && category === "upcoming" && drop.isBlocked !== true,
+      drop.game === targetGame && category === "upcoming" && isWatchableUpcomingDrop(drop),
   );
   const sortedUpcoming = sortCandidates(upcomingRelevant);
   const sortedActiveItems = sortedActive.map((s) => s.drop);
@@ -151,29 +160,67 @@ export function computeTargetDrops({
 
   const totalDrops = targetDrops.length;
   const claimedDrops = targetDropEntries.filter((drop) => drop.raw.status === "claimed").length;
-  const hasUnclaimedTarget = withCategoryDrops.some(
-    ({ drop, category }) =>
-      drop.game === targetGame && isActionableCategory(category, allowUnlinkedGames),
-  );
+  const hasUnclaimedTarget = withCategoryDrops.some(({ drop, category }) => {
+    if (drop.game !== targetGame) return false;
+    if (drop.isExpired(now)) return false;
+    if (drop.raw.status === "claimed") return false;
+    if (drop.requiredMinutes <= 0) return false;
+    if (drop.raw.blocked === true) return false;
+    if (hasHardWatchingBlockers(drop.raw)) return false;
+    if (category === "in-progress") return true;
+    if (category === "upcoming") return allowUnlinkedGames;
+    return false;
+  });
   const hasWatchableTarget =
     sortedInProgress.length > 0 || (allowUnlinkedGames && sortedUpcoming.length > 0);
   const canWatchTarget = allowWatching && !!targetGame && hasWatchableTarget;
   const showNoDropsHint = !!targetGame && !hasUnclaimedTarget;
 
-  const campaignMinutes = targetDropEntries.reduce((map, drop) => {
-    const key = drop.raw.campaignId || `drop-${drop.id}`;
-    const req = drop.requiredMinutes;
-    const earned = Math.min(req, drop.earnedMinutes);
-    const existing = map.get(key) ?? { req: 0, earned: 0 };
-    map.set(key, { req: Math.max(existing.req, req), earned: Math.max(existing.earned, earned) });
-    return map;
-  }, new Map<string, { req: number; earned: number }>());
+  const campaignMinutes = targetDropEntries.reduce(
+    (map, drop) => {
+      const key = drop.raw.campaignId || `drop-${drop.id}`;
+      const req = drop.requiredMinutes;
+      const earned = Math.min(req, drop.earnedMinutes);
+      const existing = map.get(key) ?? {
+        hasOpen: false,
+        openReq: 0,
+        openEarned: 0,
+        claimedReqSum: 0,
+        claimedEarnedSum: 0,
+      };
+      if (drop.raw.status === "claimed") {
+        map.set(key, {
+          ...existing,
+          claimedReqSum: existing.claimedReqSum + req,
+          claimedEarnedSum: existing.claimedEarnedSum + earned,
+        });
+        return map;
+      }
+      map.set(key, {
+        ...existing,
+        hasOpen: true,
+        openReq: Math.max(existing.openReq, req),
+        openEarned: Math.max(existing.openEarned, earned),
+      });
+      return map;
+    },
+    new Map<
+      string,
+      {
+        hasOpen: boolean;
+        openReq: number;
+        openEarned: number;
+        claimedReqSum: number;
+        claimedEarnedSum: number;
+      }
+    >(),
+  );
   const totalRequiredMinutes = Array.from(campaignMinutes.values()).reduce(
-    (acc, v) => acc + v.req,
+    (acc, v) => acc + v.claimedReqSum + (v.hasOpen ? v.openReq : 0),
     0,
   );
   const totalEarnedMinutes = Array.from(campaignMinutes.values()).reduce(
-    (acc, v) => acc + v.earned,
+    (acc, v) => acc + v.claimedEarnedSum + (v.hasOpen ? v.openEarned : 0),
     0,
   );
   const isWatchingAnyChannel = Boolean(watching);
