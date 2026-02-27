@@ -1236,6 +1236,9 @@ a {
 }
 
 .inventory-panel-head {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   margin-bottom: 10px;
 }
 
@@ -1276,11 +1279,24 @@ a {
 
 .inventory-head-actions {
   margin-left: auto;
+  align-items: center;
+}
+
+.inventory-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--panel);
 }
 
 .inventory-filter-row {
+  flex: 1 1 560px;
   justify-content: flex-start;
-  margin-bottom: 8px;
+  align-items: center;
 }
 
 .select {
@@ -1314,11 +1330,27 @@ a {
   gap: 12px;
 }
 
+.inventory-section-head-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .inventory-section-title {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.inventory-section-count {
+  font-size: 12px;
+}
+
+.inventory-link-meta {
+  font-size: 12px;
 }
 
 .inventory-section-head h3 {
@@ -3964,6 +3996,12 @@ code {
     flex-direction: column;
     align-items: flex-start;
   }
+  .inventory-controls {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
   .inventory-panel-head .filters-actions {
     width: 100%;
     justify-content: flex-start;
@@ -3972,11 +4010,15 @@ code {
     min-width: 100%;
   }
   .inventory-filter-row {
-    margin-bottom: 10px;
+    flex-basis: 100%;
   }
   .inventory-section-head {
     flex-direction: column;
     align-items: flex-start;
+  }
+  .inventory-section-head-right {
+    width: 100%;
+    justify-content: flex-start;
   }
   .filters {
     justify-content: flex-start;

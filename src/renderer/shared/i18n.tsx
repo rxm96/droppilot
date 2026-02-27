@@ -111,7 +111,7 @@ const translations: Translations = {
     "inventory.idle": "Not loaded yet",
     "inventory.empty": "No drops for this filter.",
     "inventory.campaigns.title": "Campaigns",
-    "inventory.campaigns.count": "{count} campaigns",
+    "inventory.campaigns.count": "{count}",
     "inventory.campaigns.loading": "Loading campaigns...",
     "inventory.campaigns.empty": "No active or upcoming campaigns.",
     "inventory.campaigns.emptyFilter": "No campaigns for this filter.",
@@ -123,6 +123,7 @@ const translations: Translations = {
     "inventory.campaigns.linkRequiredAction": "Link account",
     "inventory.campaigns.linkHint":
       "Some campaigns only count progress after your game account is linked.",
+    "inventory.campaigns.linkNeeds": "{count} need linking",
     "inventory.campaigns.linkAction": "Open Twitch connections",
     "inventory.campaigns.addPriority": "Add to priorities",
     "inventory.campaigns.inPriority": "In priorities",
@@ -622,7 +623,7 @@ const translations: Translations = {
     "inventory.idle": "Noch nicht geladen",
     "inventory.empty": "Keine Drops für diesen Filter.",
     "inventory.campaigns.title": "Kampagnen",
-    "inventory.campaigns.count": "{count} Kampagnen",
+    "inventory.campaigns.count": "{count}",
     "inventory.campaigns.loading": "Kampagnen werden geladen...",
     "inventory.campaigns.empty": "Keine aktiven oder bevorstehenden Kampagnen.",
     "inventory.campaigns.emptyFilter": "Keine Kampagnen für diesen Filter.",
@@ -634,6 +635,7 @@ const translations: Translations = {
     "inventory.campaigns.linkRequiredAction": "Account verknüpfen",
     "inventory.campaigns.linkHint":
       "Einige Kampagnen zählen Fortschritt nur mit verknüpftem Spiel-Account.",
+    "inventory.campaigns.linkNeeds": "{count} brauchen Verknüpfung",
     "inventory.campaigns.linkAction": "Twitch-Verknüpfungen öffnen",
     "inventory.campaigns.addPriority": "Zu Prioritäten",
     "inventory.campaigns.inPriority": "In Prioritäten",

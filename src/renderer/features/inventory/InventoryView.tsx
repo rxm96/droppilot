@@ -330,6 +330,10 @@ export function InventoryView({
   const hasUnlinkedCampaigns = visibleCampaigns.some(({ campaign }) =>
     shouldShowLinkAction(campaign),
   );
+  const unlinkedCampaignCount = visibleCampaigns.reduce(
+    (total, { campaign }) => (shouldShowLinkAction(campaign) ? total + 1 : total),
+    0,
+  );
   const toggleCampaign = (key: string) => {
     setExpandedCampaigns((prev) => {
       const next = new Set(prev);
@@ -376,58 +380,60 @@ export function InventoryView({
 
   return (
     <>
-      <div className="panel-head inventory-panel-head">
+      <div className="inventory-panel-head">
         <h2>{t("inventory.title")}</h2>
-        <div className="filters-actions inventory-head-actions">
-          <button
-            type="button"
-            className="ghost subtle-btn"
-            onClick={onRefresh}
-            disabled={refreshDisabled}
-          >
-            {refreshing ? (
-              <span className="inline-loader">
-                <span className="spinner" />
-                {t("inventory.refreshing")}
-              </span>
-            ) : (
-              t("inventory.refresh")
-            )}
-          </button>
-          <select
-            className="select"
-            value={gameFilter}
-            onChange={(e) => {
-              onGameFilterChange(e.target.value);
-            }}
-          >
-            <option value="all">{t("inventory.allGames")}</option>
-            {uniqueGames.map((g) => (
-              <option key={g} value={g}>
-                {g}
-              </option>
+        <div className="inventory-controls">
+          <div className="filters-buttons inventory-filter-row">
+            {[
+              { key: "all", label: t("inventory.filter.all") },
+              { key: "priority-games", label: t("inventory.filter.priorityGames") },
+              { key: "in-progress", label: t("inventory.filter.active") },
+              { key: "upcoming", label: t("inventory.filter.upcoming") },
+              { key: "finished", label: t("inventory.filter.finished") },
+              { key: "not-linked", label: t("inventory.filter.notLinked") },
+              { key: "expired", label: t("inventory.filter.expired") },
+            ].map((f) => (
+              <button
+                key={f.key}
+                className={filter === f.key ? "pill active" : "pill ghost"}
+                onClick={() => onFilterChange(f.key as FilterKey)}
+              >
+                {f.label}
+              </button>
             ))}
-          </select>
+          </div>
+          <div className="filters-actions inventory-head-actions">
+            <button
+              type="button"
+              className="ghost subtle-btn"
+              onClick={onRefresh}
+              disabled={refreshDisabled}
+            >
+              {refreshing ? (
+                <span className="inline-loader">
+                  <span className="spinner" />
+                  {t("inventory.refreshing")}
+                </span>
+              ) : (
+                t("inventory.refresh")
+              )}
+            </button>
+            <select
+              className="select"
+              value={gameFilter}
+              onChange={(e) => {
+                onGameFilterChange(e.target.value);
+              }}
+            >
+              <option value="all">{t("inventory.allGames")}</option>
+              {uniqueGames.map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-      </div>
-      <div className="filters-buttons inventory-filter-row">
-        {[
-          { key: "all", label: t("inventory.filter.all") },
-          { key: "priority-games", label: t("inventory.filter.priorityGames") },
-          { key: "in-progress", label: t("inventory.filter.active") },
-          { key: "upcoming", label: t("inventory.filter.upcoming") },
-          { key: "finished", label: t("inventory.filter.finished") },
-          { key: "not-linked", label: t("inventory.filter.notLinked") },
-          { key: "expired", label: t("inventory.filter.expired") },
-        ].map((f) => (
-          <button
-            key={f.key}
-            className={filter === f.key ? "pill active" : "pill ghost"}
-            onClick={() => onFilterChange(f.key as FilterKey)}
-          >
-            {f.label}
-          </button>
-        ))}
       </div>
 
       <section className="inventory-section">
@@ -435,16 +441,23 @@ export function InventoryView({
           <div className="inventory-section-title">
             <h3>{t("inventory.campaigns.title")}</h3>
             {!showCampaignSkeleton && (
-              <span className="pill ghost small">
+              <span className="meta inventory-section-count">
                 {t("inventory.campaigns.count", { count: visibleCampaigns.length })}
               </span>
             )}
           </div>
-          {!showCampaignSkeleton && hasUnlinkedCampaigns && (
-            <button type="button" className="ghost subtle-btn" onClick={onOpenAccountLink}>
-              {t("inventory.campaigns.linkAction")}
-            </button>
-          )}
+          <div className="inventory-section-head-right">
+            {!showCampaignSkeleton && hasUnlinkedCampaigns && (
+              <span className="meta inventory-link-meta">
+                {t("inventory.campaigns.linkNeeds", { count: unlinkedCampaignCount })}
+              </span>
+            )}
+            {!showCampaignSkeleton && hasUnlinkedCampaigns && (
+              <button type="button" className="ghost subtle-btn" onClick={onOpenAccountLink}>
+                {t("inventory.campaigns.linkAction")}
+              </button>
+            )}
+          </div>
         </div>
         {showCampaignSkeleton && (
           <>
