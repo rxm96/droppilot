@@ -63,9 +63,9 @@ describe("hasCampaignWatchtimeDrops", () => {
 describe("isCampaignInPriorityGames", () => {
   it("matches campaign games case-insensitively", () => {
     const prioritySet = createPriorityGameSet(["  World of Warcraft  ", "Rust"]);
-    expect(isCampaignInPriorityGames(makeCampaign({ game: "world of warcraft" }), prioritySet)).toBe(
-      true,
-    );
+    expect(
+      isCampaignInPriorityGames(makeCampaign({ game: "world of warcraft" }), prioritySet),
+    ).toBe(true);
   });
 
   it("returns false when campaign game is not in priority list", () => {
