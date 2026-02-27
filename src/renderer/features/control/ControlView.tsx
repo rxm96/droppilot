@@ -89,6 +89,7 @@ type WatchEngineDecision =
   | "suppressed"
   | "cooldown"
   | "watching-progress"
+  | "watching-recover"
   | "watching-no-farmable"
   | "watching-no-watchable"
   | "idle-loading-channels"
@@ -137,6 +138,8 @@ const mapWatchEngineDecisionLabel = (
       return t("control.watchEngineDecision.cooldown");
     case "watching-progress":
       return t("control.watchEngineDecision.watchingProgress");
+    case "watching-recover":
+      return t("control.watchEngineDecision.watchingRecover");
     case "watching-no-farmable":
       return t("control.watchEngineDecision.watchingNoFarmable");
     case "watching-no-watchable":
@@ -199,6 +202,11 @@ const mapWatchEngineDecisionDetails = (
       return {
         why: t("control.watchEngineWhy.watchingProgress"),
         next: t("control.watchEngineNext.watchingProgress"),
+      };
+    case "watching-recover":
+      return {
+        why: t("control.watchEngineWhy.watchingRecover"),
+        next: t("control.watchEngineNext.watchingRecover"),
       };
     case "watching-no-farmable":
       return {

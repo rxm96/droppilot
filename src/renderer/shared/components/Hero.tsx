@@ -6,6 +6,7 @@ type WatchEngineDecision =
   | "suppressed"
   | "cooldown"
   | "watching-progress"
+  | "watching-recover"
   | "watching-no-farmable"
   | "watching-no-watchable"
   | "idle-loading-channels"
@@ -56,6 +57,7 @@ const mapDecisionToRailStage = (decision: WatchEngineDecision): RailStageKey => 
       return "scan";
     case "watching-progress":
       return "watch";
+    case "watching-recover":
     case "watching-no-farmable":
     case "watching-no-watchable":
       return "recover";

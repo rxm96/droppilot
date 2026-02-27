@@ -232,6 +232,7 @@ const translations: Translations = {
     "control.watchEngineDecision.suppressedManualStop": "Auto-watch is paused",
     "control.watchEngineDecision.cooldown": "Waiting for cooldown",
     "control.watchEngineDecision.watchingProgress": "Watching and gaining drop progress",
+    "control.watchEngineDecision.watchingRecover": "Recovering from no-progress stall",
     "control.watchEngineDecision.watchingNoFarmable":
       "Watching, but no farmable drop on this stream",
     "control.watchEngineDecision.watchingNoWatchable":
@@ -248,6 +249,8 @@ const translations: Translations = {
       "This game is in cooldown after repeated no-progress checks.",
     "control.watchEngineWhy.watchingProgress":
       "The active drop is still receiving confirmed progress minutes.",
+    "control.watchEngineWhy.watchingRecover":
+      "No progress was confirmed for too long, so recovery is currently running.",
     "control.watchEngineWhy.watchingNoFarmable":
       "The current stream is live, but none of your open drops can progress on it.",
     "control.watchEngineWhy.watchingNoWatchable":
@@ -269,6 +272,8 @@ const translations: Translations = {
       "After cooldown expires, this game can be selected again automatically.",
     "control.watchEngineNext.watchingProgress":
       "Keep watching; no retarget is needed while progress continues.",
+    "control.watchEngineNext.watchingRecover":
+      "The engine rotates channels and refreshes state; if recovery budget is exhausted it retargets.",
     "control.watchEngineNext.watchingNoFarmable":
       "The engine will try another eligible channel, then retarget if needed.",
     "control.watchEngineNext.watchingNoWatchable":
@@ -736,6 +741,7 @@ const translations: Translations = {
     "control.watchEngineDecision.suppressedManualStop": "Auto-Watch ist pausiert",
     "control.watchEngineDecision.cooldown": "Warte auf Cooldown",
     "control.watchEngineDecision.watchingProgress": "Watching läuft mit Drop-Fortschritt",
+    "control.watchEngineDecision.watchingRecover": "Recovery laeuft wegen No-Progress-Stall",
     "control.watchEngineDecision.watchingNoFarmable":
       "Watching läuft, aber hier ist kein farmbarer Drop",
     "control.watchEngineDecision.watchingNoWatchable":
@@ -753,6 +759,8 @@ const translations: Translations = {
       "Dieses Game ist nach wiederholten No-Progress-Prüfungen im Cooldown.",
     "control.watchEngineWhy.watchingProgress":
       "Der aktive Drop bekommt bestätigt weitere Fortschritts-Minuten.",
+    "control.watchEngineWhy.watchingRecover":
+      "Zu lange ohne bestätigten Fortschritt, daher läuft gerade Recovery.",
     "control.watchEngineWhy.watchingNoFarmable":
       "Der aktuelle Stream ist live, aber keiner deiner offenen Drops kann hier Fortschritt machen.",
     "control.watchEngineWhy.watchingNoWatchable":
@@ -774,6 +782,8 @@ const translations: Translations = {
       "Nach Cooldown-Ende kann das Game wieder automatisch ausgewählt werden.",
     "control.watchEngineNext.watchingProgress":
       "Weiter schauen; solange Fortschritt kommt, ist kein Retarget nötig.",
+    "control.watchEngineNext.watchingRecover":
+      "Die Engine rotiert Kanäle und refreshed den Status; bei exhausted Recovery-Budget folgt Retarget.",
     "control.watchEngineNext.watchingNoFarmable":
       "Die Engine prüft erst andere berechtigte Streams, danach ggf. Retarget.",
     "control.watchEngineNext.watchingNoWatchable":

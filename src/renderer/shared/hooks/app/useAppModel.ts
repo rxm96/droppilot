@@ -34,6 +34,7 @@ import { useSmartAlerts } from "./useSmartAlerts";
 import { useStats } from "./useStats";
 import { useTheme } from "@renderer/shared/theme";
 import { DropChannelRestriction } from "@renderer/shared/domain/dropDomain";
+import { canEarnDrop } from "@renderer/shared/domain/inventory";
 import type { FilterKey, View } from "@renderer/shared/types";
 import { isVerboseLoggingEnabled, logDebug, logInfo } from "@renderer/shared/utils/logger";
 
@@ -872,12 +873,7 @@ export function useAppModel() {
         return;
       }
       const candidateDrops = targetDrops.filter(
-        (drop) =>
-          drop.status === "progress" &&
-          drop.blocked !== true &&
-          Math.max(0, Number(drop.requiredMinutes) || 0) >
-            Math.max(0, Number(drop.earnedMinutes) || 0) &&
-          drop.isClaimable !== true,
+        (drop) => drop.status === "progress" && canEarnDrop(drop, { category: "in-progress" }),
       );
       for (const candidate of candidateDrops) {
         const nextChannel = pickStallRecoveryChannel({
@@ -1118,12 +1114,22 @@ export function useAppModel() {
             sinceProgressMs: Math.max(0, now - stallTracker.lastProgressAt),
           }
         : null;
+    const hasPredictiveProgress = Boolean(
+      activeDropInfo &&
+      typeof activeDropInfo.eta === "number" &&
+      Number.isFinite(activeDropInfo.eta),
+    );
+    const hasFarmableActiveDrop = Boolean(activeDropInfo);
+    const isRecoveringNoProgress = Boolean(
+      noProgressTracker && noProgressTracker.recoveryCount > 0,
+    );
 
     let decision:
       | "no-target"
       | "suppressed"
       | "cooldown"
       | "watching-progress"
+      | "watching-recover"
       | "watching-no-farmable"
       | "watching-no-watchable"
       | "idle-loading-channels"
@@ -1138,10 +1144,12 @@ export function useAppModel() {
     } else if (!targetGame) {
       decision = "no-target";
     } else if (watching) {
-      if (activeDropInfo) {
-        decision = "watching-progress";
-      } else if (!canWatchTarget) {
+      if (!canWatchTarget) {
         decision = "watching-no-watchable";
+      } else if (isRecoveringNoProgress) {
+        decision = "watching-recover";
+      } else if (hasPredictiveProgress || hasFarmableActiveDrop) {
+        decision = "watching-progress";
       } else {
         decision = "watching-no-farmable";
       }
