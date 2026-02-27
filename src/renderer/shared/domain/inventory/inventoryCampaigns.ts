@@ -74,7 +74,8 @@ export const buildCampaignsFromInventory = (
     if (!entry.imageUrl && (campaignImage || dropImage)) {
       entry.imageUrl = campaignImage || dropImage;
     }
-    if (item.status !== "claimed") {
+    const requiredMinutes = Math.max(0, Number(item.requiredMinutes) || 0);
+    if (item.status !== "claimed" && requiredMinutes > 0) {
       entry.hasUnclaimedDrops = true;
     } else if (entry.hasUnclaimedDrops === undefined) {
       entry.hasUnclaimedDrops = false;

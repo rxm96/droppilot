@@ -163,9 +163,10 @@ export function InventoryView({
         anyUnclaimed: false,
         anyClaimed: false,
       };
+      const requiredMinutes = Math.max(0, Number(item.requiredMinutes) || 0);
       if (item.status === "claimed") {
         entry.anyClaimed = true;
-      } else {
+      } else if (requiredMinutes > 0) {
         entry.anyUnclaimed = true;
       }
       map.set(campaignId, entry);
@@ -200,7 +201,8 @@ export function InventoryView({
       const inv = inventoryByDropId.get(drop.id);
       if (!inv) continue;
       anyKnown = true;
-      if (inv.status !== "claimed") {
+      const requiredMinutes = Math.max(0, Number(inv.requiredMinutes) || 0);
+      if (inv.status !== "claimed" && requiredMinutes > 0) {
         anyUnclaimed = true;
         break;
       }

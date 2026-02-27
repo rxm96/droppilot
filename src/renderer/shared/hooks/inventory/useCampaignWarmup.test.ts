@@ -76,6 +76,36 @@ describe("selectWarmupTarget", () => {
     expect(result).toEqual({ game: "", reason: "campaigns-claimed" });
   });
 
+  it("skips campaigns where remaining drops have no watch-time requirement", () => {
+    const now = Date.parse("2026-02-14T00:00:00Z");
+    const campaigns = [
+      makeCampaign({
+        id: "c1",
+        game: "Pokemon",
+        hasUnclaimedDrops: true,
+        drops: [
+          {
+            id: "d1",
+            name: "Claimed",
+            requiredMinutes: 240,
+            earnedMinutes: 240,
+            status: "claimed",
+          },
+          { id: "d2", name: "Reward", requiredMinutes: 0, earnedMinutes: 0, status: "locked" },
+        ],
+      }),
+    ];
+    const result = selectWarmupTarget({
+      campaigns,
+      priorityGames: ["Pokemon"],
+      knownCampaignIds: new Set(),
+      knownActiveGames: new Set(),
+      attemptedCampaignIds: new Set(),
+      now,
+    });
+    expect(result).toEqual({ game: "", reason: "campaigns-claimed" });
+  });
+
   it("returns no-active-campaigns when campaigns are in the future", () => {
     const now = Date.parse("2026-02-14T00:00:00Z");
     const campaigns = [

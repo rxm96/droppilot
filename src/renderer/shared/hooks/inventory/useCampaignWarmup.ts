@@ -190,6 +190,16 @@ export const selectWarmupTarget = ({
       skippedClaimed += 1;
       continue;
     }
+    const hasWatchtimeUnclaimedDrops = Array.isArray(campaign.drops)
+      ? campaign.drops.some((drop) => {
+          const required = Math.max(0, Number(drop.requiredMinutes) || 0);
+          return required > 0 && drop.status !== "claimed";
+        })
+      : true;
+    if (!hasWatchtimeUnclaimedDrops) {
+      skippedClaimed += 1;
+      continue;
+    }
     const campaignId = typeof campaign.id === "string" ? campaign.id.trim() : "";
     const campaignName = typeof campaign.name === "string" ? campaign.name.trim() : "";
     const gameKey = game.toLowerCase();
