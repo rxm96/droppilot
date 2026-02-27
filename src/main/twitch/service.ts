@@ -19,8 +19,8 @@ import {
   isPersistedQueryNotFound,
   isTruthyFlag,
   isWithinClaimWindow,
-  mapStatus,
   mergePrimaryData,
+  normalizeDropWatchState,
   parseIsoMs,
   pickRequiredMinutes,
   unlockGuidanceForReason,
@@ -123,7 +123,7 @@ export class TwitchService {
     }
     const detailed = await this.enrichCampaigns(edges);
     const items = this.buildInventoryItems(detailed, claimedBenefitIds, summary);
-    const campaigns = buildCampaignSummaries(detailed);
+    const campaigns = buildCampaignSummaries(detailed, claimedBenefitIds);
     return { items, campaigns };
   }
 
@@ -846,21 +846,17 @@ export class TwitchService {
         const benefitClaimed = hasClaimedBenefit(claimedBenefitIds, drop);
         const isClaimed = isTruthyFlag(drop.self?.isClaimed) || benefitClaimed;
         const requiredMinutes = pickRequiredMinutes(drop);
-        let status = mapStatus(rawStatus, drop);
-        if (status === "claimed" && requiredMinutes > 0 && watched === 0) {
-          // Claimed drops report full progress.
-          watched = requiredMinutes;
-        }
-        // Heuristics: treat watched progress as "progress" even if status says locked; treat fully watched as claimable
-        const progressDone = requiredMinutes > 0 && watched >= requiredMinutes;
-        if (isClaimed) {
-          status = "claimed";
-        } else if (progressDone && status !== "claimed") {
-          status = "progress";
-        } else if (watched > 0 && status === "locked") {
-          status = "progress";
-        }
-        const earnedMinutes = requiredMinutes > 0 ? Math.min(requiredMinutes, watched) : watched;
+        const normalized = normalizeDropWatchState({
+          drop,
+          rawStatus,
+          requiredMinutes,
+          watchedMinutes: watched,
+          benefitClaimed,
+        });
+        watched = normalized.watchedMinutes;
+        const status = normalized.status;
+        const progressDone = normalized.progressDone;
+        const earnedMinutes = normalized.earnedMinutes;
         const imageUrl = extractDropImageUrl(drop);
         const excluded = allowDisabled && watched <= 0 && !isClaimed;
         const hasPreconditionsMet = drop.self?.hasPreconditionsMet;

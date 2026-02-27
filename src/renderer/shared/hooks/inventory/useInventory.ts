@@ -23,6 +23,7 @@ import {
   InventoryPubSubReconciler,
   markUpdatedInventoryChange,
   mergeProgressAnchors,
+  reconcileFetchedInventoryItems,
   resolvePubSubEventAt,
   shouldDeduplicateInFlightForceFetch,
 } from "@renderer/shared/domain/inventory";
@@ -256,7 +257,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
             setCampaignsLoading(false);
             return;
           }
-          const nextItems = bundle.items;
+          const nextItems = reconcileFetchedInventoryItems(prevItems, bundle.items);
           setCampaigns(bundle.campaigns);
           const minutesUpdate = deriveMinutesUpdate(totalMinutesRef.current, nextItems);
           logInfo("inventory: fetch success", {

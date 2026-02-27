@@ -3,6 +3,7 @@ import {
   buildCampaignSummaries,
   extractAllowedChannelFilters,
   mergePrimaryData,
+  normalizeDropWatchState,
 } from "./serviceUtils";
 
 describe("mergePrimaryData", () => {
@@ -38,6 +39,37 @@ describe("mergePrimaryData", () => {
     expect(drop.requiredMinutesWatched).toBe(60);
     expect(drop.self?.currentMinutesWatched).toBe(17);
     expect(drop.self?.status).toBe("LOCKED");
+  });
+
+  it("keeps requiredMinutesWatched when secondary payload regresses to zero", () => {
+    const primary = {
+      timeBasedDrops: [
+        {
+          id: "drop-1",
+          requiredMinutesWatched: 240,
+          self: { currentMinutesWatched: 240, status: "CLAIMED" },
+        },
+      ],
+    };
+    const secondary = {
+      timeBasedDrops: [
+        {
+          id: "drop-1",
+          requiredMinutesWatched: 0,
+          self: { currentMinutesWatched: 240, status: "CLAIMED" },
+        },
+      ],
+    };
+
+    const merged = mergePrimaryData(primary, secondary) as {
+      timeBasedDrops: Array<{
+        id: string;
+        requiredMinutesWatched?: number;
+        self?: { currentMinutesWatched?: number; status?: string };
+      }>;
+    };
+
+    expect(merged.timeBasedDrops[0].requiredMinutesWatched).toBe(240);
   });
 
   it("keeps primary drops that are missing from secondary arrays", () => {
@@ -143,6 +175,56 @@ describe("extractAllowedChannelFilters", () => {
   });
 });
 
+describe("normalizeDropWatchState", () => {
+  it("fills claimed drop minutes when claim signal arrives via claimed benefits", () => {
+    const drop = {
+      id: "drop-1",
+      name: "Drop 1",
+      requiredMinutesWatched: 240,
+      self: {
+        status: "LOCKED",
+        currentMinutesWatched: 0,
+      },
+    };
+    const normalized = normalizeDropWatchState({
+      drop,
+      rawStatus: "LOCKED",
+      requiredMinutes: 240,
+      watchedMinutes: 0,
+      benefitClaimed: true,
+    });
+
+    expect(normalized.isClaimed).toBe(true);
+    expect(normalized.status).toBe("claimed");
+    expect(normalized.watchedMinutes).toBe(240);
+    expect(normalized.earnedMinutes).toBe(240);
+  });
+
+  it("keeps in-progress signal when watched minutes are below requirement", () => {
+    const drop = {
+      id: "drop-2",
+      name: "Drop 2",
+      requiredMinutesWatched: 120,
+      self: {
+        status: "LOCKED",
+        currentMinutesWatched: 12,
+      },
+    };
+    const normalized = normalizeDropWatchState({
+      drop,
+      rawStatus: "LOCKED",
+      requiredMinutes: 120,
+      watchedMinutes: 12,
+      benefitClaimed: false,
+    });
+
+    expect(normalized.isClaimed).toBe(false);
+    expect(normalized.status).toBe("progress");
+    expect(normalized.watchedMinutes).toBe(12);
+    expect(normalized.earnedMinutes).toBe(12);
+  });
+});
+
 describe("buildCampaignSummaries", () => {
   it("keeps absolute account link urls", () => {
     const campaigns = buildCampaignSummaries([
@@ -168,5 +250,67 @@ describe("buildCampaignSummaries", () => {
     ]);
 
     expect(campaigns[0]?.accountLinkUrl).toBe("https://www.twitch.tv/settings/connections");
+  });
+
+  it("applies claimed benefit ids when drop self status is stale locked", () => {
+    const campaigns = buildCampaignSummaries(
+      [
+        {
+          id: "camp-claimed",
+          name: "Campaign",
+          game: { displayName: "Game" },
+          timeBasedDrops: [
+            {
+              id: "drop-claimed",
+              name: "Claimed Drop",
+              requiredMinutesWatched: 240,
+              self: {
+                status: "LOCKED",
+                currentMinutesWatched: 0,
+              },
+              benefitEdges: [{ benefit: { id: "benefit-1" } }],
+            },
+          ],
+        },
+      ],
+      new Set(["benefit-1"]),
+    );
+
+    expect(campaigns[0]?.drops?.[0]?.status).toBe("claimed");
+    expect(campaigns[0]?.drops?.[0]?.earnedMinutes).toBe(240);
+    expect(campaigns[0]?.drops?.[0]?.requiredMinutes).toBe(240);
+  });
+
+  it("treats zero-minute locked drops as non-unclaimed for campaign rollup", () => {
+    const campaigns = buildCampaignSummaries([
+      {
+        id: "camp-zero",
+        name: "Campaign",
+        game: { displayName: "Game" },
+        timeBasedDrops: [
+          {
+            id: "drop-claimed",
+            name: "Claimed",
+            requiredMinutesWatched: 240,
+            self: {
+              status: "CLAIMED",
+              currentMinutesWatched: 240,
+              isClaimed: true,
+            },
+          },
+          {
+            id: "drop-zero",
+            name: "Zero",
+            requiredMinutesWatched: 0,
+            self: {
+              status: "LOCKED",
+              currentMinutesWatched: 0,
+            },
+          },
+        ],
+      },
+    ]);
+
+    expect(campaigns[0]?.hasUnclaimedDrops).toBe(false);
   });
 });

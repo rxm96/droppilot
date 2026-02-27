@@ -6,6 +6,7 @@ import {
   deriveMinutesUpdate,
   deriveNewlyClaimedItems,
   getElapsedWholeMinutes,
+  reconcileFetchedInventoryItems,
 } from "./inventoryFetchState";
 
 const makeItem = (overrides: Partial<InventoryItem> = {}): InventoryItem => ({
@@ -80,5 +81,89 @@ describe("advanceDemoInventoryItems", () => {
     expect(next[1].earnedMinutes).toBe(10);
     expect(next[1].status).toBe("progress");
     expect(next[2]).toBe(items[2]);
+  });
+});
+
+describe("reconcileFetchedInventoryItems", () => {
+  it("normalizes claimed drops on first fetched snapshot", () => {
+    const merged = reconcileFetchedInventoryItems(
+      [],
+      [makeItem({ id: "drop-1", status: "claimed", earnedMinutes: 0, requiredMinutes: 240 })],
+    );
+    expect(merged[0].status).toBe("claimed");
+    expect(merged[0].requiredMinutes).toBe(240);
+    expect(merged[0].earnedMinutes).toBe(240);
+  });
+
+  it("keeps claimed drops from regressing to older fetched progress snapshots", () => {
+    const previous = [
+      makeItem({
+        id: "drop-1",
+        campaignId: "camp-1",
+        status: "claimed",
+        earnedMinutes: 240,
+        requiredMinutes: 240,
+      }),
+    ];
+    const fetched = [
+      makeItem({
+        id: "drop-1",
+        campaignId: "camp-1",
+        status: "progress",
+        earnedMinutes: 0,
+        requiredMinutes: 240,
+      }),
+    ];
+    const merged = reconcileFetchedInventoryItems(previous, fetched);
+    expect(merged[0].status).toBe("claimed");
+    expect(merged[0].earnedMinutes).toBe(240);
+  });
+
+  it("keeps required minutes when fetched snapshot regresses to zero", () => {
+    const previous = [
+      makeItem({
+        id: "drop-1",
+        campaignId: "camp-1",
+        status: "progress",
+        earnedMinutes: 120,
+        requiredMinutes: 240,
+      }),
+    ];
+    const fetched = [
+      makeItem({
+        id: "drop-1",
+        campaignId: "camp-1",
+        status: "progress",
+        earnedMinutes: 120,
+        requiredMinutes: 0,
+      }),
+    ];
+    const merged = reconcileFetchedInventoryItems(previous, fetched);
+    expect(merged[0].requiredMinutes).toBe(240);
+    expect(merged[0].earnedMinutes).toBe(120);
+  });
+
+  it("keeps higher earned minutes when fetched snapshot is stale", () => {
+    const previous = [
+      makeItem({
+        id: "drop-1",
+        campaignId: "camp-1",
+        status: "progress",
+        earnedMinutes: 88,
+        requiredMinutes: 120,
+      }),
+    ];
+    const fetched = [
+      makeItem({
+        id: "drop-1",
+        campaignId: "camp-1",
+        status: "progress",
+        earnedMinutes: 12,
+        requiredMinutes: 120,
+      }),
+    ];
+    const merged = reconcileFetchedInventoryItems(previous, fetched);
+    expect(merged[0].status).toBe("progress");
+    expect(merged[0].earnedMinutes).toBe(88);
   });
 });

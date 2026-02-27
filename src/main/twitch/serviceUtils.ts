@@ -427,6 +427,56 @@ export function mapStatus(status: string | undefined, drop?: CampaignDropNode): 
   return "locked";
 }
 
+export function normalizeDropWatchState({
+  drop,
+  rawStatus,
+  requiredMinutes,
+  watchedMinutes,
+  benefitClaimed = false,
+}: {
+  drop: CampaignDropNode;
+  rawStatus?: string;
+  requiredMinutes: number;
+  watchedMinutes: number;
+  benefitClaimed?: boolean;
+}): {
+  status: InventoryStatus;
+  watchedMinutes: number;
+  earnedMinutes: number;
+  progressDone: boolean;
+  isClaimed: boolean;
+} {
+  let watched = Math.max(0, Number(watchedMinutes) || 0);
+  let status = mapStatus(rawStatus, drop);
+  const isClaimed = isTruthyFlag(drop.self?.isClaimed) || benefitClaimed;
+
+  if (isClaimed) {
+    status = "claimed";
+  }
+  if (status === "claimed" && requiredMinutes > 0 && watched === 0) {
+    // Claimed drops should always report full progress, even on stale minute snapshots.
+    watched = requiredMinutes;
+  }
+
+  const progressDone = requiredMinutes > 0 && watched >= requiredMinutes;
+  if (!isClaimed) {
+    if (progressDone && status !== "claimed") {
+      status = "progress";
+    } else if (watched > 0 && status === "locked") {
+      status = "progress";
+    }
+  }
+
+  const earnedMinutes = requiredMinutes > 0 ? Math.min(requiredMinutes, watched) : watched;
+  return {
+    status,
+    watchedMinutes: watched,
+    earnedMinutes,
+    progressDone,
+    isClaimed,
+  };
+}
+
 const normalizeId = (value: unknown): string | undefined => {
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   if (typeof value !== "string") return undefined;
@@ -723,7 +773,7 @@ export function mergePrimaryData(
   }
 
   const leafKey = path[path.length - 1];
-  if (leafKey === "currentMinutesWatched") {
+  if (leafKey === "currentMinutesWatched" || leafKey === "requiredMinutesWatched") {
     const primaryNum = toFiniteNumber(primary);
     const secondaryNum = toFiniteNumber(secondary);
     if (primaryNum !== null && secondaryNum !== null) {
@@ -742,7 +792,10 @@ export function isPersistedQueryNotFound(err: unknown): boolean {
   return false;
 }
 
-export function buildCampaignSummaries(nodes: CampaignNode[]): CampaignInfo[] {
+export function buildCampaignSummaries(
+  nodes: CampaignNode[],
+  claimedBenefitIds?: Set<string>,
+): CampaignInfo[] {
   const now = Date.now();
   const campaigns: CampaignInfo[] = [];
   for (const node of nodes) {
@@ -767,30 +820,33 @@ export function buildCampaignSummaries(nodes: CampaignNode[]): CampaignInfo[] {
         const self = drop.self;
         const rawStatus = self?.status ?? self?.state ?? drop.status ?? drop.state ?? undefined;
         const requiredMinutes = pickRequiredMinutes(drop);
-        const watched = Number(self?.currentMinutesWatched ?? 0) || 0;
-        let status = mapStatus(rawStatus, drop);
-        if (isTruthyFlag(self?.isClaimed)) {
-          status = "claimed";
-        } else if (requiredMinutes > 0 && watched >= requiredMinutes) {
-          status = "progress";
-        } else if (watched > 0 && status === "locked") {
-          status = "progress";
-        }
-        let earnedMinutes = requiredMinutes > 0 ? Math.min(requiredMinutes, watched) : watched;
-        if (status === "claimed" && requiredMinutes > 0 && earnedMinutes === 0) {
-          earnedMinutes = requiredMinutes;
-        }
+        const benefitClaimed =
+          claimedBenefitIds && claimedBenefitIds.size > 0
+            ? hasClaimedBenefit(claimedBenefitIds, drop)
+            : false;
+        const normalized = normalizeDropWatchState({
+          drop,
+          rawStatus,
+          requiredMinutes,
+          watchedMinutes: Number(self?.currentMinutesWatched ?? 0) || 0,
+          benefitClaimed,
+        });
         drops.push({
           id: drop.id,
           name: drop.name,
           requiredMinutes,
-          earnedMinutes,
-          status,
+          earnedMinutes: normalized.earnedMinutes,
+          status: normalized.status,
           imageUrl: extractDropImageUrl(drop),
         });
       }
       hasUnclaimedDrops =
-        drops.length === 0 ? false : drops.some((drop) => drop.status !== "claimed");
+        drops.length === 0
+          ? false
+          : drops.some(
+              (drop) =>
+                Math.max(0, Number(drop.requiredMinutes) || 0) > 0 && drop.status !== "claimed",
+            );
     } else {
       hasUnclaimedDrops = false;
     }
