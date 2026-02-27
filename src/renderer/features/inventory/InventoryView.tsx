@@ -75,6 +75,22 @@ const getCampaignPhase = (campaign: CampaignSummary, now = Date.now()): Campaign
   return "finished";
 };
 
+export const hasCampaignWatchtimeDrops = (
+  campaign: CampaignSummary,
+  inventoryByDropId: Map<string, InventoryItem>,
+): boolean => {
+  const drops = Array.isArray(campaign.drops) ? campaign.drops : [];
+  if (drops.length === 0) return true;
+  return drops.some((drop) => {
+    const inventoryDrop = inventoryByDropId.get(drop.id);
+    const requiredMinutes = Math.max(
+      0,
+      Number(inventoryDrop?.requiredMinutes ?? drop.requiredMinutes) || 0,
+    );
+    return requiredMinutes > 0;
+  });
+};
+
 type InventoryProps = {
   inventory: InventoryState;
   filter: FilterKey;
@@ -230,6 +246,7 @@ export function InventoryView({
   const visibleCampaigns = (() => {
     const now = Date.now();
     const withPhase = campaigns.map((campaign) => {
+      const hasWatchtimeDrops = hasCampaignWatchtimeDrops(campaign, inventoryByDropId);
       const derivedHasUnclaimedDrops = resolveHasUnclaimedDrops(campaign);
       const basePhase = getCampaignPhase(campaign, now);
       const phase =
@@ -239,10 +256,12 @@ export function InventoryView({
         phase,
         startMs: parseIsoMs(campaign.startsAt) ?? Number.POSITIVE_INFINITY,
         derivedHasUnclaimedDrops,
+        hasWatchtimeDrops,
       };
     });
     return withPhase
       .filter((entry) => {
+        if (!entry.hasWatchtimeDrops) return false;
         if (normalizedFilter === "not-linked") {
           if (!isCampaignUnlinked(entry.campaign)) return false;
         } else {
