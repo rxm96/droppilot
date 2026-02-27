@@ -343,7 +343,6 @@ export function collectLockedReasonHints({
 
 export function collectBlockingReasonHints({
   linked,
-  allowDisabled,
   campaignNotStarted,
   campaignExpired,
   missingPrerequisiteDropIds,
@@ -354,7 +353,6 @@ export function collectBlockingReasonHints({
   isClaimed,
 }: {
   linked: boolean;
-  allowDisabled: boolean;
   campaignNotStarted: boolean;
   campaignExpired: boolean;
   missingPrerequisiteDropIds: string[];
@@ -369,7 +367,6 @@ export function collectBlockingReasonHints({
   if (!linked) reasons.push("account_not_linked");
   if (campaignNotStarted) reasons.push("campaign_not_started");
   if (campaignExpired) reasons.push("campaign_expired");
-  if (allowDisabled) reasons.push("campaign_allow_disabled");
   if (missingPrerequisiteDropIds.length > 0) {
     reasons.push(`missing_prerequisite_drops:${missingPrerequisiteDropIds.join(",")}`);
   } else if (hasPreconditionsMet === false) {
@@ -491,6 +488,7 @@ const normalizeLogin = (value: unknown): string | undefined => {
 };
 
 type AllowContainer = {
+  isEnabled?: BoolFlag;
   channels?: AllowChannelNode[];
   id?: string | number;
   login?: string;
@@ -510,8 +508,15 @@ type AllowContainer = {
   };
 };
 
+const isAllowExplicitlyDisabled = (allow: unknown): boolean => {
+  if (!allow || typeof allow !== "object") return false;
+  const container = allow as AllowContainer;
+  return container.isEnabled !== undefined && !isTruthyFlag(container.isEnabled);
+};
+
 const collectAllowEntries = (allow: unknown): AllowChannelNode[] => {
   if (!allow || typeof allow !== "object") return [];
+  if (isAllowExplicitlyDisabled(allow)) return [];
   const container = allow as AllowContainer;
   const entries: AllowChannelNode[] = [];
   if (Array.isArray(container.channels)) {
@@ -581,6 +586,9 @@ export function extractAllowedChannelFilters(
   ids: string[];
   logins: string[];
 } {
+  if (drop && isAllowExplicitlyDisabled(drop.allow)) {
+    return { ids: [], logins: [] };
+  }
   const dropFilters = drop ? collectFiltersFromEntries(collectAllowEntries(drop.allow)) : null;
   if (dropFilters && (dropFilters.ids.length > 0 || dropFilters.logins.length > 0)) {
     return dropFilters;

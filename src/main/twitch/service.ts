@@ -792,8 +792,6 @@ export class TwitchService {
         dropHasBadgeOrEmote(drop),
       );
       const withinClaimWindow = isWithinClaimWindow(endsAt, now);
-      // Some campaigns expose allow.isEnabled === false even though the user can earn progress.
-      // Only treat it as excluded if Twitch explicitly disabled the campaign AND we have no progress yet.
       const allowDisabled = campaign.allow?.isEnabled === false;
       const campaignId = campaign.id;
       const campaignLogKey =
@@ -858,7 +856,7 @@ export class TwitchService {
         const progressDone = normalized.progressDone;
         const earnedMinutes = normalized.earnedMinutes;
         const imageUrl = extractDropImageUrl(drop);
-        const excluded = allowDisabled && watched <= 0 && !isClaimed;
+        const excluded = false;
         const hasPreconditionsMet = drop.self?.hasPreconditionsMet;
         const prerequisiteDropIds = extractPreconditionDropIds(drop);
         const missingPrerequisiteDropIds = prerequisiteDropIds.filter(
@@ -866,7 +864,6 @@ export class TwitchService {
         );
         const blockingReasonHints = collectBlockingReasonHints({
           linked,
-          allowDisabled,
           campaignNotStarted,
           campaignExpired,
           missingPrerequisiteDropIds,
@@ -877,10 +874,7 @@ export class TwitchService {
           isClaimed,
         });
         const hardBlockingReasonHints = blockingReasonHints.filter(
-          (reason) =>
-            reason !== "missing_drop_instance_id" &&
-            reason !== "account_not_linked" &&
-            reason !== "campaign_allow_disabled",
+          (reason) => reason !== "missing_drop_instance_id" && reason !== "account_not_linked",
         );
         const blocked = hardBlockingReasonHints.length > 0;
         const canBuildFallbackClaimId = Boolean(campaignId && drop.id);
