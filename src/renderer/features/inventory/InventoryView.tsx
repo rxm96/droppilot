@@ -91,6 +91,35 @@ export const hasCampaignWatchtimeDrops = (
   });
 };
 
+export const createPriorityGameSet = (priorityGames: string[]): Set<string> =>
+  new Set(
+    priorityGames
+      .map((game) => (typeof game === "string" ? game.trim().toLowerCase() : ""))
+      .filter(Boolean),
+  );
+
+export const isCampaignInPriorityGames = (
+  campaign: CampaignSummary,
+  priorityGameSet: Set<string>,
+): boolean => {
+  const game = typeof campaign.game === "string" ? campaign.game.trim().toLowerCase() : "";
+  if (!game) return false;
+  if (priorityGameSet.size === 0) return false;
+  return priorityGameSet.has(game);
+};
+
+export const compareCampaignDropsByDuration = (
+  a: { requiredMinutes: number; title: string; id: string },
+  b: { requiredMinutes: number; title: string; id: string },
+): number => {
+  const aRequiredMinutes = Math.max(0, Number(a.requiredMinutes) || 0);
+  const bRequiredMinutes = Math.max(0, Number(b.requiredMinutes) || 0);
+  if (aRequiredMinutes !== bRequiredMinutes) return aRequiredMinutes - bRequiredMinutes;
+  const titleDelta = a.title.localeCompare(b.title);
+  if (titleDelta !== 0) return titleDelta;
+  return a.id.localeCompare(b.id);
+};
+
 type InventoryProps = {
   inventory: InventoryState;
   filter: FilterKey;
@@ -242,6 +271,7 @@ export function InventoryView({
     isCampaignUnlinked(campaign) || hasAccountNotLinkedHint(campaign);
   const shouldShowLinkRequired = (campaign: CampaignSummary): boolean =>
     !allowUnlinkedGames && shouldShowLinkAction(campaign);
+  const priorityGameSet = useMemo(() => createPriorityGameSet(priorityGames), [priorityGames]);
   const normalizedFilter: FilterKey = filter === "excluded" ? "all" : filter;
   const visibleCampaigns = (() => {
     const now = Date.now();
@@ -262,7 +292,10 @@ export function InventoryView({
     return withPhase
       .filter((entry) => {
         if (!entry.hasWatchtimeDrops) return false;
-        if (normalizedFilter === "not-linked") {
+        if (normalizedFilter === "priority-games") {
+          if (!isCampaignInPriorityGames(entry.campaign, priorityGameSet)) return false;
+          if (entry.phase === "expired") return false;
+        } else if (normalizedFilter === "not-linked") {
           if (!isCampaignUnlinked(entry.campaign)) return false;
         } else {
           switch (normalizedFilter) {
@@ -343,81 +376,76 @@ export function InventoryView({
 
   return (
     <>
-      <div className="panel-head">
-        <div>
-          <h2>{t("inventory.title")}</h2>
-          <p className="meta">{t("inventory.filterHint")}</p>
-        </div>
-        <div className="filters filters-row">
-          <div className="filters-buttons">
-            {[
-              { key: "all", label: t("inventory.filter.all") },
-              { key: "in-progress", label: t("inventory.filter.active") },
-              { key: "upcoming", label: t("inventory.filter.upcoming") },
-              { key: "finished", label: t("inventory.filter.finished") },
-              { key: "not-linked", label: t("inventory.filter.notLinked") },
-              { key: "expired", label: t("inventory.filter.expired") },
-            ].map((f) => (
-              <button
-                key={f.key}
-                className={filter === f.key ? "pill active" : "pill ghost"}
-                onClick={() => onFilterChange(f.key as FilterKey)}
-              >
-                {f.label}
-              </button>
+      <div className="panel-head inventory-panel-head">
+        <h2>{t("inventory.title")}</h2>
+        <div className="filters-actions inventory-head-actions">
+          <button
+            type="button"
+            className="ghost subtle-btn"
+            onClick={onRefresh}
+            disabled={refreshDisabled}
+          >
+            {refreshing ? (
+              <span className="inline-loader">
+                <span className="spinner" />
+                {t("inventory.refreshing")}
+              </span>
+            ) : (
+              t("inventory.refresh")
+            )}
+          </button>
+          <select
+            className="select"
+            value={gameFilter}
+            onChange={(e) => {
+              onGameFilterChange(e.target.value);
+            }}
+          >
+            <option value="all">{t("inventory.allGames")}</option>
+            {uniqueGames.map((g) => (
+              <option key={g} value={g}>
+                {g}
+              </option>
             ))}
-          </div>
-          <div className="filters-actions">
-            <button
-              type="button"
-              className="ghost subtle-btn"
-              onClick={onRefresh}
-              disabled={refreshDisabled}
-            >
-              {refreshing ? (
-                <span className="inline-loader">
-                  <span className="spinner" />
-                  {t("inventory.refreshing")}
-                </span>
-              ) : (
-                t("inventory.refresh")
-              )}
-            </button>
-            <select
-              className="select"
-              value={gameFilter}
-              onChange={(e) => {
-                onGameFilterChange(e.target.value);
-              }}
-            >
-              <option value="all">{t("inventory.allGames")}</option>
-              {uniqueGames.map((g) => (
-                <option key={g} value={g}>
-                  {g}
-                </option>
-              ))}
-            </select>
-          </div>
+          </select>
         </div>
+      </div>
+      <div className="filters-buttons inventory-filter-row">
+        {[
+          { key: "all", label: t("inventory.filter.all") },
+          { key: "priority-games", label: t("inventory.filter.priorityGames") },
+          { key: "in-progress", label: t("inventory.filter.active") },
+          { key: "upcoming", label: t("inventory.filter.upcoming") },
+          { key: "finished", label: t("inventory.filter.finished") },
+          { key: "not-linked", label: t("inventory.filter.notLinked") },
+          { key: "expired", label: t("inventory.filter.expired") },
+        ].map((f) => (
+          <button
+            key={f.key}
+            className={filter === f.key ? "pill active" : "pill ghost"}
+            onClick={() => onFilterChange(f.key as FilterKey)}
+          >
+            {f.label}
+          </button>
+        ))}
       </div>
 
       <section className="inventory-section">
         <div className="inventory-section-head">
-          <h3>{t("inventory.campaigns.title")}</h3>
-          {!showCampaignSkeleton && (
-            <span className="pill ghost small">
-              {t("inventory.campaigns.count", { count: visibleCampaigns.length })}
-            </span>
-          )}
-        </div>
-        {!showCampaignSkeleton && hasUnlinkedCampaigns && (
-          <div className="campaign-link-hint">
-            <p className="meta">{t("inventory.campaigns.linkHint")}</p>
+          <div className="inventory-section-title">
+            <h3>{t("inventory.campaigns.title")}</h3>
+            {!showCampaignSkeleton && (
+              <span className="pill ghost small">
+                {t("inventory.campaigns.count", { count: visibleCampaigns.length })}
+              </span>
+            )}
+          </div>
+          {!showCampaignSkeleton && hasUnlinkedCampaigns && (
             <button type="button" className="ghost subtle-btn" onClick={onOpenAccountLink}>
               {t("inventory.campaigns.linkAction")}
             </button>
-          </div>
-        )}
+          )}
+        </div>
         {showCampaignSkeleton && (
           <>
             <span className="sr-only" role="status">
@@ -507,7 +535,7 @@ export function InventoryView({
                       : [],
                   };
                 })
-                .sort((a, b) => a.title.localeCompare(b.title));
+                .sort(compareCampaignDropsByDuration);
               const isExpanded = expandedCampaigns.has(campaignKey);
               const expandLabel = isExpanded
                 ? t("inventory.campaigns.hideDrops")

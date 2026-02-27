@@ -94,10 +94,11 @@ const translations: Translations = {
     "settings.language.en": "English",
 
     "inventory.title": "Inventory",
-    "inventory.filterHint": "Filters: Not linked, Upcoming, Expired, Finished.",
+    "inventory.filterHint": "Filters: Priority, Not linked, Upcoming, Expired, Finished.",
     "inventory.refresh": "Refresh",
     "inventory.refreshing": "Refreshing...",
     "inventory.filter.all": "All",
+    "inventory.filter.priorityGames": "Priority",
     "inventory.filter.active": "Active",
     "inventory.filter.upcoming": "Upcoming",
     "inventory.filter.finished": "Finished",
@@ -120,7 +121,8 @@ const translations: Translations = {
     "inventory.campaigns.dropFallback": "Drop reward",
     "inventory.campaigns.linkRequired": "Account link required",
     "inventory.campaigns.linkRequiredAction": "Link account",
-    "inventory.campaigns.linkHint": "Drops only progress after your game account is linked.",
+    "inventory.campaigns.linkHint":
+      "Some campaigns only count progress after your game account is linked.",
     "inventory.campaigns.linkAction": "Open Twitch connections",
     "inventory.campaigns.addPriority": "Add to priorities",
     "inventory.campaigns.inPriority": "In priorities",
@@ -602,10 +604,12 @@ const translations: Translations = {
     "settings.language.en": "Englisch",
 
     "inventory.title": "Inventory",
-    "inventory.filterHint": "Filter: Not linked, Upcoming, Expired, Finished.",
+    "inventory.filterHint":
+      "Filter: Priorität, Nicht verknüpft, Bevorstehend, Abgelaufen, Abgeschlossen.",
     "inventory.refresh": "Aktualisieren",
     "inventory.refreshing": "Aktualisiere...",
     "inventory.filter.all": "Alle",
+    "inventory.filter.priorityGames": "Priorität",
     "inventory.filter.active": "Aktiv",
     "inventory.filter.upcoming": "Bevorstehend",
     "inventory.filter.finished": "Abgeschlossen",
@@ -628,7 +632,8 @@ const translations: Translations = {
     "inventory.campaigns.dropFallback": "Drop-Belohnung",
     "inventory.campaigns.linkRequired": "Account-Verknüpfung nötig",
     "inventory.campaigns.linkRequiredAction": "Account verknüpfen",
-    "inventory.campaigns.linkHint": "Drops laufen erst, wenn dein Spiel-Account verknüpft ist.",
+    "inventory.campaigns.linkHint":
+      "Einige Kampagnen zählen Fortschritt nur mit verknüpftem Spiel-Account.",
     "inventory.campaigns.linkAction": "Twitch-Verknüpfungen öffnen",
     "inventory.campaigns.addPriority": "Zu Prioritäten",
     "inventory.campaigns.inPriority": "In Prioritäten",

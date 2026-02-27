@@ -72,6 +72,7 @@ export type InventoryState =
 
 export type FilterKey =
   | "all"
+  | "priority-games"
   | "in-progress"
   | "upcoming"
   | "finished"

@@ -1235,6 +1235,10 @@ a {
   margin-bottom: 12px;
 }
 
+.inventory-panel-head {
+  margin-bottom: 10px;
+}
+
 .status-row {
   display: flex;
   flex-wrap: wrap;
@@ -1270,6 +1274,15 @@ a {
   gap: 6px;
 }
 
+.inventory-head-actions {
+  margin-left: auto;
+}
+
+.inventory-filter-row {
+  justify-content: flex-start;
+  margin-bottom: 8px;
+}
+
 .select {
   background: var(--background);
   color: var(--foreground);
@@ -1288,7 +1301,7 @@ a {
 }
 
 .inventory-section {
-  margin-top: 12px;
+  margin-top: 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1301,24 +1314,20 @@ a {
   gap: 12px;
 }
 
-.inventory-section-head h3 {
-  margin: 0;
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--muted-foreground);
-}
-
-.campaign-link-hint {
+.inventory-section-title {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
-.campaign-link-hint .meta {
+.inventory-section-head h3 {
   margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: var(--foreground);
 }
 
 .campaign-list {
@@ -3952,6 +3961,20 @@ code {
     grid-template-columns: 1fr;
   }
   .panel-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .inventory-panel-head .filters-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .inventory-panel-head .select {
+    min-width: 100%;
+  }
+  .inventory-filter-row {
+    margin-bottom: 10px;
+  }
+  .inventory-section-head {
     flex-direction: column;
     align-items: flex-start;
   }
