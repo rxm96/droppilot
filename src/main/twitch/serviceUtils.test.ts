@@ -173,6 +173,44 @@ describe("extractAllowedChannelFilters", () => {
     expect(result.ids).toEqual(["333"]);
     expect(result.logins).toEqual(["singlechannel"]);
   });
+
+  it("ignores campaign allow channels when allow is explicitly disabled", () => {
+    const result = extractAllowedChannelFilters({
+      id: "camp-5",
+      name: "Campaign 5",
+      allow: {
+        isEnabled: false,
+        channels: [{ id: "999", login: "should_be_ignored" }],
+      },
+    });
+
+    expect(result.ids).toEqual([]);
+    expect(result.logins).toEqual([]);
+  });
+
+  it("treats drop-level disabled allow as unrestricted and does not fall back to campaign acl", () => {
+    const campaign = {
+      id: "camp-6",
+      name: "Campaign 6",
+      allow: {
+        isEnabled: true,
+        channels: [{ id: "111", login: "campaignonly" }],
+      },
+    };
+    const drop = {
+      id: "drop-6",
+      name: "Drop 6",
+      allow: {
+        isEnabled: false,
+        channels: [{ id: "222", login: "dropshouldbeignored" }],
+      },
+    };
+
+    const result = extractAllowedChannelFilters(campaign, drop);
+
+    expect(result.ids).toEqual([]);
+    expect(result.logins).toEqual([]);
+  });
 });
 
 describe("normalizeDropWatchState", () => {
