@@ -62,7 +62,7 @@ export function UpdateOverlay({ updateStatus, onInstallUpdate }: Props) {
   const statusState = resolvedStatus.state;
   const [installing, setInstalling] = useState(false);
 
-  const forcePreview = true;
+  const forcePreview = false;
   const previewVersion = "2.5.0";
   const previewReleaseNotes = [
     "- Improved update flow stability and error handling",
