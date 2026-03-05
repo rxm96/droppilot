@@ -1,4 +1,11 @@
 import { useI18n } from "@renderer/shared/i18n";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@renderer/shared/components/ui/select";
 
 type PriorityViewProps = {
   uniqueGames: string[];
@@ -19,6 +26,8 @@ type PriorityViewProps = {
   obeyPriority: boolean;
   setObeyPriority: (val: boolean) => void;
 };
+
+const NO_GAME_SELECT_VALUE = "__dp_none__";
 
 export function PriorityView({
   uniqueGames,
@@ -57,18 +66,26 @@ export function PriorityView({
           <p className="meta">{t("settings.addFromDropsOption")}</p>
           {uniqueGames.length > 0 && (
             <div className="settings-row">
-              <select
-                className="select"
-                value={selectedGame || ""}
-                onChange={(e) => setSelectedGame(e.target.value)}
+              <Select
+                value={selectedGame || NO_GAME_SELECT_VALUE}
+                onValueChange={(value) =>
+                  setSelectedGame(value === NO_GAME_SELECT_VALUE ? "" : value)
+                }
               >
-                <option value="">{t("settings.addFromDropsOption")}</option>
-                {uniqueGames.map((g) => (
-                  <option key={g} value={g}>
-                    {g}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger aria-label={t("settings.addFromDrops")}>
+                  <SelectValue placeholder={t("settings.addFromDropsOption")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_GAME_SELECT_VALUE}>
+                    {t("settings.addFromDropsOption")}
+                  </SelectItem>
+                  {uniqueGames.map((g) => (
+                    <SelectItem key={g} value={g}>
+                      {g}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <button type="button" onClick={addGameFromSelect} disabled={!selectedGame}>
                 {t("settings.add")}
               </button>

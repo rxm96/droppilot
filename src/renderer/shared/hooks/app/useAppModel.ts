@@ -19,6 +19,7 @@ import {
   evaluateNoProgressStall,
   pickStallRecoveryChannel,
   STALL_STOP_SUPPRESSION_HOLD_MS,
+  MANUAL_STOP_SUPPRESSION_HOLD_MS,
   selectVisibleTargetGame,
   shouldForceClearWatchingOnSuppressedTarget,
   watchEngineReducer,
@@ -590,12 +591,15 @@ export function useAppModel() {
   ]);
 
   useEffect(() => {
-    if (watchEngineState.suppressionReason !== "stall-stop") return;
+    const reason = watchEngineState.suppressionReason;
+    if (reason !== "stall-stop" && reason !== "manual-stop") return;
     const suppressedGame = watchEngineState.suppressedTargetGame.trim();
     const suppressedAt = watchEngineState.suppressedAt;
     const watchingGame = (watching?.game ?? "").trim();
     if (!suppressedGame) return;
     if (typeof suppressedAt !== "number" || !Number.isFinite(suppressedAt)) return;
+    const holdMs =
+      reason === "stall-stop" ? STALL_STOP_SUPPRESSION_HOLD_MS : MANUAL_STOP_SUPPRESSION_HOLD_MS;
     const runSync = () => {
       dispatchWatchEngineEvent(
         {
@@ -604,10 +608,10 @@ export function useAppModel() {
           watchingGame,
           now: Date.now(),
         },
-        "stall-hold-expire-sync",
+        `${reason}-hold-expire-sync`,
       );
     };
-    const dueAt = suppressedAt + STALL_STOP_SUPPRESSION_HOLD_MS;
+    const dueAt = suppressedAt + holdMs;
     const remainingMs = dueAt - Date.now();
     if (remainingMs <= 0) {
       runSync();
@@ -1084,11 +1088,15 @@ export function useAppModel() {
     const suppressionGame = watchEngineState.suppressedTargetGame.trim();
     const suppressionReason = watchEngineState.suppressionReason;
     const suppressionAt = watchEngineState.suppressedAt;
+    const holdMs =
+      suppressionReason === "stall-stop"
+        ? STALL_STOP_SUPPRESSION_HOLD_MS
+        : suppressionReason === "manual-stop"
+          ? MANUAL_STOP_SUPPRESSION_HOLD_MS
+          : 0;
     const suppressionHoldRemainingMs =
-      suppressionReason === "stall-stop" &&
-      typeof suppressionAt === "number" &&
-      Number.isFinite(suppressionAt)
-        ? Math.max(0, suppressionAt + STALL_STOP_SUPPRESSION_HOLD_MS - now)
+      holdMs && typeof suppressionAt === "number" && Number.isFinite(suppressionAt)
+        ? Math.max(0, suppressionAt + holdMs - now)
         : 0;
     const activeCooldowns = Object.entries(stalledGameCooldownUntil)
       .map(([rawGame, until]) => ({ game: rawGame.trim(), until }))

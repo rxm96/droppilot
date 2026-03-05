@@ -1,4 +1,11 @@
 import { useI18n } from "@renderer/shared/i18n";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@renderer/shared/components/ui/select";
 import { useEffect, useState } from "react";
 import type { ThemePreference } from "@renderer/shared/theme";
 
@@ -249,25 +256,33 @@ export function SettingsView({
             </div>
             <div className="settings-row">
               <div className="label">{t("settings.languageLabel")}</div>
-              <select
-                className="select"
+              <Select
                 value={language}
-                onChange={(e) => setLanguage((e.target.value as "de" | "en") || "de")}
+                onValueChange={(value) => setLanguage((value as "de" | "en") || "de")}
               >
-                <option value="de">{t("settings.language.de")}</option>
-                <option value="en">{t("settings.language.en")}</option>
-              </select>
+                <SelectTrigger aria-label={t("settings.languageLabel")}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="de">{t("settings.language.de")}</SelectItem>
+                  <SelectItem value="en">{t("settings.language.en")}</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="settings-row">
               <div className="label">{t("theme.toggle")}</div>
-              <select
-                className="select"
+              <Select
                 value={theme}
-                onChange={(e) => setTheme((e.target.value as ThemePreference) || "light")}
+                onValueChange={(value) => setTheme((value as ThemePreference) || "light")}
               >
-                <option value="light">{t("theme.light")}</option>
-                <option value="dark">{t("theme.dark")}</option>
-              </select>
+                <SelectTrigger aria-label={t("theme.toggle")}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="light">{t("theme.light")}</SelectItem>
+                  <SelectItem value="dark">{t("theme.dark")}</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             {showAutoStart ? (
               <div className="toggle-row">
@@ -467,26 +482,29 @@ export function SettingsView({
               <div className="settings-actions">
                 <label className="meta">
                   {t("settings.refreshPreset")}
-                  <select
-                    className="select"
+                  <Select
                     value={currentPreset}
-                    onChange={(e) => {
-                      const value = e.target.value;
+                    onValueChange={(value) => {
                       const preset = refreshPresets.find((entry) => entry.key === value);
                       if (preset) {
                         setRefreshIntervals(preset.minMs, preset.maxMs);
                       }
                     }}
                   >
-                    {refreshPresets.map((preset) => (
-                      <option key={preset.key} value={preset.key}>
-                        {preset.label}
-                      </option>
-                    ))}
-                    {currentPreset === "custom" ? (
-                      <option value="custom">{customPresetLabel}</option>
-                    ) : null}
-                  </select>
+                    <SelectTrigger aria-label={t("settings.refreshPreset")}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {refreshPresets.map((preset) => (
+                        <SelectItem key={preset.key} value={preset.key}>
+                          {preset.label}
+                        </SelectItem>
+                      ))}
+                      {currentPreset === "custom" ? (
+                        <SelectItem value="custom">{customPresetLabel}</SelectItem>
+                      ) : null}
+                    </SelectContent>
+                  </Select>
                 </label>
                 <button
                   type="button"

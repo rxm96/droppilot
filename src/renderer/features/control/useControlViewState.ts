@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useInterval } from "@renderer/shared/hooks/useInterval";
 import type {
   ChannelDiff,
   ChannelEntry,
@@ -323,11 +324,9 @@ export function useControlViewState({
     typeof activeDropInfo?.eta === "number" && Number.isFinite(activeDropInfo.eta);
   const shouldTickProgress = Boolean(isPageVisible && hasPredictiveEta);
   useEffect(() => {
-    if (!shouldTickProgress) return;
-    setProgressNow(Date.now());
-    const timer = window.setInterval(() => setProgressNow(Date.now()), 1_000);
-    return () => window.clearInterval(timer);
+    if (shouldTickProgress) setProgressNow(Date.now());
   }, [shouldTickProgress, activeDropInfo?.id, activeDropInfo?.eta]);
+  useInterval(() => setProgressNow(Date.now()), 1_000, shouldTickProgress);
   const liveProgress = useMemo(() => {
     const activeEta = hasPredictiveEta && activeDropInfo ? activeDropInfo.eta : null;
     const activeRemainingFromEta =

@@ -1,4 +1,5 @@
-import { memo, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useInterval } from "@renderer/shared/hooks/useInterval";
 import { useI18n } from "@renderer/shared/i18n";
 import { cn } from "@renderer/shared/lib/utils";
 import type { ChannelTrackerStatus } from "@renderer/shared/types";
@@ -191,31 +192,32 @@ export function DebugView({ snapshot }: DebugViewProps) {
     pushLog("info", ["debug: auto-scroll", { enabled: autoScroll }]);
   }, [autoScroll]);
 
+  const flushPending = useCallback(() => {
+    if (pendingRef.current.length === 0) return;
+    const batch = pendingRef.current;
+    pendingRef.current = [];
+    setLogs((prev) => {
+      const next = [...prev, ...batch];
+      if (next.length > LOG_LIMIT) {
+        next.splice(0, next.length - LOG_LIMIT);
+      }
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     if (paused) return;
-    const flush = () => {
-      if (pendingRef.current.length === 0) return;
-      const batch = pendingRef.current;
-      pendingRef.current = [];
-      setLogs((prev) => {
-        const next = [...prev, ...batch];
-        if (next.length > LOG_LIMIT) {
-          next.splice(0, next.length - LOG_LIMIT);
-        }
-        return next;
-      });
-    };
     const unsubscribe = subscribeLogs((entry) => {
       pendingRef.current.push(entry);
     });
-    const timer = window.setInterval(flush, 250);
     return () => {
-      flush();
-      window.clearInterval(timer);
+      flushPending();
       unsubscribe();
       pendingRef.current = [];
     };
-  }, [paused]);
+  }, [paused, flushPending]);
+
+  useInterval(flushPending, 250, !paused);
 
   useEffect(() => {
     if (!paused) {

@@ -418,6 +418,8 @@ const translations: Translations = {
     "settings.updateBetaHint": "Include pre-release builds in update checks.",
     "updateOverlay.whatsNew": "What's new",
     "updateOverlay.whatsNewVersion": "What's new in v{version}",
+    "updateOverlay.installing": "Installing update",
+    "updateOverlay.installingHint": "The app will restart automatically.",
     "settings.advanced": "Automation",
     "settings.advancedHint":
       "Control auto-claim, auto-select, auto-switch, warmup & refresh cadence.",
@@ -935,6 +937,8 @@ const translations: Translations = {
     "settings.updateBetaHint": "Vorabversionen in die Update-Suche einbeziehen.",
     "updateOverlay.whatsNew": "Was ist neu",
     "updateOverlay.whatsNewVersion": "Was ist neu in v{version}",
+    "updateOverlay.installing": "Update wird installiert",
+    "updateOverlay.installingHint": "Die App startet automatisch neu.",
     "settings.advanced": "Automatisierung",
     "settings.advancedHint": "Steuert Auto-Claim, Auto-Select, Auto-Switch, Warmup & Refresh-Takt.",
     "settings.autoClaim": "Auto-Claim aktiv",

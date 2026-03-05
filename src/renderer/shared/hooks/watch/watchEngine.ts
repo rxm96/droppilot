@@ -27,6 +27,14 @@ export type WatchEngineEvent =
  */
 export const STALL_STOP_SUPPRESSION_HOLD_MS = 60_000;
 
+/**
+ * Hold window for manual-stop suppression.
+ * Prevents immediate bounce-back after a manual stop, but allows
+ * re-targeting the same game once the window expires (e.g. when a new
+ * campaign appears via inventory refresh while the app is idle).
+ */
+export const MANUAL_STOP_SUPPRESSION_HOLD_MS = 120_000;
+
 export const WATCH_ENGINE_INITIAL_STATE: WatchEngineState = {
   suppressedTargetGame: "",
   suppressionReason: null,
@@ -93,7 +101,16 @@ export const watchEngineReducer = (
         }
         return clearSuppression(state);
       }
-      if (!watchingGame || watchingGame === state.suppressedTargetGame) {
+      // Watching a different game → clear immediately (existing behavior).
+      if (watchingGame && watchingGame !== state.suppressedTargetGame) {
+        return clearSuppression(state);
+      }
+      // Idle or still on same game: hold for a window to prevent bounce-back,
+      // then clear so auto-watch can pick up newly-discovered campaigns.
+      const now =
+        typeof event.now === "number" && Number.isFinite(event.now) ? event.now : Date.now();
+      const suppressedAt = state.suppressedAt ?? now;
+      if (now - suppressedAt < MANUAL_STOP_SUPPRESSION_HOLD_MS) {
         return state;
       }
       return clearSuppression(state);

@@ -1,5 +1,6 @@
 import { useI18n } from "@renderer/shared/i18n";
 import { useEffect, useMemo, useState } from "react";
+import { useInterval } from "@renderer/shared/hooks/useInterval";
 
 type WatchEngineDecision =
   | "no-target"
@@ -138,11 +139,9 @@ export function Hero({
   const hasActiveEta = typeof activeDropEta === "number" && Number.isFinite(activeDropEta);
   const shouldTickRemaining = hasUpdatePulse && hasActiveEta;
   useEffect(() => {
-    if (!shouldTickRemaining) return;
-    setNowTick(Date.now());
-    const timer = window.setInterval(() => setNowTick(Date.now()), 1_000);
-    return () => window.clearInterval(timer);
+    if (shouldTickRemaining) setNowTick(Date.now());
   }, [shouldTickRemaining, activeDropEta]);
+  useInterval(() => setNowTick(Date.now()), 1_000, shouldTickRemaining);
   const activeDropRemainingSeconds =
     shouldTickRemaining && hasActiveEta
       ? Math.max(0, Math.ceil((activeDropEta - nowTick) / 1000))

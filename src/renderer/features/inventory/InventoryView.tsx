@@ -8,6 +8,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { formatRange, categoryLabel, mapStatusLabel } from "@renderer/shared/utils";
 import { useI18n } from "@renderer/shared/i18n";
 import { resolveErrorMessage } from "@renderer/shared/utils/errors";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@renderer/shared/components/ui/select";
 
 const parseIsoMs = (value?: string): number | null => {
   if (!value) return null;
@@ -418,20 +425,19 @@ export function InventoryView({
                 t("inventory.refresh")
               )}
             </button>
-            <select
-              className="select"
-              value={gameFilter}
-              onChange={(e) => {
-                onGameFilterChange(e.target.value);
-              }}
-            >
-              <option value="all">{t("inventory.allGames")}</option>
-              {uniqueGames.map((g) => (
-                <option key={g} value={g}>
-                  {g}
-                </option>
-              ))}
-            </select>
+            <Select value={gameFilter} onValueChange={(value) => onGameFilterChange(value)}>
+              <SelectTrigger aria-label={t("inventory.allGames")}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("inventory.allGames")}</SelectItem>
+                {uniqueGames.map((g) => (
+                  <SelectItem key={g} value={g}>
+                    {g}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>

@@ -577,10 +577,8 @@ export class TwitchClient {
   }
 
   async getUser(): Promise<TwitchUser> {
-    // 1) Validate token to get login/user_id without relying on Helix scopes
     const validate = await this.getValidateInfo();
 
-    // 2) Try Helix users with the known user_id to enrich profile
     const headers = await this.authHeaders();
     try {
       const data = await this.fetchJson<{ data: any[] }>(
@@ -604,7 +602,6 @@ export class TwitchClient {
       // fall through to GQL
     }
 
-    // 3) Fallback: GQL currentUser
     const gqlBody = {
       query: `
         query CurrentUser {
@@ -638,7 +635,6 @@ export class TwitchClient {
     const payload = (await res.json()) as any;
     const user = payload?.data?.currentUser;
     if (!user) {
-      // As last resort, return validate info
       return {
         id: validate.userId,
         login: validate.login,

@@ -1,5 +1,6 @@
 import { demoProfile } from "@renderer/shared/demoData";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useInterval } from "@renderer/shared/hooks/useInterval";
 import type {
   AuthState,
   ChannelTrackerStatus,
@@ -150,67 +151,49 @@ export function useAppBootstrap({
     };
   }, []);
 
-  useEffect(() => {
-    let disposed = false;
-    const pollTrackerStatus = async () => {
-      try {
-        const res: unknown = await window.electronAPI.twitch.trackerStatus();
-        if (disposed) return;
-        if (isIpcErrorResponse(res)) {
-          if (isIpcAuthErrorResponse(res)) {
-            forwardAuthError(res.message);
-            return;
-          }
+  const pollTrackerStatus = useCallback(async () => {
+    try {
+      const res: unknown = await window.electronAPI.twitch.trackerStatus();
+      if (isIpcErrorResponse(res)) {
+        if (isIpcAuthErrorResponse(res)) {
+          forwardAuthError(res.message);
           return;
         }
-        if (!isChannelTrackerStatus(res)) return;
-        setTrackerStatus(res);
-      } catch (err) {
-        if (!disposed) {
-          logDebug("twitch: trackerStatus failed", err);
-        }
+        return;
       }
-    };
-    void pollTrackerStatus();
-    const id = window.setInterval(() => {
-      void pollTrackerStatus();
-    }, 15_000);
-    return () => {
-      disposed = true;
-      window.clearInterval(id);
-    };
+      if (!isChannelTrackerStatus(res)) return;
+      setTrackerStatus(res);
+    } catch (err) {
+      logDebug("twitch: trackerStatus failed", err);
+    }
   }, [forwardAuthError]);
 
   useEffect(() => {
-    let disposed = false;
-    const pollUserPubSubStatus = async () => {
-      try {
-        const res: unknown = await window.electronAPI.twitch.userPubSubStatus();
-        if (disposed) return;
-        if (isIpcErrorResponse(res)) {
-          if (isIpcAuthErrorResponse(res)) {
-            forwardAuthError(res.message);
-            return;
-          }
+    void pollTrackerStatus();
+  }, [pollTrackerStatus]);
+  useInterval(() => void pollTrackerStatus(), 15_000);
+
+  const pollUserPubSubStatus = useCallback(async () => {
+    try {
+      const res: unknown = await window.electronAPI.twitch.userPubSubStatus();
+      if (isIpcErrorResponse(res)) {
+        if (isIpcAuthErrorResponse(res)) {
+          forwardAuthError(res.message);
           return;
         }
-        if (!isUserPubSubStatus(res)) return;
-        setUserPubSubStatus(res);
-      } catch (err) {
-        if (!disposed) {
-          logDebug("twitch: userPubSubStatus failed", err);
-        }
+        return;
       }
-    };
-    void pollUserPubSubStatus();
-    const id = window.setInterval(() => {
-      void pollUserPubSubStatus();
-    }, 15_000);
-    return () => {
-      disposed = true;
-      window.clearInterval(id);
-    };
+      if (!isUserPubSubStatus(res)) return;
+      setUserPubSubStatus(res);
+    } catch (err) {
+      logDebug("twitch: userPubSubStatus failed", err);
+    }
   }, [forwardAuthError]);
+
+  useEffect(() => {
+    void pollUserPubSubStatus();
+  }, [pollUserPubSubStatus]);
+  useInterval(() => void pollUserPubSubStatus(), 15_000);
 
   useEffect(() => {
     let cancelled = false;

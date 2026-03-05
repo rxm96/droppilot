@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useInterval } from "@renderer/shared/hooks/useInterval";
 import { DropChannelRestriction, type ChannelAllowlist } from "@renderer/shared/domain/dropDomain";
 import type {
   AutoSwitchInfo,
@@ -498,9 +499,7 @@ export function useChannels({
   const trackerClearedRef = useRef(false);
   const lastTrackedGameRef = useRef<string>("");
 
-  useEffect(() => {
-    targetGameRef.current = targetGame;
-  }, [targetGame]);
+  targetGameRef.current = targetGame;
 
   const applyChannelsState = useCallback(
     (next: ChannelEntry[]) => {
@@ -525,11 +524,9 @@ export function useChannels({
   const shouldTrackChannels =
     allowWatching &&
     hasTrackableTarget &&
-    (view === "control" || autoSelectEnabled || watching || autoSwitchEnabled);
+    (view === "control" || autoSelectEnabled || !!watching || autoSwitchEnabled);
   const shouldTrackChannelsRef = useRef(shouldTrackChannels);
-  useEffect(() => {
-    shouldTrackChannelsRef.current = shouldTrackChannels;
-  }, [shouldTrackChannels]);
+  shouldTrackChannelsRef.current = shouldTrackChannels;
   const clearTrackerIfTrackingDisabled = useCallback(
     (
       context: "stale-demo-response" | "stale-response" | "stale-failure",
@@ -827,10 +824,6 @@ export function useChannels({
   }, [applyChannelsState, demoMode]);
 
   useEffect(() => {
-    channelsRef.current = channels;
-  }, [channels]);
-
-  useEffect(() => {
     const prev = channelsRef.current;
     const prioritized = prioritizeChannelsByAllowlist(prev, channelAllowlist);
     const sameLength = prioritized.length === prev.length;
@@ -876,15 +869,15 @@ export function useChannels({
   }, [fetchChannels, isFresh, shouldTrackChannels, targetGame]);
 
   // Auto-refresh while control is active or auto-watching in background (cache-aware)
-  useEffect(() => {
-    if (!shouldTrackChannels) return;
-    const id = window.setInterval(() => {
+  useInterval(
+    () => {
       if (!targetGame) return;
       if (isFresh(targetGame)) return;
       fetchChannels(targetGame);
-    }, TRACKER_REFRESH_WINDOW_MS);
-    return () => window.clearInterval(id);
-  }, [TRACKER_REFRESH_WINDOW_MS, fetchChannels, isFresh, shouldTrackChannels, targetGame]);
+    },
+    TRACKER_REFRESH_WINDOW_MS,
+    shouldTrackChannels,
+  );
 
   // Auto-select first channel if none selected
   useEffect(() => {

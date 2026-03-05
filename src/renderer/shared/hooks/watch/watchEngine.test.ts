@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  MANUAL_STOP_SUPPRESSION_HOLD_MS,
   STALL_STOP_SUPPRESSION_HOLD_MS,
   selectIsTargetSuppressed,
   selectVisibleTargetGame,
@@ -145,6 +146,55 @@ describe("watchEngine", () => {
     expect(synced.suppressedTargetGame).toBe("");
     expect(synced.suppressionReason).toBeNull();
     expect(synced.suppressedAt).toBeNull();
+  });
+
+  it("keeps manual-stop suppression during hold window when idle", () => {
+    const suppressed = watchEngineReducer(WATCH_ENGINE_INITIAL_STATE, {
+      type: "watch/stop",
+      activeTargetGame: "EA Sports FC 26",
+      at: 5_000,
+    });
+    const synced = watchEngineReducer(suppressed, {
+      type: "sync",
+      activeTargetGame: "EA Sports FC 26",
+      watchingGame: "",
+      now: 5_000 + MANUAL_STOP_SUPPRESSION_HOLD_MS - 1,
+    });
+    expect(synced.suppressedTargetGame).toBe("EA Sports FC 26");
+    expect(synced.suppressionReason).toBe("manual-stop");
+  });
+
+  it("clears manual-stop suppression after hold window when idle", () => {
+    const suppressed = watchEngineReducer(WATCH_ENGINE_INITIAL_STATE, {
+      type: "watch/stop",
+      activeTargetGame: "EA Sports FC 26",
+      at: 5_000,
+    });
+    const synced = watchEngineReducer(suppressed, {
+      type: "sync",
+      activeTargetGame: "EA Sports FC 26",
+      watchingGame: "",
+      now: 5_000 + MANUAL_STOP_SUPPRESSION_HOLD_MS,
+    });
+    expect(synced.suppressedTargetGame).toBe("");
+    expect(synced.suppressionReason).toBeNull();
+    expect(synced.suppressedAt).toBeNull();
+  });
+
+  it("still clears manual-stop suppression immediately when a different game is watched", () => {
+    const suppressed = watchEngineReducer(WATCH_ENGINE_INITIAL_STATE, {
+      type: "watch/stop",
+      activeTargetGame: "EA Sports FC 26",
+      at: 5_000,
+    });
+    const synced = watchEngineReducer(suppressed, {
+      type: "sync",
+      activeTargetGame: "Battlefield 6",
+      watchingGame: "Battlefield 6",
+      now: 5_001, // well within hold window
+    });
+    expect(synced.suppressedTargetGame).toBe("");
+    expect(synced.suppressionReason).toBeNull();
   });
 
   it("derives visible target and forced clear flags", () => {
