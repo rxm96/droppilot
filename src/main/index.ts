@@ -126,9 +126,7 @@ if (process.argv.includes("--update-splash")) {
       webPreferences: { nodeIntegration: false, contextIsolation: true },
     });
     splash.removeMenu();
-    splash.loadURL(
-      `data:text/html;charset=utf-8,${encodeURIComponent(getUpdateSplashHtml())}`,
-    );
+    splash.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(getUpdateSplashHtml())}`);
     splash.center();
     // Auto-close after 20s (installer should be done well before that)
     setTimeout(() => {
@@ -415,67 +413,68 @@ function setupAutoUpdater() {
 
 const isSplashMode = process.argv.includes("--update-splash");
 
-if (!isSplashMode) app.whenReady().then(() => {
-  const startHidden = process.argv.includes("--start-in-tray");
-  const win = createWindow(startHidden);
-  if (!isDev && debugLogsOptIn) {
-    console.log("[DropPilot] Verbose logging enabled (prod opt-in).");
-  }
-  const effectiveTrackerMode = channelTracker.mode;
-  if (effectiveTrackerMode !== trackerMode) {
-    console.log(
-      `[DropPilot] Channel tracker mode: ${effectiveTrackerMode} (requested: ${trackerMode})`,
-    );
-  } else {
-    console.log(`[DropPilot] Channel tracker mode: ${effectiveTrackerMode}`);
-  }
-  createTray(win);
-  setupAutoUpdater();
-  userPubSub.start();
-  void loadSettings()
-    .then((settings) => {
-      applyAutoStartSetting(settings.autoStart);
-    })
-    .catch((err) => {
-      console.warn("autostart: settings load failed", err);
+if (!isSplashMode)
+  app.whenReady().then(() => {
+    const startHidden = process.argv.includes("--start-in-tray");
+    const win = createWindow(startHidden);
+    if (!isDev && debugLogsOptIn) {
+      console.log("[DropPilot] Verbose logging enabled (prod opt-in).");
+    }
+    const effectiveTrackerMode = channelTracker.mode;
+    if (effectiveTrackerMode !== trackerMode) {
+      console.log(
+        `[DropPilot] Channel tracker mode: ${effectiveTrackerMode} (requested: ${trackerMode})`,
+      );
+    } else {
+      console.log(`[DropPilot] Channel tracker mode: ${effectiveTrackerMode}`);
+    }
+    createTray(win);
+    setupAutoUpdater();
+    userPubSub.start();
+    void loadSettings()
+      .then((settings) => {
+        applyAutoStartSetting(settings.autoStart);
+      })
+      .catch((err) => {
+        console.warn("autostart: settings load failed", err);
+      });
+
+    // Forward noisy Twitch logs only in development or explicit prod opt-in.
+    if (verboseLogsEnabled) {
+      const forwardLog = (scope: string, ...args: unknown[]) => {
+        console.log(`[${scope}]`, ...args);
+        if (!win.isDestroyed()) {
+          win.webContents.send("main-log", { scope, args });
+        }
+      };
+      (twitchService as any).debug = (...args: unknown[]) => forwardLog("TwitchService", ...args);
+    } else {
+      (twitchService as any).debug = () => {};
+    }
+
+    registerIpcHandlers({
+      auth,
+      twitch: twitchService,
+      channelTracker,
+      userPubSub,
+      loadSession,
+      clearSession,
+      loadSettings,
+      saveSettings,
+      loadStats,
+      saveStats,
+      bumpStats,
+      resetStats,
+      applyAutoStartSetting,
     });
 
-  // Forward noisy Twitch logs only in development or explicit prod opt-in.
-  if (verboseLogsEnabled) {
-    const forwardLog = (scope: string, ...args: unknown[]) => {
-      console.log(`[${scope}]`, ...args);
-      if (!win.isDestroyed()) {
-        win.webContents.send("main-log", { scope, args });
+    app.on("activate", () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        const newWin = createWindow();
+        createTray(newWin);
       }
-    };
-    (twitchService as any).debug = (...args: unknown[]) => forwardLog("TwitchService", ...args);
-  } else {
-    (twitchService as any).debug = () => {};
-  }
-
-  registerIpcHandlers({
-    auth,
-    twitch: twitchService,
-    channelTracker,
-    userPubSub,
-    loadSession,
-    clearSession,
-    loadSettings,
-    saveSettings,
-    loadStats,
-    saveStats,
-    bumpStats,
-    resetStats,
-    applyAutoStartSetting,
+    });
   });
-
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      const newWin = createWindow();
-      createTray(newWin);
-    }
-  });
-});
 
 if (!isSplashMode) {
   app.on("window-all-closed", () => {

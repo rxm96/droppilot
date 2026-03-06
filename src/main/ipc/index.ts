@@ -11,7 +11,6 @@ import { TwitchServiceError } from "../twitch/errors";
 import type { ChannelTracker, ChannelTrackerDiffEvent } from "../twitch/tracker";
 import type { UserPubSub, UserPubSubEvent } from "../twitch/userPubSub";
 
-
 function extractReleaseNoteText(entry: unknown): string {
   if (typeof entry === "string") return entry;
   if (!entry || typeof entry !== "object") return "";
