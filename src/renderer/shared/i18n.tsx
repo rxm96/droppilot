@@ -420,6 +420,7 @@ const translations: Translations = {
     "updateOverlay.whatsNewVersion": "What's new in v{version}",
     "updateOverlay.installing": "Installing update",
     "updateOverlay.installingHint": "The app will restart automatically.",
+    "updateOverlay.restartingShortly": "Restarting shortly\u2026",
     "settings.advanced": "Automation",
     "settings.advancedHint":
       "Control auto-claim, auto-select, auto-switch, warmup & refresh cadence.",
@@ -939,6 +940,7 @@ const translations: Translations = {
     "updateOverlay.whatsNewVersion": "Was ist neu in v{version}",
     "updateOverlay.installing": "Update wird installiert",
     "updateOverlay.installingHint": "Die App startet automatisch neu.",
+    "updateOverlay.restartingShortly": "Startet gleich neu\u2026",
     "settings.advanced": "Automatisierung",
     "settings.advancedHint": "Steuert Auto-Claim, Auto-Select, Auto-Switch, Warmup & Refresh-Takt.",
     "settings.autoClaim": "Auto-Claim aktiv",

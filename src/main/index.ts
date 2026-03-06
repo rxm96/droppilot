@@ -107,6 +107,88 @@ if (process.platform === "win32") {
   app.setAppUserModelId("com.droppilot.app");
 }
 
+// Lightweight splash mode: shows a small "Installing update" window, then exits.
+// Spawned as a detached child process before quitAndInstall so it survives the app quit.
+if (process.argv.includes("--update-splash")) {
+  app.whenReady().then(() => {
+    const splash = new BrowserWindow({
+      width: 360,
+      height: 240,
+      frame: false,
+      resizable: false,
+      movable: false,
+      minimizable: false,
+      maximizable: false,
+      alwaysOnTop: true,
+      transparent: true,
+      skipTaskbar: true,
+      backgroundColor: "#00000000",
+      webPreferences: { nodeIntegration: false, contextIsolation: true },
+    });
+    splash.removeMenu();
+    splash.loadURL(
+      `data:text/html;charset=utf-8,${encodeURIComponent(getUpdateSplashHtml())}`,
+    );
+    splash.center();
+    // Auto-close after 20s (installer should be done well before that)
+    setTimeout(() => {
+      if (!splash.isDestroyed()) splash.close();
+      app.quit();
+    }, 20_000);
+  });
+  // Skip all normal app initialization
+}
+
+function getUpdateSplashHtml(): string {
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:transparent;-webkit-app-region:no-drag}
+body{display:flex;align-items:center;justify-content:center;font-family:'Segoe UI',system-ui,sans-serif}
+.card{
+  display:flex;flex-direction:column;align-items:center;gap:14px;
+  padding:32px 36px;border-radius:20px;text-align:center;
+  background:linear-gradient(160deg,rgba(12,18,34,0.97),rgba(8,12,24,0.99));
+  box-shadow:0 24px 64px rgba(0,0,0,0.6),0 0 0 1px rgba(136,208,255,0.1);
+  animation:cardIn .35s cubic-bezier(.16,1,.3,1) both;
+}
+.orb{
+  width:56px;height:56px;border-radius:50%;position:relative;
+  animation:breathe 1.4s ease-in-out infinite;
+}
+.orb::before{
+  content:"";position:absolute;inset:0;border-radius:50%;
+  background:conic-gradient(from 0deg,#88d0ff,#9c8bff,#b29aff,#88d0ff);
+  animation:spin 2s linear infinite;
+  box-shadow:0 0 36px rgba(136,208,255,0.45),0 0 64px rgba(156,139,255,0.2);
+}
+.orb::after{
+  content:"";position:absolute;inset:4px;border-radius:50%;
+  background:linear-gradient(160deg,rgba(12,18,34,0.98),rgba(8,12,24,1));
+}
+h2{font-size:17px;font-weight:600;color:#f4f3ef;letter-spacing:-0.3px}
+p{font-size:12px;color:rgba(244,243,239,0.5)}
+.bar{width:100%;height:6px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,0.06)}
+.fill{
+  height:100%;border-radius:999px;width:100%;
+  background:linear-gradient(90deg,#88d0ff,#9c8bff,#88d0ff);background-size:200% 100%;
+  animation:shimmer 1.5s ease-in-out infinite;
+  box-shadow:0 0 12px rgba(136,208,255,0.4);
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes breathe{0%,100%{transform:scale(1);opacity:.9}50%{transform:scale(1.06);opacity:1}}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@keyframes cardIn{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
+</style></head><body>
+<div class="card">
+  <div class="orb"></div>
+  <h2>Installing update</h2>
+  <p>Restarting shortly\\u2026</p>
+  <div class="bar"><div class="fill"></div></div>
+</div>
+</body></html>`;
+}
+
 function applyAutoStartSetting(enabled: boolean) {
   if (process.platform !== "win32") return;
   try {
@@ -331,7 +413,9 @@ function setupAutoUpdater() {
     });
 }
 
-app.whenReady().then(() => {
+const isSplashMode = process.argv.includes("--update-splash");
+
+if (!isSplashMode) app.whenReady().then(() => {
   const startHidden = process.argv.includes("--start-in-tray");
   const win = createWindow(startHidden);
   if (!isDev && debugLogsOptIn) {
@@ -393,19 +477,21 @@ app.whenReady().then(() => {
   });
 });
 
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
-});
+if (!isSplashMode) {
+  app.on("window-all-closed", () => {
+    if (process.platform !== "darwin") {
+      app.quit();
+    }
+  });
 
-app.on("before-quit", () => {
-  if (typeof channelTracker.dispose === "function") {
-    channelTracker.dispose();
-  }
-  userPubSub.dispose();
-  if (updateTimer) {
-    clearInterval(updateTimer);
-    updateTimer = null;
-  }
-});
+  app.on("before-quit", () => {
+    if (typeof channelTracker.dispose === "function") {
+      channelTracker.dispose();
+    }
+    userPubSub.dispose();
+    if (updateTimer) {
+      clearInterval(updateTimer);
+      updateTimer = null;
+    }
+  });
+}

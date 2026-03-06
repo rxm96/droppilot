@@ -61,6 +61,7 @@ export function UpdateOverlay({ updateStatus, onInstallUpdate }: Props) {
   const resolvedStatus: UpdateStatus = updateStatus ?? { state: "idle" };
   const statusState = resolvedStatus.state;
   const [installing, setInstalling] = useState(false);
+  const [showSplash, setShowSplash] = useState(false);
 
   const forcePreview = false;
   const previewVersion = "2.5.0";
@@ -103,11 +104,15 @@ export function UpdateOverlay({ updateStatus, onInstallUpdate }: Props) {
   const handleInstallClick = () => {
     setInstalling(true);
     if (forcePreview) {
-      // Simulation: fake installing then reset
+      // Simulate: installing state → splash screen → reset
       setTimeout(() => {
         setInstalling(false);
+        setShowSplash(true);
+      }, 1_200);
+      setTimeout(() => {
+        setShowSplash(false);
         setSimProgress(0);
-      }, SIMULATE_INSTALL_MS);
+      }, SIMULATE_INSTALL_MS + 1_200);
       return;
     }
     onInstallUpdate?.();
@@ -147,7 +152,7 @@ export function UpdateOverlay({ updateStatus, onInstallUpdate }: Props) {
     : formatEta(resolvedStatus.transferred, resolvedStatus.total, resolvedStatus.bytesPerSecond);
   const noteLines = releaseNotes ? parseReleaseNotes(releaseNotes) : [];
 
-  const showOverlay = isDownloading || isReady || isInstalling;
+  const showOverlay = isDownloading || isReady || isInstalling || showSplash;
 
   useEffect(() => {
     if (!showOverlay) return;
@@ -164,6 +169,24 @@ export function UpdateOverlay({ updateStatus, onInstallUpdate }: Props) {
   }, [showOverlay]);
 
   if (!showOverlay) return null;
+
+  // Splash screen: simulates the frameless BrowserWindow from the main process
+  if (showSplash) {
+    return (
+      <div className="update-splash-backdrop" role="status" aria-live="polite">
+        <div className="update-splash-card">
+          <div className="update-overlay-orb installing" aria-hidden="true" />
+          <h2 className="update-splash-title">{t("updateOverlay.installing")}</h2>
+          <p className="update-splash-hint">{t("updateOverlay.restartingShortly")}</p>
+          <div className="update-overlay-progress">
+            <div className="progress-bar" aria-hidden="true">
+              <span className="progress-bar-fill installing" style={{ width: "100%" }} />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const orbClass = isInstalling ? "installing" : isDownloading ? "downloading" : "ready";
 

@@ -1,4 +1,5 @@
 import { BrowserWindow, ipcMain, Notification, app } from "electron";
+import { spawn } from "node:child_process";
 import { autoUpdater } from "electron-updater";
 import type { AuthController, AuthResult } from "../auth";
 import type { TwitchService } from "../twitch/service";
@@ -9,6 +10,7 @@ import type { PriorityPlan } from "../twitch/channels";
 import { TwitchServiceError } from "../twitch/errors";
 import type { ChannelTracker, ChannelTrackerDiffEvent } from "../twitch/tracker";
 import type { UserPubSub, UserPubSubEvent } from "../twitch/userPubSub";
+
 
 function extractReleaseNoteText(entry: unknown): string {
   if (typeof entry === "string") return entry;
@@ -448,11 +450,24 @@ export function registerIpcHandlers(deps: {
     }
   });
 
-  ipcMain.handle("app/installUpdate", async () => {
+  ipcMain.handle("app/installUpdate", async (event) => {
     if (process.platform !== "win32" || !app.isPackaged) {
       return { ok: false, status: "unsupported" };
     }
     try {
+      // Spawn a detached splash process that survives our quit
+      const child = spawn(process.execPath, ["--update-splash"], {
+        detached: true,
+        stdio: "ignore",
+      });
+      child.unref();
+
+      // Hide the main window so the splash is all the user sees
+      const mainWin = BrowserWindow.fromWebContents(event.sender);
+      mainWin?.hide();
+
+      // Give the splash a moment to render, then quit-and-install
+      await new Promise((resolve) => setTimeout(resolve, 800));
       autoUpdater.quitAndInstall(true, true);
       return { ok: true };
     } catch (err) {

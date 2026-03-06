@@ -554,6 +554,58 @@ body {
   box-shadow: 0 0 16px rgba(136, 208, 255, 0.5);
 }
 
+/* --- Splash Screen (simulates standalone BrowserWindow) --- */
+
+.update-splash-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.92);
+  animation: overlayFadeIn 0.3s ease both;
+}
+
+.update-splash-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 32px 40px;
+  border-radius: 20px;
+  text-align: center;
+  background: linear-gradient(160deg, rgba(12, 18, 34, 0.97), rgba(8, 12, 24, 0.99));
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(136, 208, 255, 0.1);
+  animation: cardEnter 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+  width: 320px;
+}
+
+.update-splash-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--foreground);
+  letter-spacing: -0.3px;
+}
+
+.update-splash-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.update-splash-card .update-overlay-progress {
+  width: 100%;
+}
+
+.update-splash-card .update-overlay-orb {
+  width: 56px;
+  height: 56px;
+}
+
 /* --- Release Notes --- */
 
 .update-overlay-notes {
