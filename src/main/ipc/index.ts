@@ -15,7 +15,10 @@ import { TwitchServiceError } from "../twitch/errors";
 import type { ChannelTracker, ChannelTrackerDiffEvent } from "../twitch/tracker";
 import type { UserPubSub, UserPubSubEvent } from "../twitch/userPubSub";
 import { allowsPrereleaseBuilds } from "../../shared/updateChannels";
-import { spawnDetachedUpdateSplash } from "../updateSplash";
+import {
+  resolvePendingNsisInstall,
+  spawnDetachedUpdateInstallerHelper,
+} from "../updateInstallerLauncher";
 
 function extractReleaseNoteText(entry: unknown): string {
   if (typeof entry === "string") return entry;
@@ -455,26 +458,33 @@ export function registerIpcHandlers(deps: {
     }
   });
 
-  ipcMain.handle("app/installUpdate", async (event) => {
+  ipcMain.handle("app/installUpdate", async () => {
     if (process.platform !== "win32" || !app.isPackaged) {
       return { ok: false, status: "unsupported" };
     }
     try {
-      const splashSpawned = spawnDetachedUpdateSplash({
-        parentPid: process.pid,
-        executablePath: process.execPath,
-      });
-      if (!splashSpawned) {
-        console.warn("update: external splash failed to start, continuing install");
+      const pendingInstall = resolvePendingNsisInstall(autoUpdater);
+      if (pendingInstall) {
+        const helperSpawned = spawnDetachedUpdateInstallerHelper({
+          parentPid: process.pid,
+          ...pendingInstall,
+        });
+        if (helperSpawned) {
+          autoUpdater.autoInstallOnAppQuit = false;
+          setImmediate(() => {
+            app.quit();
+          });
+          return { ok: true };
+        }
+        console.warn(
+          "update: installer helper failed to start, falling back to visible NSIS install",
+        );
+      } else {
+        console.warn(
+          "update: installer metadata unavailable, falling back to visible NSIS install",
+        );
       }
-
-      // Hide the main window so the splash is all the user sees
-      const mainWin = BrowserWindow.fromWebContents(event.sender);
-      mainWin?.hide();
-
-      // Let the hide paint land, then hand off immediately to the installer.
-      await new Promise((resolve) => setTimeout(resolve, 120));
-      autoUpdater.quitAndInstall(true, true);
+      autoUpdater.quitAndInstall(false, true);
       return { ok: true };
     } catch (err) {
       return {
