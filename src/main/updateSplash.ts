@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { join, parse } from "node:path";
+import { win32 as pathWin32 } from "node:path";
 
 const UPDATE_SPLASH_CLOSE_MS = 45_000;
 const UPDATE_SPLASH_PARENT_WAIT_MS = 15_000;
@@ -26,7 +26,14 @@ export const escapePowerShellSingleQuoted = (value: string): string => value.rep
 
 export const resolvePowerShellPath = (systemRoot = process.env.SystemRoot): string => {
   if (!systemRoot) return "powershell.exe";
-  const candidate = join(systemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
+  const candidate = pathWin32.join(
+    systemRoot,
+    "System32",
+    "WindowsPowerShell",
+    "v1.0",
+    "powershell.exe",
+  );
+  if (process.platform !== "win32") return candidate;
   return existsSync(candidate) ? candidate : "powershell.exe";
 };
 
@@ -39,7 +46,7 @@ export const buildUpdateSplashPowerShellScript = ({
 }: BuildUpdateSplashScriptParams): string => {
   const sanitizedParentPid = Math.max(0, Math.floor(parentPid));
   const sanitizedCloseAfterMs = Math.max(1_000, Math.floor(closeAfterMs));
-  const processName = parse(executablePath).name || "DropPilot";
+  const processName = pathWin32.parse(executablePath).name || "DropPilot";
 
   return [
     "$ErrorActionPreference = 'SilentlyContinue'",
