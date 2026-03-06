@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { arrayMove } from "@dnd-kit/sortable";
 
 type Params = {
   newGame: string;
@@ -6,10 +7,18 @@ type Params = {
   selectedGame: string;
   priorityGames: string[];
   setAutoSelectEnabled: (next: boolean) => void;
-  dragIndex: number | null;
-  setDragIndex: (val: number | null) => void;
-  setDragOverIndex: (val: number | null) => void;
   savePriorityGames: (list: string[]) => Promise<void>;
+};
+
+export const reorderPriorityGamesByValue = (
+  priorityGames: string[],
+  activeGame: string,
+  overGame: string,
+): string[] => {
+  const activeIndex = priorityGames.indexOf(activeGame);
+  const overIndex = priorityGames.indexOf(overGame);
+  if (activeIndex < 0 || overIndex < 0 || activeIndex === overIndex) return priorityGames;
+  return arrayMove(priorityGames, activeIndex, overIndex);
 };
 
 export function usePriorityActions({
@@ -18,9 +27,6 @@ export function usePriorityActions({
   selectedGame,
   priorityGames,
   setAutoSelectEnabled,
-  dragIndex,
-  setDragIndex,
-  setDragOverIndex,
   savePriorityGames,
 }: Params) {
   const addGame = useCallback(() => {
@@ -44,42 +50,14 @@ export function usePriorityActions({
     [priorityGames, savePriorityGames],
   );
 
-  const handleDropReorder = useCallback(
-    (targetIndex: number) => {
-      if (dragIndex === null || dragIndex === targetIndex) {
-        setDragIndex(null);
-        setDragOverIndex(null);
-        return;
-      }
-      const updated = [...priorityGames];
-      // Ensure dragIndex is within bounds of the current list before splicing.
-      if (dragIndex < 0 || dragIndex >= updated.length) {
-        setDragIndex(null);
-        setDragOverIndex(null);
-        return;
-      }
-      const [item] = updated.splice(dragIndex, 1);
-      if (item === undefined) {
-        setDragIndex(null);
-        setDragOverIndex(null);
-        return;
-      }
-      // Clamp targetIndex after removal so insertion is always in a valid range.
-      const clampedTargetIndex = Math.max(0, Math.min(targetIndex, updated.length));
-      updated.splice(clampedTargetIndex, 0, item);
-      setDragIndex(null);
-      setDragOverIndex(null);
+  const movePriorityGame = useCallback(
+    (activeGame: string, overGame: string) => {
+      const updated = reorderPriorityGamesByValue(priorityGames, activeGame, overGame);
+      if (updated === priorityGames) return;
       setAutoSelectEnabled(true);
       void savePriorityGames(updated);
     },
-    [
-      dragIndex,
-      priorityGames,
-      savePriorityGames,
-      setAutoSelectEnabled,
-      setDragIndex,
-      setDragOverIndex,
-    ],
+    [priorityGames, savePriorityGames, setAutoSelectEnabled],
   );
 
   const addGameFromSelect = useCallback(() => {
@@ -104,7 +82,7 @@ export function usePriorityActions({
   return {
     addGame,
     removeGame,
-    handleDropReorder,
+    movePriorityGame,
     addGameFromSelect,
     addGameByName,
   };

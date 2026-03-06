@@ -11,9 +11,6 @@ type Params = {
   setNewGame: (val: string) => void;
   selectedGame: string;
   priorityGames: string[];
-  dragIndex: number | null;
-  setDragIndex: (val: number | null) => void;
-  setDragOverIndex: (val: number | null) => void;
   savePriorityGames: (list: string[]) => Promise<void>;
   saveObeyPriority: (val: boolean) => Promise<void>;
   saveAutoStart: (val: boolean) => Promise<void>;
@@ -51,9 +48,6 @@ export function useAppActions({
   setNewGame,
   selectedGame,
   priorityGames,
-  dragIndex,
-  setDragIndex,
-  setDragOverIndex,
   savePriorityGames,
   saveObeyPriority,
   saveAutoStart,
@@ -91,9 +85,6 @@ export function useAppActions({
     selectedGame,
     priorityGames,
     setAutoSelectEnabled,
-    dragIndex,
-    setDragIndex,
-    setDragOverIndex,
     savePriorityGames,
   });
 

@@ -122,8 +122,6 @@ export function useAppModel() {
     settingsError,
   } = useSettingsStore();
   const [gameFilter, setGameFilter] = useState<string>("all");
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [watchEngineState, dispatchWatchEngine] = useReducer(
     watchEngineReducer,
     WATCH_ENGINE_INITIAL_STATE,
@@ -418,9 +416,6 @@ export function useAppModel() {
     setNewGame,
     selectedGame,
     priorityGames,
-    dragIndex,
-    setDragIndex,
-    setDragOverIndex,
     savePriorityGames,
     saveObeyPriority,
     saveAutoStart,
@@ -466,18 +461,6 @@ export function useAppModel() {
     return () => window.clearTimeout(id);
   }, [claimStatus, setClaimStatus]);
 
-  const previewPriorityGames =
-    dragIndex !== null && dragOverIndex !== null && priorityGames.length > 0
-      ? (() => {
-          const clone = [...priorityGames];
-          if (dragIndex < 0 || dragIndex >= clone.length) return priorityGames;
-          const [item] = clone.splice(dragIndex, 1);
-          if (item === undefined) return priorityGames;
-          const clampedTargetIndex = Math.max(0, Math.min(dragOverIndex, clone.length));
-          clone.splice(clampedTargetIndex, 0, item);
-          return clone;
-        })()
-      : priorityGames;
   const stallSuppressedGame =
     watchEngineState.suppressionReason === "stall-stop"
       ? watchEngineState.suppressedTargetGame
@@ -1243,13 +1226,8 @@ export function useAppModel() {
     addGame: actions.addGame,
     addGameFromSelect: actions.addGameFromSelect,
     priorityGames,
-    previewPriorityGames,
     removeGame: actions.removeGame,
-    dragIndex,
-    dragOverIndex,
-    setDragIndex,
-    setDragOverIndex,
-    handleDropReorder: actions.handleDropReorder,
+    movePriorityGame: actions.movePriorityGame,
     obeyPriority,
     setObeyPriority: actions.handleSetObeyPriority,
   };

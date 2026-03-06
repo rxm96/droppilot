@@ -1,4 +1,21 @@
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useI18n } from "@renderer/shared/i18n";
+import { useEffect, type ButtonHTMLAttributes, type CSSProperties } from "react";
 import {
   Select,
   SelectContent,
@@ -16,18 +33,108 @@ type PriorityViewProps = {
   addGame: () => void;
   addGameFromSelect: () => void;
   priorityGames: string[];
-  previewPriorityGames: string[];
   removeGame: (name: string) => void;
-  dragIndex: number | null;
-  dragOverIndex: number | null;
-  setDragIndex: (idx: number | null) => void;
-  setDragOverIndex: (idx: number | null) => void;
-  handleDropReorder: (idx: number) => void;
+  movePriorityGame: (activeGame: string, overGame: string) => void;
   obeyPriority: boolean;
   setObeyPriority: (val: boolean) => void;
 };
 
+type PriorityCardProps = {
+  game: string;
+  dragLabel: string;
+  removeLabel: string;
+  onRemove: (name: string) => void;
+  dragHandleProps: ButtonHTMLAttributes<HTMLButtonElement>;
+  setDragHandleRef?: (element: HTMLButtonElement | null) => void;
+};
+
 const NO_GAME_SELECT_VALUE = "__dp_none__";
+
+export const getSelectableDropGames = (
+  uniqueGames: string[],
+  priorityGames: string[],
+): string[] => uniqueGames.filter((game) => !priorityGames.includes(game));
+
+function PriorityCard({
+  game,
+  dragLabel,
+  removeLabel,
+  onRemove,
+  dragHandleProps,
+  setDragHandleRef,
+}: PriorityCardProps) {
+  return (
+    <div className="priority-list-card">
+      <div className="priority-item-main">
+        <button
+          type="button"
+          className="ghost priority-drag-handle"
+          aria-label={dragLabel}
+          title={dragLabel}
+          ref={setDragHandleRef}
+          {...dragHandleProps}
+        >
+          <span className="priority-drag-grip" aria-hidden="true">
+            {Array.from({ length: 6 }, (_, gripIdx) => (
+              <span key={gripIdx} />
+            ))}
+          </span>
+        </button>
+        <span className="priority-game-name">{game}</span>
+      </div>
+      <div className="priority-actions">
+        <button type="button" className="ghost" onClick={() => onRemove(game)}>
+          {removeLabel}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+type SortablePriorityItemProps = {
+  game: string;
+  dragLabel: string;
+  removeLabel: string;
+  onRemove: (name: string) => void;
+};
+
+function SortablePriorityItem({
+  game,
+  dragLabel,
+  removeLabel,
+  onRemove,
+}: SortablePriorityItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: game });
+
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <li ref={setNodeRef} style={style} className={isDragging ? "priority-list-item sortable-dragging" : "priority-list-item"}>
+      <PriorityCard
+        game={game}
+        dragLabel={dragLabel}
+        removeLabel={removeLabel}
+        onRemove={onRemove}
+        setDragHandleRef={setActivatorNodeRef}
+        dragHandleProps={{
+          ...attributes,
+          ...listeners,
+        } as ButtonHTMLAttributes<HTMLButtonElement>}
+      />
+    </li>
+  );
+}
 
 export function PriorityView({
   uniqueGames,
@@ -38,18 +145,38 @@ export function PriorityView({
   addGame,
   addGameFromSelect,
   priorityGames,
-  previewPriorityGames,
   removeGame,
-  dragIndex,
-  dragOverIndex,
-  setDragIndex,
-  setDragOverIndex,
-  handleDropReorder,
+  movePriorityGame,
   obeyPriority,
   setObeyPriority,
 }: PriorityViewProps) {
   const { t } = useI18n();
   const countLabel = t("priorities.count", { count: priorityGames.length });
+  const selectableDropGames = getSelectableDropGames(uniqueGames, priorityGames);
+  const hasSelectableSelectedGame = selectableDropGames.includes(selectedGame);
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 6,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  useEffect(() => {
+    if (!selectedGame || hasSelectableSelectedGame) return;
+    setSelectedGame("");
+  }, [hasSelectableSelectedGame, selectedGame, setSelectedGame]);
+
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over) return;
+    const activeGame = String(active.id);
+    const overGame = String(over.id);
+    if (!activeGame || !overGame || activeGame === overGame) return;
+    movePriorityGame(activeGame, overGame);
+  };
 
   return (
     <div className="priority-view">
@@ -64,10 +191,10 @@ export function PriorityView({
         <section className="priority-panel">
           <div className="label">{t("settings.addFromDrops")}</div>
           <p className="meta">{t("settings.addFromDropsOption")}</p>
-          {uniqueGames.length > 0 && (
+          {selectableDropGames.length > 0 && (
             <div className="settings-row">
               <Select
-                value={selectedGame || NO_GAME_SELECT_VALUE}
+                value={hasSelectableSelectedGame ? selectedGame : NO_GAME_SELECT_VALUE}
                 onValueChange={(value) =>
                   setSelectedGame(value === NO_GAME_SELECT_VALUE ? "" : value)
                 }
@@ -79,14 +206,18 @@ export function PriorityView({
                   <SelectItem value={NO_GAME_SELECT_VALUE}>
                     {t("settings.addFromDropsOption")}
                   </SelectItem>
-                  {uniqueGames.map((g) => (
+                  {selectableDropGames.map((g) => (
                     <SelectItem key={g} value={g}>
                       {g}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <button type="button" onClick={addGameFromSelect} disabled={!selectedGame}>
+              <button
+                type="button"
+                onClick={addGameFromSelect}
+                disabled={!hasSelectableSelectedGame}
+              >
                 {t("settings.add")}
               </button>
             </div>
@@ -127,34 +258,22 @@ export function PriorityView({
           <div className="label">{t("settings.priorityGames")}</div>
           <p className="meta">{t("settings.drag")}</p>
           {priorityGames.length === 0 ? <p className="meta">{t("settings.noneEntries")}</p> : null}
-          {previewPriorityGames.length > 0 && (
-            <ul className="priority-list">
-              {previewPriorityGames.map((g, idx) => (
-                <li
-                  key={g}
-                  draggable
-                  onDragStart={() => setDragIndex(idx)}
-                  onDragEnd={() => {
-                    setDragIndex(null);
-                    setDragOverIndex(null);
-                  }}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setDragOverIndex(idx);
-                  }}
-                  onDrop={() => handleDropReorder(idx)}
-                  className={`${dragIndex === idx ? "dragging" : ""} ${dragOverIndex === idx ? "drop-target" : ""}`}
-                >
-                  <span>{g}</span>
-                  <div className="priority-actions">
-                    <span className="pill ghost">{t("settings.drag")}</span>
-                    <button type="button" className="ghost" onClick={() => removeGame(g)}>
-                      {t("settings.remove")}
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+          {priorityGames.length > 0 && (
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={priorityGames} strategy={verticalListSortingStrategy}>
+                <ul className="priority-list">
+                  {priorityGames.map((game) => (
+                    <SortablePriorityItem
+                      key={game}
+                      game={game}
+                      dragLabel={t("settings.drag")}
+                      removeLabel={t("settings.remove")}
+                      onRemove={removeGame}
+                    />
+                  ))}
+                </ul>
+              </SortableContext>
+            </DndContext>
           )}
         </section>
       </div>

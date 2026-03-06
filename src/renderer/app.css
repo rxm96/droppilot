@@ -2814,24 +2814,91 @@ code {
   gap: 8px;
 }
 
-.priority-list li {
+.priority-list-item {
+  list-style: none;
+}
+
+.priority-list-card {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   border: 1px solid var(--border);
   background: var(--background);
   border-radius: 12px;
   padding: 8px 12px;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    box-shadow 0.18s ease,
+    opacity 0.14s ease;
+  will-change: transform;
 }
 
-.priority-list li.dragging {
-  opacity: 0.6;
-  border-style: dashed;
+.priority-list-card:hover,
+.priority-list-card:focus-within {
+  border-color: color-mix(in srgb, var(--foreground) 22%, var(--border));
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--foreground) 6%, transparent);
 }
 
-.priority-list li.drop-target {
-  border-color: var(--foreground);
-  box-shadow: 0 0 0 1px rgba(28, 27, 26, 0.25);
+.priority-list-item.sortable-dragging {
+  z-index: 1;
+}
+
+.priority-list-item.sortable-dragging .priority-list-card {
+  opacity: 0.34;
+  border-color: color-mix(in srgb, var(--foreground) 16%, var(--border));
+  background: color-mix(in srgb, var(--muted) 68%, var(--background));
+}
+
+.priority-item-main {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.priority-game-name {
+  min-width: 0;
+  flex: 1 1 auto;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.priority-drag-handle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 10px;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.priority-drag-handle:active,
+.priority-list-item.sortable-dragging .priority-drag-handle {
+  cursor: grabbing;
+}
+
+.priority-drag-grip {
+  display: grid;
+  grid-template-columns: repeat(2, 4px);
+  gap: 3px 4px;
+}
+
+.priority-drag-grip span {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.72;
 }
 
 .priority-actions {
@@ -2839,6 +2906,7 @@ code {
   gap: 6px;
   align-items: center;
   flex-wrap: wrap;
+  flex: 0 0 auto;
 }
 
 .animate-item {
