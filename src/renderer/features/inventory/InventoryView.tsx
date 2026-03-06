@@ -82,20 +82,49 @@ const getCampaignPhase = (campaign: CampaignSummary, now = Date.now()): Campaign
   return "finished";
 };
 
-export const hasCampaignWatchtimeDrops = (
-  campaign: CampaignSummary,
-  inventoryByDropId: Map<string, InventoryItem>,
+type InventoryCampaignListEntry = {
+  campaign: CampaignSummary;
+  phase: CampaignPhase;
+};
+
+type InventoryCampaignVisibilityOptions = {
+  normalizedFilter: FilterKey;
+  priorityGameSet: Set<string>;
+  gameFilter: string;
+  isCampaignUnlinked: (campaign: CampaignSummary) => boolean;
+};
+
+export const shouldDisplayCampaignEntry = (
+  entry: InventoryCampaignListEntry,
+  {
+    normalizedFilter,
+    priorityGameSet,
+    gameFilter,
+    isCampaignUnlinked,
+  }: InventoryCampaignVisibilityOptions,
 ): boolean => {
-  const drops = Array.isArray(campaign.drops) ? campaign.drops : [];
-  if (drops.length === 0) return true;
-  return drops.some((drop) => {
-    const inventoryDrop = inventoryByDropId.get(drop.id);
-    const requiredMinutes = Math.max(
-      0,
-      Number(inventoryDrop?.requiredMinutes ?? drop.requiredMinutes) || 0,
-    );
-    return requiredMinutes > 0;
-  });
+  if (normalizedFilter === "priority-games") {
+    if (!isCampaignInPriorityGames(entry.campaign, priorityGameSet)) return false;
+    if (entry.phase === "expired") return false;
+  } else if (normalizedFilter === "not-linked") {
+    if (!isCampaignUnlinked(entry.campaign)) return false;
+  } else {
+    switch (normalizedFilter) {
+      case "all":
+        if (entry.phase === "expired") return false;
+        break;
+      case "in-progress":
+      case "upcoming":
+      case "finished":
+      case "expired":
+        if (entry.phase !== normalizedFilter) return false;
+        break;
+      default:
+        return false;
+    }
+  }
+  if (gameFilter !== "all" && entry.campaign.game !== gameFilter) return false;
+  return true;
 };
 
 export const createPriorityGameSet = (priorityGames: string[]): Set<string> =>
@@ -283,7 +312,6 @@ export function InventoryView({
   const visibleCampaigns = (() => {
     const now = Date.now();
     const withPhase = campaigns.map((campaign) => {
-      const hasWatchtimeDrops = hasCampaignWatchtimeDrops(campaign, inventoryByDropId);
       const derivedHasUnclaimedDrops = resolveHasUnclaimedDrops(campaign);
       const basePhase = getCampaignPhase(campaign, now);
       const phase =
@@ -293,35 +321,17 @@ export function InventoryView({
         phase,
         startMs: parseIsoMs(campaign.startsAt) ?? Number.POSITIVE_INFINITY,
         derivedHasUnclaimedDrops,
-        hasWatchtimeDrops,
       };
     });
     return withPhase
-      .filter((entry) => {
-        if (!entry.hasWatchtimeDrops) return false;
-        if (normalizedFilter === "priority-games") {
-          if (!isCampaignInPriorityGames(entry.campaign, priorityGameSet)) return false;
-          if (entry.phase === "expired") return false;
-        } else if (normalizedFilter === "not-linked") {
-          if (!isCampaignUnlinked(entry.campaign)) return false;
-        } else {
-          switch (normalizedFilter) {
-            case "all":
-              if (entry.phase === "expired") return false;
-              break;
-            case "in-progress":
-            case "upcoming":
-            case "finished":
-            case "expired":
-              if (entry.phase !== normalizedFilter) return false;
-              break;
-            default:
-              return false;
-          }
-        }
-        if (gameFilter !== "all" && entry.campaign.game !== gameFilter) return false;
-        return true;
-      })
+      .filter((entry) =>
+        shouldDisplayCampaignEntry(entry, {
+          normalizedFilter,
+          priorityGameSet,
+          gameFilter,
+          isCampaignUnlinked,
+        }),
+      )
       .sort((a, b) => {
         const order = (phase: string) =>
           phase === "in-progress" ? 0 : phase === "upcoming" ? 1 : 2;
