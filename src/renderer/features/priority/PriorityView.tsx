@@ -50,10 +50,8 @@ type PriorityCardProps = {
 
 const NO_GAME_SELECT_VALUE = "__dp_none__";
 
-export const getSelectableDropGames = (
-  uniqueGames: string[],
-  priorityGames: string[],
-): string[] => uniqueGames.filter((game) => !priorityGames.includes(game));
+export const getSelectableDropGames = (uniqueGames: string[], priorityGames: string[]): string[] =>
+  uniqueGames.filter((game) => !priorityGames.includes(game));
 
 function PriorityCard({
   game,
@@ -120,17 +118,23 @@ function SortablePriorityItem({
   };
 
   return (
-    <li ref={setNodeRef} style={style} className={isDragging ? "priority-list-item sortable-dragging" : "priority-list-item"}>
+    <li
+      ref={setNodeRef}
+      style={style}
+      className={isDragging ? "priority-list-item sortable-dragging" : "priority-list-item"}
+    >
       <PriorityCard
         game={game}
         dragLabel={dragLabel}
         removeLabel={removeLabel}
         onRemove={onRemove}
         setDragHandleRef={setActivatorNodeRef}
-        dragHandleProps={{
-          ...attributes,
-          ...listeners,
-        } as ButtonHTMLAttributes<HTMLButtonElement>}
+        dragHandleProps={
+          {
+            ...attributes,
+            ...listeners,
+          } as ButtonHTMLAttributes<HTMLButtonElement>
+        }
       />
     </li>
   );
@@ -259,7 +263,11 @@ export function PriorityView({
           <p className="meta">{t("settings.drag")}</p>
           {priorityGames.length === 0 ? <p className="meta">{t("settings.noneEntries")}</p> : null}
           {priorityGames.length > 0 && (
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
               <SortableContext items={priorityGames} strategy={verticalListSortingStrategy}>
                 <ul className="priority-list">
                   {priorityGames.map((game) => (
