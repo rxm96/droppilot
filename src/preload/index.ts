@@ -1,5 +1,6 @@
 import type { Language } from "../renderer/shared/i18n";
 import { contextBridge, ipcRenderer, shell } from "electron";
+import type { UpdateChannel } from "../shared/updateChannels";
 
 type SettingsPayload = {
   priorityGames?: string[];
@@ -11,6 +12,7 @@ type SettingsPayload = {
   autoSelect?: boolean;
   autoSwitch?: boolean;
   warmupEnabled?: boolean;
+  updateChannel?: UpdateChannel;
   betaUpdates?: boolean;
   refreshMinMs?: number;
   refreshMaxMs?: number;

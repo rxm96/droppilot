@@ -2,6 +2,11 @@ import { app } from "electron";
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
 import { Language } from "../../renderer/i18n";
+import {
+  DEFAULT_UPDATE_CHANNEL,
+  normalizeUpdateChannel,
+  type UpdateChannel,
+} from "../../shared/updateChannels";
 
 export type SettingsData = {
   priorityGames: string[];
@@ -13,7 +18,7 @@ export type SettingsData = {
   autoSelect: boolean;
   autoSwitch: boolean;
   warmupEnabled: boolean;
-  betaUpdates: boolean;
+  updateChannel: UpdateChannel;
   refreshMinMs: number;
   refreshMaxMs: number;
   demoMode: boolean;
@@ -44,7 +49,7 @@ const defaultSettings: SettingsData = {
   autoSelect: true,
   autoSwitch: true,
   warmupEnabled: true,
-  betaUpdates: false,
+  updateChannel: DEFAULT_UPDATE_CHANNEL,
   refreshMinMs: 3_600_000,
   refreshMaxMs: 4_200_000,
   demoMode: false,
@@ -72,6 +77,10 @@ const normalizeRefreshIntervals = (
   return { min: clampedMin, max: clampedMax };
 };
 
+export type SettingsSaveData = Partial<SettingsData> & {
+  betaUpdates?: boolean;
+};
+
 export async function loadSettings(): Promise<SettingsData> {
   try {
     const raw = await fs.readFile(settingsFile, "utf-8");
@@ -79,7 +88,6 @@ export async function loadSettings(): Promise<SettingsData> {
     const refresh = normalizeRefreshIntervals(parsed?.refreshMinMs, parsed?.refreshMaxMs);
     return {
       ...defaultSettings,
-      ...parsed,
       priorityGames: Array.isArray(parsed?.priorityGames) ? parsed.priorityGames : [],
       excludeGames: Array.isArray(parsed?.excludeGames) ? parsed.excludeGames : [],
       obeyPriority:
@@ -99,8 +107,7 @@ export async function loadSettings(): Promise<SettingsData> {
         typeof parsed?.warmupEnabled === "boolean"
           ? parsed.warmupEnabled
           : defaultSettings.warmupEnabled,
-      betaUpdates:
-        typeof parsed?.betaUpdates === "boolean" ? parsed.betaUpdates : defaultSettings.betaUpdates,
+      updateChannel: normalizeUpdateChannel(parsed?.updateChannel, parsed?.betaUpdates),
       refreshMinMs: refresh.min,
       refreshMaxMs: refresh.max,
       demoMode: typeof parsed?.demoMode === "boolean" ? parsed.demoMode : defaultSettings.demoMode,
@@ -154,61 +161,81 @@ export async function loadSettings(): Promise<SettingsData> {
   }
 }
 
-export async function saveSettings(data: Partial<SettingsData>): Promise<SettingsData> {
+export async function saveSettings(data: SettingsSaveData): Promise<SettingsData> {
   const current = await loadSettings();
+  const { betaUpdates: legacyBetaUpdates, ...restData } = data;
   const refresh = normalizeRefreshIntervals(
-    Number.isFinite(data.refreshMinMs) ? data.refreshMinMs : current.refreshMinMs,
-    Number.isFinite(data.refreshMaxMs) ? data.refreshMaxMs : current.refreshMaxMs,
+    Number.isFinite(restData.refreshMinMs) ? restData.refreshMinMs : current.refreshMinMs,
+    Number.isFinite(restData.refreshMaxMs) ? restData.refreshMaxMs : current.refreshMaxMs,
   );
   const next: SettingsData = {
     ...current,
-    ...data,
-    priorityGames: Array.isArray(data.priorityGames) ? data.priorityGames : current.priorityGames,
-    excludeGames: Array.isArray(data.excludeGames) ? data.excludeGames : current.excludeGames,
-    obeyPriority: typeof data.obeyPriority === "boolean" ? data.obeyPriority : current.obeyPriority,
-    language: data.language === "en" || data.language === "de" ? data.language : current.language,
-    autoStart: typeof data.autoStart === "boolean" ? data.autoStart : current.autoStart,
-    autoClaim: typeof data.autoClaim === "boolean" ? data.autoClaim : current.autoClaim,
-    autoSelect: typeof data.autoSelect === "boolean" ? data.autoSelect : current.autoSelect,
-    autoSwitch: typeof data.autoSwitch === "boolean" ? data.autoSwitch : current.autoSwitch,
+    ...restData,
+    priorityGames: Array.isArray(restData.priorityGames)
+      ? restData.priorityGames
+      : current.priorityGames,
+    excludeGames: Array.isArray(restData.excludeGames)
+      ? restData.excludeGames
+      : current.excludeGames,
+    obeyPriority:
+      typeof restData.obeyPriority === "boolean" ? restData.obeyPriority : current.obeyPriority,
+    language:
+      restData.language === "en" || restData.language === "de"
+        ? restData.language
+        : current.language,
+    autoStart: typeof restData.autoStart === "boolean" ? restData.autoStart : current.autoStart,
+    autoClaim: typeof restData.autoClaim === "boolean" ? restData.autoClaim : current.autoClaim,
+    autoSelect: typeof restData.autoSelect === "boolean" ? restData.autoSelect : current.autoSelect,
+    autoSwitch: typeof restData.autoSwitch === "boolean" ? restData.autoSwitch : current.autoSwitch,
     warmupEnabled:
-      typeof data.warmupEnabled === "boolean" ? data.warmupEnabled : current.warmupEnabled,
-    betaUpdates: typeof data.betaUpdates === "boolean" ? data.betaUpdates : current.betaUpdates,
+      typeof restData.warmupEnabled === "boolean" ? restData.warmupEnabled : current.warmupEnabled,
+    updateChannel:
+      typeof restData.updateChannel === "string" || typeof legacyBetaUpdates === "boolean"
+        ? normalizeUpdateChannel(restData.updateChannel, legacyBetaUpdates)
+        : current.updateChannel,
     refreshMinMs: refresh.min,
     refreshMaxMs: refresh.max,
-    demoMode: typeof data.demoMode === "boolean" ? data.demoMode : current.demoMode,
-    debugEnabled: typeof data.debugEnabled === "boolean" ? data.debugEnabled : current.debugEnabled,
+    demoMode: typeof restData.demoMode === "boolean" ? restData.demoMode : current.demoMode,
+    debugEnabled:
+      typeof restData.debugEnabled === "boolean" ? restData.debugEnabled : current.debugEnabled,
     alertsEnabled:
-      typeof data.alertsEnabled === "boolean" ? data.alertsEnabled : current.alertsEnabled,
+      typeof restData.alertsEnabled === "boolean" ? restData.alertsEnabled : current.alertsEnabled,
     alertsNotifyWhileFocused:
-      typeof data.alertsNotifyWhileFocused === "boolean"
-        ? data.alertsNotifyWhileFocused
+      typeof restData.alertsNotifyWhileFocused === "boolean"
+        ? restData.alertsNotifyWhileFocused
         : current.alertsNotifyWhileFocused,
     alertsDropClaimed:
-      typeof data.alertsDropClaimed === "boolean"
-        ? data.alertsDropClaimed
+      typeof restData.alertsDropClaimed === "boolean"
+        ? restData.alertsDropClaimed
         : current.alertsDropClaimed,
     alertsDropEndingSoon:
-      typeof data.alertsDropEndingSoon === "boolean"
-        ? data.alertsDropEndingSoon
+      typeof restData.alertsDropEndingSoon === "boolean"
+        ? restData.alertsDropEndingSoon
         : current.alertsDropEndingSoon,
     alertsDropEndingMinutes:
-      Number.isFinite(data.alertsDropEndingMinutes) && (data.alertsDropEndingMinutes as number) > 0
-        ? Math.min(60, Math.max(1, data.alertsDropEndingMinutes as number))
+      Number.isFinite(restData.alertsDropEndingMinutes) &&
+      (restData.alertsDropEndingMinutes as number) > 0
+        ? Math.min(60, Math.max(1, restData.alertsDropEndingMinutes as number))
         : current.alertsDropEndingMinutes,
     alertsWatchError:
-      typeof data.alertsWatchError === "boolean" ? data.alertsWatchError : current.alertsWatchError,
+      typeof restData.alertsWatchError === "boolean"
+        ? restData.alertsWatchError
+        : current.alertsWatchError,
     alertsAutoSwitch:
-      typeof data.alertsAutoSwitch === "boolean" ? data.alertsAutoSwitch : current.alertsAutoSwitch,
+      typeof restData.alertsAutoSwitch === "boolean"
+        ? restData.alertsAutoSwitch
+        : current.alertsAutoSwitch,
     alertsNewDrops:
-      typeof data.alertsNewDrops === "boolean" ? data.alertsNewDrops : current.alertsNewDrops,
+      typeof restData.alertsNewDrops === "boolean"
+        ? restData.alertsNewDrops
+        : current.alertsNewDrops,
     enableBadgesEmotes:
-      typeof data.enableBadgesEmotes === "boolean"
-        ? data.enableBadgesEmotes
+      typeof restData.enableBadgesEmotes === "boolean"
+        ? restData.enableBadgesEmotes
         : current.enableBadgesEmotes,
     allowUnlinkedGames:
-      typeof data.allowUnlinkedGames === "boolean"
-        ? data.allowUnlinkedGames
+      typeof restData.allowUnlinkedGames === "boolean"
+        ? restData.allowUnlinkedGames
         : current.allowUnlinkedGames,
   };
   await fs.mkdir(app.getPath("userData"), { recursive: true });
@@ -220,7 +247,7 @@ export async function exportSettings(): Promise<SettingsData> {
   return loadSettings();
 }
 
-export async function importSettings(payload: Partial<SettingsData>): Promise<SettingsData> {
+export async function importSettings(payload: SettingsSaveData): Promise<SettingsData> {
   // Reuse the same merge/validation logic as saveSettings
   return saveSettings(payload);
 }

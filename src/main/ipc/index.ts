@@ -1,15 +1,21 @@
 import { BrowserWindow, ipcMain, Notification, app } from "electron";
-import { spawn } from "node:child_process";
 import { autoUpdater } from "electron-updater";
 import type { AuthController, AuthResult } from "../auth";
 import type { TwitchService } from "../twitch/service";
 import type { SessionData } from "../core/storage";
-import { exportSettings, importSettings, type SettingsData } from "../core/settings";
+import {
+  exportSettings,
+  importSettings,
+  type SettingsData,
+  type SettingsSaveData,
+} from "../core/settings";
 import type { StatsData } from "../core/stats";
 import type { PriorityPlan } from "../twitch/channels";
 import { TwitchServiceError } from "../twitch/errors";
 import type { ChannelTracker, ChannelTrackerDiffEvent } from "../twitch/tracker";
 import type { UserPubSub, UserPubSubEvent } from "../twitch/userPubSub";
+import { allowsPrereleaseBuilds } from "../../shared/updateChannels";
+import { spawnDetachedUpdateSplash } from "../updateSplash";
 
 function extractReleaseNoteText(entry: unknown): string {
   if (typeof entry === "string") return entry;
@@ -83,7 +89,7 @@ export function registerIpcHandlers(deps: {
   loadSession: () => Promise<SessionData | null>;
   clearSession: () => Promise<void>;
   loadSettings: () => Promise<SettingsData>;
-  saveSettings: (data: Partial<SettingsData>) => Promise<SettingsData>;
+  saveSettings: (data: SettingsSaveData) => Promise<SettingsData>;
   loadStats: () => Promise<StatsData>;
   saveStats: (data: Partial<StatsData>) => Promise<StatsData>;
   bumpStats: (delta: {
@@ -327,11 +333,11 @@ export function registerIpcHandlers(deps: {
     return loadSettings();
   });
 
-  ipcMain.handle("settings/save", async (_e, payload: Partial<SettingsData>) => {
+  ipcMain.handle("settings/save", async (_e, payload: SettingsSaveData) => {
     const saved = await saveSettings(payload);
     applyAutoStartSetting?.(saved.autoStart);
     if (process.platform === "win32" && app.isPackaged) {
-      autoUpdater.allowPrerelease = saved.betaUpdates === true;
+      autoUpdater.allowPrerelease = allowsPrereleaseBuilds(saved.updateChannel);
     }
     return saved;
   });
@@ -340,11 +346,11 @@ export function registerIpcHandlers(deps: {
     return exportSettings();
   });
 
-  ipcMain.handle("settings/import", async (_e, payload: Partial<SettingsData>) => {
+  ipcMain.handle("settings/import", async (_e, payload: SettingsSaveData) => {
     const saved = await importSettings(payload);
     applyAutoStartSetting?.(saved.autoStart);
     if (process.platform === "win32" && app.isPackaged) {
-      autoUpdater.allowPrerelease = saved.betaUpdates === true;
+      autoUpdater.allowPrerelease = allowsPrereleaseBuilds(saved.updateChannel);
     }
     return saved;
   });
@@ -415,7 +421,7 @@ export function registerIpcHandlers(deps: {
     try {
       autoUpdater.autoDownload = false;
       const settings = await loadSettings();
-      autoUpdater.allowPrerelease = settings.betaUpdates === true;
+      autoUpdater.allowPrerelease = allowsPrereleaseBuilds(settings.updateChannel);
       const result = await autoUpdater.checkForUpdates();
       const version = result?.updateInfo?.version;
       const releaseNotes = normalizeReleaseNotes(result?.updateInfo?.releaseNotes);
@@ -454,19 +460,20 @@ export function registerIpcHandlers(deps: {
       return { ok: false, status: "unsupported" };
     }
     try {
-      // Spawn a detached splash process that survives our quit
-      const child = spawn(process.execPath, ["--update-splash"], {
-        detached: true,
-        stdio: "ignore",
+      const splashSpawned = spawnDetachedUpdateSplash({
+        parentPid: process.pid,
+        executablePath: process.execPath,
       });
-      child.unref();
+      if (!splashSpawned) {
+        console.warn("update: external splash failed to start, continuing install");
+      }
 
       // Hide the main window so the splash is all the user sees
       const mainWin = BrowserWindow.fromWebContents(event.sender);
       mainWin?.hide();
 
-      // Give the splash a moment to render, then quit-and-install
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      // Let the hide paint land, then hand off immediately to the installer.
+      await new Promise((resolve) => setTimeout(resolve, 120));
       autoUpdater.quitAndInstall(true, true);
       return { ok: true };
     } catch (err) {
