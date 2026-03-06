@@ -1,5 +1,10 @@
 import type { Language } from "@renderer/shared/i18n";
 import { useEffect, useState } from "react";
+import {
+  DEFAULT_UPDATE_CHANNEL,
+  normalizeUpdateChannel,
+  type UpdateChannel,
+} from "../../../../shared/updateChannels";
 
 type SettingsData = {
   priorityGames: string[];
@@ -11,6 +16,7 @@ type SettingsData = {
   autoSelect?: boolean;
   autoSwitch?: boolean;
   warmupEnabled?: boolean;
+  updateChannel?: UpdateChannel;
   betaUpdates?: boolean;
   refreshMinMs?: number;
   refreshMaxMs?: number;
@@ -37,7 +43,7 @@ type SettingsHook = {
   autoSelect: boolean;
   autoSwitchEnabled: boolean;
   warmupEnabled: boolean;
-  betaUpdates: boolean;
+  updateChannel: UpdateChannel;
   refreshMinMs: number;
   refreshMaxMs: number;
   demoMode: boolean;
@@ -60,7 +66,7 @@ type SettingsHook = {
   saveAutoSelect: (val: boolean) => Promise<void>;
   saveAutoSwitchEnabled: (val: boolean) => Promise<void>;
   saveWarmupEnabled: (val: boolean) => Promise<void>;
-  saveBetaUpdates: (val: boolean) => Promise<void>;
+  saveUpdateChannel: (val: UpdateChannel) => Promise<void>;
   saveRefreshIntervals: (minMs: number, maxMs: number) => Promise<void>;
   saveDemoMode: (val: boolean) => Promise<void>;
   saveDebugEnabled: (val: boolean) => Promise<void>;
@@ -118,7 +124,7 @@ export function useSettingsStore(): SettingsHook {
   const [autoSelect, setAutoSelect] = useState<boolean>(true);
   const [autoSwitchEnabled, setAutoSwitchEnabled] = useState<boolean>(true);
   const [warmupEnabled, setWarmupEnabled] = useState<boolean>(true);
-  const [betaUpdates, setBetaUpdates] = useState<boolean>(false);
+  const [updateChannel, setUpdateChannel] = useState<UpdateChannel>(DEFAULT_UPDATE_CHANNEL);
   const [refreshMinMs, setRefreshMinMs] = useState<number>(DEFAULT_REFRESH_MIN);
   const [refreshMaxMs, setRefreshMaxMs] = useState<number>(DEFAULT_REFRESH_MAX);
   const [demoMode, setDemoMode] = useState<boolean>(false);
@@ -150,7 +156,7 @@ export function useSettingsStore(): SettingsHook {
       setAutoSelect(res.autoSelect !== false);
       setAutoSwitchEnabled(res.autoSwitch !== false);
       setWarmupEnabled(res.warmupEnabled !== false);
-      setBetaUpdates(res.betaUpdates === true);
+      setUpdateChannel(normalizeUpdateChannel(res.updateChannel, res.betaUpdates));
       const refresh = normalizeRefreshIntervals(res.refreshMinMs, res.refreshMaxMs);
       setRefreshMinMs(refresh.min);
       setRefreshMaxMs(refresh.max);
@@ -192,7 +198,7 @@ export function useSettingsStore(): SettingsHook {
       setAutoSelect(saved.autoSelect !== false);
       setAutoSwitchEnabled(saved.autoSwitch !== false);
       setWarmupEnabled(saved.warmupEnabled !== false);
-      setBetaUpdates(saved.betaUpdates === true);
+      setUpdateChannel(normalizeUpdateChannel(saved.updateChannel, saved.betaUpdates));
       const refresh = normalizeRefreshIntervals(saved.refreshMinMs, saved.refreshMaxMs);
       setRefreshMinMs(refresh.min);
       setRefreshMaxMs(refresh.max);
@@ -258,9 +264,9 @@ export function useSettingsStore(): SettingsHook {
     await persist({ warmupEnabled: val });
   };
 
-  const saveBetaUpdates = async (val: boolean) => {
-    setBetaUpdates(val);
-    await persist({ betaUpdates: val });
+  const saveUpdateChannel = async (val: UpdateChannel) => {
+    setUpdateChannel(val);
+    await persist({ updateChannel: val });
   };
 
   const saveRefreshIntervals = async (minMs: number, maxMs: number) => {
@@ -386,7 +392,7 @@ export function useSettingsStore(): SettingsHook {
       setAutoSelect(saved.autoSelect !== false);
       setAutoSwitchEnabled(saved.autoSwitch !== false);
       setWarmupEnabled(saved.warmupEnabled !== false);
-      setBetaUpdates(saved.betaUpdates === true);
+      setUpdateChannel(normalizeUpdateChannel(saved.updateChannel, saved.betaUpdates));
       const refresh = normalizeRefreshIntervals(saved.refreshMinMs, saved.refreshMaxMs);
       setRefreshMinMs(refresh.min);
       setRefreshMaxMs(refresh.max);
@@ -431,7 +437,7 @@ export function useSettingsStore(): SettingsHook {
     autoSelect,
     autoSwitchEnabled,
     warmupEnabled,
-    betaUpdates,
+    updateChannel,
     refreshMinMs,
     refreshMaxMs,
     demoMode,
@@ -454,7 +460,7 @@ export function useSettingsStore(): SettingsHook {
     saveAutoSelect,
     saveAutoSwitchEnabled,
     saveWarmupEnabled,
-    saveBetaUpdates,
+    saveUpdateChannel,
     saveRefreshIntervals,
     saveDemoMode,
     saveDebugEnabled,

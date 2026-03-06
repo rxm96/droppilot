@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import type { FilterKey } from "@renderer/shared/types";
+import type { UpdateChannel } from "../../../../shared/updateChannels";
 
 type Params = {
   setFilter: (next: FilterKey) => void;
@@ -9,7 +10,7 @@ type Params = {
   saveAutoSelect: (val: boolean) => Promise<void>;
   saveAutoSwitchEnabled: (val: boolean) => Promise<void>;
   saveWarmupEnabled: (val: boolean) => Promise<void>;
-  saveBetaUpdates: (val: boolean) => Promise<void>;
+  saveUpdateChannel: (val: UpdateChannel) => Promise<void>;
   saveDemoMode: (val: boolean) => Promise<void>;
   saveAlertsEnabled: (val: boolean) => Promise<void>;
   saveAlertsNotifyWhileFocused: (val: boolean) => Promise<void>;
@@ -33,7 +34,7 @@ export function useSettingsActions({
   saveAutoSelect,
   saveAutoSwitchEnabled,
   saveWarmupEnabled,
-  saveBetaUpdates,
+  saveUpdateChannel,
   saveDemoMode,
   saveAlertsEnabled,
   saveAlertsNotifyWhileFocused,
@@ -92,11 +93,11 @@ export function useSettingsActions({
     [saveWarmupEnabled],
   );
 
-  const handleSetBetaUpdates = useCallback(
-    (val: boolean) => {
-      void saveBetaUpdates(val);
+  const handleSetUpdateChannel = useCallback(
+    (val: UpdateChannel) => {
+      void saveUpdateChannel(val);
     },
-    [saveBetaUpdates],
+    [saveUpdateChannel],
   );
 
   const handleSetDemoMode = useCallback(
@@ -194,7 +195,7 @@ export function useSettingsActions({
     handleSetAutoSelect,
     handleSetAutoSwitchEnabled,
     handleSetWarmupEnabled,
-    handleSetBetaUpdates,
+    handleSetUpdateChannel,
     handleSetDemoMode,
     handleSetAlertsEnabled,
     handleSetAlertsNotifyWhileFocused,

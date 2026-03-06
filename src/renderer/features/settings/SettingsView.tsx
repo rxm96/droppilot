@@ -8,6 +8,7 @@ import {
 } from "@renderer/shared/components/ui/select";
 import { useEffect, useState } from "react";
 import type { ThemePreference } from "@renderer/shared/theme";
+import type { UpdateChannel } from "../../../shared/updateChannels";
 
 type SettingsProps = {
   isLinked: boolean;
@@ -25,8 +26,8 @@ type SettingsProps = {
   setAutoSwitchEnabled: (val: boolean) => void;
   warmupEnabled: boolean;
   setWarmupEnabled: (val: boolean) => void;
-  betaUpdates: boolean;
-  setBetaUpdates: (val: boolean) => void;
+  updateChannel: UpdateChannel;
+  setUpdateChannel: (val: UpdateChannel) => void;
   demoMode: boolean;
   setDemoMode: (val: boolean) => void;
   debugEnabled: boolean;
@@ -102,8 +103,8 @@ export function SettingsView({
   setAutoSwitchEnabled,
   warmupEnabled,
   setWarmupEnabled,
-  betaUpdates,
-  setBetaUpdates,
+  updateChannel,
+  setUpdateChannel,
   demoMode,
   setDemoMode,
   debugEnabled,
@@ -330,18 +331,23 @@ export function SettingsView({
               </div>
             ) : null}
             {showUpdateCheck ? (
-              <div className="toggle-row">
-                <label className="toggle">
-                  <input
-                    type="checkbox"
-                    checked={betaUpdates}
-                    onChange={(e) => setBetaUpdates(e.target.checked)}
-                  />
-                  <span className="toggle-label">
-                    <span className="toggle-title">{t("settings.updateBeta")}</span>
-                    <span className="toggle-hint">{t("settings.updateBetaHint")}</span>
-                  </span>
-                </label>
+              <div className="settings-row">
+                <div>
+                  <div className="label">{t("settings.updateChannel")}</div>
+                  <p className="meta">{t("settings.updateChannelHint")}</p>
+                </div>
+                <Select
+                  value={updateChannel}
+                  onValueChange={(value) => setUpdateChannel((value as UpdateChannel) || "stable")}
+                >
+                  <SelectTrigger aria-label={t("settings.updateChannel")}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="stable">{t("settings.updateChannel.stable")}</SelectItem>
+                    <SelectItem value="preview">{t("settings.updateChannel.preview")}</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             ) : null}
           </section>
