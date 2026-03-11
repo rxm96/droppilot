@@ -395,7 +395,10 @@ export function useControlViewState({
         active: Boolean(isActiveInGroup),
       });
     }
-    return groups;
+    return groups.sort((a, b) => {
+      if (a.active !== b.active) return a.active ? -1 : 1;
+      return a.title.localeCompare(b.title);
+    });
   }, [activeDropInfo?.campaignId, activeDropInfo?.id, targetDrops, t]);
 
   const activeEtaText = liveProgress.activeEta

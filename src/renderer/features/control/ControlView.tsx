@@ -17,7 +17,7 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@renderer/shared/components/ui/hover-card";
-import { useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useControlViewState } from "./useControlViewState";
 
 const CHANNEL_SKELETON = Array.from({ length: 4 }, (_, idx) => ({ key: `sk-${idx}` }));
@@ -638,11 +638,104 @@ export function ControlView({
         ? t("control.resumeHint", { channel: resumeChannel.displayName })
         : t("control.pickStream");
   const hasOpenTargetDrops = targetDrops.some((drop) => drop.status !== "claimed");
+  const openTargetDropsCount = targetDrops.filter((drop) => drop.status !== "claimed").length;
   const inactiveDropText = showNoDropsHint
     ? t("control.noDropsHint")
     : watching && hasOpenTargetDrops
       ? t("control.noFarmableDrop")
       : t("control.allDone");
+  const activeDropLiveEarnedMinutes = activeDropInfo
+    ? Math.floor(
+        Math.min(
+          activeDropInfo.requiredMinutes,
+          Math.max(
+            activeDropInfo.earnedMinutes,
+            activeDropInfo.virtualEarned +
+              Math.max(0, Number(liveProgress.activeElapsedMinutesRaw) || 0),
+          ),
+        ),
+      )
+    : 0;
+  const activeDropProgressPct =
+    activeDropInfo && activeDropInfo.requiredMinutes > 0
+      ? Math.min(
+          100,
+          Math.round((activeDropLiveEarnedMinutes / activeDropInfo.requiredMinutes) * 100),
+        )
+      : 0;
+  const controlStateText = watching
+    ? t("control.sidebarStateWatching")
+    : resumeChannel
+      ? t("control.sidebarStatePaused")
+      : canWatchTarget
+        ? t("control.sidebarStateReady")
+        : t("control.sidebarStateIdle");
+  const campaignPanels = useMemo(
+    () =>
+      campaignGroups.map((group) => {
+        const campaignProgress = group.items.reduce(
+          (acc, item) => {
+            const req = Math.max(0, Number(item.requiredMinutes) || 0);
+            const earned = Math.max(0, Number(item.earnedMinutes) || 0);
+            const isInActiveCampaign =
+              !!watching &&
+              !!activeDropInfo &&
+              (activeDropInfo.id === item.id ||
+                (!!activeDropInfo.campaignId &&
+                  !!item.campaignId &&
+                  activeDropInfo.campaignId === item.campaignId));
+            const liveEarned = isInActiveCampaign
+              ? Math.max(
+                  earned,
+                  earned + Math.max(0, Number(liveProgress.activeElapsedMinutesRaw) || 0),
+                )
+              : earned;
+            const normalizedEarned = Math.min(req, Math.floor(liveEarned));
+            if (item.status === "claimed") {
+              acc.required += req;
+              acc.earned += normalizedEarned;
+              return acc;
+            }
+            acc.required += Math.max(acc.openRequired, req) - acc.openRequired;
+            acc.earned += Math.max(acc.openEarned, normalizedEarned) - acc.openEarned;
+            acc.openRequired = Math.max(acc.openRequired, req);
+            acc.openEarned = Math.max(acc.openEarned, normalizedEarned);
+            return acc;
+          },
+          {
+            required: 0,
+            earned: 0,
+            openRequired: 0,
+            openEarned: 0,
+          },
+        );
+        const requiredMinutes = campaignProgress.required;
+        const earnedMinutes = campaignProgress.earned;
+        const pct =
+          requiredMinutes > 0
+            ? Math.min(100, Math.round((earnedMinutes / requiredMinutes) * 100))
+            : 0;
+        const openDrops = group.items.filter((item) => item.status !== "claimed").length;
+        return {
+          ...group,
+          requiredMinutes,
+          earnedMinutes,
+          pct,
+          openDrops,
+        };
+      }),
+    [activeDropInfo, campaignGroups, liveProgress.activeElapsedMinutesRaw, watching],
+  );
+  const hasMultipleCampaigns = campaignPanels.length > 1;
+  const [selectedCampaignKey, setSelectedCampaignKey] = useState<string>("");
+  useEffect(() => {
+    const validKeys = new Set(campaignPanels.map((group) => group.key));
+    const activeKey = campaignPanels.find((group) => group.active)?.key;
+    if (selectedCampaignKey && validKeys.has(selectedCampaignKey)) return;
+    setSelectedCampaignKey(activeKey ?? campaignPanels[0]?.key ?? "");
+  }, [campaignPanels, selectedCampaignKey]);
+  const selectedCampaign =
+    campaignPanels.find((group) => group.key === selectedCampaignKey) ?? campaignPanels[0] ?? null;
   return (
     <>
       <div className="panel-head control-head">
@@ -679,77 +772,91 @@ export function ControlView({
       <div className="control-layout">
         <div className="control-left">
           <div className="card control-drops">
-            <div className="card-header-row">
-              <div className="label">{t("control.progress")}</div>
+            <div className="control-section-head">
+              <div>
+                <div className="label">{t("control.nowTitle")}</div>
+                <p className="meta">{t("control.nowHint")}</p>
+              </div>
               {lastWatchOk ? (
                 <div className="meta muted">
-                  Last ping: {new Date(lastWatchOk).toLocaleTimeString()}
+                  {t("control.lastPingLabel")}: {new Date(lastWatchOk).toLocaleTimeString()}
                 </div>
               ) : null}
             </div>
-            <div className={`active-stream-bar${watching ? "" : " is-paused"}`}>
-              <div
-                className="active-stream-thumb"
-                style={streamCardThumb ? { backgroundImage: `url(${streamCardThumb})` } : undefined}
-              />
-              <div className="active-stream-info">
-                <div className="label">{t("control.activeStream")}</div>
-                <div className="active-stream-name">
-                  <span>{streamCardName}</span>
-                  {streamStateNode}
+            <div className="control-now-grid">
+              <section className={`control-now-stream${watching ? "" : " is-paused"}`}>
+                <div
+                  className="active-stream-thumb"
+                  style={
+                    streamCardThumb ? { backgroundImage: `url(${streamCardThumb})` } : undefined
+                  }
+                />
+                <div className="active-stream-info">
+                  <div className="label">{t("control.activeStream")}</div>
+                  <div className="active-stream-name">
+                    <span>{streamCardName}</span>
+                    {streamStateNode}
+                  </div>
+                  <div className="meta">
+                    {streamCardGame || t("control.noTarget")}
+                    {watching
+                      ? activeLoginMismatch
+                        ? ` | @${activeLoginMismatch}`
+                        : ""
+                      : streamCardLogin
+                        ? ` | @${streamCardLogin}`
+                        : ""}
+                  </div>
+                  <p className="meta muted">{streamCardNote}</p>
                 </div>
-                <div className="meta">
-                  {streamCardGame || t("control.noTarget")}
-                  {watching
-                    ? activeLoginMismatch
-                      ? ` | @${activeLoginMismatch}`
-                      : ""
-                    : streamCardLogin
-                      ? ` | @${streamCardLogin}`
-                      : ""}
+                <div className="active-stream-actions">
+                  {streamCardChannel && streamCardViewers ? (
+                    <span className="pill viewers-chip small">
+                      {streamCardViewers} {t("control.viewers")}
+                    </span>
+                  ) : (
+                    <span className="pill ghost small">{t("control.streamInfoUnavailable")}</span>
+                  )}
                 </div>
-                <p className="meta muted">{streamCardNote}</p>
-              </div>
-              <div className="active-stream-actions">
-                {streamCardChannel && streamCardViewers ? (
-                  <span className="pill viewers-chip small">
-                    {streamCardViewers} {t("control.viewers")}
-                  </span>
-                ) : (
-                  <span className="pill ghost small">{t("control.streamInfoUnavailable")}</span>
-                )}
-              </div>
-            </div>
-            {autoSwitchInfo ? (
-              <p className="meta muted">
-                Auto-Switch ({autoSwitchInfo.reason}): {autoSwitchInfo.from?.name ?? "Unknown"} -
-                {">"} {autoSwitchInfo.to.name} um {new Date(autoSwitchInfo.at).toLocaleTimeString()}
-              </p>
-            ) : null}
-            {watchErrorText ? (
-              <p className="error">
-                {t("control.pingError")}: {watchErrorText}
-              </p>
-            ) : null}
-            {targetGame ? (
-              <>
-                <div className={`active-drop-row${activeDropInfo ? "" : " is-empty"}`}>
-                  <div className="active-drop-main">
-                    <div className="meta">{t("control.currentDrop")}</div>
+              </section>
+              <section className={`control-now-drop-card${activeDropInfo ? "" : " is-empty"}`}>
+                <div className="control-now-drop-head">
+                  <div>
+                    <div className="label">{t("control.currentDrop")}</div>
                     <div
-                      className={`active-drop-title${activeDropInfo ? "" : " active-drop-placeholder"}`}
+                      className={`active-drop-title control-now-drop-title${activeDropInfo ? "" : " active-drop-placeholder"}`}
                       title={activeDropInfo?.title ?? inactiveDropText}
                     >
                       {activeDropInfo?.title ?? inactiveDropText}
                     </div>
                   </div>
-                  {activeDropInfo ? (
-                    <div className="pill-row">
-                      <span className="pill ghost small">
+                  <span className="pill ghost small">
+                    {activeDropInfo ? `${activeDropProgressPct}%` : "--"}
+                  </span>
+                </div>
+                {activeDropInfo ? (
+                  <>
+                    <div className="control-now-drop-progress">
+                      <div className="control-now-drop-minutes">
+                        {activeDropLiveEarnedMinutes}/{activeDropInfo.requiredMinutes}
+                        <span> min</span>
+                      </div>
+                      <div className="meta">
                         {liveProgress.activeRemainingMinutes > 0
                           ? t("control.rest", {
                               time: formatDuration(liveProgress.activeRemainingMinutes * 60_000),
                             })
+                          : t("control.done")}
+                        {activeEtaText ? ` • ${t("control.eta", { time: activeEtaText })}` : ""}
+                      </div>
+                    </div>
+                    <div className="progress-bar">
+                      <span style={{ width: `${activeDropProgressPct}%` }} />
+                    </div>
+                    <div className="control-now-drop-meta">
+                      <span className="pill ghost small">
+                        {activeDropProgressPct < 100
+                          ? t("control.sidebarStateWatching")
                           : t("control.done")}
                       </span>
                       {activeEtaText ? (
@@ -758,149 +865,242 @@ export function ControlView({
                         </span>
                       ) : null}
                     </div>
-                  ) : (
-                    <div className="pill-row active-drop-pill-placeholder" aria-hidden="true">
-                      <span className="pill ghost small">--</span>
+                  </>
+                ) : (
+                  <div className="control-now-drop-empty">
+                    <div className="meta">{inactiveDropText}</div>
+                    <div className="progress-bar small">
+                      <span style={{ width: "0%" }} />
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
+              </section>
+            </div>
+            {(autoSwitchInfo || watchErrorText) && (
+              <div className="control-status-strip">
+                {autoSwitchInfo ? (
+                  <span className="pill ghost small">
+                    Auto-Switch ({autoSwitchInfo.reason}): {autoSwitchInfo.from?.name ?? "Unknown"}{" "}
+                    -{">"} {autoSwitchInfo.to.name}
+                  </span>
+                ) : null}
+                {watchErrorText ? (
+                  <span className="pill ghost small danger-chip">
+                    {t("control.pingError")}: {watchErrorText}
+                  </span>
+                ) : null}
+              </div>
+            )}
+            {autoSwitchInfo ? (
+              <p className="meta muted">
+                {t("control.lastSwitchLabel")}: {new Date(autoSwitchInfo.at).toLocaleTimeString()}
+              </p>
+            ) : null}
+            {targetGame ? (
+              <>
                 {watchEnginePanel}
                 {campaignGroups.length > 0 && (
-                  <div className="drop-campaigns">
-                    {campaignGroups.map((group, groupIdx) => (
-                      <section
-                        key={group.key}
-                        className={`drop-campaign-group ${group.active ? "active" : ""}`}
-                      >
-                        <div className="drop-campaign-head">
-                          <div className="drop-campaign-title" title={group.tooltip}>
-                            {group.title}
-                          </div>
-                          <span className="pill ghost small">
-                            {t("control.campaignDrops", { count: group.items.length })}
-                          </span>
+                  <>
+                    <div className="control-section-head">
+                      <div>
+                        <div className="label">{t("control.dropCampaignsTitle")}</div>
+                        <p className="meta">{t("control.dropCampaignsHint")}</p>
+                      </div>
+                    </div>
+                    <div className="drop-campaigns">
+                      {hasMultipleCampaigns ? (
+                        <div
+                          className="drop-campaign-selector"
+                          role="tablist"
+                          aria-label={t("control.dropCampaignsTitle")}
+                        >
+                          {campaignPanels.map((group) => (
+                            <button
+                              key={group.key}
+                              type="button"
+                              role="tab"
+                              aria-selected={selectedCampaign?.key === group.key}
+                              className={`drop-campaign-chip${selectedCampaign?.key === group.key ? " active" : ""}`}
+                              onClick={() => setSelectedCampaignKey(group.key)}
+                            >
+                              <span className="drop-campaign-chip-title">{group.title}</span>
+                              <span className="drop-campaign-chip-meta">
+                                {group.pct}% •{" "}
+                                {t("control.campaignDrops", { count: group.openDrops })}
+                              </span>
+                            </button>
+                          ))}
                         </div>
-                        <ul className="drop-grid">
-                          {group.items.map((d, idx) => {
-                            const req = Math.max(0, Number(d.requiredMinutes) || 0);
-                            const earned = Math.max(0, Number(d.earnedMinutes) || 0);
-                            const isActive = activeDropInfo?.id === d.id;
-                            const isInActiveCampaign =
-                              !!watching &&
-                              !!activeDropInfo &&
-                              (isActive ||
-                                (!!activeDropInfo.campaignId &&
-                                  !!d.campaignId &&
-                                  activeDropInfo.campaignId === d.campaignId));
-                            const campaignLiveEarnedRaw = isInActiveCampaign
-                              ? Math.max(
-                                  0,
-                                  earned +
-                                    Math.max(0, Number(liveProgress.activeElapsedMinutesRaw) || 0),
-                                )
-                              : earned;
-                            const campaignLiveEarned = Math.floor(campaignLiveEarnedRaw);
-                            const earnedDisplay = Math.min(
-                              req,
-                              Math.max(earned, campaignLiveEarned),
-                            );
-                            const pct = req
-                              ? Math.min(100, Math.round((earnedDisplay / req) * 100))
-                              : 0;
-                            const liveProgressVisible =
-                              isInActiveCampaign && !!watching && earnedDisplay > earned;
-                            const displayStatus =
-                              liveProgressVisible && d.status === "locked" ? "progress" : d.status;
-                            const statusLabel = mapStatusLabel(displayStatus, (key) => t(key));
-                            const statusClass =
-                              displayStatus === "claimed"
-                                ? "claimed"
-                                : displayStatus === "progress"
-                                  ? "progress"
-                                  : "locked";
-                            const animate = !firstRenderRef.current && dropChangedIds.has(d.id);
-                            const dropImage =
-                              typeof d.imageUrl === "string" ? d.imageUrl.trim() : "";
-                            const campaignImage =
-                              typeof d.campaignImageUrl === "string"
-                                ? d.campaignImageUrl.trim()
-                                : "";
-                            const imageSrc = dropImage || campaignImage;
-                            const blockingReasonCode = pickDisplayBlockingReason(
-                              d.blockingReasonHints ?? [],
-                            );
-                            const blockingReasonLabel = blockingReasonCode
-                              ? formatBlockingReason(blockingReasonCode, t)
-                              : null;
-                            const watchingWrongGame =
-                              Boolean(watching && targetGame && watching.game !== targetGame) &&
-                              d.status !== "claimed";
-                            const channelRestricted =
-                              Boolean(watching) &&
-                              !watchingWrongGame &&
-                              d.status !== "claimed" &&
-                              !canDropProgressOnWatchingChannel(d, watching);
-                            const channelRestrictionLabel = channelRestricted
-                              ? formatChannelRestrictionReason(d, t)
-                              : null;
-                            const dropReasonLabel =
-                              blockingReasonLabel ??
-                              (watchingWrongGame ? t("control.dropReason.wrongGame") : null) ??
-                              channelRestrictionLabel;
-                            return (
-                              <li
-                                key={d.id}
-                                className={`drop-card ${statusClass} ${isActive ? "active" : ""} ${animate ? "animate-item" : ""}`}
-                                style={
-                                  animate
-                                    ? { animationDelay: `${(groupIdx * 8 + idx) * 30}ms` }
-                                    : undefined
-                                }
-                              >
-                                {imageSrc ? (
-                                  <div
-                                    className="drop-image-frame"
+                      ) : null}
+                      {selectedCampaign ? (
+                        <section
+                          key={selectedCampaign.key}
+                          className={`drop-campaign-group ${selectedCampaign.active ? "active" : ""}`}
+                        >
+                          <>
+                            <div className="drop-campaign-head">
+                              <div className="drop-campaign-head-main">
+                                <div
+                                  className="drop-campaign-title"
+                                  title={selectedCampaign.tooltip}
+                                >
+                                  {selectedCampaign.title}
+                                </div>
+                                <div className="drop-campaign-meta">
+                                  <span>
+                                    {t("control.campaignMinutes", {
+                                      earned: selectedCampaign.earnedMinutes,
+                                      required: selectedCampaign.requiredMinutes,
+                                    })}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="drop-campaign-summary">
+                                <strong>{selectedCampaign.pct}%</strong>
+                                <div className="drop-campaign-summary-actions">
+                                  {selectedCampaign.active ? (
+                                    <span className="pill ghost small">
+                                      {t("control.sidebarStateWatching")}
+                                    </span>
+                                  ) : null}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="progress-bar small drop-campaign-progress">
+                              <span style={{ width: `${selectedCampaign.pct}%` }} />
+                            </div>
+                            <ul className="drop-grid">
+                              {selectedCampaign.items.map((d, idx) => {
+                                const req = Math.max(0, Number(d.requiredMinutes) || 0);
+                                const earned = Math.max(0, Number(d.earnedMinutes) || 0);
+                                const isActive = activeDropInfo?.id === d.id;
+                                const isInActiveCampaign =
+                                  !!watching &&
+                                  !!activeDropInfo &&
+                                  (isActive ||
+                                    (!!activeDropInfo.campaignId &&
+                                      !!d.campaignId &&
+                                      activeDropInfo.campaignId === d.campaignId));
+                                const campaignLiveEarnedRaw = isInActiveCampaign
+                                  ? Math.max(
+                                      0,
+                                      earned +
+                                        Math.max(
+                                          0,
+                                          Number(liveProgress.activeElapsedMinutesRaw) || 0,
+                                        ),
+                                    )
+                                  : earned;
+                                const campaignLiveEarned = Math.floor(campaignLiveEarnedRaw);
+                                const earnedDisplay = Math.min(
+                                  req,
+                                  Math.max(earned, campaignLiveEarned),
+                                );
+                                const pct = req
+                                  ? Math.min(100, Math.round((earnedDisplay / req) * 100))
+                                  : 0;
+                                const liveProgressVisible =
+                                  isInActiveCampaign && !!watching && earnedDisplay > earned;
+                                const displayStatus =
+                                  liveProgressVisible && d.status === "locked"
+                                    ? "progress"
+                                    : d.status;
+                                const statusLabel = mapStatusLabel(displayStatus, (key) => t(key));
+                                const statusClass =
+                                  displayStatus === "claimed"
+                                    ? "claimed"
+                                    : displayStatus === "progress"
+                                      ? "progress"
+                                      : "locked";
+                                const animate = !firstRenderRef.current && dropChangedIds.has(d.id);
+                                const dropImage =
+                                  typeof d.imageUrl === "string" ? d.imageUrl.trim() : "";
+                                const campaignImage =
+                                  typeof d.campaignImageUrl === "string"
+                                    ? d.campaignImageUrl.trim()
+                                    : "";
+                                const imageSrc = dropImage || campaignImage;
+                                const blockingReasonCode = pickDisplayBlockingReason(
+                                  d.blockingReasonHints ?? [],
+                                );
+                                const blockingReasonLabel = blockingReasonCode
+                                  ? formatBlockingReason(blockingReasonCode, t)
+                                  : null;
+                                const watchingWrongGame =
+                                  Boolean(watching && targetGame && watching.game !== targetGame) &&
+                                  d.status !== "claimed";
+                                const channelRestricted =
+                                  Boolean(watching) &&
+                                  !watchingWrongGame &&
+                                  d.status !== "claimed" &&
+                                  !canDropProgressOnWatchingChannel(d, watching);
+                                const channelRestrictionLabel = channelRestricted
+                                  ? formatChannelRestrictionReason(d, t)
+                                  : null;
+                                const dropReasonLabel =
+                                  blockingReasonLabel ??
+                                  (watchingWrongGame ? t("control.dropReason.wrongGame") : null) ??
+                                  channelRestrictionLabel;
+                                const showDropReason =
+                                  Boolean(dropReasonLabel) &&
+                                  displayStatus !== "progress" &&
+                                  displayStatus !== "claimed";
+                                return (
+                                  <li
+                                    key={d.id}
+                                    className={`drop-card ${statusClass} ${isActive ? "active" : ""} ${animate ? "animate-item" : ""}`}
                                     style={
-                                      campaignImage
-                                        ? {
-                                            backgroundImage: `linear-gradient(150deg, rgba(5, 10, 22, 0.6), rgba(8, 12, 26, 0.8)), url(${campaignImage})`,
-                                            backgroundSize: "cover",
-                                            backgroundPosition: "center",
-                                          }
-                                        : undefined
+                                      animate ? { animationDelay: `${idx * 30}ms` } : undefined
                                     }
                                   >
-                                    <img src={imageSrc} alt="" loading="lazy" />
-                                  </div>
-                                ) : null}
-                                <div className="drop-body">
-                                  <div className="drop-header">
-                                    <div className="drop-title">
-                                      <span className="drop-title-text">{d.title}</span>
+                                    {imageSrc ? (
+                                      <div
+                                        className="drop-image-frame"
+                                        style={
+                                          campaignImage
+                                            ? {
+                                                backgroundImage: `linear-gradient(150deg, rgba(5, 10, 22, 0.6), rgba(8, 12, 26, 0.8)), url(${campaignImage})`,
+                                                backgroundSize: "cover",
+                                                backgroundPosition: "center",
+                                              }
+                                            : undefined
+                                        }
+                                      >
+                                        <img src={imageSrc} alt="" loading="lazy" />
+                                      </div>
+                                    ) : null}
+                                    <div className="drop-body">
+                                      <div className="drop-header">
+                                        <div className="drop-title">
+                                          <span className="drop-title-text">{d.title}</span>
+                                        </div>
+                                        {displayStatus !== "progress" ? (
+                                          <span className="pill ghost small">{statusLabel}</span>
+                                        ) : null}
+                                      </div>
+                                      <div className="meta muted drop-meta-line">
+                                        <span className="drop-meta-item">
+                                          {Math.floor(earnedDisplay)}/{req} min
+                                        </span>
+                                      </div>
+                                      {showDropReason ? (
+                                        <div className="drop-reason" title={dropReasonLabel}>
+                                          {dropReasonLabel}
+                                        </div>
+                                      ) : null}
+                                      <div className="progress-bar small">
+                                        <span style={{ width: `${pct}%` }} />
+                                      </div>
                                     </div>
-                                    <span className="pill ghost small">{statusLabel}</span>
-                                  </div>
-                                  <div className="meta muted drop-meta-line">
-                                    <span className="drop-meta-item">
-                                      {Math.floor(earnedDisplay)}/{req} min
-                                    </span>
-                                  </div>
-                                  {dropReasonLabel ? (
-                                    <div className="drop-reason" title={dropReasonLabel}>
-                                      {dropReasonLabel}
-                                    </div>
-                                  ) : null}
-                                  <div className="progress-bar small">
-                                    <span style={{ width: `${pct}%` }} />
-                                  </div>
-                                </div>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      </section>
-                    ))}
-                  </div>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </>
+                        </section>
+                      ) : null}
+                    </div>
+                  </>
                 )}
               </>
             ) : (
@@ -911,7 +1111,10 @@ export function ControlView({
 
         <div className="card control-target">
           <div className="control-target-head">
-            <div className="label">{t("control.watchControlsTitle")}</div>
+            <div>
+              <div className="label">{t("control.watchControlsTitle")}</div>
+              <p className="meta">{t("control.sidebarHint")}</p>
+            </div>
             <div className="control-target-actions">
               <button
                 type="button"
@@ -925,12 +1128,22 @@ export function ControlView({
           </div>
           {targetGame ? (
             <>
-              <p className="meta">
-                {t("control.activeTarget")}: {targetGame}
-              </p>
-              <p className="meta muted">
-                {t("control.streamsFound")}: {channels.length > 0 ? channels.length : 0}
-              </p>
+              <div className="control-sidebar-grid">
+                <div className="control-sidebar-card">
+                  <span className="label">{t("control.activeTarget")}</span>
+                  <strong className="control-sidebar-value">{targetGame}</strong>
+                  <p className="meta">{controlStateText}</p>
+                </div>
+                <div className="control-sidebar-card">
+                  <span className="label">{t("control.streamsFound")}</span>
+                  <strong className="control-sidebar-value">
+                    {channels.length > 0 ? channels.length : 0}
+                  </strong>
+                  <p className="meta">
+                    {t("control.dropsOpen")}: {openTargetDropsCount}
+                  </p>
+                </div>
+              </div>
               {trackerStatus ? (
                 <div className="status-row control-tracker-row">
                   {trackerStatus.connectionState &&
@@ -956,6 +1169,14 @@ export function ControlView({
           ) : (
             <p className="meta">{t("control.targetMissing")}</p>
           )}
+          {targetGame ? (
+            <div className="control-section-head control-channel-head">
+              <div>
+                <div className="label">{t("control.channelListTitle")}</div>
+                <p className="meta">{t("control.channelListHint")}</p>
+              </div>
+            </div>
+          ) : null}
           {targetGame && channelsLoading ? (
             <p className="meta inline-loader">
               <span className="spinner" />

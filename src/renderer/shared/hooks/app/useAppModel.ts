@@ -1199,7 +1199,36 @@ export function useAppModel() {
     logout,
     showDebug: debugEnabled,
   };
-  const overviewProps = { inventory, stats, resetStats };
+  const heroClaimableDrops = targetDrops.filter(
+    (drop) => drop.status !== "claimed" && drop.isClaimable === true,
+  ).length;
+  const heroBlockedDrops = targetDrops.filter(
+    (drop) =>
+      drop.status !== "claimed" &&
+      (drop.status === "locked" || drop.blocked === true || drop.excluded),
+  ).length;
+  const overviewProps = {
+    inventory,
+    stats,
+    resetStats,
+    activeGame: displayTargetGame,
+    activeDropTitle: activeDropInfo?.title,
+    activeDropRemainingMinutes: activeDropInfo?.remainingMinutes,
+    activeDropEta: activeDropInfo?.eta,
+    targetProgress,
+    totalDrops,
+    claimedDrops,
+    claimableDrops: heroClaimableDrops,
+    blockedDrops: heroBlockedDrops,
+    channelsCount: channels.length,
+    canWatchTarget,
+    watchDecision: watchEngineSnapshot.decision,
+    watchSuppressionReason: watchEngineSnapshot.suppression?.reason ?? null,
+    lastWatchOk: watchStats.lastOk,
+    inventoryFetchedAt,
+    trackerStatus,
+    watchError: watchStats.lastError,
+  };
   const inventoryProps = {
     inventory,
     filter,
@@ -1324,15 +1353,6 @@ export function useAppModel() {
     trackerStatus,
     watchEngineSnapshot,
   };
-
-  const heroClaimableDrops = targetDrops.filter(
-    (drop) => drop.status !== "claimed" && drop.isClaimable === true,
-  ).length;
-  const heroBlockedDrops = targetDrops.filter(
-    (drop) =>
-      drop.status !== "claimed" &&
-      (drop.status === "locked" || drop.blocked === true || drop.excluded),
-  ).length;
 
   const heroProps = {
     demoMode,
