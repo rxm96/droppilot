@@ -312,6 +312,7 @@ export function usePriorityOrchestration({
     priorityPlan,
     effectivePriorityPlan,
     priorityOrder,
+    priorityListPreemptionActive: priorityListChanged,
     refreshPriorityPlan,
   };
 }

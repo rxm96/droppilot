@@ -487,7 +487,13 @@ export function useAppModel() {
     });
   }, [isGameInStallCooldown, stallSuppressedGame, stalledGameCooldownUntil, withCategories]);
 
-  const { activeTargetGame, setActiveTargetGame, priorityOrder, refreshPriorityPlan } =
+  const {
+    activeTargetGame,
+    setActiveTargetGame,
+    priorityOrder,
+    priorityListPreemptionActive,
+    refreshPriorityPlan,
+  } =
     usePriorityOrchestration({
       demoMode,
       inventoryStatus: inventory.status,
@@ -723,7 +729,7 @@ export function useAppModel() {
     clearWatching,
     autoSelectEnabled,
     autoSwitchEnabled,
-    forcePrioritySwitch: obeyPriority,
+    forcePrioritySwitch: obeyPriority || priorityListPreemptionActive,
     allowWatching,
     canWatchTarget,
     trackerMode: trackerStatus?.mode,

@@ -113,6 +113,24 @@ describe("useChannels helpers", () => {
     }
   });
 
+  it("forces a switch on explicit priority retarget even when auto-switch is disabled", () => {
+    const channels = [makeChannel({ id: "2", displayName: "Beta", game: "Other" })];
+    const watching: WatchingState = { id: "1", name: "Alpha", game: "Game" };
+    const action = computeAutoSwitchAction({
+      allowWatching: true,
+      watching,
+      channels,
+      autoSwitchEnabled: false,
+      forcePrioritySwitch: true,
+      canWatchTarget: true,
+    });
+    expect(action.action).toBe("switch");
+    if (action.action === "switch") {
+      expect(action.reason).toBe("priority");
+      expect(action.nextChannel.id).toBe("2");
+    }
+  });
+
   it("switches to an allowlisted channel when current channel is not allowlisted", () => {
     const channels = [
       makeChannel({ id: "1", login: "alpha", displayName: "Alpha" }),

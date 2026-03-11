@@ -21,14 +21,20 @@ export const buildChannelAllowlist = ({
   if (!game) return null;
 
   let combinedRestriction = new DropChannelRestriction();
+  let sawActionableDrop = false;
 
   for (const { item, category } of withCategories) {
     const drop = new InventoryDrop(item);
     if (drop.game !== game) continue;
     if (!canEarnDrop(item, { category, allowUpcoming })) continue;
-    if (!drop.restriction.hasConstraints) continue;
+    sawActionableDrop = true;
+    // If any actionable drop is unrestricted, the game can be farmed on any valid live channel.
+    if (!drop.restriction.hasConstraints) {
+      return null;
+    }
     combinedRestriction = combinedRestriction.mergedWith(drop.restriction);
   }
 
+  if (!sawActionableDrop) return null;
   return combinedRestriction.toAllowlist();
 };

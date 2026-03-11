@@ -89,6 +89,32 @@ describe("channelAllowlist helpers", () => {
     ).toBeNull();
   });
 
+  it("does not constrain the whole game when any actionable drop is unrestricted", () => {
+    const withCategories: WithCategory[] = [
+      {
+        item: makeItem({
+          id: "restricted",
+          allowedChannelIds: ["1"],
+          allowedChannelLogins: ["alpha"],
+        }),
+        category: "in-progress",
+      },
+      {
+        item: makeItem({
+          id: "unrestricted",
+        }),
+        category: "in-progress",
+      },
+    ];
+
+    expect(
+      buildChannelAllowlist({
+        targetGame: "Game",
+        withCategories,
+      }),
+    ).toBeNull();
+  });
+
   it("can include upcoming drops when enabled", () => {
     const withCategories: WithCategory[] = [
       {
