@@ -1085,8 +1085,7 @@ const translations: Translations = {
     "settings.badgesEmotes": "Unverknüpfte Badge/Emote-Drops erlauben",
     "settings.badgesEmotesHint": "Farmt unverknüpfte Kampagnen, wenn es nur Badges/Emotes sind.",
     "settings.allowUnlinked": "Unverknüpfte Kampagnen erlauben",
-    "settings.allowUnlinkedHint":
-      "Farmt auch, wenn Twitch den Account als nicht verknüpft meldet.",
+    "settings.allowUnlinkedHint": "Farmt auch, wenn Twitch den Account als nicht verknüpft meldet.",
     "settings.demoModeTitle": "Demo-Modus",
     "settings.demoMode": "Demo-Modus",
     "settings.refreshInterval": "Inventory Refresh Intervall",
