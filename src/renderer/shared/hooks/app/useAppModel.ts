@@ -493,18 +493,17 @@ export function useAppModel() {
     priorityOrder,
     priorityListPreemptionActive,
     refreshPriorityPlan,
-  } =
-    usePriorityOrchestration({
-      demoMode,
-      inventoryStatus: inventory.status,
-      inventoryItems,
-      withCategories: orchestrationCategories,
-      priorityGames,
-      obeyPriority,
-      allowUnlinkedGames,
-      watching,
-      stopWatching: stopWatchingForAutomation,
-    });
+  } = usePriorityOrchestration({
+    demoMode,
+    inventoryStatus: inventory.status,
+    inventoryItems,
+    withCategories: orchestrationCategories,
+    priorityGames,
+    obeyPriority,
+    allowUnlinkedGames,
+    watching,
+    stopWatching: stopWatchingForAutomation,
+  });
 
   const targetGame = selectVisibleTargetGame(watchEngineState, activeTargetGame);
   const displayTargetGame = useMemo(() => {
