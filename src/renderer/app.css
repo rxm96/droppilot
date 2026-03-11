@@ -2667,7 +2667,7 @@ code {
 .priority-view {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 
 .priority-head {
@@ -2691,20 +2691,84 @@ code {
 
 .priority-split {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
-  gap: 16px;
+  grid-template-columns: minmax(320px, 0.92fr) minmax(0, 1.65fr);
+  gap: 18px;
   align-items: start;
 }
 
 .priority-panel {
-  padding: 16px;
+  padding: 18px;
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 18px;
   background: var(--card);
   box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
+  gap: 14px;
+}
+
+.priority-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
+}
+
+.priority-summary-card {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--muted) 72%, transparent), transparent),
+    var(--card);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.priority-summary-value {
+  font-size: 20px;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.priority-panel-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.priority-empty-note {
+  padding: 12px 14px;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--muted) 55%, transparent);
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+
+.priority-manual-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.priority-rule-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 42%, var(--card));
+}
+
+.priority-add-button {
+  min-width: 96px;
 }
 
 .priority-panel-list {
@@ -2824,9 +2888,11 @@ code {
   align-items: center;
   gap: 12px;
   border: 1px solid var(--border);
-  background: var(--background);
-  border-radius: 12px;
-  padding: 8px 12px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--muted) 30%, transparent), transparent),
+    var(--background);
+  border-radius: 16px;
+  padding: 10px 12px;
   transition:
     border-color 0.18s ease,
     background-color 0.18s ease,
@@ -2859,13 +2925,38 @@ code {
   gap: 10px;
 }
 
+.priority-rank {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--foreground) 8%, var(--background));
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.priority-game-copy {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .priority-game-name {
   min-width: 0;
   flex: 1 1 auto;
   font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+.priority-game-meta {
+  font-size: 12px;
+  color: var(--muted-foreground);
 }
 
 .priority-drag-handle {
@@ -2907,6 +2998,23 @@ code {
   align-items: center;
   flex-wrap: wrap;
   flex: 0 0 auto;
+}
+
+.priority-state-chip {
+  padding: 5px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 14%, var(--border));
+  background: color-mix(in srgb, var(--foreground) 5%, var(--background));
+  color: var(--foreground);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.priority-state-chip.is-watching {
+  border-color: color-mix(in srgb, var(--accent) 36%, var(--border));
+  background: color-mix(in srgb, var(--accent) 14%, var(--background));
 }
 
 .animate-item {
@@ -4342,6 +4450,9 @@ code {
 }
 
 @media (max-width: 960px) {
+  .priority-summary-grid {
+    grid-template-columns: 1fr;
+  }
   .hero-shell {
     padding: 12px;
   }
@@ -4389,6 +4500,10 @@ code {
   }
   .priority-split {
     grid-template-columns: 1fr;
+  }
+  .priority-rule-card {
+    flex-direction: column;
+    align-items: flex-start;
   }
   .overview-grid {
     grid-template-columns: 1fr;
@@ -4455,6 +4570,18 @@ code {
 }
 
 @media (max-width: 560px) {
+  .priority-panel,
+  .priority-summary-card {
+    padding: 14px;
+  }
+  .priority-list-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .priority-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
   .hero-title {
     font-size: 1.2rem;
   }

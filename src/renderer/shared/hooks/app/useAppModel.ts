@@ -1219,6 +1219,8 @@ export function useAppModel() {
   };
   const priorityProps = {
     uniqueGames,
+    activeTargetGame,
+    watchingGame: watching?.game ?? "",
     selectedGame,
     setSelectedGame,
     newGame,

@@ -26,6 +26,8 @@ import {
 
 type PriorityViewProps = {
   uniqueGames: string[];
+  activeTargetGame: string;
+  watchingGame: string;
   selectedGame: string;
   setSelectedGame: (val: string) => void;
   newGame: string;
@@ -40,7 +42,11 @@ type PriorityViewProps = {
 };
 
 type PriorityCardProps = {
+  rank: number;
   game: string;
+  isTarget: boolean;
+  isWatching: boolean;
+  isLive: boolean;
   dragLabel: string;
   removeLabel: string;
   onRemove: (name: string) => void;
@@ -54,16 +60,31 @@ export const getSelectableDropGames = (uniqueGames: string[], priorityGames: str
   uniqueGames.filter((game) => !priorityGames.includes(game));
 
 function PriorityCard({
+  rank,
   game,
+  isTarget,
+  isWatching,
+  isLive,
   dragLabel,
   removeLabel,
   onRemove,
   dragHandleProps,
   setDragHandleRef,
 }: PriorityCardProps) {
+  const { t } = useI18n();
+  const stateLabel = isWatching
+    ? t("priorities.state.watching")
+    : isTarget
+      ? t("priorities.state.target")
+      : isLive
+        ? t("priorities.state.live")
+        : t("priorities.state.idle");
   return (
     <div className="priority-list-card">
       <div className="priority-item-main">
+        <div className="priority-rank" aria-label={t("priorities.rank", { rank })}>
+          {rank}
+        </div>
         <button
           type="button"
           className="ghost priority-drag-handle"
@@ -78,9 +99,17 @@ function PriorityCard({
             ))}
           </span>
         </button>
-        <span className="priority-game-name">{game}</span>
+        <div className="priority-game-copy">
+          <span className="priority-game-name">{game}</span>
+          <span className="priority-game-meta">{stateLabel}</span>
+        </div>
       </div>
       <div className="priority-actions">
+        {(isTarget || isWatching) && (
+          <span className={isWatching ? "priority-state-chip is-watching" : "priority-state-chip"}>
+            {isWatching ? t("priorities.badge.watching") : t("priorities.badge.target")}
+          </span>
+        )}
         <button type="button" className="ghost" onClick={() => onRemove(game)}>
           {removeLabel}
         </button>
@@ -90,14 +119,22 @@ function PriorityCard({
 }
 
 type SortablePriorityItemProps = {
+  rank: number;
   game: string;
+  isTarget: boolean;
+  isWatching: boolean;
+  isLive: boolean;
   dragLabel: string;
   removeLabel: string;
   onRemove: (name: string) => void;
 };
 
 function SortablePriorityItem({
+  rank,
   game,
+  isTarget,
+  isWatching,
+  isLive,
   dragLabel,
   removeLabel,
   onRemove,
@@ -124,7 +161,11 @@ function SortablePriorityItem({
       className={isDragging ? "priority-list-item sortable-dragging" : "priority-list-item"}
     >
       <PriorityCard
+        rank={rank}
         game={game}
+        isTarget={isTarget}
+        isWatching={isWatching}
+        isLive={isLive}
         dragLabel={dragLabel}
         removeLabel={removeLabel}
         onRemove={onRemove}
@@ -142,6 +183,8 @@ function SortablePriorityItem({
 
 export function PriorityView({
   uniqueGames,
+  activeTargetGame,
+  watchingGame,
   selectedGame,
   setSelectedGame,
   newGame,
@@ -158,6 +201,9 @@ export function PriorityView({
   const countLabel = t("priorities.count", { count: priorityGames.length });
   const selectableDropGames = getSelectableDropGames(uniqueGames, priorityGames);
   const hasSelectableSelectedGame = selectableDropGames.includes(selectedGame);
+  const liveGameSet = new Set(uniqueGames);
+  const livePriorityCount = priorityGames.filter((game) => liveGameSet.has(game)).length;
+  const topGame = priorityGames[0] ?? "";
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -191,10 +237,43 @@ export function PriorityView({
         </div>
         <span className="priority-count">{countLabel}</span>
       </div>
+      <div className="priority-summary-grid">
+        <section className="priority-summary-card">
+          <span className="label">{t("priorities.currentTarget")}</span>
+          <strong className="priority-summary-value">
+            {activeTargetGame || t("priorities.noneSelected")}
+          </strong>
+          <p className="meta">
+            {watchingGame
+              ? t("priorities.currentTargetWatching", { game: watchingGame })
+              : obeyPriority
+                ? t("priorities.modeStrict")
+                : t("priorities.modeFlexible")}
+          </p>
+        </section>
+        <section className="priority-summary-card">
+          <span className="label">{t("priorities.queueHealth")}</span>
+          <strong className="priority-summary-value">
+            {livePriorityCount}/{priorityGames.length || 0}
+          </strong>
+          <p className="meta">{t("priorities.queueHealthHint")}</p>
+        </section>
+        <section className="priority-summary-card">
+          <span className="label">{t("priorities.topSlot")}</span>
+          <strong className="priority-summary-value">
+            {topGame || t("priorities.noneSelected")}
+          </strong>
+          <p className="meta">{t("priorities.topSlotHint")}</p>
+        </section>
+      </div>
       <div className="priority-split">
         <section className="priority-panel">
-          <div className="label">{t("settings.addFromDrops")}</div>
-          <p className="meta">{t("settings.addFromDropsOption")}</p>
+          <div className="priority-panel-head">
+            <div>
+              <div className="label">{t("priorities.addTitle")}</div>
+              <p className="meta">{t("priorities.addHint")}</p>
+            </div>
+          </div>
           {selectableDropGames.length > 0 && (
             <div className="settings-row">
               <Select
@@ -221,11 +300,19 @@ export function PriorityView({
                 type="button"
                 onClick={addGameFromSelect}
                 disabled={!hasSelectableSelectedGame}
+                className="priority-add-button"
               >
                 {t("settings.add")}
               </button>
             </div>
           )}
+          {selectableDropGames.length === 0 && (
+            <div className="priority-empty-note">{t("priorities.addEmpty")}</div>
+          )}
+          <div className="priority-manual-block">
+            <div className="label">{t("priorities.manualTitle")}</div>
+            <p className="meta">{t("priorities.manualHint")}</p>
+          </div>
           <div className="settings-row">
             <input
               type="text"
@@ -241,11 +328,17 @@ export function PriorityView({
               }}
               aria-label={t("settings.addGamePlaceholder")}
             />
-            <button type="button" onClick={addGame}>
+            <button type="button" onClick={addGame} className="priority-add-button">
               {t("settings.add")}
             </button>
           </div>
-          <div className="toggle-row">
+          <div className="priority-rule-card">
+            <div>
+              <div className="label">{t("priorities.ruleTitle")}</div>
+              <p className="meta">
+                {obeyPriority ? t("priorities.ruleStrictHint") : t("priorities.ruleFlexibleHint")}
+              </p>
+            </div>
             <label className="toggle">
               <input
                 type="checkbox"
@@ -259,8 +352,12 @@ export function PriorityView({
           </div>
         </section>
         <section className="priority-panel priority-panel-list">
-          <div className="label">{t("settings.priorityGames")}</div>
-          <p className="meta">{t("settings.drag")}</p>
+          <div className="priority-panel-head">
+            <div>
+              <div className="label">{t("settings.priorityGames")}</div>
+              <p className="meta">{t("priorities.queueHint")}</p>
+            </div>
+          </div>
           {priorityGames.length === 0 ? <p className="meta">{t("settings.noneEntries")}</p> : null}
           {priorityGames.length > 0 && (
             <DndContext
@@ -270,10 +367,14 @@ export function PriorityView({
             >
               <SortableContext items={priorityGames} strategy={verticalListSortingStrategy}>
                 <ul className="priority-list">
-                  {priorityGames.map((game) => (
+                  {priorityGames.map((game, index) => (
                     <SortablePriorityItem
                       key={game}
+                      rank={index + 1}
                       game={game}
+                      isTarget={game === activeTargetGame}
+                      isWatching={game === watchingGame}
+                      isLive={liveGameSet.has(game)}
                       dragLabel={t("settings.drag")}
                       removeLabel={t("settings.remove")}
                       onRemove={removeGame}
