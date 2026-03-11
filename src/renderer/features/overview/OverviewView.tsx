@@ -386,7 +386,7 @@ export function OverviewView({
             <div className="overview-hero-kpis">
               <div className="overview-kpi">
                 <span className="overview-kpi-value">{formatNumber(openDrops)}</span>
-                <span className="overview-kpi-label">{t("overview.closestFirst")}</span>
+                <span className="overview-kpi-label">{t("overview.openDrops")}</span>
               </div>
               <div className="overview-kpi">
                 <span className="overview-kpi-value">{formatNumber(claimableDrops)}</span>
