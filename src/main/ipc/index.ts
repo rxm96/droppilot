@@ -15,10 +15,6 @@ import { TwitchServiceError } from "../twitch/errors";
 import type { ChannelTracker, ChannelTrackerDiffEvent } from "../twitch/tracker";
 import type { UserPubSub, UserPubSubEvent } from "../twitch/userPubSub";
 import { allowsPrereleaseBuilds } from "../../shared/updateChannels";
-import {
-  resolvePendingNsisInstall,
-  spawnDetachedUpdateInstallerHelper,
-} from "../updateInstallerLauncher";
 
 function extractReleaseNoteText(entry: unknown): string {
   if (typeof entry === "string") return entry;
@@ -463,27 +459,6 @@ export function registerIpcHandlers(deps: {
       return { ok: false, status: "unsupported" };
     }
     try {
-      const pendingInstall = resolvePendingNsisInstall(autoUpdater);
-      if (pendingInstall) {
-        const helperSpawned = spawnDetachedUpdateInstallerHelper({
-          parentPid: process.pid,
-          ...pendingInstall,
-        });
-        if (helperSpawned) {
-          autoUpdater.autoInstallOnAppQuit = false;
-          setImmediate(() => {
-            app.quit();
-          });
-          return { ok: true };
-        }
-        console.warn(
-          "update: installer helper failed to start, falling back to visible NSIS install",
-        );
-      } else {
-        console.warn(
-          "update: installer metadata unavailable, falling back to visible NSIS install",
-        );
-      }
       autoUpdater.quitAndInstall(false, true);
       return { ok: true };
     } catch (err) {
