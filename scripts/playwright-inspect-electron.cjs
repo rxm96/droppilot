@@ -68,13 +68,18 @@ function parseArgs(argv) {
 
 async function waitForAppShell(page) {
   await page.waitForLoadState("domcontentloaded");
-  await page.locator(".top-nav-tab").first().waitFor({ state: "visible", timeout: 15000 });
   await page.locator(".layout").first().waitFor({ state: "visible", timeout: 15000 });
+  const nav = page.locator(".top-nav-tab, .app-sidebar-tab").first();
+  if ((await nav.count()) > 0) {
+    await nav.waitFor({ state: "visible", timeout: 5000 });
+  }
 }
 
 async function openView(page, view) {
+  const tabs = page.locator(".top-nav-tab, .app-sidebar-tab");
+  if ((await tabs.count()) === 0) return;
   const index = VIEW_INDEX[view] ?? VIEW_INDEX.control;
-  const tab = page.locator(".top-nav-tab").nth(index);
+  const tab = tabs.nth(index);
   await tab.click();
   await page.waitForTimeout(500);
 }
@@ -209,7 +214,63 @@ async function main() {
 
   try {
     const page = await app.firstWindow();
-    await waitForAppShell(page);
+    const pageErrors = [];
+    const consoleMessages = [];
+    const requestFailures = [];
+    page.on("pageerror", (error) => {
+      pageErrors.push(String(error));
+    });
+    page.on("console", (message) => {
+      consoleMessages.push(`[${message.type()}] ${message.text()}`);
+    });
+    page.on("requestfailed", (request) => {
+      requestFailures.push({
+        url: request.url(),
+        method: request.method(),
+        failure: request.failure()?.errorText ?? "unknown",
+      });
+    });
+
+    try {
+      await waitForAppShell(page);
+    } catch (error) {
+      const failurePath = `${options.prefix}-failure.png`;
+      await page.screenshot({ path: failurePath, fullPage: true }).catch(() => undefined);
+      const bodyState = await page
+        .evaluate(() => ({
+          url: window.location.href,
+          title: document.title,
+          bodyText: document.body?.textContent ?? "",
+          bodyHtml: document.body?.innerHTML ?? "",
+          rootExists: Boolean(document.getElementById("root")),
+          rootHtml: document.getElementById("root")?.innerHTML ?? "",
+          rootChildCount: document.getElementById("root")?.childElementCount ?? 0,
+        }))
+        .catch(() => ({
+          url: "",
+          title: "",
+          bodyText: "",
+          bodyHtml: "",
+          rootExists: false,
+          rootHtml: "",
+          rootChildCount: 0,
+        }));
+      console.error(
+        JSON.stringify(
+          {
+            stage: "waitForAppShell",
+            pageErrors,
+            consoleMessages,
+            requestFailures,
+            bodyState,
+            failurePath,
+          },
+          null,
+          2,
+        ),
+      );
+      throw error;
+    }
     await openView(page, options.view);
     if (options.refresh) {
       const triggered = await maybeRefresh(page);

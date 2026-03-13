@@ -15,7 +15,7 @@ import { loadStats, saveStats, bumpStats, resetStats } from "./core/stats";
 
 const isDev = !app.isPackaged;
 const devToolsEnabled = isDev;
-const devServerUrl = process.env.VITE_DEV_SERVER_URL ?? "http://localhost:5173";
+const devServerUrl = process.env.VITE_DEV_SERVER_URL ?? "http://127.0.0.1:5173";
 const debugLogsOptIn =
   process.argv.includes("--debug-logs") || process.env.DROPPILOT_DEBUG_LOGS === "1";
 const verboseLogsEnabled = isDev || debugLogsOptIn;
