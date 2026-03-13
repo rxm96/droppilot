@@ -3,6 +3,7 @@ import { useInterval } from "@renderer/shared/hooks/useInterval";
 import { useI18n } from "@renderer/shared/i18n";
 import { cn } from "@renderer/shared/lib/utils";
 import type { ChannelTrackerStatus } from "@renderer/shared/types";
+import { WATCH_INTERVAL_MS } from "@renderer/shared/hooks/watch/useWatchPing";
 import { Badge } from "@renderer/shared/components/ui/badge";
 import { Button } from "@renderer/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@renderer/shared/components/ui/card";
@@ -23,10 +24,105 @@ type DebugViewProps = {
   snapshot: Record<string, unknown>;
 };
 
+type DebugSnapshot = {
+  watching?: {
+    name?: string;
+    game?: string;
+    login?: string;
+  } | null;
+  targetGame?: string;
+  tracker?: ChannelTrackerStatus | null;
+  userPubSub?: {
+    connectionState?: "disconnected" | "connecting" | "connected";
+    listening?: boolean;
+    reconnectAttempts?: number;
+    lastMessageAt?: number | null;
+    lastErrorMessage?: string;
+    events?: number;
+  } | null;
+  inventory?: {
+    status?: "idle" | "loading" | "ready" | "error";
+    items?: number;
+    refreshing?: boolean;
+    fetchedAt?: number | null;
+  };
+  inventoryRefresh?: {
+    mode?: string;
+    lastRun?: string | null;
+    nextAt?: string | null;
+  };
+  channels?: {
+    count?: number;
+    loading?: boolean;
+    refreshing?: boolean;
+    diff?: {
+      added?: number;
+      removed?: number;
+      updated?: number;
+    } | null;
+    error?: {
+      message?: string;
+    } | null;
+  };
+  watch?: {
+    lastOk?: number;
+    nextAt?: number;
+    error?: {
+      message?: string;
+    } | null;
+  };
+  warmup?: {
+    active?: boolean;
+    game?: string;
+    lastReason?: string | null;
+    cooldownUntil?: string | null;
+    attemptedCount?: number;
+  };
+  activeDropInfo?: {
+    id?: string;
+    title?: string;
+    earnedMinutes?: number;
+    requiredMinutes?: number;
+  } | null;
+  priority?: {
+    activeTargetGame?: string;
+  };
+  cpu?: {
+    percent?: number;
+    idleWakeups?: number;
+    lastAt?: number | null;
+  };
+  perf?: {
+    items?: Array<{
+      id: string;
+      avgMs: number;
+      lastMs: number;
+    }>;
+  };
+};
+
 type LevelFilter = Record<LogLevel, boolean>;
 type LevelCounts = Record<LogLevel, number>;
+type SummaryTone = "ok" | "warn" | "error" | "idle";
+type LogSource = {
+  source: string | null;
+  body: string;
+};
+type StructuredLogRow = {
+  id: string;
+  level: LogLevel;
+  timeLabel: string;
+  source: string | null;
+  headline: string;
+  meta: string | null;
+  details: string | null;
+  args: unknown[];
+  repeatCount: number;
+};
 
 const LEVELS: LogLevel[] = ["debug", "info", "warn", "error"];
+const LOG_WINDOW_STEP = 120;
+const SEARCH_LOG_WINDOW = 200;
 
 const safeStringify = (value: unknown) => {
   if (typeof value === "string") return value;
@@ -52,6 +148,157 @@ const formatArgs = (args: unknown[]) =>
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+const parseTimeValue = (value: number | string | null | undefined) => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
+
+const parseLogSource = (message: string): LogSource => {
+  const value = message.trim();
+  if (!value) return { source: null, body: value };
+  const bracketMatch = /^\[([^\]]+)\]\s*(.*)$/.exec(value);
+  if (bracketMatch) {
+    return {
+      source: bracketMatch[1].trim().replace(":", "/"),
+      body: bracketMatch[2].trim() || bracketMatch[1].trim(),
+    };
+  }
+  const separatorIndex = value.indexOf(":");
+  if (separatorIndex <= 0 || separatorIndex > 24) {
+    return { source: null, body: value };
+  }
+  const source = value.slice(0, separatorIndex).trim();
+  if (!/^[a-z][a-z0-9-]*$/i.test(source)) {
+    return { source: null, body: value };
+  }
+  const body = value.slice(separatorIndex + 1).trim();
+  return {
+    source,
+    body: body || value,
+  };
+};
+
+const startCase = (value: string) =>
+  value
+    .split(/[\s-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+const summarizeValue = (value: unknown) => {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+    return String(value);
+  }
+  if (Array.isArray(value)) return `${value.length} items`;
+  if (value && typeof value === "object") return "details";
+  return "";
+};
+
+const buildMeta = (payload?: Record<string, unknown>) => {
+  if (!payload) return null;
+  const candidates: Array<[string, unknown]> = [
+    ["game", payload.game],
+    ["count", payload.count],
+    ["decision", payload.decision],
+    ["reason", payload.reason],
+    ["channel", payload.login ?? payload.channelId],
+    ["drop", payload.title ?? payload.dropId],
+    ["attempt", payload.reconnectAttempts ?? payload.attempts],
+    ["status", payload.status],
+  ];
+  const parts = candidates
+    .filter(([, value]) => value !== undefined && value !== null && `${value}`.length > 0)
+    .slice(0, 3)
+    .map(([label, value]) => `${label}: ${summarizeValue(value)}`);
+  return parts.length > 0 ? parts.join(" · ") : null;
+};
+
+const buildDetails = (payload?: Record<string, unknown>) => {
+  if (!payload) return null;
+  const preferred =
+    payload.message ??
+    payload.code ??
+    payload.err ??
+    payload.context ??
+    payload.next ??
+    payload.prev ??
+    payload.changed;
+  if (preferred instanceof Error) return `${preferred.name}: ${preferred.message}`;
+  if (typeof preferred === "string") return preferred;
+  if (typeof preferred === "number" || typeof preferred === "boolean") return String(preferred);
+  if (preferred && typeof preferred === "object") return safeStringify(preferred);
+  return null;
+};
+
+const formatHeadline = (source: string | null, body: string) => {
+  const trimmed = body.trim();
+  if (!trimmed) return startCase(source ?? "event");
+  if (source === "watch-engine") {
+    return `Watch Engine ${startCase(trimmed)}`;
+  }
+  if (source) {
+    return `${startCase(source)} ${startCase(trimmed)}`;
+  }
+  return startCase(trimmed);
+};
+
+const trimSentence = (value: string, limit = 96) =>
+  value.length > limit ? `${value.slice(0, limit - 1).trimEnd()}…` : value;
+
+const structureLogEntry = (entry: LogEntry, emptyMessage: string): StructuredLogRow => {
+  const primaryArg = typeof entry.args[0] === "string" ? entry.args[0].trim() : "";
+  const rawMessage = primaryArg || entry.message || emptyMessage;
+  const parsed = parseLogSource(rawMessage);
+  const payload =
+    entry.args.find(
+      (arg) => arg && typeof arg === "object" && !Array.isArray(arg) && !(arg instanceof Error),
+    ) as Record<string, unknown> | undefined;
+  const extraString = entry.args
+    .slice(primaryArg ? 1 : 0)
+    .find((arg) => typeof arg === "string" && arg.trim().length > 0) as string | undefined;
+  const details = buildDetails(payload) ?? (extraString ? trimSentence(extraString.trim(), 140) : null);
+  return {
+    id: String(entry.id),
+    level: entry.level,
+    timeLabel: entry.timeLabel,
+    source: parsed.source,
+    headline: trimSentence(formatHeadline(parsed.source, parsed.body)),
+    meta: buildMeta(payload),
+    details,
+    args: entry.args,
+    repeatCount: 1,
+  };
+};
+
+const canGroupStructuredRows = (left: StructuredLogRow, right: StructuredLogRow) =>
+  left.level === right.level &&
+  left.source === right.source &&
+  left.headline === right.headline &&
+  left.meta === right.meta &&
+  left.level !== "warn" &&
+  left.level !== "error";
+
+const groupStructuredRows = (rows: StructuredLogRow[]) => {
+  const grouped: StructuredLogRow[] = [];
+  for (const row of rows) {
+    const last = grouped[grouped.length - 1];
+    if (last && canGroupStructuredRows(last, row)) {
+      last.repeatCount += 1;
+      last.timeLabel = row.timeLabel;
+      last.args = row.args;
+      if (row.details) last.details = row.details;
+      continue;
+    }
+    grouped.push({ ...row });
+  }
+  return grouped;
+};
+
 const highlightMatches = (text: string, term: string) => {
   if (!term) return text;
   const source = term.trim();
@@ -70,26 +317,29 @@ const highlightMatches = (text: string, term: string) => {
   );
 };
 
-const LEVEL_STYLES: Record<LogLevel, { badge: string; border: string; text: string }> = {
+const LEVEL_STYLES: Record<
+  LogLevel,
+  { badgeVariant: "outline" | "muted" | "default" | "destructive"; border: string; text: string }
+> = {
   debug: {
-    badge: "border-border bg-muted text-muted-foreground",
+    badgeVariant: "outline",
     border: "border-l-border",
     text: "text-foreground",
   },
   info: {
-    badge: "border-border bg-secondary text-secondary-foreground",
+    badgeVariant: "muted",
     border: "border-l-border",
     text: "text-foreground",
   },
   warn: {
-    badge: "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300",
-    border: "border-l-amber-500/60",
-    text: "text-amber-700 dark:text-amber-200",
+    badgeVariant: "default",
+    border: "border-l-border",
+    text: "text-foreground",
   },
   error: {
-    badge: "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300",
-    border: "border-l-red-500/60",
-    text: "text-red-700 dark:text-red-200",
+    badgeVariant: "destructive",
+    border: "border-l-destructive",
+    text: "text-destructive",
   },
 };
 
@@ -117,38 +367,84 @@ const LogDetails = memo(function LogDetails({ args, label, highlightTerm = "" }:
 });
 
 type LogRowProps = {
-  entry: LogEntry;
-  emptyMessage: string;
+  row: StructuredLogRow;
   detailsLabel: string;
   highlightTerm?: string;
 };
 
 const LogRow = memo(function LogRow({
-  entry,
-  emptyMessage,
+  row,
   detailsLabel,
   highlightTerm = "",
 }: LogRowProps) {
-  const style = LEVEL_STYLES[entry.level];
-  const logMessage = entry.message || emptyMessage;
+  const style = LEVEL_STYLES[row.level];
 
   return (
-    <li className={cn("log-item", `level-${entry.level}`)}>
+    <li className={cn("log-item", `level-${row.level}`)}>
       <div className="log-head">
-        <Badge className={style.badge} variant="outline">
-          {highlightMatches(entry.level, highlightTerm)}
-        </Badge>
-        <span className="log-time">{entry.timeLabel}</span>
+        <div className="log-meta-group">
+          <Badge variant={style.badgeVariant}>
+            {highlightMatches(row.level, highlightTerm)}
+          </Badge>
+          {row.source ? (
+            <Badge variant="outline" className="log-source-badge">
+              {highlightMatches(row.source, highlightTerm)}
+            </Badge>
+          ) : null}
+          {row.repeatCount > 1 ? (
+            <Badge variant="muted" className="log-repeat-badge">
+              x{row.repeatCount}
+            </Badge>
+          ) : null}
+        </div>
+        <span className="log-time">{row.timeLabel}</span>
       </div>
-      <div className={cn("log-message", style.text)}>
-        {highlightMatches(logMessage, highlightTerm)}
-      </div>
-      {entry.args.length > 0 ? (
-        <LogDetails args={entry.args} label={detailsLabel} highlightTerm={highlightTerm} />
+      <div className={cn("log-headline", style.text)}>{highlightMatches(row.headline, highlightTerm)}</div>
+      {row.meta ? <div className="log-meta-copy">{highlightMatches(row.meta, highlightTerm)}</div> : null}
+      {row.details ? (
+        <div className={cn("log-message", style.text)}>{highlightMatches(row.details, highlightTerm)}</div>
+      ) : null}
+      {row.args.length > 0 ? (
+        <LogDetails args={row.args} label={detailsLabel} highlightTerm={highlightTerm} />
       ) : null}
     </li>
   );
 });
+
+type DebugMetricCardProps = {
+  label: string;
+  value: string;
+  meta: string;
+  tone: SummaryTone;
+};
+
+function DebugMetricCard({ label, value, meta, tone }: DebugMetricCardProps) {
+  return (
+    <Card className={cn("debug-panel debug-metric-card", `tone-${tone}`)}>
+      <CardContent className="debug-metric-content">
+        <div className="debug-metric-label">{label}</div>
+        <div className="debug-metric-value">{value}</div>
+        <div className="debug-metric-meta">{meta}</div>
+      </CardContent>
+    </Card>
+  );
+}
+
+type DebugFactTileProps = {
+  label: string;
+  value: string;
+  meta?: string;
+};
+
+function DebugFactTile({ label, value, meta }: DebugFactTileProps) {
+  return (
+    <div className="debug-fact-tile">
+      <div className="debug-fact-label">{label}</div>
+      <div className="debug-fact-value">{value}</div>
+      {meta ? <div className="debug-fact-meta">{meta}</div> : null}
+    </div>
+  );
+}
 
 export function DebugView({ snapshot }: DebugViewProps) {
   const { t, language } = useI18n();
@@ -166,11 +462,13 @@ export function DebugView({ snapshot }: DebugViewProps) {
     warn: true,
     error: true,
   });
+  const [visibleCount, setVisibleCount] = useState(LOG_WINDOW_STEP);
   const deferredQuery = useDeferredValue(query);
   const listRef = useRef<HTMLDivElement | null>(null);
   const pendingRef = useRef<LogEntry[]>([]);
   const pausedLogRef = useRef<boolean | null>(null);
   const autoScrollLogRef = useRef<boolean | null>(null);
+  const snapshotData = snapshot as DebugSnapshot;
 
   useEffect(() => {
     if (pausedLogRef.current === null) {
@@ -263,6 +561,16 @@ export function DebugView({ snapshot }: DebugViewProps) {
     });
   }, [logs, levels, deferredQuery]);
   const highlightTerm = deferredQuery.trim();
+  const effectiveVisibleCount = highlightTerm ? SEARCH_LOG_WINDOW : visibleCount;
+  const hiddenCount = Math.max(0, filtered.length - effectiveVisibleCount);
+  const visibleLogs = useMemo(
+    () => filtered.slice(Math.max(0, filtered.length - effectiveVisibleCount)),
+    [effectiveVisibleCount, filtered],
+  );
+  const structuredRows = useMemo(
+    () => groupStructuredRows(visibleLogs.map((entry) => structureLogEntry(entry, t("debug.emptyMessage")))),
+    [t, visibleLogs],
+  );
   const trackerStatus = useMemo<ChannelTrackerStatus | null>(() => {
     const candidate = snapshot["tracker"];
     return isChannelTrackerStatus(candidate) ? candidate : null;
@@ -281,11 +589,303 @@ export function DebugView({ snapshot }: DebugViewProps) {
     setSimDropId((prev) => (prev.trim().length ? prev : suggestedDropId));
   }, [suggestedDropId]);
 
+  useEffect(() => {
+    if (highlightTerm) {
+      setVisibleCount(LOG_WINDOW_STEP);
+    }
+  }, [highlightTerm]);
+
   const numberFormatter = useMemo(
     () => new Intl.NumberFormat(language === "de" ? "de-DE" : "en-US"),
     [language],
   );
   const formatNumber = (val: number) => numberFormatter.format(Math.max(0, val ?? 0));
+  const relativeTimeFormatter = useMemo(
+    () => new Intl.RelativeTimeFormat(language === "de" ? "de-DE" : "en-US", {
+      numeric: "auto",
+    }),
+    [language],
+  );
+  const formatRelativeTime = useCallback(
+    (value: number | string | null | undefined) => {
+      const timestamp = parseTimeValue(value);
+      if (!timestamp) return t("debug.summary.noSignal");
+      const diffMs = timestamp - Date.now();
+      const absMs = Math.abs(diffMs);
+      if (absMs < 60_000) {
+        return relativeTimeFormatter.format(Math.round(diffMs / 1000), "second");
+      }
+      if (absMs < 3_600_000) {
+        return relativeTimeFormatter.format(Math.round(diffMs / 60_000), "minute");
+      }
+      if (absMs < 86_400_000) {
+        return relativeTimeFormatter.format(Math.round(diffMs / 3_600_000), "hour");
+      }
+      return relativeTimeFormatter.format(Math.round(diffMs / 86_400_000), "day");
+    },
+    [relativeTimeFormatter, t],
+  );
+  const inventoryStatusLabel = useCallback(
+    (status?: "idle" | "loading" | "ready" | "error") => {
+      if (status === "loading") return t("inventory.loading");
+      if (status === "error") return t("inventory.error");
+      if (status === "idle") return t("inventory.idle");
+      return t("session.ready");
+    },
+    [t],
+  );
+  const trackerConnectionLabel = useCallback(
+    (state?: "disconnected" | "connecting" | "connected") =>
+      t(`control.trackerConn.${state ?? "disconnected"}`),
+    [t],
+  );
+  const watchAgeMs = snapshotData.watch?.lastOk ? Date.now() - snapshotData.watch.lastOk : null;
+  const topPerfEntry = snapshotData.perf?.items?.[0] ?? null;
+  const summaryCards = useMemo(
+    () => [
+      {
+        key: "watching",
+        label: t("debug.summary.watching"),
+        value: snapshotData.watching?.name?.trim() || t("debug.summary.watchingIdle"),
+        meta:
+          snapshotData.watching?.game?.trim() ||
+          snapshotData.priority?.activeTargetGame?.trim() ||
+          t("debug.runtime.none"),
+        tone: (snapshotData.watching ? "ok" : "idle") satisfies SummaryTone,
+      },
+      {
+        key: "tracker",
+        label: t("debug.summary.tracker"),
+        value: trackerConnectionLabel(trackerStatus?.connectionState),
+        meta:
+          trackerShards.length > 0
+            ? t("debug.summary.shards", { count: formatNumber(trackerShards.length) })
+            : t("debug.summary.subscriptions", {
+                active: formatNumber(trackerStatus?.subscriptions ?? 0),
+                desired: formatNumber(trackerStatus?.desiredSubscriptions ?? 0),
+              }),
+        tone: (
+          trackerStatus?.state === "error"
+            ? "error"
+            : trackerStatus?.connectionState === "connecting"
+              ? "warn"
+              : trackerStatus?.state === "ok"
+                ? "ok"
+                : "idle"
+        ) satisfies SummaryTone,
+      },
+      {
+        key: "pubsub",
+        label: t("debug.summary.pubsub"),
+        value: trackerConnectionLabel(snapshotData.userPubSub?.connectionState),
+        meta: snapshotData.userPubSub?.listening
+          ? t("debug.summary.events", {
+              count: formatNumber(snapshotData.userPubSub?.events ?? 0),
+            })
+          : t("debug.summary.notListening"),
+        tone: (
+          snapshotData.userPubSub?.lastErrorMessage
+            ? "error"
+            : snapshotData.userPubSub?.connectionState === "connecting"
+              ? "warn"
+              : snapshotData.userPubSub?.connectionState === "connected"
+                ? "ok"
+                : "idle"
+        ) satisfies SummaryTone,
+      },
+      {
+        key: "inventory",
+        label: t("debug.summary.inventory"),
+        value:
+          snapshotData.inventory?.status === "ready"
+            ? t("debug.summary.items", {
+                count: formatNumber(snapshotData.inventory?.items ?? 0),
+              })
+            : inventoryStatusLabel(snapshotData.inventory?.status),
+        meta: snapshotData.inventory?.refreshing
+          ? t("debug.runtime.refreshing")
+          : t("debug.summary.lastSeen", {
+              time: formatRelativeTime(snapshotData.inventory?.fetchedAt),
+            }),
+        tone: (
+          snapshotData.inventory?.status === "error"
+            ? "error"
+            : snapshotData.inventory?.refreshing || snapshotData.inventory?.status === "loading"
+              ? "warn"
+              : snapshotData.inventory?.status === "ready"
+                ? "ok"
+                : "idle"
+        ) satisfies SummaryTone,
+      },
+      {
+        key: "watch",
+        label: t("debug.summary.watchPing"),
+        value: formatRelativeTime(snapshotData.watch?.lastOk),
+        meta: snapshotData.watch?.error?.message
+          ? snapshotData.watch.error.message
+          : t("debug.summary.nextCheck", {
+              time: formatRelativeTime(snapshotData.watch?.nextAt),
+            }),
+        tone: (
+          snapshotData.watch?.error
+            ? "error"
+            : watchAgeMs === null
+              ? "idle"
+              : watchAgeMs > WATCH_INTERVAL_MS * 2
+                ? "warn"
+                : "ok"
+        ) satisfies SummaryTone,
+      },
+      {
+        key: "cpu",
+        label: t("debug.summary.cpu"),
+        value:
+          typeof snapshotData.cpu?.percent === "number"
+            ? `${snapshotData.cpu.percent.toFixed(2)}%`
+            : "--",
+        meta: topPerfEntry
+          ? t("debug.summary.topComponent", {
+              id: topPerfEntry.id,
+              time: formatNumber(Math.round(topPerfEntry.avgMs)),
+            })
+          : t("debug.summary.componentsTracked", { count: "0" }),
+        tone: (
+          typeof snapshotData.cpu?.percent === "number" && snapshotData.cpu.percent >= 35
+            ? "warn"
+            : snapshotData.cpu?.lastAt
+              ? "ok"
+              : "idle"
+        ) satisfies SummaryTone,
+      },
+    ],
+    [
+      formatNumber,
+      formatRelativeTime,
+      inventoryStatusLabel,
+      snapshotData.cpu,
+      snapshotData.inventory?.fetchedAt,
+      snapshotData.inventory?.items,
+      snapshotData.inventory?.refreshing,
+      snapshotData.inventory?.status,
+      snapshotData.priority?.activeTargetGame,
+      snapshotData.userPubSub?.connectionState,
+      snapshotData.userPubSub?.events,
+      snapshotData.userPubSub?.lastErrorMessage,
+      snapshotData.userPubSub?.listening,
+      snapshotData.watch?.error,
+      snapshotData.watch?.lastOk,
+      snapshotData.watch?.nextAt,
+      snapshotData.watching?.game,
+      snapshotData.watching?.name,
+      t,
+      topPerfEntry,
+      trackerConnectionLabel,
+      trackerShards.length,
+      trackerStatus?.connectionState,
+      trackerStatus?.desiredSubscriptions,
+      trackerStatus?.state,
+      trackerStatus?.subscriptions,
+      watchAgeMs,
+    ],
+  );
+  const runtimeFacts = useMemo(
+    () => [
+      {
+        key: "stream",
+        label: t("debug.runtime.channel"),
+        value: snapshotData.watching?.name?.trim() || t("debug.summary.watchingIdle"),
+        meta: snapshotData.watching?.game?.trim() || snapshotData.watching?.login?.trim() || "",
+      },
+      {
+        key: "target",
+        label: t("debug.runtime.target"),
+        value:
+          snapshotData.priority?.activeTargetGame?.trim() ||
+          snapshotData.targetGame?.trim() ||
+          t("debug.runtime.none"),
+        meta: t("debug.summary.channels", {
+          count: formatNumber(snapshotData.channels?.count ?? 0),
+        }),
+      },
+      {
+        key: "drop",
+        label: t("debug.runtime.drop"),
+        value: snapshotData.activeDropInfo?.title?.trim() || t("debug.runtime.none"),
+        meta:
+          typeof snapshotData.activeDropInfo?.requiredMinutes === "number"
+            ? `${formatNumber(snapshotData.activeDropInfo?.earnedMinutes ?? 0)}/${formatNumber(
+                snapshotData.activeDropInfo.requiredMinutes,
+              )} min`
+            : "",
+      },
+      {
+        key: "inventory",
+        label: t("debug.runtime.inventoryRefresh"),
+        value: snapshotData.inventory?.refreshing
+          ? t("debug.runtime.refreshing")
+          : formatRelativeTime(snapshotData.inventoryRefresh?.nextAt),
+        meta: t("debug.summary.lastSeen", {
+          time: formatRelativeTime(snapshotData.inventoryRefresh?.lastRun),
+        }),
+      },
+      {
+        key: "channels",
+        label: t("debug.runtime.channelRefresh"),
+        value: snapshotData.channels?.refreshing
+          ? t("debug.runtime.refreshing")
+          : t("debug.summary.channels", {
+              count: formatNumber(snapshotData.channels?.count ?? 0),
+            }),
+        meta: snapshotData.channels?.diff
+          ? `+${formatNumber(snapshotData.channels.diff.added ?? 0)} / -${formatNumber(
+              snapshotData.channels.diff.removed ?? 0,
+            )} / ${formatNumber(snapshotData.channels.diff.updated ?? 0)} ${t(
+              "debug.runtime.updated",
+            )}`
+          : snapshotData.channels?.error?.message || "",
+      },
+      {
+        key: "warmup",
+        label: t("debug.runtime.warmup"),
+        value: snapshotData.warmup?.active
+          ? snapshotData.warmup.game?.trim() || t("debug.status.live")
+          : t("debug.runtime.none"),
+        meta: snapshotData.warmup?.cooldownUntil
+          ? t("debug.runtime.cooldown", {
+              time: formatRelativeTime(snapshotData.warmup.cooldownUntil),
+            })
+          : snapshotData.warmup?.lastReason?.trim() ||
+            t("debug.runtime.attempts", {
+              count: formatNumber(snapshotData.warmup?.attemptedCount ?? 0),
+            }),
+      },
+    ],
+    [
+      formatNumber,
+      formatRelativeTime,
+      snapshotData.activeDropInfo?.earnedMinutes,
+      snapshotData.activeDropInfo?.requiredMinutes,
+      snapshotData.activeDropInfo?.title,
+      snapshotData.channels?.count,
+      snapshotData.channels?.diff,
+      snapshotData.channels?.error?.message,
+      snapshotData.channels?.refreshing,
+      snapshotData.inventory?.refreshing,
+      snapshotData.inventoryRefresh?.lastRun,
+      snapshotData.inventoryRefresh?.nextAt,
+      snapshotData.priority?.activeTargetGame,
+      snapshotData.targetGame,
+      snapshotData.warmup?.active,
+      snapshotData.warmup?.attemptedCount,
+      snapshotData.warmup?.cooldownUntil,
+      snapshotData.warmup?.game,
+      snapshotData.warmup?.lastReason,
+      snapshotData.watching?.game,
+      snapshotData.watching?.login,
+      snapshotData.watching?.name,
+      t,
+    ],
+  );
 
   const togglePaused = () => {
     setPaused((prev) => !prev);
@@ -351,8 +951,8 @@ export function DebugView({ snapshot }: DebugViewProps) {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="debug-shell">
+      <div className="debug-header">
         <div>
           <h2 className="text-lg font-semibold">{t("debug.title")}</h2>
           <p className="text-sm text-muted-foreground">{t("debug.subtitle")}</p>
@@ -361,42 +961,68 @@ export function DebugView({ snapshot }: DebugViewProps) {
           {t("debug.total")}: {formatNumber(logs.length)}
         </Badge>
       </div>
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
-        <Card>
-          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
+      <div className="debug-summary-grid">
+        {summaryCards.map((card) => (
+          <DebugMetricCard
+            key={card.key}
+            label={card.label}
+            value={card.value}
+            meta={card.meta}
+            tone={card.tone}
+          />
+        ))}
+      </div>
+      <div className="debug-investigation-grid">
+        <div className="debug-side-stack">
+          <Card className="debug-panel">
             <div>
-              <CardTitle>{t("debug.snapshot")}</CardTitle>
-              <p className="text-xs text-muted-foreground">{t("debug.snapshotHelp")}</p>
-            </div>
-            <Button variant="outline" size="sm" onClick={copySnapshot}>
-              {copied ? t("debug.copied") : t("debug.copy")}
-            </Button>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {trackerShards.length > 0 ? (
-              <div className="rounded-lg border border-border bg-muted/20 p-3">
-                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {t("debug.trackerShards")}
+              <CardHeader>
+                <CardTitle>{t("debug.runtime.title")}</CardTitle>
+                <p className="text-xs text-muted-foreground">{t("debug.runtime.subtitle")}</p>
+              </CardHeader>
+              <CardContent>
+                <div className="debug-facts-grid">
+                  {runtimeFacts.map((fact) => (
+                    <DebugFactTile
+                      key={fact.key}
+                      label={fact.label}
+                      value={fact.value}
+                      meta={fact.meta}
+                    />
+                  ))}
                 </div>
-                <p className="mb-2 text-xs text-muted-foreground">{t("debug.trackerShardsHelp")}</p>
-                <p className="mb-2 text-xs text-muted-foreground">{t("debug.websocketHelp")}</p>
-                <ul className="space-y-1.5">
+              </CardContent>
+            </div>
+          </Card>
+          <Card className="debug-panel">
+            <CardHeader>
+              <CardTitle>{t("debug.trackerShards")}</CardTitle>
+              <p className="text-xs text-muted-foreground">{t("debug.trackerShardsHelp")}</p>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              <p className="text-xs text-muted-foreground">{t("debug.websocketHelp")}</p>
+            {trackerShards.length > 0 ? (
+                <ul className="debug-shard-list">
                   {trackerShards.map((shard) => (
                     <li
                       key={shard.id}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/70 bg-background/70 px-2 py-1.5 text-xs"
+                      className="debug-shard-row"
                     >
-                      <span className="font-medium">
-                        {t("debug.trackerShard", { id: String(shard.id) })}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className="font-medium">
+                          {t("debug.trackerShard", { id: String(shard.id) })}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {t("debug.summary.subscriptions", {
+                            active: formatNumber(shard.subscriptions),
+                            desired: formatNumber(shard.desiredSubscriptions),
+                          })}
+                        </span>
+                      </div>
                       <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
-                        <Badge variant="outline" className="text-[10px]">
+                        <Badge variant="outline">
                           {t(`control.trackerConn.${shard.connectionState}`)}
                         </Badge>
-                        <span>
-                          {t("debug.trackerSubsShort")}: {formatNumber(shard.subscriptions)}/
-                          {formatNumber(shard.desiredSubscriptions)}
-                        </span>
                         <span>
                           {t("debug.trackerReconnectsShort")}:{" "}
                           {formatNumber(shard.reconnectAttempts)}
@@ -405,13 +1031,142 @@ export function DebugView({ snapshot }: DebugViewProps) {
                     </li>
                   ))}
                 </ul>
+              ) : (
+                <div className="rounded-lg border border-dashed border-border bg-muted/10 px-3 py-4 text-sm text-muted-foreground">
+                  {t("debug.summary.noSignal")}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+        <Card className="debug-panel">
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
+            <div>
+              <CardTitle>{t("debug.log")}</CardTitle>
+              <p className="text-xs text-muted-foreground">{t("debug.logHelp")}</p>
+            </div>
+            <div className="debug-log-statuses">
+              <Badge variant={paused ? "outline" : "muted"}>
+                {paused ? t("debug.status.paused") : t("debug.status.live")}
+              </Badge>
+              <Badge variant="outline">
+                {autoScroll ? t("debug.status.autoScrollOn") : t("debug.status.autoScrollOff")}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <div className="debug-log-toolbar">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  clearLogBuffer();
+                  resetPerfStore();
+                  setLogs([]);
+                }}
+              >
+                {t("debug.clear")}
+              </Button>
+              <Button variant="outline" size="sm" onClick={togglePaused}>
+                {paused ? t("debug.resume") : t("debug.pause")}
+              </Button>
+              <Button
+                variant={autoScroll ? "secondary" : "outline"}
+                size="sm"
+                onClick={toggleAutoScroll}
+              >
+                {t("debug.autoScroll")}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">{t("debug.logControlsHelp")}</p>
+            <div className="debug-log-filters">
+              <div className="debug-log-search">
+                <Input
+                  type="text"
+                  placeholder={t("debug.search")}
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
               </div>
-            ) : null}
-            <div className="rounded-lg border border-border bg-muted/20 p-3">
-              <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {t("debug.sim.title")}
+              <div className="flex flex-wrap gap-2">
+                {LEVELS.map((level) => (
+                  <Button
+                    key={level}
+                    type="button"
+                    size="xs"
+                    variant={levels[level] ? "secondary" : "outline"}
+                    onClick={() => setLevels((prev) => ({ ...prev, [level]: !prev[level] }))}
+                  >
+                    {level} ({formatNumber(counts[level])})
+                  </Button>
+                ))}
               </div>
-              <p className="mb-2 text-xs text-muted-foreground">{t("debug.sim.help")}</p>
+            </div>
+            <p className="text-xs text-muted-foreground">{t("debug.searchHelp")}</p>
+            <div className="debug-log-overview">
+              <span className="debug-log-overview-copy">
+                {hiddenCount > 0
+                  ? t("debug.logWindow", {
+                      visible: formatNumber(visibleLogs.length),
+                      total: formatNumber(filtered.length),
+                    })
+                  : t("debug.logWindowAll", { total: formatNumber(filtered.length) })}
+              </span>
+              <div className="debug-log-overview-actions">
+                {hiddenCount > 0 ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    onClick={() => setVisibleCount((prev) => prev + LOG_WINDOW_STEP)}
+                  >
+                    {t("debug.showOlder")}
+                  </Button>
+                ) : null}
+                {visibleCount > LOG_WINDOW_STEP && !highlightTerm ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    onClick={() => setVisibleCount(LOG_WINDOW_STEP)}
+                  >
+                    {t("debug.jumpToLatest")}
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+            <div
+              ref={listRef}
+              className="debug-log-frame"
+            >
+              {structuredRows.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t("debug.empty")}</p>
+              ) : (
+                <ul className="log-timeline">
+                  {structuredRows.map((row) => (
+                    <LogRow
+                      key={row.id}
+                      row={row}
+                      detailsLabel={t("debug.details")}
+                      highlightTerm={highlightTerm}
+                    />
+                  ))}
+                </ul>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      <Card className="debug-panel">
+        <CardHeader>
+          <CardTitle>{t("debug.advanced.title")}</CardTitle>
+          <p className="text-xs text-muted-foreground">{t("debug.advanced.subtitle")}</p>
+        </CardHeader>
+        <CardContent className="debug-advanced-grid">
+          <details className="debug-advanced-details" open>
+            <summary className="debug-advanced-summary">{t("debug.sim.title")}</summary>
+            <div className="debug-advanced-body">
+              <p className="text-xs text-muted-foreground">{t("debug.sim.help")}</p>
               <div className="grid gap-2 sm:grid-cols-2">
                 <Input
                   type="text"
@@ -427,7 +1182,7 @@ export function DebugView({ snapshot }: DebugViewProps) {
                   onChange={(e) => setSimProgress(e.target.value)}
                 />
               </div>
-              <div className="mt-2 flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant="outline"
                   size="xs"
@@ -454,100 +1209,27 @@ export function DebugView({ snapshot }: DebugViewProps) {
                 </Button>
               </div>
             </div>
-            <ol className="code-panel" aria-label={t("debug.snapshot")}>
-              {snapshotLines.map((line, index) => (
-                <li key={`${index}`} className="code-line">
-                  {line}
-                </li>
-              ))}
-            </ol>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
-            <div>
-              <CardTitle>{t("debug.log")}</CardTitle>
-              <p className="text-xs text-muted-foreground">{t("debug.logHelp")}</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={paused ? "outline" : "muted"}>
-                {paused ? t("debug.status.paused") : t("debug.status.live")}
-              </Badge>
-              <Badge variant="outline">
-                {autoScroll ? t("debug.status.autoScrollOn") : t("debug.status.autoScrollOff")}
-              </Badge>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  clearLogBuffer();
-                  resetPerfStore();
-                  setLogs([]);
-                }}
-              >
-                {t("debug.clear")}
+          </details>
+          <details className="debug-advanced-details">
+            <summary className="debug-advanced-summary">
+              <span>{t("debug.snapshot")}</span>
+              <Button variant="outline" size="sm" onClick={copySnapshot} type="button">
+                {copied ? t("debug.copied") : t("debug.copy")}
               </Button>
-              <Button variant="outline" size="sm" onClick={togglePaused}>
-                {paused ? t("debug.resume") : t("debug.pause")}
-              </Button>
-              <Button
-                variant={autoScroll ? "secondary" : "outline"}
-                size="sm"
-                onClick={toggleAutoScroll}
-              >
-                {t("debug.autoScroll")}
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-xs text-muted-foreground">{t("debug.logControlsHelp")}</p>
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="min-w-[180px] flex-1">
-                <Input
-                  type="text"
-                  placeholder={t("debug.search")}
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                />
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {LEVELS.map((level) => (
-                  <Button
-                    key={level}
-                    type="button"
-                    size="xs"
-                    variant={levels[level] ? "secondary" : "outline"}
-                    onClick={() => setLevels((prev) => ({ ...prev, [level]: !prev[level] }))}
-                  >
-                    {level} ({formatNumber(counts[level])})
-                  </Button>
+            </summary>
+            <div className="debug-advanced-body">
+              <p className="text-xs text-muted-foreground">{t("debug.snapshotHelp")}</p>
+              <ol className="code-panel" aria-label={t("debug.snapshot")}>
+                {snapshotLines.map((line, index) => (
+                  <li key={`${index}`} className="code-line">
+                    {line}
+                  </li>
                 ))}
-              </div>
+              </ol>
             </div>
-            <p className="text-xs text-muted-foreground">{t("debug.searchHelp")}</p>
-            <div
-              ref={listRef}
-              className="max-h-[460px] overflow-auto rounded-lg border border-border bg-background p-3"
-            >
-              {filtered.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{t("debug.empty")}</p>
-              ) : (
-                <ul className="log-timeline">
-                  {filtered.map((entry) => (
-                    <LogRow
-                      key={entry.id}
-                      entry={entry}
-                      emptyMessage={t("debug.emptyMessage")}
-                      detailsLabel={t("debug.details")}
-                      highlightTerm={highlightTerm}
-                    />
-                  ))}
-                </ul>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          </details>
+        </CardContent>
+      </Card>
     </div>
   );
 }
