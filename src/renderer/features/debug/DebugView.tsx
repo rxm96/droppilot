@@ -254,14 +254,14 @@ const structureLogEntry = (entry: LogEntry, emptyMessage: string): StructuredLog
   const primaryArg = typeof entry.args[0] === "string" ? entry.args[0].trim() : "";
   const rawMessage = primaryArg || entry.message || emptyMessage;
   const parsed = parseLogSource(rawMessage);
-  const payload =
-    entry.args.find(
-      (arg) => arg && typeof arg === "object" && !Array.isArray(arg) && !(arg instanceof Error),
-    ) as Record<string, unknown> | undefined;
+  const payload = entry.args.find(
+    (arg) => arg && typeof arg === "object" && !Array.isArray(arg) && !(arg instanceof Error),
+  ) as Record<string, unknown> | undefined;
   const extraString = entry.args
     .slice(primaryArg ? 1 : 0)
     .find((arg) => typeof arg === "string" && arg.trim().length > 0) as string | undefined;
-  const details = buildDetails(payload) ?? (extraString ? trimSentence(extraString.trim(), 140) : null);
+  const details =
+    buildDetails(payload) ?? (extraString ? trimSentence(extraString.trim(), 140) : null);
   return {
     id: String(entry.id),
     level: entry.level,
@@ -372,20 +372,14 @@ type LogRowProps = {
   highlightTerm?: string;
 };
 
-const LogRow = memo(function LogRow({
-  row,
-  detailsLabel,
-  highlightTerm = "",
-}: LogRowProps) {
+const LogRow = memo(function LogRow({ row, detailsLabel, highlightTerm = "" }: LogRowProps) {
   const style = LEVEL_STYLES[row.level];
 
   return (
     <li className={cn("log-item", `level-${row.level}`)}>
       <div className="log-head">
         <div className="log-meta-group">
-          <Badge variant={style.badgeVariant}>
-            {highlightMatches(row.level, highlightTerm)}
-          </Badge>
+          <Badge variant={style.badgeVariant}>{highlightMatches(row.level, highlightTerm)}</Badge>
           {row.source ? (
             <Badge variant="outline" className="log-source-badge">
               {highlightMatches(row.source, highlightTerm)}
@@ -399,10 +393,16 @@ const LogRow = memo(function LogRow({
         </div>
         <span className="log-time">{row.timeLabel}</span>
       </div>
-      <div className={cn("log-headline", style.text)}>{highlightMatches(row.headline, highlightTerm)}</div>
-      {row.meta ? <div className="log-meta-copy">{highlightMatches(row.meta, highlightTerm)}</div> : null}
+      <div className={cn("log-headline", style.text)}>
+        {highlightMatches(row.headline, highlightTerm)}
+      </div>
+      {row.meta ? (
+        <div className="log-meta-copy">{highlightMatches(row.meta, highlightTerm)}</div>
+      ) : null}
       {row.details ? (
-        <div className={cn("log-message", style.text)}>{highlightMatches(row.details, highlightTerm)}</div>
+        <div className={cn("log-message", style.text)}>
+          {highlightMatches(row.details, highlightTerm)}
+        </div>
       ) : null}
       {row.args.length > 0 ? (
         <LogDetails args={row.args} label={detailsLabel} highlightTerm={highlightTerm} />
@@ -568,7 +568,10 @@ export function DebugView({ snapshot }: DebugViewProps) {
     [effectiveVisibleCount, filtered],
   );
   const structuredRows = useMemo(
-    () => groupStructuredRows(visibleLogs.map((entry) => structureLogEntry(entry, t("debug.emptyMessage")))),
+    () =>
+      groupStructuredRows(
+        visibleLogs.map((entry) => structureLogEntry(entry, t("debug.emptyMessage"))),
+      ),
     [t, visibleLogs],
   );
   const trackerStatus = useMemo<ChannelTrackerStatus | null>(() => {
@@ -601,9 +604,10 @@ export function DebugView({ snapshot }: DebugViewProps) {
   );
   const formatNumber = (val: number) => numberFormatter.format(Math.max(0, val ?? 0));
   const relativeTimeFormatter = useMemo(
-    () => new Intl.RelativeTimeFormat(language === "de" ? "de-DE" : "en-US", {
-      numeric: "auto",
-    }),
+    () =>
+      new Intl.RelativeTimeFormat(language === "de" ? "de-DE" : "en-US", {
+        numeric: "auto",
+      }),
     [language],
   );
   const formatRelativeTime = useCallback(
@@ -664,15 +668,13 @@ export function DebugView({ snapshot }: DebugViewProps) {
                 active: formatNumber(trackerStatus?.subscriptions ?? 0),
                 desired: formatNumber(trackerStatus?.desiredSubscriptions ?? 0),
               }),
-        tone: (
-          trackerStatus?.state === "error"
-            ? "error"
-            : trackerStatus?.connectionState === "connecting"
-              ? "warn"
-              : trackerStatus?.state === "ok"
-                ? "ok"
-                : "idle"
-        ) satisfies SummaryTone,
+        tone: (trackerStatus?.state === "error"
+          ? "error"
+          : trackerStatus?.connectionState === "connecting"
+            ? "warn"
+            : trackerStatus?.state === "ok"
+              ? "ok"
+              : "idle") satisfies SummaryTone,
       },
       {
         key: "pubsub",
@@ -683,15 +685,13 @@ export function DebugView({ snapshot }: DebugViewProps) {
               count: formatNumber(snapshotData.userPubSub?.events ?? 0),
             })
           : t("debug.summary.notListening"),
-        tone: (
-          snapshotData.userPubSub?.lastErrorMessage
-            ? "error"
-            : snapshotData.userPubSub?.connectionState === "connecting"
-              ? "warn"
-              : snapshotData.userPubSub?.connectionState === "connected"
-                ? "ok"
-                : "idle"
-        ) satisfies SummaryTone,
+        tone: (snapshotData.userPubSub?.lastErrorMessage
+          ? "error"
+          : snapshotData.userPubSub?.connectionState === "connecting"
+            ? "warn"
+            : snapshotData.userPubSub?.connectionState === "connected"
+              ? "ok"
+              : "idle") satisfies SummaryTone,
       },
       {
         key: "inventory",
@@ -707,15 +707,13 @@ export function DebugView({ snapshot }: DebugViewProps) {
           : t("debug.summary.lastSeen", {
               time: formatRelativeTime(snapshotData.inventory?.fetchedAt),
             }),
-        tone: (
-          snapshotData.inventory?.status === "error"
-            ? "error"
-            : snapshotData.inventory?.refreshing || snapshotData.inventory?.status === "loading"
-              ? "warn"
-              : snapshotData.inventory?.status === "ready"
-                ? "ok"
-                : "idle"
-        ) satisfies SummaryTone,
+        tone: (snapshotData.inventory?.status === "error"
+          ? "error"
+          : snapshotData.inventory?.refreshing || snapshotData.inventory?.status === "loading"
+            ? "warn"
+            : snapshotData.inventory?.status === "ready"
+              ? "ok"
+              : "idle") satisfies SummaryTone,
       },
       {
         key: "watch",
@@ -726,15 +724,13 @@ export function DebugView({ snapshot }: DebugViewProps) {
           : t("debug.summary.nextCheck", {
               time: formatRelativeTime(snapshotData.watch?.nextAt),
             }),
-        tone: (
-          snapshotData.watch?.error
-            ? "error"
-            : watchAgeMs === null
-              ? "idle"
-              : watchAgeMs > WATCH_INTERVAL_MS * 2
-                ? "warn"
-                : "ok"
-        ) satisfies SummaryTone,
+        tone: (snapshotData.watch?.error
+          ? "error"
+          : watchAgeMs === null
+            ? "idle"
+            : watchAgeMs > WATCH_INTERVAL_MS * 2
+              ? "warn"
+              : "ok") satisfies SummaryTone,
       },
       {
         key: "cpu",
@@ -749,13 +745,11 @@ export function DebugView({ snapshot }: DebugViewProps) {
               time: formatNumber(Math.round(topPerfEntry.avgMs)),
             })
           : t("debug.summary.componentsTracked", { count: "0" }),
-        tone: (
-          typeof snapshotData.cpu?.percent === "number" && snapshotData.cpu.percent >= 35
-            ? "warn"
-            : snapshotData.cpu?.lastAt
-              ? "ok"
-              : "idle"
-        ) satisfies SummaryTone,
+        tone: (typeof snapshotData.cpu?.percent === "number" && snapshotData.cpu.percent >= 35
+          ? "warn"
+          : snapshotData.cpu?.lastAt
+            ? "ok"
+            : "idle") satisfies SummaryTone,
       },
     ],
     [
@@ -1001,13 +995,10 @@ export function DebugView({ snapshot }: DebugViewProps) {
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               <p className="text-xs text-muted-foreground">{t("debug.websocketHelp")}</p>
-            {trackerShards.length > 0 ? (
+              {trackerShards.length > 0 ? (
                 <ul className="debug-shard-list">
                   {trackerShards.map((shard) => (
-                    <li
-                      key={shard.id}
-                      className="debug-shard-row"
-                    >
+                    <li key={shard.id} className="debug-shard-row">
                       <div className="flex flex-col gap-1">
                         <span className="font-medium">
                           {t("debug.trackerShard", { id: String(shard.id) })}
@@ -1135,10 +1126,7 @@ export function DebugView({ snapshot }: DebugViewProps) {
                 ) : null}
               </div>
             </div>
-            <div
-              ref={listRef}
-              className="debug-log-frame"
-            >
+            <div ref={listRef} className="debug-log-frame">
               {structuredRows.length === 0 ? (
                 <p className="text-sm text-muted-foreground">{t("debug.empty")}</p>
               ) : (

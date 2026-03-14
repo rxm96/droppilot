@@ -437,20 +437,20 @@ export function InventoryView({
               )}
             </button>
             <Select value={gameFilter} onValueChange={(value) => onGameFilterChange(value)}>
-            <SelectTrigger aria-label={t("inventory.allGames")}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="all">{t("inventory.allGames")}</SelectItem>
-                {uniqueGames.map((g) => (
-                  <SelectItem key={g} value={g}>
-                    {g}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+              <SelectTrigger aria-label={t("inventory.allGames")}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">{t("inventory.allGames")}</SelectItem>
+                  {uniqueGames.map((g) => (
+                    <SelectItem key={g} value={g}>
+                      {g}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>

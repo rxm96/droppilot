@@ -1406,7 +1406,11 @@ a {
   position: relative;
   border-color: color-mix(in srgb, var(--border) 82%, transparent);
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--card) 86%, var(--background) 14%), var(--card)),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--card) 86%, var(--background) 14%),
+      var(--card)
+    ),
     var(--card);
 }
 

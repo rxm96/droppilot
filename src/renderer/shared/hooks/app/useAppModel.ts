@@ -958,7 +958,8 @@ export function useAppModel() {
     const activeProbe = watchConfirmationProbeRef.current;
     if (
       activeProbe &&
-      (activeProbe.key !== key || activeProbe.baselineProgressAt < evaluation.tracker.lastProgressAt)
+      (activeProbe.key !== key ||
+        activeProbe.baselineProgressAt < evaluation.tracker.lastProgressAt)
     ) {
       watchConfirmationProbeRef.current = null;
     }
