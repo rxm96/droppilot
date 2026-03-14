@@ -4,6 +4,7 @@ import { TwitchClient, TwitchAuthError, type RevalidateResult, type TwitchUser }
 import { buildPriorityPlan, type PriorityPlan } from "./channels";
 import { TwitchServiceError } from "./errors";
 import { TWITCH_ERROR_CODES } from "../../shared/errorCodes";
+import { extractSpadeUrl, SETTINGS_PATTERN } from "./spade";
 import {
   buildCampaignSummaries,
   collectBlockingReasonHints,
@@ -311,10 +312,6 @@ export class TwitchService {
       return this.spadeCache.get(login)!;
     }
 
-    const SETTINGS_PATTERN = /src="(https:\/\/[\w.]+\/config\/settings\.[0-9a-f]{32}\.js)"/i;
-    const SPADE_PATTERN =
-      /"beacon_?url": ?"(https:\/\/video-edge-[.\w\-/]+\.ts(?:\?allow_stream=true)?)"/i;
-
     const fetchText = async (url: string) => {
       const res = await fetch(url, {
         redirect: "follow",
@@ -345,20 +342,19 @@ export class TwitchService {
       );
     }
 
-    let match = html.match(SPADE_PATTERN);
-    if (!match) {
+    let spade = extractSpadeUrl(html);
+    if (!spade) {
       const settingsMatch = html.match(SETTINGS_PATTERN);
       if (!settingsMatch) {
         throw new TwitchServiceError(TWITCH_ERROR_CODES.SPADE_URL_MISSING, "Spade URL missing");
       }
       const settingsJs = await fetchText(settingsMatch[1]);
-      match = settingsJs.match(SPADE_PATTERN);
-      if (!match) {
+      spade = extractSpadeUrl(settingsJs);
+      if (!spade) {
         throw new TwitchServiceError(TWITCH_ERROR_CODES.SPADE_URL_MISSING, "Spade URL missing");
       }
     }
 
-    const spade = match[1];
     this.spadeCache.set(login, spade);
     return spade;
   }

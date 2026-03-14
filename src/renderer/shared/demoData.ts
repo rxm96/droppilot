@@ -14,7 +14,7 @@ function svgDataUri(width: number, height: number, label: string, color: string)
   const fontSize = Math.max(14, Math.round(height / 6));
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
   <rect width="100%" height="100%" fill="${color}"/>
-  <text x="50%" y="54%" text-anchor="middle" font-family="Arial, sans-serif" font-size="${fontSize}" fill="#ffffff">${safeLabel}</text>
+  <text x="50%" y="54%" text-anchor="middle" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="${fontSize}" fill="#ffffff">${safeLabel}</text>
 </svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }

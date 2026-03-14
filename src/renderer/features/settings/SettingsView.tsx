@@ -2,6 +2,7 @@ import { useI18n } from "@renderer/shared/i18n";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -265,8 +266,10 @@ export function SettingsView({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="de">{t("settings.language.de")}</SelectItem>
-                  <SelectItem value="en">{t("settings.language.en")}</SelectItem>
+                  <SelectGroup>
+                    <SelectItem value="de">{t("settings.language.de")}</SelectItem>
+                    <SelectItem value="en">{t("settings.language.en")}</SelectItem>
+                  </SelectGroup>
                 </SelectContent>
               </Select>
             </div>
@@ -280,8 +283,10 @@ export function SettingsView({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="light">{t("theme.light")}</SelectItem>
-                  <SelectItem value="dark">{t("theme.dark")}</SelectItem>
+                  <SelectGroup>
+                    <SelectItem value="light">{t("theme.light")}</SelectItem>
+                    <SelectItem value="dark">{t("theme.dark")}</SelectItem>
+                  </SelectGroup>
                 </SelectContent>
               </Select>
             </div>
@@ -344,8 +349,10 @@ export function SettingsView({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="stable">{t("settings.updateChannel.stable")}</SelectItem>
-                    <SelectItem value="preview">{t("settings.updateChannel.preview")}</SelectItem>
+                    <SelectGroup>
+                      <SelectItem value="stable">{t("settings.updateChannel.stable")}</SelectItem>
+                      <SelectItem value="preview">{t("settings.updateChannel.preview")}</SelectItem>
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>
@@ -501,14 +508,16 @@ export function SettingsView({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {refreshPresets.map((preset) => (
-                        <SelectItem key={preset.key} value={preset.key}>
-                          {preset.label}
-                        </SelectItem>
-                      ))}
-                      {currentPreset === "custom" ? (
-                        <SelectItem value="custom">{customPresetLabel}</SelectItem>
-                      ) : null}
+                      <SelectGroup>
+                        {refreshPresets.map((preset) => (
+                          <SelectItem key={preset.key} value={preset.key}>
+                            {preset.label}
+                          </SelectItem>
+                        ))}
+                        {currentPreset === "custom" ? (
+                          <SelectItem value="custom">{customPresetLabel}</SelectItem>
+                        ) : null}
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                 </label>

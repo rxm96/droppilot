@@ -14,10 +14,12 @@ import {
   buildChannelAllowlist,
   useChannels,
   useWatchPing,
+  WATCH_INTERVAL_MS,
   useWatchingController,
   buildWatchStallTrackerKey,
   evaluateNoProgressStall,
   pickStallRecoveryChannel,
+  shouldProbeNoProgressConfirmation,
   STALL_STOP_SUPPRESSION_HOLD_MS,
   MANUAL_STOP_SUPPRESSION_HOLD_MS,
   selectVisibleTargetGame,
@@ -46,6 +48,7 @@ const STALL_NO_PROGRESS_WINDOW_NEAR_END_MS = 3 * 60_000;
 const STALL_RECOVERY_COOLDOWN_MS = 60_000;
 const STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS = 2;
 const STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS_NEAR_END = 1;
+const STALL_CONFIRMATION_PROBE_COOLDOWN_MS = 60_000;
 const NO_FARMABLE_DROP_GRACE_MS = 30_000;
 const NO_FARMABLE_GAME_COOLDOWN_MS = 10 * 60_000;
 const NO_PROGRESS_GAME_COOLDOWN_MS = 30 * 60_000;
@@ -140,6 +143,11 @@ export function useAppModel() {
   const claimProbeInFlightRef = useRef(false);
   const claimProbeLastAtRef = useRef(0);
   const watchStallTrackerRef = useRef<WatchStallTracker | null>(null);
+  const watchConfirmationProbeRef = useRef<{
+    key: string;
+    baselineProgressAt: number;
+    lastProbeAt: number;
+  } | null>(null);
   const noFarmableDropRef = useRef<{ key: string; sinceAt: number } | null>(null);
   const [stalledGameCooldownUntil, setStalledGameCooldownUntil] = useState<Record<string, number>>(
     {},
@@ -797,6 +805,7 @@ export function useAppModel() {
   useEffect(() => {
     if (!watching) {
       watchStallTrackerRef.current = null;
+      watchConfirmationProbeRef.current = null;
       const shouldEvaluateIdleNoFarmable = allowWatching && autoSelectEnabled && !!targetGame;
       if (!shouldEvaluateIdleNoFarmable) {
         noFarmableDropRef.current = null;
@@ -914,17 +923,20 @@ export function useAppModel() {
         "stall-no-farmable",
       );
       watchStallTrackerRef.current = null;
+      watchConfirmationProbeRef.current = null;
       noFarmableDropRef.current = null;
       return;
     }
     noFarmableDropRef.current = null;
     if (!activeDropInfo) {
       watchStallTrackerRef.current = null;
+      watchConfirmationProbeRef.current = null;
       return;
     }
     const dropId = activeDropInfo.id?.trim();
     if (!dropId) {
       watchStallTrackerRef.current = null;
+      watchConfirmationProbeRef.current = null;
       return;
     }
     const earnedMinutes = Math.max(0, Number(activeDropInfo.earnedMinutes) || 0);
@@ -943,6 +955,47 @@ export function useAppModel() {
       actionCooldownMs: STALL_RECOVERY_COOLDOWN_MS,
     });
     watchStallTrackerRef.current = evaluation.tracker;
+    const activeProbe = watchConfirmationProbeRef.current;
+    if (
+      activeProbe &&
+      (activeProbe.key !== key || activeProbe.baselineProgressAt < evaluation.tracker.lastProgressAt)
+    ) {
+      watchConfirmationProbeRef.current = null;
+    }
+    const probeLeadMs = Math.min(2 * 60_000, Math.floor(noProgressWindowMs / 3));
+    const recentWatchPingGraceMs = WATCH_INTERVAL_MS + 30_000;
+    const lastProbeAt =
+      watchConfirmationProbeRef.current?.key === key &&
+      watchConfirmationProbeRef.current?.baselineProgressAt === evaluation.tracker.lastProgressAt
+        ? watchConfirmationProbeRef.current.lastProbeAt
+        : 0;
+    if (
+      shouldProbeNoProgressConfirmation({
+        tracker: evaluation.tracker,
+        key,
+        now,
+        noProgressWindowMs,
+        probeLeadMs,
+        lastWatchOk: watchStats.lastOk,
+        watchPingGraceMs: recentWatchPingGraceMs,
+        lastProbeAt,
+        probeCooldownMs: STALL_CONFIRMATION_PROBE_COOLDOWN_MS,
+      })
+    ) {
+      watchConfirmationProbeRef.current = {
+        key,
+        baselineProgressAt: evaluation.tracker.lastProgressAt,
+        lastProbeAt: now,
+      };
+      logInfo("watch-engine: confirmation probe", {
+        reason: "stall-no-progress-confirmation-probe",
+        key,
+        noProgressWindowMs,
+        probeLeadMs,
+        lastConfirmedProgressMsAgo: Math.max(0, now - evaluation.tracker.lastProgressAt),
+      });
+      void fetchInventory({ forceLoading: true });
+    }
     if (!evaluation.shouldRecover) return;
     const maxChannelRecoveryAttempts = nearEndNoProgressProbe
       ? STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS_NEAR_END

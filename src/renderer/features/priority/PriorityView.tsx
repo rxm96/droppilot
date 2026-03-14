@@ -19,6 +19,7 @@ import { useEffect, type ButtonHTMLAttributes, type CSSProperties } from "react"
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -286,14 +287,16 @@ export function PriorityView({
                   <SelectValue placeholder={t("settings.addFromDropsOption")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NO_GAME_SELECT_VALUE}>
-                    {t("settings.addFromDropsOption")}
-                  </SelectItem>
-                  {selectableDropGames.map((g) => (
-                    <SelectItem key={g} value={g}>
-                      {g}
+                  <SelectGroup>
+                    <SelectItem value={NO_GAME_SELECT_VALUE}>
+                      {t("settings.addFromDropsOption")}
                     </SelectItem>
-                  ))}
+                    {selectableDropGames.map((g) => (
+                      <SelectItem key={g} value={g}>
+                        {g}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 </SelectContent>
               </Select>
               <button

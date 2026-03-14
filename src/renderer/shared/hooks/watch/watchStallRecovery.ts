@@ -104,6 +104,37 @@ export const evaluateNoProgressStall = ({
   };
 };
 
+export const shouldProbeNoProgressConfirmation = ({
+  tracker,
+  key,
+  now,
+  noProgressWindowMs,
+  probeLeadMs,
+  lastWatchOk,
+  watchPingGraceMs,
+  lastProbeAt,
+  probeCooldownMs,
+}: {
+  tracker: WatchStallTracker | null;
+  key: string;
+  now: number;
+  noProgressWindowMs: number;
+  probeLeadMs: number;
+  lastWatchOk: number;
+  watchPingGraceMs: number;
+  lastProbeAt: number;
+  probeCooldownMs: number;
+}): boolean => {
+  if (!tracker || tracker.key !== key) return false;
+  if (lastWatchOk <= tracker.lastProgressAt) return false;
+  if (now - lastWatchOk > watchPingGraceMs) return false;
+  const probeAt = tracker.lastProgressAt + Math.max(0, noProgressWindowMs - probeLeadMs);
+  if (now < probeAt) return false;
+  if (now >= tracker.lastProgressAt + noProgressWindowMs) return false;
+  if (lastProbeAt >= tracker.lastProgressAt && now - lastProbeAt < probeCooldownMs) return false;
+  return true;
+};
+
 export const pickStallRecoveryChannel = ({
   channels,
   watching,

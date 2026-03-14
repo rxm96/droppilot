@@ -4,6 +4,7 @@ import {
   buildWatchStallTrackerKey,
   evaluateNoProgressStall,
   pickStallRecoveryChannel,
+  shouldProbeNoProgressConfirmation,
 } from "./watchStallRecovery";
 
 const makeChannel = (overrides: Partial<ChannelEntry> = {}): ChannelEntry => ({
@@ -165,6 +166,91 @@ describe("watchStallRecovery helpers", () => {
       actionCooldownMs: 1_000,
     });
     expect(tooEarly.shouldRecover).toBe(false);
+  });
+
+  it("requests a confirmation probe shortly before recovery when watch pings stay healthy", () => {
+    const init = evaluateNoProgressStall({
+      tracker: null,
+      key: "k",
+      earnedMinutes: 5,
+      now: 0,
+      noProgressWindowMs: 15 * 60_000,
+      actionCooldownMs: 1_000,
+    });
+    expect(
+      shouldProbeNoProgressConfirmation({
+        tracker: init.tracker,
+        key: "k",
+        now: 13 * 60_000,
+        noProgressWindowMs: 15 * 60_000,
+        probeLeadMs: 2 * 60_000,
+        lastWatchOk: 12 * 60_000 + 30_000,
+        watchPingGraceMs: 90_000,
+        lastProbeAt: 0,
+        probeCooldownMs: 60_000,
+      }),
+    ).toBe(true);
+  });
+
+  it("does not request a confirmation probe without a recent watch ping or after the stall window", () => {
+    const init = evaluateNoProgressStall({
+      tracker: null,
+      key: "k",
+      earnedMinutes: 5,
+      now: 0,
+      noProgressWindowMs: 15 * 60_000,
+      actionCooldownMs: 1_000,
+    });
+    expect(
+      shouldProbeNoProgressConfirmation({
+        tracker: init.tracker,
+        key: "k",
+        now: 13 * 60_000,
+        noProgressWindowMs: 15 * 60_000,
+        probeLeadMs: 2 * 60_000,
+        lastWatchOk: 11 * 60_000,
+        watchPingGraceMs: 90_000,
+        lastProbeAt: 0,
+        probeCooldownMs: 60_000,
+      }),
+    ).toBe(false);
+    expect(
+      shouldProbeNoProgressConfirmation({
+        tracker: init.tracker,
+        key: "k",
+        now: 15 * 60_000,
+        noProgressWindowMs: 15 * 60_000,
+        probeLeadMs: 2 * 60_000,
+        lastWatchOk: 14 * 60_000 + 30_000,
+        watchPingGraceMs: 90_000,
+        lastProbeAt: 0,
+        probeCooldownMs: 60_000,
+      }),
+    ).toBe(false);
+  });
+
+  it("respects probe cooldown for the same unconfirmed progress baseline", () => {
+    const init = evaluateNoProgressStall({
+      tracker: null,
+      key: "k",
+      earnedMinutes: 5,
+      now: 0,
+      noProgressWindowMs: 15 * 60_000,
+      actionCooldownMs: 1_000,
+    });
+    expect(
+      shouldProbeNoProgressConfirmation({
+        tracker: init.tracker,
+        key: "k",
+        now: 13 * 60_000 + 30_000,
+        noProgressWindowMs: 15 * 60_000,
+        probeLeadMs: 2 * 60_000,
+        lastWatchOk: 13 * 60_000,
+        watchPingGraceMs: 90_000,
+        lastProbeAt: 13 * 60_000,
+        probeCooldownMs: 60_000,
+      }),
+    ).toBe(false);
   });
 
   it("picks the first alternative channel that can farm the active drop", () => {
