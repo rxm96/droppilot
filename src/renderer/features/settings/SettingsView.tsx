@@ -240,21 +240,18 @@ export function SettingsView({
           <h2>{t("settings.title")}</h2>
           <p className="meta">{t("settings.quickActions")}</p>
         </div>
-        {demoMode ? <span className="settings-chip">{t("settings.demoMode")}</span> : null}
       </div>
       <div className="settings-sections">
-        <div className="settings-column">
+        <div className="settings-column settings-column-primary">
           <section className="settings-section">
             <div className="settings-row">
               <div>
                 <div className="label">{t("settings.session")}</div>
                 <p className="meta">{isLinked ? t("session.ready") : t("session.loginNeeded")}</p>
               </div>
-              <div className="settings-actions">
-                <span className={`status-pill ${isLinked ? "ok" : "warn"}`}>
-                  {isLinked ? t("session.connected") : t("session.disconnected")}
-                </span>
-              </div>
+              <span className="settings-value">
+                {isLinked ? t("session.connected") : t("session.disconnected")}
+              </span>
             </div>
             <div className="settings-row">
               <div className="label">{t("settings.languageLabel")}</div>
@@ -289,6 +286,32 @@ export function SettingsView({
                   </SelectGroup>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="toggle-row">
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={demoMode}
+                  onChange={(e) => setDemoMode(e.target.checked)}
+                />
+                <span className="toggle-label">
+                  <span className="toggle-title">{t("settings.demoMode")}</span>
+                  <span className="toggle-hint">{t("settings.demoModeHint")}</span>
+                </span>
+              </label>
+            </div>
+            <div className="toggle-row">
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={debugEnabled}
+                  onChange={(e) => setDebugEnabled(e.target.checked)}
+                />
+                <span className="toggle-label">
+                  <span className="toggle-title">{t("settings.debugToggle")}</span>
+                  <span className="toggle-hint">{t("settings.debugHint")}</span>
+                </span>
+              </label>
             </div>
             {showAutoStart ? (
               <div className="toggle-row">
@@ -357,44 +380,6 @@ export function SettingsView({
                 </Select>
               </div>
             ) : null}
-          </section>
-
-          <section className="settings-section">
-            <div className="settings-row">
-              <div>
-                <div className="label">{t("settings.demoModeTitle")}</div>
-                <p className="meta">{t("settings.demoModeHint")}</p>
-              </div>
-            </div>
-            <div className="toggle-row">
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={demoMode}
-                  onChange={(e) => setDemoMode(e.target.checked)}
-                />
-                <span>{t("settings.demoMode")}</span>
-              </label>
-            </div>
-          </section>
-
-          <section className="settings-section">
-            <div className="settings-row">
-              <div>
-                <div className="label">{t("settings.debugTitle")}</div>
-                <p className="meta">{t("settings.debugHint")}</p>
-              </div>
-            </div>
-            <div className="toggle-row">
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={debugEnabled}
-                  onChange={(e) => setDebugEnabled(e.target.checked)}
-                />
-                <span>{t("settings.debugToggle")}</span>
-              </label>
-            </div>
           </section>
 
           <section className="settings-section">
@@ -571,8 +556,8 @@ export function SettingsView({
           </section>
         </div>
 
-        <div className="settings-column">
-          <section className="settings-section">
+        <div className="settings-column settings-column-secondary">
+          <section className="settings-section settings-section-backup">
             <div className="settings-row">
               <div>
                 <div className="label">{t("settings.alerts")}</div>

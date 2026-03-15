@@ -3066,6 +3066,11 @@ textarea:focus-visible {
   min-height: 120px;
 }
 
+.settings-section-backup .settings-textarea {
+  flex: 1 1 auto;
+  min-height: clamp(180px, 24vw, 240px);
+}
+
 .meta {
   font-size: var(--type-meta-size);
   line-height: var(--type-meta-line);
@@ -4102,8 +4107,8 @@ code {
 
 .settings-sections {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: minmax(0, 1.22fr) minmax(320px, 0.88fr);
+  gap: clamp(16px, 2vw, 22px);
   align-items: start;
 }
 
@@ -4111,6 +4116,15 @@ code {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
+}
+
+.settings-column-primary {
+  gap: 18px;
+}
+
+.settings-column-secondary {
+  gap: 14px;
 }
 
 .settings-head {
@@ -4142,28 +4156,20 @@ code {
   color: var(--muted-foreground);
 }
 
-.settings-chip {
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--muted);
-  color: var(--muted-foreground);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .settings-section {
   padding: 16px;
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
   border-radius: 16px;
-  background: var(--card);
-  box-shadow: var(--shadow);
+  background: color-mix(in srgb, var(--card) 94%, transparent);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   position: relative;
+}
+
+.settings-section-backup {
+  min-height: clamp(260px, 28vw, 320px);
 }
 
 .priority-view {
@@ -4312,7 +4318,7 @@ code {
 .settings-section > .toggle-row + .toggle-row,
 .settings-section > .settings-row + .toggle-row,
 .settings-section > .toggle-row + .settings-row {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
   padding-top: 12px;
   margin-top: 0;
 }
@@ -4323,6 +4329,11 @@ code {
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
+}
+
+.settings-row > :first-child {
+  min-width: 0;
+  flex: 1 1 240px;
 }
 
 .settings-row .label {
@@ -4337,16 +4348,27 @@ code {
 
 .settings-section .label {
   font-size: 11px;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.14em;
   color: var(--muted-foreground);
+}
+
+.settings-value {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  color: color-mix(in srgb, var(--foreground) 84%, transparent);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .settings-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
   align-items: center;
   margin-left: auto;
+  min-width: min(100%, 240px);
 }
 
 .settings-row > label.meta {
@@ -4394,6 +4416,14 @@ code {
   padding: 10px 12px;
   background: var(--background);
   color: var(--foreground);
+}
+
+.settings-section .select {
+  width: min(100%, 220px);
+}
+
+.settings-actions .select {
+  min-width: 180px;
 }
 
 .priority-list {
@@ -6041,6 +6071,32 @@ code {
   }
 }
 
+@media (max-width: 1180px) {
+  .settings-sections {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .settings-column-primary,
+  .settings-column-secondary {
+    gap: 14px;
+  }
+
+  .settings-section-backup {
+    min-height: 0;
+  }
+
+  .settings-row > :first-child {
+    flex-basis: 100%;
+  }
+
+  .settings-actions {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+}
+
 @media (max-width: 960px) {
   .priority-summary-grid {
     grid-template-columns: 1fr;
@@ -6077,9 +6133,6 @@ code {
   .settings-head {
     flex-direction: column;
     align-items: flex-start;
-  }
-  .settings-sections {
-    grid-template-columns: 1fr;
   }
   .control-layout {
     grid-template-columns: 1fr;
@@ -6228,6 +6281,90 @@ code {
   }
   .inv-progress-meta {
     justify-content: flex-start;
+  }
+}
+
+@media (max-width: 720px) {
+  .settings-section {
+    padding: 14px;
+    border-radius: 14px;
+    gap: 8px;
+  }
+
+  .settings-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .settings-row > :first-child,
+  .settings-row > .settings-value {
+    flex-basis: auto;
+    width: 100%;
+  }
+
+  .settings-value {
+    min-height: 0;
+    white-space: normal;
+  }
+
+  .settings-section .select,
+  .settings-actions .select,
+  .settings-section .input,
+  .input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .settings-row > label.meta,
+  .settings-actions > label.meta {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    white-space: normal;
+  }
+
+  .settings-row > label.meta .input,
+  .settings-actions > label.meta .input {
+    width: 100%;
+    min-width: 0;
+    flex-basis: auto;
+  }
+
+  .settings-actions,
+  .cta-row {
+    width: 100%;
+    margin-left: 0;
+    gap: 8px;
+  }
+
+  .settings-actions > *,
+  .cta-row > * {
+    flex: 1 1 100%;
+  }
+
+  .toggle {
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .toggle input {
+    width: 40px;
+    height: 24px;
+  }
+
+  .toggle input::after {
+    width: 20px;
+    height: 20px;
+  }
+
+  .toggle input:checked::after {
+    transform: translateX(18px);
+  }
+
+  .settings-section-backup .settings-textarea {
+    min-height: 200px;
   }
 }
 
