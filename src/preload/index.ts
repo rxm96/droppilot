@@ -141,9 +141,16 @@ const api = {
   app: {
     windowControl: (action: "minimize" | "maximize" | "restore" | "close" | "hide-to-tray") =>
       ipcRenderer.invoke("app/windowControl", { action }),
+    getWindowState: () => ipcRenderer.invoke("app/getWindowState"),
     checkUpdates: () => ipcRenderer.invoke("app/checkUpdates"),
     downloadUpdate: () => ipcRenderer.invoke("app/downloadUpdate"),
     installUpdate: () => ipcRenderer.invoke("app/installUpdate"),
+    onWindowState: (handler: (payload: { maximized: boolean; fullscreen: boolean }) => void) => {
+      const listener = (_event: unknown, payload: { maximized: boolean; fullscreen: boolean }) =>
+        handler(payload);
+      ipcRenderer.on("app/windowState", listener);
+      return () => ipcRenderer.removeListener("app/windowState", listener);
+    },
     onUpdateStatus: (handler: (payload: { status: string; [key: string]: unknown }) => void) => {
       const listener = (_event: unknown, payload: { status: string; [key: string]: unknown }) =>
         handler(payload);

@@ -413,6 +413,18 @@ export function registerIpcHandlers(deps: {
     },
   );
 
+  ipcMain.handle("app/getWindowState", async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win) {
+      return { ok: false, message: "No window" };
+    }
+    return {
+      ok: true,
+      maximized: win.isMaximized(),
+      fullscreen: win.isFullScreen(),
+    };
+  });
+
   ipcMain.handle("app/checkUpdates", async () => {
     if (process.platform !== "win32" || !app.isPackaged) {
       return { ok: false, status: "unsupported" };

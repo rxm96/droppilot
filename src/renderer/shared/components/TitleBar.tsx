@@ -1,4 +1,4 @@
-import type { Dispatch, SetStateAction } from "react";
+import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { useI18n } from "@renderer/shared/i18n";
 import { cn } from "@renderer/shared/lib/utils";
 import type { ThemePreference } from "@renderer/shared/theme";
@@ -37,8 +37,44 @@ export function TitleBar({
   onInstallUpdate,
 }: Props) {
   const { t } = useI18n();
-  const handle = (action: WindowAction) => {
-    window.electronAPI.app.windowControl(action);
+  const [windowState, setWindowState] = useState({ maximized: false, fullscreen: false });
+
+  useEffect(() => {
+    let mounted = true;
+    const syncWindowState = async () => {
+      try {
+        const result = await window.electronAPI.app.getWindowState();
+        if (!mounted || !result?.ok) return;
+        setWindowState({
+          maximized: Boolean(result.maximized),
+          fullscreen: Boolean(result.fullscreen),
+        });
+      } catch {
+        // Best-effort sync; keep current state if the host cannot provide it.
+      }
+    };
+
+    void syncWindowState();
+    const unsubscribe = window.electronAPI.app.onWindowState((payload) => {
+      if (!mounted) return;
+      setWindowState({
+        maximized: Boolean(payload.maximized),
+        fullscreen: Boolean(payload.fullscreen),
+      });
+    });
+
+    return () => {
+      mounted = false;
+      unsubscribe?.();
+    };
+  }, []);
+
+  const handle = async (action: WindowAction) => {
+    try {
+      await window.electronAPI.app.windowControl(action);
+    } catch {
+      // Ignore host window-control failures; the native frame remains available.
+    }
   };
   const updateState = updateStatus?.state;
   const showUpdate =
@@ -49,14 +85,20 @@ export function TitleBar({
       : null;
   const updateLabel =
     updateState === "available"
-      ? t("titlebar.updateAvailable")
+      ? t("titlebar.updateDownload")
       : updateState === "downloading"
         ? t("titlebar.updateDownloading")
-        : t("titlebar.updateReady");
+        : t("titlebar.updateInstall");
   const updateTitle =
-    updateState === "available" && updateStatus?.version
-      ? `${t("titlebar.updateAvailable")} (${updateStatus.version})`
-      : updateLabel;
+    updateState === "available"
+      ? updateStatus?.version
+        ? `${t("titlebar.updateAvailable")} (${updateStatus.version})`
+        : t("titlebar.updateAvailable")
+      : updateState === "downloading"
+        ? updateProgress !== null
+          ? `${t("titlebar.updateDownloading")} ${updateProgress}%`
+          : t("titlebar.updateDownloading")
+        : t("titlebar.updateReady");
   const canDownloadUpdate = updateState === "available" && typeof onDownloadUpdate === "function";
   const canInstallUpdate = updateState === "downloaded" && typeof onInstallUpdate === "function";
   const updateAction = canDownloadUpdate
@@ -67,8 +109,14 @@ export function TitleBar({
   const disableUpdateAction = updateState === "downloading" || !updateAction;
   const themeLabelKey = theme === "light" ? "theme.light" : "theme.dark";
   const themeLabel = t(themeLabelKey);
-  const themeTitle = `${t("theme.toggle")}: ${themeLabel}`;
+  const themeTitle = `${t("titlebar.themeSwitch")}: ${themeLabel}`;
   const themeIcon = theme === "dark" ? "dark_mode" : "light_mode";
+  const isWindowExpanded = windowState.maximized || windowState.fullscreen;
+  const expandAction: WindowAction = isWindowExpanded ? "restore" : "maximize";
+  const expandLabel = isWindowExpanded ? t("titlebar.restore") : t("titlebar.maximize");
+  const expandIcon = isWindowExpanded ? "filter_none" : "crop_square";
+  const trayTitle = t("titlebar.tray");
+  const trayLabel = t("titlebar.trayShort");
   const cycleTheme = () => {
     setTheme((current) => (current === "light" ? "dark" : "light"));
   };
@@ -115,21 +163,22 @@ export function TitleBar({
         <button
           type="button"
           className="title-btn title-btn-pill"
-          onClick={() => handle("hide-to-tray")}
-          aria-label={t("titlebar.tray")}
-          title={t("titlebar.tray")}
+          onClick={() => void handle("hide-to-tray")}
+          aria-label={trayTitle}
+          title={trayTitle}
         >
           <span className="material-symbols-rounded" aria-hidden="true">
             arrow_downward
           </span>
-          <span className="titlebar-btn-text">{t("titlebar.tray")}</span>
+          <span className="titlebar-btn-text">{trayLabel}</span>
         </button>
         <div className="titlebar-controls">
           <button
             type="button"
             className="title-btn title-btn-icon"
-            onClick={() => handle("minimize")}
+            onClick={() => void handle("minimize")}
             aria-label={t("titlebar.minimize")}
+            title={t("titlebar.minimize")}
           >
             <span className="material-symbols-rounded" aria-hidden="true">
               remove
@@ -138,18 +187,20 @@ export function TitleBar({
           <button
             type="button"
             className="title-btn title-btn-icon"
-            onClick={() => handle("maximize")}
-            aria-label={t("titlebar.maximize")}
+            onClick={() => void handle(expandAction)}
+            aria-label={expandLabel}
+            title={expandLabel}
           >
             <span className="material-symbols-rounded" aria-hidden="true">
-              crop_square
+              {expandIcon}
             </span>
           </button>
           <button
             type="button"
             className="title-btn title-btn-icon title-btn-close"
-            onClick={() => handle("close")}
+            onClick={() => void handle("close")}
             aria-label={t("titlebar.close")}
+            title={t("titlebar.close")}
           >
             <span className="material-symbols-rounded" aria-hidden="true">
               close

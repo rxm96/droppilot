@@ -322,7 +322,7 @@ body {
 }
 
 .titlebar {
-  height: 44px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -339,6 +339,8 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .titlebar-title {
@@ -347,11 +349,16 @@ body {
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--titlebar-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .titlebar-version {
   font-size: 11px;
   color: var(--titlebar-muted);
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .titlebar-actions {
@@ -359,6 +366,7 @@ body {
   align-items: center;
   gap: 8px;
   -webkit-app-region: no-drag;
+  flex: 0 0 auto;
 }
 
 .titlebar-controls {
@@ -453,6 +461,85 @@ body {
 
 .titlebar-btn-text {
   white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .titlebar {
+    padding: 0 8px;
+  }
+
+  .titlebar-left {
+    gap: 6px;
+  }
+
+  .titlebar-actions {
+    gap: 6px;
+  }
+
+  .titlebar-controls {
+    gap: 2px;
+  }
+
+  .title-btn-pill {
+    padding: 0 8px;
+  }
+}
+
+@media (max-width: 620px) {
+  .titlebar {
+    min-height: 40px;
+    padding: 0 6px;
+  }
+
+  .titlebar-title {
+    letter-spacing: 0.16em;
+  }
+
+  .titlebar-version {
+    display: none;
+  }
+
+  .titlebar-actions {
+    gap: 4px;
+  }
+
+  .titlebar-controls {
+    padding: 1px;
+  }
+
+  .titlebar .title-btn-pill {
+    width: 28px;
+    min-width: 28px;
+    padding: 0;
+    gap: 0;
+  }
+
+  .titlebar .title-btn-pill .titlebar-btn-text {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .titlebar-title {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+  }
+
+  .title-btn,
+  .titlebar .title-btn-pill,
+  .title-btn-icon {
+    height: 26px;
+  }
+
+  .title-btn-icon,
+  .titlebar .title-btn-pill {
+    width: 26px;
+    min-width: 26px;
+  }
+
+  .material-symbols-rounded {
+    font-size: 16px;
+  }
 }
 
 /* --- Update Overlay --- */

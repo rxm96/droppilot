@@ -178,6 +178,20 @@ function createWindow(startHidden = false): BrowserWindow {
     });
   }
 
+  const emitWindowState = () => {
+    if (win.isDestroyed()) return;
+    win.webContents.send("app/windowState", {
+      maximized: win.isMaximized(),
+      fullscreen: win.isFullScreen(),
+    });
+  };
+
+  win.on("maximize", emitWindowState);
+  win.on("unmaximize", emitWindowState);
+  win.on("enter-full-screen", emitWindowState);
+  win.on("leave-full-screen", emitWindowState);
+  win.webContents.on("did-finish-load", emitWindowState);
+
   return win;
 }
 
