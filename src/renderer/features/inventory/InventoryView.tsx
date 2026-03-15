@@ -464,7 +464,7 @@ export function InventoryView({
         const showLinkAction = shouldShowLinkAction(campaign);
         const needsLink = shouldShowLinkRequired(campaign);
         const showAddPriorityAction = Boolean(trimmedGame) && !isPriority;
-        const showCampaignActions = showLinkAction || showAddPriorityAction || isPriority;
+        const showCampaignActions = showLinkAction || showAddPriorityAction;
         const statusChip = allClaimed
           ? {
               className: "pill ghost small success-chip",
@@ -695,36 +695,40 @@ export function InventoryView({
                   {sk.expanded ? (
                     <div className="campaign-inline-detail-shell is-open campaign-skeleton-detail-shell">
                       <div className="campaign-inline-detail">
-                        <div className="campaign-detail-stage campaign-skeleton-action-rail">
-                          <div className="campaign-detail-head">
-                            <div className="campaign-card-actions">
-                              <div className="skeleton-chip wide" />
-                              <div className="skeleton-chip wide" />
+                        <div className="campaign-action-rail-shell is-open">
+                          <div className="campaign-action-rail-body">
+                            <div className="campaign-detail-stage campaign-skeleton-action-rail">
+                              <div className="campaign-detail-head">
+                                <div className="campaign-card-actions">
+                                  <div className="skeleton-chip wide" />
+                                  <div className="skeleton-chip wide" />
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
                         <ul className="campaign-drop-list campaign-skeleton-drop-list">
-                          {Array.from({ length: sk.drops }).map((_, dropIdx) => (
-                            <li
-                              key={`${sk.key}-drop-${dropIdx}`}
-                              className="campaign-drop campaign-skeleton-drop"
-                            >
-                              <div className="campaign-drop-main">
-                                <div className="skeleton-line skeleton-thumb campaign-skeleton-drop-thumb" />
-                                <div className="campaign-drop-body skeleton-body">
-                                  <div className="skeleton-line short" />
+                            {Array.from({ length: sk.drops }).map((_, dropIdx) => (
+                              <li
+                                key={`${sk.key}-drop-${dropIdx}`}
+                                className="campaign-drop campaign-skeleton-drop"
+                              >
+                                <div className="campaign-drop-main">
+                                  <div className="skeleton-line skeleton-thumb campaign-skeleton-drop-thumb" />
+                                  <div className="campaign-drop-body skeleton-body">
+                                    <div className="skeleton-line short" />
+                                    <div className="skeleton-line tiny" />
+                                  </div>
+                                </div>
+                                <div className="campaign-drop-progress-column campaign-skeleton-drop-progress">
+                                  <div className="skeleton-line bar" />
                                   <div className="skeleton-line tiny" />
                                 </div>
-                              </div>
-                              <div className="campaign-drop-progress-column campaign-skeleton-drop-progress">
-                                <div className="skeleton-line bar" />
-                                <div className="skeleton-line tiny" />
-                              </div>
-                              <div className="campaign-drop-meta">
-                                <div className="skeleton-chip wide" />
-                              </div>
-                            </li>
-                          ))}
+                                <div className="campaign-drop-meta">
+                                  <div className="skeleton-chip wide" />
+                                </div>
+                              </li>
+                            ))}
                         </ul>
                       </div>
                     </div>
@@ -742,7 +746,7 @@ export function InventoryView({
           <ul className={`campaign-list campaign-ledger${campaignsEntering ? " is-entering" : ""}`}>
             {paginatedCampaignViews.map((view, index) => {
               const isSelected = selectedCampaign?.campaignKey === view.campaignKey;
-              const isLeading = selectedCampaign === null && index === 0;
+              const isLeading = index === 0;
               const collapsedMetaParts = [
                 `${view.campaignProgressPct}%`,
                 t("overview.openRewards", { count: view.campaignOpenDropCount }),
@@ -800,6 +804,9 @@ export function InventoryView({
                         {view.statusChip ? (
                           <span className={view.statusChip.className}>{view.statusChip.label}</span>
                         ) : null}
+                        {view.isPriority ? (
+                          <span className="pill ghost small">{view.addPriorityLabel}</span>
+                        ) : null}
                         <span className="meta campaign-card-toggle">
                           {isSelected
                             ? t("inventory.campaigns.closeDetails")
@@ -814,33 +821,32 @@ export function InventoryView({
                   >
                     <div className="campaign-inline-detail">
                       {view.showCampaignActions ? (
-                        <div className="campaign-detail-stage">
-                          <div className="campaign-detail-head">
-                            <div className="campaign-card-actions">
-                              {view.showLinkAction ? (
-                                <button
-                                  type="button"
-                                  className={`pill ghost small ${view.needsLink ? "danger-chip" : ""}`}
-                                  onClick={() =>
-                                    onOpenAccountLink(view.accountLinkUrl || undefined)
-                                  }
-                                  title={view.accountLinkUrl || undefined}
-                                >
-                                  {t("inventory.campaigns.linkRequiredAction")}
-                                </button>
-                              ) : null}
-                              {view.isPriority ? (
-                                <span className="pill ghost small">{view.addPriorityLabel}</span>
-                              ) : null}
-                              {view.showAddPriorityAction ? (
-                                <button
-                                  type="button"
-                                  className="pill ghost small campaign-card-action"
-                                  onClick={() => onAddPriorityGame(view.game.trim())}
-                                >
-                                  {view.addPriorityLabel}
-                                </button>
-                              ) : null}
+                        <div className={`campaign-action-rail-shell${isSelected ? " is-open" : ""}`}>
+                          <div className="campaign-action-rail-body">
+                            <div className="campaign-detail-stage">
+                              <div className="campaign-detail-head">
+                                <div className="campaign-card-actions">
+                                  {view.showLinkAction ? (
+                                    <button
+                                      type="button"
+                                      className={`pill ghost small ${view.needsLink ? "danger-chip" : ""}`}
+                                      onClick={() => onOpenAccountLink(view.accountLinkUrl || undefined)}
+                                      title={view.accountLinkUrl || undefined}
+                                    >
+                                      {t("inventory.campaigns.linkRequiredAction")}
+                                    </button>
+                                  ) : null}
+                                  {view.showAddPriorityAction ? (
+                                    <button
+                                      type="button"
+                                      className="pill ghost small campaign-card-action"
+                                      onClick={() => onAddPriorityGame(view.game.trim())}
+                                    >
+                                      {view.addPriorityLabel}
+                                    </button>
+                                  ) : null}
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -914,11 +920,9 @@ export function InventoryView({
                                       >
                                         {blockingReasonLabel}
                                       </div>
-                                    ) : (
+                                    ) : req > 0 ? null : (
                                       <div className="campaign-drop-subline meta">
-                                        {req > 0
-                                          ? `${earned}/${req} ${t("inventory.minutes")}`
-                                          : t("inventory.campaigns.noDrops")}
+                                        {t("inventory.campaigns.noDrops")}
                                       </div>
                                     )}
                                   </div>
