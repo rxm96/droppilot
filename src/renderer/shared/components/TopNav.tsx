@@ -23,6 +23,7 @@ export function TopNav({
 }: TopNavProps) {
   const { t } = useI18n();
   const isLinked = auth.status === "ok";
+  const isLoginPending = auth.status === "pending";
   const sessionDisplayName = profile.status === "ready" ? profile.displayName : "";
   const sessionAvatar = profile.status === "ready" ? profile.avatar : "";
   const sessionInitial = sessionDisplayName.trim().charAt(0).toUpperCase() || "U";
@@ -52,32 +53,37 @@ export function TopNav({
     settings: "settings",
     debug: "bug_report",
   };
+  const sessionStatusLabel = isLinked ? t("session.connected") : t("session.disconnected");
+  const loginActionLabel = isLoginPending ? t("session.login") : t("session.loginBrowser");
 
   return (
     <nav className="top-nav" aria-label={t("nav.title")}>
-      <div className="top-nav-tabs" role="tablist">
+      <div className="top-nav-tabs">
         {navItems.map((item) => {
           const active = view === item.key;
+          const itemDescription = `${item.label} · ${item.caption}`;
           return (
             <button
               key={item.key}
               type="button"
               className={cn("top-nav-tab", active && "active")}
               onClick={() => setView(item.key)}
+              aria-label={itemDescription}
               aria-current={active ? "page" : undefined}
+              title={itemDescription}
             >
               <span className="top-nav-icon material-symbols-rounded" aria-hidden="true">
                 {icons[item.key]}
               </span>
-              <span className="top-nav-copy">
-                <span className="top-nav-label">{item.label}</span>
-                <span className="top-nav-caption">{item.caption}</span>
-              </span>
+              <span className="top-nav-label">{item.label}</span>
             </button>
           );
         })}
       </div>
       <div className="top-nav-session">
+        <span className="sr-only" role="status" aria-live="polite">
+          {sessionStatusLabel}
+        </span>
         {isLinked && profile.status === "ready" ? (
           <div className="top-nav-identity inline-flex max-w-[220px] items-center gap-2 rounded-lg border border-border bg-background px-2 py-1">
             {sessionAvatar ? (
@@ -91,16 +97,13 @@ export function TopNav({
                 {sessionInitial}
               </span>
             )}
-            <span className="truncate text-sm font-medium text-foreground">
+            <span className="truncate text-sm font-medium text-foreground" title={sessionDisplayName}>
               {sessionDisplayName}
             </span>
           </div>
         ) : null}
-        <span className={cn("status-pill", isLinked ? "ok" : "warn")}>
-          {isLinked ? t("session.connected") : t("session.disconnected")}
-        </span>
         {isLinked ? (
-          <button type="button" className="top-nav-action ghost" onClick={logout}>
+          <button type="button" className="top-nav-action ghost" onClick={logout} aria-label={t("session.logout")}>
             {t("session.logout")}
           </button>
         ) : (
@@ -108,9 +111,11 @@ export function TopNav({
             type="button"
             className="top-nav-action"
             onClick={startLogin}
-            disabled={auth.status === "pending"}
+            disabled={isLoginPending}
+            aria-label={loginActionLabel}
+            aria-busy={isLoginPending || undefined}
           >
-            {auth.status === "pending" ? t("session.login") : t("session.loginBrowser")}
+            {loginActionLabel}
           </button>
         )}
       </div>
