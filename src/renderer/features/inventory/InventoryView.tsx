@@ -542,10 +542,9 @@ export function InventoryView({
             campaignRequiredMinutes > 0
               ? `${campaignProgressMinutes}/${campaignRequiredMinutes} ${t("inventory.minutes")}`
               : t("inventory.campaigns.noDrops"),
-          rewardSummary:
-            allClaimed
-              ? t("inventory.campaigns.allClaimed")
-              : t("overview.openRewards", { count: campaignOpenDropCount }),
+          rewardSummary: allClaimed
+            ? t("inventory.campaigns.allClaimed")
+            : t("overview.openRewards", { count: campaignOpenDropCount }),
           scheduleLabel: formatRange(campaign.startsAt, campaign.endsAt, t),
         };
       }),
@@ -706,7 +705,10 @@ export function InventoryView({
                         </div>
                         <ul className="campaign-drop-list campaign-skeleton-drop-list">
                           {Array.from({ length: sk.drops }).map((_, dropIdx) => (
-                            <li key={`${sk.key}-drop-${dropIdx}`} className="campaign-drop campaign-skeleton-drop">
+                            <li
+                              key={`${sk.key}-drop-${dropIdx}`}
+                              className="campaign-drop campaign-skeleton-drop"
+                            >
                               <div className="campaign-drop-main">
                                 <div className="skeleton-line skeleton-thumb campaign-skeleton-drop-thumb" />
                                 <div className="campaign-drop-body skeleton-body">
@@ -783,7 +785,9 @@ export function InventoryView({
                           <div className="meta">{view.scheduleLabel}</div>
                           {view.drops.length > 0 ? (
                             <>
-                              <div className="meta campaign-card-collapsed-meta">{collapsedMeta}</div>
+                              <div className="meta campaign-card-collapsed-meta">
+                                {collapsedMeta}
+                              </div>
                               <div className="campaign-card-progress-bar" aria-hidden="true">
                                 <span style={{ width: `${view.campaignProgressPct}%` }} />
                               </div>
@@ -817,7 +821,9 @@ export function InventoryView({
                                 <button
                                   type="button"
                                   className={`pill ghost small ${view.needsLink ? "danger-chip" : ""}`}
-                                  onClick={() => onOpenAccountLink(view.accountLinkUrl || undefined)}
+                                  onClick={() =>
+                                    onOpenAccountLink(view.accountLinkUrl || undefined)
+                                  }
                                   title={view.accountLinkUrl || undefined}
                                 >
                                   {t("inventory.campaigns.linkRequiredAction")}
@@ -884,7 +890,11 @@ export function InventoryView({
                               <li
                                 key={item.id}
                                 className={`campaign-drop${status === "claimed" ? " is-claimed" : ""}${status === "progress" ? " is-progress" : ""}${displayBlocked ? " is-blocked" : ""}`}
-                                style={{ "--drop-index": String(Math.min(8, index)) } as React.CSSProperties}
+                                style={
+                                  {
+                                    "--drop-index": String(Math.min(8, index)),
+                                  } as React.CSSProperties
+                                }
                               >
                                 <div className="campaign-drop-main">
                                   {dropImage ? (
@@ -898,7 +908,10 @@ export function InventoryView({
                                   <div className="campaign-drop-body">
                                     <div className="campaign-drop-title">{item.title}</div>
                                     {blockingReasonLabel ? (
-                                      <div className="campaign-drop-reason" title={blockingReasonLabel}>
+                                      <div
+                                        className="campaign-drop-reason"
+                                        title={blockingReasonLabel}
+                                      >
                                         {blockingReasonLabel}
                                       </div>
                                     ) : (
@@ -913,7 +926,10 @@ export function InventoryView({
                                 <div className="campaign-drop-progress-column">
                                   {req > 0 ? (
                                     <>
-                                      <div className="campaign-drop-progress-bar" aria-hidden="true">
+                                      <div
+                                        className="campaign-drop-progress-bar"
+                                        aria-hidden="true"
+                                      >
                                         <span style={{ width: `${dropProgressPct}%` }} />
                                       </div>
                                       <span className="meta">

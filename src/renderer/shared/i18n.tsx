@@ -114,7 +114,8 @@ const translations: Translations = {
     "inventory.campaigns.count": "{count}",
     "inventory.campaigns.loading": "Loading campaigns...",
     "inventory.campaigns.loadingLabel": "Campaigns are loading",
-    "inventory.campaigns.loadingHint": "Checking Twitch inventory, account links, and reward progress.",
+    "inventory.campaigns.loadingHint":
+      "Checking Twitch inventory, account links, and reward progress.",
     "inventory.campaigns.empty": "No active or upcoming campaigns.",
     "inventory.campaigns.emptyFilter": "No campaigns for this filter.",
     "inventory.campaigns.showDrops": "Show drops ({count})",
@@ -750,7 +751,8 @@ const translations: Translations = {
     "inventory.campaigns.count": "{count}",
     "inventory.campaigns.loading": "Kampagnen werden geladen...",
     "inventory.campaigns.loadingLabel": "Kampagnen werden geladen",
-    "inventory.campaigns.loadingHint": "Twitch-Inventar, Account-Verknüpfungen und Reward-Fortschritt werden geprüft.",
+    "inventory.campaigns.loadingHint":
+      "Twitch-Inventar, Account-Verknüpfungen und Reward-Fortschritt werden geprüft.",
     "inventory.campaigns.empty": "Keine aktiven oder bevorstehenden Kampagnen.",
     "inventory.campaigns.emptyFilter": "Keine Kampagnen für diesen Filter.",
     "inventory.campaigns.showDrops": "Drops anzeigen ({count})",
