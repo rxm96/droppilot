@@ -904,12 +904,14 @@ export function InventoryView({
                               >
                                 <div className="campaign-drop-main">
                                   {dropImage ? (
-                                    <img
-                                      className="campaign-drop-thumb"
-                                      src={dropImage}
-                                      alt=""
-                                      loading="lazy"
-                                    />
+                                    <div className="campaign-drop-thumb-frame">
+                                      <img
+                                        className="campaign-drop-thumb"
+                                        src={dropImage}
+                                        alt=""
+                                        loading="lazy"
+                                      />
+                                    </div>
                                   ) : null}
                                   <div className="campaign-drop-body">
                                     <div className="campaign-drop-title">{item.title}</div>
