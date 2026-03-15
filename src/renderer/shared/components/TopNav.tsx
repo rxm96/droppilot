@@ -65,19 +65,21 @@ export function TopNav({
               className={cn("top-nav-tab", active && "active")}
               onClick={() => setView(item.key)}
               aria-current={active ? "page" : undefined}
-              title={`${item.label} - ${item.caption}`}
             >
               <span className="top-nav-icon material-symbols-rounded" aria-hidden="true">
                 {icons[item.key]}
               </span>
-              <span className="top-nav-label">{item.label}</span>
+              <span className="top-nav-copy">
+                <span className="top-nav-label">{item.label}</span>
+                <span className="top-nav-caption">{item.caption}</span>
+              </span>
             </button>
           );
         })}
       </div>
       <div className="top-nav-session">
         {isLinked && profile.status === "ready" ? (
-          <div className="inline-flex max-w-[220px] items-center gap-2 rounded-lg border border-border bg-background px-2 py-1">
+          <div className="top-nav-identity inline-flex max-w-[220px] items-center gap-2 rounded-lg border border-border bg-background px-2 py-1">
             {sessionAvatar ? (
               <img
                 src={sessionAvatar}

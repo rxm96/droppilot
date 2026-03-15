@@ -359,14 +359,14 @@ export function OverviewView({
             </div>
 
             <div className="overview-now-grid">
-              <div className="overview-now-card">
+              <div className="overview-now-card overview-now-card-primary">
                 <span className="overview-card-k">{t("overview.currentDrop")}</span>
                 <strong className="overview-card-v">
                   {activeDropTitle?.trim() || t("overview.noActiveDrop")}
                 </strong>
                 <p className="meta">{activeDropMeta}</p>
               </div>
-              <div className="overview-now-card">
+              <div className="overview-now-card overview-now-card-state">
                 <span className="overview-card-k">{t("overview.watchState")}</span>
                 <strong className="overview-card-v">{watchState}</strong>
                 <p className="meta">
@@ -374,7 +374,7 @@ export function OverviewView({
                   {Math.max(0, Math.min(100, Math.round(targetProgress)))}%
                 </p>
               </div>
-              <div className="overview-now-card">
+              <div className="overview-now-card overview-now-card-sync">
                 <span className="overview-card-k">{t("overview.syncHealth")}</span>
                 <strong className="overview-card-v">{formatTime(lastWatchOk)}</strong>
                 <p className="meta">

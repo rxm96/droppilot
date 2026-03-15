@@ -239,7 +239,7 @@ export function PriorityView({
         <span className="priority-count">{countLabel}</span>
       </div>
       <div className="priority-summary-grid">
-        <section className="priority-summary-card">
+        <section className="priority-summary-card priority-summary-card-primary">
           <span className="label">{t("priorities.currentTarget")}</span>
           <strong className="priority-summary-value">
             {activeTargetGame || t("priorities.noneSelected")}
@@ -259,7 +259,7 @@ export function PriorityView({
           </strong>
           <p className="meta">{t("priorities.queueHealthHint")}</p>
         </section>
-        <section className="priority-summary-card">
+        <section className="priority-summary-card priority-summary-card-top">
           <span className="label">{t("priorities.topSlot")}</span>
           <strong className="priority-summary-value">
             {topGame || t("priorities.noneSelected")}

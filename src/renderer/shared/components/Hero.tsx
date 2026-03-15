@@ -171,16 +171,16 @@ export function Hero({
       ? t("hero.warmup", { game: warmupGame })
       : t("hero.warmupActive")
     : "";
+  const hasFlags = Boolean(warmupLabel || demoMode);
 
   return (
     <header className="hero-shell motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
-      <div className="hero-head">
-        <h1 className="hero-title">{t("hero.title")}</h1>
+      {hasFlags ? (
         <div className="hero-flags">
           {warmupLabel ? <span className="hero-badge warmup">{warmupLabel}</span> : null}
           {demoMode ? <span className="hero-badge demo">{t("hero.demoMode")}</span> : null}
         </div>
-      </div>
+      ) : null}
       <div className="hero-grid">
         <section className="hero-card hero-card-campaign motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
           <div className="hero-card-head">

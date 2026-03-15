@@ -4,7 +4,7 @@ import type {
   InventoryItem,
   InventoryState,
 } from "@renderer/shared/types";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatRange, categoryLabel, mapStatusLabel } from "@renderer/shared/utils";
 import { useI18n } from "@renderer/shared/i18n";
 import { resolveErrorMessage } from "@renderer/shared/utils/errors";
@@ -69,6 +69,8 @@ const pickDisplayBlockingReason = (
 const CAMPAIGN_PAGE_SIZE = 8;
 const CAMPAIGN_SKELETON = Array.from({ length: CAMPAIGN_PAGE_SIZE }, (_, idx) => ({
   key: `campaign-sk-${idx}`,
+  expanded: idx === 0,
+  drops: idx === 0 ? 4 : 0,
 }));
 
 type CampaignPhase = "expired" | "in-progress" | "upcoming" | "finished";
@@ -86,6 +88,43 @@ const getCampaignPhase = (campaign: CampaignSummary, now = Date.now()): Campaign
 type InventoryCampaignListEntry = {
   campaign: CampaignSummary;
   phase: CampaignPhase;
+};
+
+type InventoryCampaignView = {
+  campaign: CampaignSummary;
+  phase: CampaignPhase;
+  campaignKey: string;
+  name: string;
+  game: string;
+  imageUrl: string;
+  accountLinkUrl: string;
+  phaseLabel: string;
+  isPriority: boolean;
+  addPriorityLabel: string;
+  allClaimed: boolean;
+  needsLink: boolean;
+  showLinkAction: boolean;
+  showAddPriorityAction: boolean;
+  showCampaignActions: boolean;
+  statusChip: { className: string; label: string } | null;
+  drops: Array<{
+    id: string;
+    title: string;
+    requiredMinutes: number;
+    earnedMinutes: number;
+    status?: string;
+    imageUrl?: string;
+    blocked: boolean;
+    blockingReasonHints: string[];
+  }>;
+  campaignProgressMinutes: number;
+  campaignRequiredMinutes: number;
+  campaignProgressPct: number;
+  campaignOpenDropCount: number;
+  campaignBlockedDropCount: number;
+  progressLabel: string;
+  rewardSummary: string;
+  scheduleLabel: string;
 };
 
 type InventoryCampaignVisibilityOptions = {
@@ -204,7 +243,7 @@ export function InventoryView({
     inventory.status === "error"
       ? resolveErrorMessage(t, { code: inventory.code, message: inventory.message })
       : null;
-  const [expandedCampaigns, setExpandedCampaigns] = useState<Set<string>>(new Set());
+  const [selectedCampaignKey, setSelectedCampaignKey] = useState<string | null>(null);
   const inventoryItems = useMemo<InventoryItem[]>(
     () =>
       inventory.status === "ready"
@@ -214,103 +253,112 @@ export function InventoryView({
           : [],
     [inventory],
   );
-  const campaignLinkMap = useMemo(() => {
-    const map = new Map<
+  const { campaignLinkMap, campaignInventoryStats, inventoryByDropId } = useMemo(() => {
+    const linkMap = new Map<
       string,
       { anyTrue: boolean; anyFalse: boolean; anyAccountNotLinkedHint: boolean }
     >();
+    const inventoryStatsMap = new Map<string, { anyUnclaimed: boolean; anyClaimed: boolean }>();
+    const dropIdMap = new Map<string, InventoryItem>();
     for (const item of inventoryItems) {
+      if (item.id) {
+        dropIdMap.set(item.id, item);
+      }
       const campaignId = item.campaignId?.trim();
       if (!campaignId) continue;
-      const entry = map.get(campaignId) ?? {
+      const linkEntry = linkMap.get(campaignId) ?? {
         anyTrue: false,
         anyFalse: false,
         anyAccountNotLinkedHint: false,
       };
-      if (item.linked === true) entry.anyTrue = true;
-      if (item.linked === false) entry.anyFalse = true;
+      if (item.linked === true) linkEntry.anyTrue = true;
+      if (item.linked === false) linkEntry.anyFalse = true;
       if ((item.blockingReasonHints ?? []).some((reason) => reason === "account_not_linked")) {
-        entry.anyAccountNotLinkedHint = true;
+        linkEntry.anyAccountNotLinkedHint = true;
       }
-      map.set(campaignId, entry);
-    }
-    return map;
-  }, [inventoryItems]);
-  const campaignInventoryStats = useMemo(() => {
-    const map = new Map<string, { anyUnclaimed: boolean; anyClaimed: boolean }>();
-    for (const item of inventoryItems) {
-      const campaignId = item.campaignId?.trim();
-      if (!campaignId) continue;
-      const entry = map.get(campaignId) ?? {
+      linkMap.set(campaignId, linkEntry);
+
+      const inventoryEntry = inventoryStatsMap.get(campaignId) ?? {
         anyUnclaimed: false,
         anyClaimed: false,
       };
       const requiredMinutes = Math.max(0, Number(item.requiredMinutes) || 0);
       if (item.status === "claimed") {
-        entry.anyClaimed = true;
+        inventoryEntry.anyClaimed = true;
       } else if (requiredMinutes > 0) {
-        entry.anyUnclaimed = true;
+        inventoryEntry.anyUnclaimed = true;
       }
-      map.set(campaignId, entry);
+      inventoryStatsMap.set(campaignId, inventoryEntry);
     }
-    return map;
+    return {
+      campaignLinkMap: linkMap,
+      campaignInventoryStats: inventoryStatsMap,
+      inventoryByDropId: dropIdMap,
+    };
   }, [inventoryItems]);
-  const inventoryByDropId = useMemo(() => {
-    const map = new Map<string, InventoryItem>();
-    for (const item of inventoryItems) {
-      if (item.id) {
-        map.set(item.id, item);
+  const resolveAccountLinked = useCallback(
+    (campaign: CampaignSummary): boolean | undefined => {
+      const id = campaign.id?.trim();
+      if (id) {
+        const entry = campaignLinkMap.get(id);
+        if (entry?.anyTrue) return true;
+        if (entry?.anyFalse) return false;
       }
-    }
-    return map;
-  }, [inventoryItems]);
-  const resolveAccountLinked = (campaign: CampaignSummary): boolean | undefined => {
-    const id = campaign.id?.trim();
-    if (id) {
-      const entry = campaignLinkMap.get(id);
-      if (entry?.anyTrue) return true;
-      if (entry?.anyFalse) return false;
-    }
-    if (campaign.isAccountConnected === true) return true;
-    if (campaign.isAccountConnected === false) return false;
-    return undefined;
-  };
-  const resolveHasUnclaimedDrops = (campaign: CampaignSummary): boolean | undefined => {
-    const drops = Array.isArray(campaign.drops) ? campaign.drops : [];
-    let anyKnown = false;
-    let anyUnclaimed = false;
-    for (const drop of drops) {
-      const inv = inventoryByDropId.get(drop.id);
-      if (!inv) continue;
-      anyKnown = true;
-      const requiredMinutes = Math.max(0, Number(inv.requiredMinutes) || 0);
-      if (inv.status !== "claimed" && requiredMinutes > 0) {
-        anyUnclaimed = true;
-        break;
+      if (campaign.isAccountConnected === true) return true;
+      if (campaign.isAccountConnected === false) return false;
+      return undefined;
+    },
+    [campaignLinkMap],
+  );
+  const resolveHasUnclaimedDrops = useCallback(
+    (campaign: CampaignSummary): boolean | undefined => {
+      const drops = Array.isArray(campaign.drops) ? campaign.drops : [];
+      let anyKnown = false;
+      let anyUnclaimed = false;
+      for (const drop of drops) {
+        const inv = inventoryByDropId.get(drop.id);
+        if (!inv) continue;
+        anyKnown = true;
+        const requiredMinutes = Math.max(0, Number(inv.requiredMinutes) || 0);
+        if (inv.status !== "claimed" && requiredMinutes > 0) {
+          anyUnclaimed = true;
+          break;
+        }
       }
-    }
-    if (anyKnown) return anyUnclaimed;
-    const id = campaign.id?.trim();
-    if (id) {
-      const stats = campaignInventoryStats.get(id);
-      if (stats) return stats.anyUnclaimed;
-    }
-    return campaign.hasUnclaimedDrops;
-  };
-  const isCampaignUnlinked = (campaign: CampaignSummary): boolean =>
-    resolveAccountLinked(campaign) === false;
-  const hasAccountNotLinkedHint = (campaign: CampaignSummary): boolean => {
-    const id = campaign.id?.trim();
-    if (!id) return false;
-    return campaignLinkMap.get(id)?.anyAccountNotLinkedHint === true;
-  };
-  const shouldShowLinkAction = (campaign: CampaignSummary): boolean =>
-    isCampaignUnlinked(campaign) || hasAccountNotLinkedHint(campaign);
-  const shouldShowLinkRequired = (campaign: CampaignSummary): boolean =>
-    !allowUnlinkedGames && shouldShowLinkAction(campaign);
+      if (anyKnown) return anyUnclaimed;
+      const id = campaign.id?.trim();
+      if (id) {
+        const stats = campaignInventoryStats.get(id);
+        if (stats) return stats.anyUnclaimed;
+      }
+      return campaign.hasUnclaimedDrops;
+    },
+    [campaignInventoryStats, inventoryByDropId],
+  );
+  const isCampaignUnlinked = useCallback(
+    (campaign: CampaignSummary): boolean => resolveAccountLinked(campaign) === false,
+    [resolveAccountLinked],
+  );
+  const hasAccountNotLinkedHint = useCallback(
+    (campaign: CampaignSummary): boolean => {
+      const id = campaign.id?.trim();
+      if (!id) return false;
+      return campaignLinkMap.get(id)?.anyAccountNotLinkedHint === true;
+    },
+    [campaignLinkMap],
+  );
+  const shouldShowLinkAction = useCallback(
+    (campaign: CampaignSummary): boolean =>
+      isCampaignUnlinked(campaign) || hasAccountNotLinkedHint(campaign),
+    [hasAccountNotLinkedHint, isCampaignUnlinked],
+  );
+  const shouldShowLinkRequired = useCallback(
+    (campaign: CampaignSummary): boolean => !allowUnlinkedGames && shouldShowLinkAction(campaign),
+    [allowUnlinkedGames, shouldShowLinkAction],
+  );
   const priorityGameSet = useMemo(() => createPriorityGameSet(priorityGames), [priorityGames]);
   const normalizedFilter: FilterKey = filter === "excluded" ? "all" : filter;
-  const visibleCampaigns = (() => {
+  const visibleCampaigns = useMemo(() => {
     const now = Date.now();
     const withPhase = campaigns.map((campaign) => {
       const derivedHasUnclaimedDrops = resolveHasUnclaimedDrops(campaign);
@@ -344,25 +392,26 @@ export function InventoryView({
         if (aName !== bName) return aName.localeCompare(bName);
         return (a.campaign.game ?? "").localeCompare(b.campaign.game ?? "");
       });
-  })();
-  const hasUnlinkedCampaigns = visibleCampaigns.some(({ campaign }) =>
-    shouldShowLinkAction(campaign),
-  );
-  const unlinkedCampaignCount = visibleCampaigns.reduce(
-    (total, { campaign }) => (shouldShowLinkAction(campaign) ? total + 1 : total),
-    0,
-  );
-  const toggleCampaign = (key: string) => {
-    setExpandedCampaigns((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
+  }, [
+    campaigns,
+    gameFilter,
+    isCampaignUnlinked,
+    normalizedFilter,
+    priorityGameSet,
+    resolveHasUnclaimedDrops,
+  ]);
+  const { hasUnlinkedCampaigns, unlinkedCampaignCount } = useMemo(() => {
+    let count = 0;
+    for (const { campaign } of visibleCampaigns) {
+      if (shouldShowLinkAction(campaign)) {
+        count += 1;
       }
-      return next;
-    });
-  };
+    }
+    return {
+      hasUnlinkedCampaigns: count > 0,
+      unlinkedCampaignCount: count,
+    };
+  }, [shouldShowLinkAction, visibleCampaigns]);
   const isFiltered = normalizedFilter !== "all" || gameFilter !== "all";
   const campaignsEmptyText = isLinked
     ? isFiltered
@@ -394,6 +443,137 @@ export function InventoryView({
         currentCampaignPage * CAMPAIGN_PAGE_SIZE,
       ),
     [visibleCampaigns, currentCampaignPage],
+  );
+  const paginatedCampaignViews = useMemo<InventoryCampaignView[]>(
+    () =>
+      paginatedCampaigns.map(({ campaign, phase, derivedHasUnclaimedDrops }) => {
+        const name = campaign.name ?? campaign.game ?? t("inventory.campaigns.unknown");
+        const game = campaign.game ?? "";
+        const imageUrl = typeof campaign.imageUrl === "string" ? campaign.imageUrl.trim() : "";
+        const accountLinkUrl =
+          typeof campaign.accountLinkUrl === "string" ? campaign.accountLinkUrl.trim() : "";
+        const campaignKey = campaign.id ?? `${game}:${name}`;
+        const phaseLabel = categoryLabel(phase, (key) => t(key));
+        const campaignDrops = Array.isArray(campaign.drops) ? campaign.drops : [];
+        const trimmedGame = game.trim();
+        const isPriority = trimmedGame ? priorityGames.includes(trimmedGame) : false;
+        const addPriorityLabel = isPriority
+          ? t("inventory.campaigns.inPriority")
+          : t("inventory.campaigns.addPriority");
+        const allClaimed = derivedHasUnclaimedDrops === false;
+        const showLinkAction = shouldShowLinkAction(campaign);
+        const needsLink = shouldShowLinkRequired(campaign);
+        const showAddPriorityAction = Boolean(trimmedGame) && !isPriority;
+        const showCampaignActions = showLinkAction || showAddPriorityAction || isPriority;
+        const statusChip = allClaimed
+          ? {
+              className: "pill ghost small success-chip",
+              label: t("inventory.campaigns.allClaimed"),
+            }
+          : needsLink
+            ? {
+                className: "pill ghost small danger-chip",
+                label: t("inventory.campaigns.linkRequired"),
+              }
+            : null;
+        const drops = campaignDrops
+          .map((drop) => {
+            const inventoryDrop = inventoryByDropId.get(drop.id);
+            return {
+              id: drop.id,
+              title: drop.name ?? t("inventory.campaigns.dropFallback"),
+              requiredMinutes: Math.max(
+                0,
+                Number(inventoryDrop?.requiredMinutes ?? drop.requiredMinutes) || 0,
+              ),
+              earnedMinutes: (() => {
+                const raw = inventoryDrop?.earnedMinutes ?? drop.earnedMinutes ?? 0;
+                return Math.max(0, Number(raw) || 0);
+              })(),
+              status: inventoryDrop?.status ?? drop.status,
+              imageUrl: drop.imageUrl,
+              blocked:
+                inventoryDrop?.blocked === true ||
+                (inventoryDrop?.blockingReasonHints?.length ?? 0) > 0,
+              blockingReasonHints: Array.isArray(inventoryDrop?.blockingReasonHints)
+                ? inventoryDrop.blockingReasonHints
+                : [],
+            };
+          })
+          .sort(compareCampaignDropsByDuration);
+        const campaignProgressMinutes = drops.reduce(
+          (total, item) => total + Math.max(0, Number(item.earnedMinutes) || 0),
+          0,
+        );
+        const campaignRequiredMinutes = drops.reduce(
+          (total, item) => total + Math.max(0, Number(item.requiredMinutes) || 0),
+          0,
+        );
+        const campaignProgressPct =
+          campaignRequiredMinutes > 0
+            ? Math.min(100, Math.round((campaignProgressMinutes / campaignRequiredMinutes) * 100))
+            : 0;
+        const campaignOpenDropCount = drops.filter((item) => item.status !== "claimed").length;
+        const campaignBlockedDropCount = drops.filter((item) => item.blocked).length;
+        return {
+          campaign,
+          phase,
+          campaignKey,
+          name,
+          game,
+          imageUrl,
+          accountLinkUrl,
+          phaseLabel,
+          isPriority,
+          addPriorityLabel,
+          allClaimed,
+          needsLink,
+          showLinkAction,
+          showAddPriorityAction,
+          showCampaignActions,
+          statusChip,
+          drops,
+          campaignProgressMinutes,
+          campaignRequiredMinutes,
+          campaignProgressPct,
+          campaignOpenDropCount,
+          campaignBlockedDropCount,
+          progressLabel:
+            campaignRequiredMinutes > 0
+              ? `${campaignProgressMinutes}/${campaignRequiredMinutes} ${t("inventory.minutes")}`
+              : t("inventory.campaigns.noDrops"),
+          rewardSummary:
+            allClaimed
+              ? t("inventory.campaigns.allClaimed")
+              : t("overview.openRewards", { count: campaignOpenDropCount }),
+          scheduleLabel: formatRange(campaign.startsAt, campaign.endsAt, t),
+        };
+      }),
+    [
+      inventoryByDropId,
+      paginatedCampaigns,
+      priorityGames,
+      shouldShowLinkAction,
+      shouldShowLinkRequired,
+      t,
+    ],
+  );
+
+  useEffect(() => {
+    if (paginatedCampaignViews.length === 0) {
+      setSelectedCampaignKey(null);
+      return;
+    }
+    setSelectedCampaignKey((prev) => {
+      if (prev === null) return null;
+      if (prev && paginatedCampaignViews.some((item) => item.campaignKey === prev)) return prev;
+      return null;
+    });
+  }, [paginatedCampaignViews]);
+
+  const selectedCampaign = useMemo(
+    () => paginatedCampaignViews.find((item) => item.campaignKey === selectedCampaignKey) ?? null,
+    [paginatedCampaignViews, selectedCampaignKey],
   );
 
   return (
@@ -479,164 +659,191 @@ export function InventoryView({
           </div>
         </div>
         {showCampaignSkeleton && (
-          <>
-            <span className="sr-only" role="status">
-              {t("inventory.loading")}
-            </span>
+          <div className="inventory-loading-state" role="status" aria-live="polite">
+            <div className="inventory-loading-band">
+              <span className="inventory-loading-band-dot" aria-hidden="true" />
+              <div className="inventory-loading-band-copy">
+                <strong>{t("inventory.campaigns.loadingLabel")}</strong>
+                <span>{t("inventory.campaigns.loadingHint")}</span>
+              </div>
+              <div className="inventory-loading-band-rail" aria-hidden="true">
+                <span />
+              </div>
+            </div>
+            <span className="sr-only">{t("inventory.loading")}</span>
             <ul className="campaign-list campaign-list-skeleton" aria-hidden="true">
               {CAMPAIGN_SKELETON.map((sk) => (
                 <li key={sk.key} className="campaign-card skeleton-card">
-                  <div className="campaign-card-top">
-                    <div className="campaign-card-main">
-                      <div className="skeleton-line skeleton-thumb" />
-                      <div className="campaign-card-body skeleton-body">
-                        <div className="skeleton-line tiny" />
-                        <div className="skeleton-line medium" />
-                        <div className="skeleton-line short" />
+                  <div className="campaign-card-select campaign-skeleton-row">
+                    <div className="campaign-card-top">
+                      <div className="campaign-card-main">
+                        <div className="skeleton-line skeleton-thumb campaign-skeleton-thumb" />
+                        <div className="campaign-card-body skeleton-body campaign-skeleton-body">
+                          <div className="skeleton-line tiny" />
+                          <div className="skeleton-line medium" />
+                          <div className="skeleton-line short" />
+                          <div className="skeleton-line medium campaign-skeleton-meta-line" />
+                          <div className="skeleton-line bar campaign-skeleton-progress-line" />
+                        </div>
+                      </div>
+                      <div className="campaign-card-meta campaign-skeleton-meta">
+                        <div className="skeleton-chip small" />
+                        <div className="skeleton-chip small" />
+                        <div className="skeleton-chip wide" />
                       </div>
                     </div>
-                    <div className="campaign-card-meta">
-                      <div className="skeleton-chip small" />
-                      <div className="skeleton-chip wide" />
-                    </div>
                   </div>
+                  {sk.expanded ? (
+                    <div className="campaign-inline-detail-shell is-open campaign-skeleton-detail-shell">
+                      <div className="campaign-inline-detail">
+                        <div className="campaign-detail-stage campaign-skeleton-action-rail">
+                          <div className="campaign-detail-head">
+                            <div className="campaign-card-actions">
+                              <div className="skeleton-chip wide" />
+                              <div className="skeleton-chip wide" />
+                            </div>
+                          </div>
+                        </div>
+                        <ul className="campaign-drop-list campaign-skeleton-drop-list">
+                          {Array.from({ length: sk.drops }).map((_, dropIdx) => (
+                            <li key={`${sk.key}-drop-${dropIdx}`} className="campaign-drop campaign-skeleton-drop">
+                              <div className="campaign-drop-main">
+                                <div className="skeleton-line skeleton-thumb campaign-skeleton-drop-thumb" />
+                                <div className="campaign-drop-body skeleton-body">
+                                  <div className="skeleton-line short" />
+                                  <div className="skeleton-line tiny" />
+                                </div>
+                              </div>
+                              <div className="campaign-drop-progress-column campaign-skeleton-drop-progress">
+                                <div className="skeleton-line bar" />
+                                <div className="skeleton-line tiny" />
+                              </div>
+                              <div className="campaign-drop-meta">
+                                <div className="skeleton-chip wide" />
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  ) : null}
                 </li>
               ))}
             </ul>
-          </>
+          </div>
         )}
         {!showCampaignSkeleton &&
           !campaignsLoading &&
           !isInventoryError &&
           visibleCampaigns.length === 0 && <p className="meta">{campaignsEmptyText}</p>}
         {!showCampaignSkeleton && visibleCampaigns.length > 0 && (
-          <ul className={`campaign-list${campaignsEntering ? " is-entering" : ""}`}>
-            {paginatedCampaigns.map(({ campaign, phase, derivedHasUnclaimedDrops }) => {
-              const name = campaign.name ?? campaign.game ?? t("inventory.campaigns.unknown");
-              const game = campaign.game ?? "";
-              const imageUrl =
-                typeof campaign.imageUrl === "string" ? campaign.imageUrl.trim() : "";
-              const accountLinkUrl =
-                typeof campaign.accountLinkUrl === "string" ? campaign.accountLinkUrl.trim() : "";
-              const campaignKey = campaign.id ?? `${game}:${name}`;
-              const phaseLabel = categoryLabel(phase, (key) => t(key));
-              const campaignDrops = Array.isArray(campaign.drops) ? campaign.drops : [];
-              const trimmedGame = game.trim();
-              const isPriority = trimmedGame ? priorityGames.includes(trimmedGame) : false;
-              const addPriorityLabel = isPriority
-                ? t("inventory.campaigns.inPriority")
-                : t("inventory.campaigns.addPriority");
-              const allClaimed = derivedHasUnclaimedDrops === false;
-              const showLinkAction = shouldShowLinkAction(campaign);
-              const needsLink = shouldShowLinkRequired(campaign);
-              const showAddPriorityAction = Boolean(trimmedGame) && !isPriority;
-              const showCampaignActions = showLinkAction || showAddPriorityAction || isPriority;
-              const statusChip = allClaimed
-                ? {
-                    className: "pill ghost small success-chip",
-                    label: t("inventory.campaigns.allClaimed"),
-                  }
-                : needsLink
-                  ? {
-                      className: "pill ghost small danger-chip",
-                      label: t("inventory.campaigns.linkRequired"),
-                    }
-                  : null;
-              const drops = campaignDrops
-                .map((drop) => {
-                  const inventoryDrop = inventoryByDropId.get(drop.id);
-                  return {
-                    id: drop.id,
-                    title: drop.name ?? t("inventory.campaigns.dropFallback"),
-                    requiredMinutes: Math.max(
-                      0,
-                      Number(inventoryDrop?.requiredMinutes ?? drop.requiredMinutes) || 0,
-                    ),
-                    earnedMinutes: (() => {
-                      const raw = inventoryDrop?.earnedMinutes ?? drop.earnedMinutes ?? 0;
-                      const value = Math.max(0, Number(raw) || 0);
-                      return value;
-                    })(),
-                    status: inventoryDrop?.status ?? drop.status,
-                    imageUrl: drop.imageUrl,
-                    blocked:
-                      inventoryDrop?.blocked === true ||
-                      (inventoryDrop?.blockingReasonHints?.length ?? 0) > 0,
-                    blockingReasonHints: Array.isArray(inventoryDrop?.blockingReasonHints)
-                      ? inventoryDrop.blockingReasonHints
-                      : [],
-                  };
-                })
-                .sort(compareCampaignDropsByDuration);
-              const isExpanded = expandedCampaigns.has(campaignKey);
-              const expandLabel = isExpanded
-                ? t("inventory.campaigns.hideDrops")
-                : t("inventory.campaigns.showDrops", { count: drops.length });
+          <ul className={`campaign-list campaign-ledger${campaignsEntering ? " is-entering" : ""}`}>
+            {paginatedCampaignViews.map((view, index) => {
+              const isSelected = selectedCampaign?.campaignKey === view.campaignKey;
+              const isLeading = selectedCampaign === null && index === 0;
+              const collapsedMetaParts = [
+                `${view.campaignProgressPct}%`,
+                t("overview.openRewards", { count: view.campaignOpenDropCount }),
+              ];
+              if (view.campaignBlockedDropCount > 0) {
+                collapsedMetaParts.push(`${t("hero.opsBlocked")} ${view.campaignBlockedDropCount}`);
+              }
+              const collapsedMeta = collapsedMetaParts.join(" / ");
               return (
-                <li key={campaignKey} className={`campaign-card ${phase}`}>
-                  <div className="campaign-card-top">
-                    <div className="campaign-card-main">
-                      {imageUrl ? (
-                        <img className="campaign-card-thumb" src={imageUrl} alt="" loading="lazy" />
-                      ) : null}
-                      <div className="campaign-card-body">
-                        <div className="campaign-card-heading">
-                          {game ? <div className="meta">{game}</div> : null}
-                          <div className="campaign-card-title">{name}</div>
-                        </div>
-                        <div className="meta">
-                          {formatRange(campaign.startsAt, campaign.endsAt, t)}
+                <li
+                  key={view.campaignKey}
+                  className={`campaign-card ${view.phase}${isSelected ? " is-selected" : ""}${isLeading ? " is-leading" : ""}`}
+                >
+                  <button
+                    type="button"
+                    className="campaign-card-select"
+                    aria-pressed={isSelected}
+                    aria-expanded={isSelected}
+                    onClick={() =>
+                      setSelectedCampaignKey((current) =>
+                        current === view.campaignKey ? null : view.campaignKey,
+                      )
+                    }
+                  >
+                    <div className="campaign-card-top">
+                      <div className="campaign-card-main">
+                        {view.imageUrl ? (
+                          <img
+                            className="campaign-card-thumb"
+                            src={view.imageUrl}
+                            alt=""
+                            loading="lazy"
+                          />
+                        ) : null}
+                        <div className="campaign-card-body">
+                          <div className="campaign-card-heading">
+                            {view.game ? <div className="meta">{view.game}</div> : null}
+                            <div className="campaign-card-title">{view.name}</div>
+                          </div>
+                          <div className="meta">{view.scheduleLabel}</div>
+                          {view.drops.length > 0 ? (
+                            <>
+                              <div className="meta campaign-card-collapsed-meta">{collapsedMeta}</div>
+                              <div className="campaign-card-progress-bar" aria-hidden="true">
+                                <span style={{ width: `${view.campaignProgressPct}%` }} />
+                              </div>
+                            </>
+                          ) : null}
                         </div>
                       </div>
+                      <div className="campaign-card-meta">
+                        <span className="pill ghost small">{view.phaseLabel}</span>
+                        {view.statusChip ? (
+                          <span className={view.statusChip.className}>{view.statusChip.label}</span>
+                        ) : null}
+                        <span className="meta campaign-card-toggle">
+                          {isSelected
+                            ? t("inventory.campaigns.closeDetails")
+                            : t("inventory.campaigns.openDetails")}
+                        </span>
+                      </div>
                     </div>
-                    <div className="campaign-card-meta">
-                      <span className="pill ghost small">{phaseLabel}</span>
-                      {statusChip ? (
-                        <span className={statusChip.className}>{statusChip.label}</span>
-                      ) : null}
-                      <button
-                        type="button"
-                        className="pill ghost small campaign-card-toggle"
-                        aria-expanded={isExpanded}
-                        onClick={() => toggleCampaign(campaignKey)}
-                      >
-                        {expandLabel}
-                      </button>
-                    </div>
-                  </div>
-                  {isExpanded && (
-                    <div className="campaign-card-drops">
-                      {showCampaignActions ? (
-                        <div className="campaign-card-actions">
-                          {showLinkAction ? (
-                            <button
-                              type="button"
-                              className={`pill ghost small ${needsLink ? "danger-chip" : ""}`}
-                              onClick={() => onOpenAccountLink(accountLinkUrl || undefined)}
-                              title={accountLinkUrl || undefined}
-                            >
-                              {t("inventory.campaigns.linkRequiredAction")}
-                            </button>
-                          ) : null}
-                          {isPriority ? (
-                            <span className="pill ghost small">{addPriorityLabel}</span>
-                          ) : null}
-                          {showAddPriorityAction ? (
-                            <button
-                              type="button"
-                              className="pill ghost small campaign-card-action"
-                              onClick={() => onAddPriorityGame(trimmedGame)}
-                            >
-                              {addPriorityLabel}
-                            </button>
-                          ) : null}
+                  </button>
+                  <div
+                    className={`campaign-inline-detail-shell${isSelected ? " is-open" : ""}`}
+                    aria-hidden={!isSelected}
+                  >
+                    <div className="campaign-inline-detail">
+                      {view.showCampaignActions ? (
+                        <div className="campaign-detail-stage">
+                          <div className="campaign-detail-head">
+                            <div className="campaign-card-actions">
+                              {view.showLinkAction ? (
+                                <button
+                                  type="button"
+                                  className={`pill ghost small ${view.needsLink ? "danger-chip" : ""}`}
+                                  onClick={() => onOpenAccountLink(view.accountLinkUrl || undefined)}
+                                  title={view.accountLinkUrl || undefined}
+                                >
+                                  {t("inventory.campaigns.linkRequiredAction")}
+                                </button>
+                              ) : null}
+                              {view.isPriority ? (
+                                <span className="pill ghost small">{view.addPriorityLabel}</span>
+                              ) : null}
+                              {view.showAddPriorityAction ? (
+                                <button
+                                  type="button"
+                                  className="pill ghost small campaign-card-action"
+                                  onClick={() => onAddPriorityGame(view.game.trim())}
+                                >
+                                  {view.addPriorityLabel}
+                                </button>
+                              ) : null}
+                            </div>
+                          </div>
                         </div>
                       ) : null}
-                      {drops.length === 0 ? (
+                      {view.drops.length === 0 ? (
                         <p className="meta">{t("inventory.campaigns.noDrops")}</p>
                       ) : (
                         <ul className="campaign-drop-list">
-                          {drops.map((item) => {
+                          {view.drops.map((item, index) => {
                             const req = Math.max(0, Number(item.requiredMinutes) || 0);
                             let earned = Math.max(0, Number(item.earnedMinutes) || 0);
                             let status = item.status;
@@ -657,13 +864,15 @@ export function InventoryView({
                             }
                             const displayBlockingReason = pickDisplayBlockingReason(
                               item.blockingReasonHints,
-                              needsLink,
+                              view.needsLink,
                             );
                             const blockingReasonLabel =
                               item.blocked && displayBlockingReason
                                 ? formatBlockingReason(displayBlockingReason, t)
                                 : null;
                             const displayBlocked = item.blocked && !!displayBlockingReason;
+                            const dropProgressPct =
+                              req > 0 ? Math.min(100, Math.round((earned / req) * 100)) : 0;
                             const statusLabel = status
                               ? status === "progress" && displayBlocked
                                 ? t("inventory.status.progressBlocked")
@@ -672,7 +881,11 @@ export function InventoryView({
                             const dropImage =
                               typeof item.imageUrl === "string" ? item.imageUrl.trim() : "";
                             return (
-                              <li key={item.id} className="campaign-drop">
+                              <li
+                                key={item.id}
+                                className={`campaign-drop${status === "claimed" ? " is-claimed" : ""}${status === "progress" ? " is-progress" : ""}${displayBlocked ? " is-blocked" : ""}`}
+                                style={{ "--drop-index": String(Math.min(8, index)) } as React.CSSProperties}
+                              >
                                 <div className="campaign-drop-main">
                                   {dropImage ? (
                                     <img
@@ -685,24 +898,36 @@ export function InventoryView({
                                   <div className="campaign-drop-body">
                                     <div className="campaign-drop-title">{item.title}</div>
                                     {blockingReasonLabel ? (
-                                      <div
-                                        className="campaign-drop-reason"
-                                        title={blockingReasonLabel}
-                                      >
+                                      <div className="campaign-drop-reason" title={blockingReasonLabel}>
                                         {blockingReasonLabel}
                                       </div>
-                                    ) : null}
+                                    ) : (
+                                      <div className="campaign-drop-subline meta">
+                                        {req > 0
+                                          ? `${earned}/${req} ${t("inventory.minutes")}`
+                                          : t("inventory.campaigns.noDrops")}
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
-                                <div className="campaign-drop-meta">
+                                <div className="campaign-drop-progress-column">
                                   {req > 0 ? (
-                                    <span className="meta">
-                                      {earned}/{req} {t("inventory.minutes")}
-                                    </span>
-                                  ) : null}
+                                    <>
+                                      <div className="campaign-drop-progress-bar" aria-hidden="true">
+                                        <span style={{ width: `${dropProgressPct}%` }} />
+                                      </div>
+                                      <span className="meta">
+                                        {earned}/{req} {t("inventory.minutes")}
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span className="meta">-</span>
+                                  )}
+                                </div>
+                                <div className="campaign-drop-meta">
                                   {statusLabel ? (
                                     <span
-                                      className={`pill ghost small ${status === "progress" && displayBlocked ? "danger-chip" : ""}`}
+                                      className={`pill ghost small campaign-drop-status-pill ${status === "progress" && displayBlocked ? "danger-chip" : ""}`}
                                       title={blockingReasonLabel ?? undefined}
                                     >
                                       {statusLabel}
@@ -715,7 +940,7 @@ export function InventoryView({
                         </ul>
                       )}
                     </div>
-                  )}
+                  </div>
                 </li>
               );
             })}
