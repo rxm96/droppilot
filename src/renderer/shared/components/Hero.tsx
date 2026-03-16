@@ -1,5 +1,6 @@
 import { useI18n } from "@renderer/shared/i18n";
-import { useEffect, useMemo, useState } from "react";
+import type { CSSProperties } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useInterval } from "@renderer/shared/hooks/useInterval";
 
 type WatchEngineDecision =
@@ -15,6 +16,8 @@ type WatchEngineDecision =
   | "idle-ready"
   | "idle-no-watchable-drops";
 
+type HeroSummaryTone = "quiet" | "base" | "signal" | "warn";
+
 const RAIL_STAGES = [
   { key: "standby", labelKey: "hero.engineRailStage.standby" },
   { key: "scan", labelKey: "hero.engineRailStage.scan" },
@@ -25,17 +28,37 @@ const RAIL_STAGES = [
 
 type RailStageKey = (typeof RAIL_STAGES)[number]["key"];
 
-const formatHeroRemaining = (seconds: number): string => {
+const getHeroLocale = (language: string) => (language === "de" ? "de-DE" : "en-US");
+
+const getCharacterCount = (text: string): number => Array.from(text.trim()).length;
+
+export const shouldCompactCurrentDropTitle = (text: string): boolean => {
+  const normalized = text.trim();
+  if (!normalized) return false;
+  if (getCharacterCount(normalized) >= 28) return true;
+  return normalized.split(/\s+/).some((part) => getCharacterCount(part) >= 18);
+};
+
+const formatHeroRemaining = (
+  seconds: number,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): string => {
   const safeSeconds = Math.max(0, Math.floor(seconds));
-  if (safeSeconds < 60) return `${safeSeconds}s`;
+  if (safeSeconds < 60) return t("hero.time.seconds", { seconds: safeSeconds });
   if (safeSeconds < 3600) {
     const minutes = Math.floor(safeSeconds / 60);
-    const secs = safeSeconds % 60;
-    return `${minutes}m ${secs.toString().padStart(2, "0")}s`;
+    const remainingSeconds = safeSeconds % 60;
+    return t("hero.time.minutesSeconds", {
+      minutes,
+      seconds: remainingSeconds.toString().padStart(2, "0"),
+    });
   }
   const hours = Math.floor(safeSeconds / 3600);
   const minutes = Math.floor((safeSeconds % 3600) / 60);
-  return `${hours}h ${minutes.toString().padStart(2, "0")}m`;
+  return t("hero.time.hoursMinutes", {
+    hours,
+    minutes: minutes.toString().padStart(2, "0"),
+  });
 };
 
 const fallbackDecision = (
@@ -67,6 +90,17 @@ const mapDecisionToRailStage = (decision: WatchEngineDecision): RailStageKey => 
       return "hold";
     default:
       return "standby";
+  }
+};
+
+const getRailStatusKey = (decision: WatchEngineDecision, railStage: RailStageKey): string => {
+  switch (decision) {
+    case "no-target":
+      return "hero.engineRailStatus.noTarget";
+    case "idle-no-watchable-drops":
+      return "hero.engineRailStatus.noDrops";
+    default:
+      return `hero.engineRailStatus.${railStage}`;
   }
 };
 
@@ -107,13 +141,17 @@ export function Hero({
   warmupActive,
   warmupGame,
 }: HeroProps) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [nowTick, setNowTick] = useState(() => Date.now());
+  const campaignHeadingId = useId();
+  const opsHeadingId = useId();
+  const progressLabelId = useId();
+  const progressValueId = useId();
+  const engineTitleId = useId();
+  const engineStatusId = useId();
+  const engineSummaryId = useId();
 
-  const dropProgress =
-    typeof dropsTotal === "number" && typeof dropsClaimed === "number"
-      ? `${dropsClaimed}/${dropsTotal}`
-      : "--";
+  const hasTarget = Boolean(activeGame?.trim());
 
   const progressPctValue =
     typeof targetProgress === "number" && Number.isFinite(targetProgress)
@@ -134,10 +172,28 @@ export function Hero({
     [resolvedDecision],
   );
   const activeRailIndex = RAIL_STAGES.findIndex((stage) => stage.key === activeRailStage);
-  const railStatusKey = `hero.engineRailStatus.${activeRailStage}`;
+  const activeRailStep = activeRailIndex >= 0 ? activeRailIndex + 1 : 1;
+  const railStatusKey = getRailStatusKey(resolvedDecision, activeRailStage);
   const railStatusText = t(railStatusKey);
+  const railLiveText = t("hero.engineRailLive", { status: railStatusText });
+  const railStagesText = RAIL_STAGES.map((stage) => t(stage.labelKey)).join(", ");
+  const railSummaryText = t("hero.engineRailSummary", {
+    current: activeRailStep,
+    total: RAIL_STAGES.length,
+    status: railStatusText,
+    stages: railStagesText,
+  });
   const hasActiveEta = typeof activeDropEta === "number" && Number.isFinite(activeDropEta);
   const shouldTickRemaining = hasUpdatePulse && hasActiveEta;
+  const timeFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(getHeroLocale(language), {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      }),
+    [language],
+  );
   useEffect(() => {
     if (shouldTickRemaining) setNowTick(Date.now());
   }, [shouldTickRemaining, activeDropEta]);
@@ -148,30 +204,97 @@ export function Hero({
       : typeof activeDropRemainingMinutes === "number"
         ? Math.max(0, Math.ceil(activeDropRemainingMinutes * 60))
         : null;
-  const activeDropTitleText = activeDropTitle?.trim()
-    ? activeDropTitle
-    : activeGame && dropsOpen === 0
-      ? t("control.allDone")
-      : activeGame
-        ? t("hero.opsNoActiveDrop")
-        : t("hero.noTarget");
+  const hasLiveDropTitle = Boolean(activeDropTitle?.trim());
+  const isAllDone = Boolean(hasTarget && dropsOpen === 0);
+  const activeDropTitleText = hasLiveDropTitle
+    ? activeDropTitle.trim()
+    : !hasTarget
+      ? t("hero.opsNoTargetSelected")
+      : isAllDone
+        ? t("control.allDone")
+        : t("hero.opsWaitingTitle");
+  const useCompactCurrentDropTitle = hasLiveDropTitle && shouldCompactCurrentDropTitle(activeDropTitleText);
+  const currentDropClassName = [
+    "hero-current-drop",
+    hasTarget ? "" : "is-empty",
+    isAllDone ? "is-complete" : "",
+    useCompactCurrentDropTitle ? "is-compact-title" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const progressFillStyle =
+    progressPctValue === null
+      ? undefined
+      : ({ "--hero-progress-scale": String(progressPctValue / 100) } as CSSProperties);
+  const progressAriaText =
+    progressPctValue === null
+      ? t("hero.targetProgressUnknown")
+      : t("hero.targetProgressValue", { value: progressPctValue });
   const activeDropRemainingText =
     activeDropRemainingSeconds !== null
       ? t("control.rest", {
-          time: formatHeroRemaining(activeDropRemainingSeconds),
+          time: formatHeroRemaining(activeDropRemainingSeconds, t),
         })
-      : "--";
-  const activeDropEtaText = hasActiveEta ? new Date(activeDropEta).toLocaleTimeString() : null;
+      : null;
+  const activeDropEtaText = hasActiveEta ? timeFormatter.format(new Date(activeDropEta)) : null;
+  const activeDropEtaIso = hasActiveEta ? new Date(activeDropEta).toISOString() : null;
   const inventorySyncText = inventoryFetchedAt
-    ? new Date(inventoryFetchedAt).toLocaleTimeString()
+    ? timeFormatter.format(new Date(inventoryFetchedAt))
     : "--";
-  const lastPingText = lastWatchOk ? new Date(lastWatchOk).toLocaleTimeString() : "--";
+  const inventoryFetchedAtIso = inventoryFetchedAt
+    ? new Date(inventoryFetchedAt).toISOString()
+    : null;
+  const lastPingText = lastWatchOk ? timeFormatter.format(new Date(lastWatchOk)) : "--";
+  const lastWatchOkIso = lastWatchOk ? new Date(lastWatchOk).toISOString() : null;
   const warmupLabel = warmupActive
     ? warmupGame
       ? t("hero.warmup", { game: warmupGame })
       : t("hero.warmupActive")
     : "";
   const hasFlags = Boolean(warmupLabel || demoMode);
+  const campaignNoteText = hasTarget ? null : t("hero.activeCampaignHint");
+  const currentDropNoteText = !hasTarget
+    ? t("hero.noTargetHint")
+    : isAllDone
+      ? t("hero.opsDoneHint")
+      : !hasLiveDropTitle
+        ? t("hero.opsWaitingHint")
+        : null;
+  const opsSummaryRows: Array<{
+    key: string;
+    label: string;
+    value: string;
+    tone: HeroSummaryTone;
+  }> = hasTarget
+    ? [
+        ...(typeof dropsBlocked === "number" && dropsBlocked > 0
+          ? [
+              {
+                key: "blocked",
+                label: t("hero.opsBlocked"),
+                value: dropsBlockedLabel,
+                tone: "warn" as const,
+              },
+            ]
+          : []),
+        ...(typeof dropsClaimable === "number" && dropsClaimable > 0
+          ? [
+              {
+                key: "claimable",
+                label: t("hero.opsClaimable"),
+                value: dropsClaimableLabel,
+                tone: "signal" as const,
+              },
+            ]
+          : []),
+        {
+          key: "open",
+          label: t("control.dropsOpen"),
+          value: dropsOpenLabel,
+          tone: typeof dropsOpen === "number" && dropsOpen > 0 ? "base" : "quiet",
+        },
+      ]
+    : [];
 
   return (
     <header className="hero-shell motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
@@ -182,27 +305,60 @@ export function Hero({
         </div>
       ) : null}
       <div className="hero-grid">
-        <section className="hero-card hero-card-campaign motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
+        <section
+          className="hero-card hero-card-campaign motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2"
+          aria-labelledby={campaignHeadingId}
+        >
           <div className="hero-card-head">
-            <span className="hero-card-label">{t("hero.activeCampaign")}</span>
+            <h2 id={campaignHeadingId} className="hero-card-label">
+              {t("hero.activeCampaign")}
+            </h2>
           </div>
-          <div className="hero-campaign-name">{activeGame || t("hero.noTarget")}</div>
+          <p className="hero-campaign-name">{activeGame || t("hero.noTarget")}</p>
+          {campaignNoteText ? <p className="hero-campaign-note">{campaignNoteText}</p> : null}
           <div className="hero-campaign-progress">
             <div className="hero-campaign-progress-head">
-              <span className="hero-micro-label">{t("hero.targetProgress")}</span>
-              <span className="hero-micro-value">{progressPct}</span>
+              <span id={progressLabelId} className="hero-micro-label">
+                {t("hero.targetProgress")}
+              </span>
+              <span id={progressValueId} className="hero-micro-value">
+                {progressPct}
+              </span>
             </div>
-            <div className="hero-campaign-progress-track" aria-hidden="true">
+            <div
+              className="hero-campaign-progress-track"
+              role="progressbar"
+              aria-labelledby={progressLabelId}
+              aria-describedby={progressValueId}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={progressPctValue ?? undefined}
+              aria-valuetext={progressAriaText}
+            >
               <span
                 className={`hero-campaign-progress-fill${progressPctValue === null ? " is-empty" : ""}`}
-                style={progressPctValue === null ? undefined : { width: `${progressPctValue}%` }}
+                style={progressFillStyle}
               />
             </div>
           </div>
-          <div className={`hero-engine-rail tone-${activeRailStage}`} aria-hidden="true">
+          <div
+            className={`hero-engine-rail tone-${activeRailStage}`}
+            role="group"
+            aria-labelledby={engineTitleId}
+            aria-describedby={`${engineStatusId} ${engineSummaryId}`}
+          >
             <div className="hero-engine-rail-head">
-              <span className="hero-engine-rail-title">{t("hero.engineRailTitle")}</span>
-              <span className="hero-engine-rail-status-wrap">
+              <span id={engineTitleId} className="hero-engine-rail-title">
+                {t("hero.engineRailTitle")}
+              </span>
+              <span
+                id={engineStatusId}
+                className="hero-engine-rail-status-wrap"
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+                aria-label={railLiveText}
+              >
                 <strong
                   key={`hero-rail-status-${activeRailStage}`}
                   className="hero-engine-rail-status hero-engine-rail-status-animated"
@@ -211,7 +367,10 @@ export function Hero({
                 </strong>
               </span>
             </div>
-            <div className="hero-engine-rail-segments">
+            <p id={engineSummaryId} className="sr-only">
+              {railSummaryText}
+            </p>
+            <div className="hero-engine-rail-segments" aria-hidden="true">
               {RAIL_STAGES.map((stage, index) => {
                 const isComplete = activeRailIndex > index;
                 const isActive = activeRailIndex === index;
@@ -223,66 +382,73 @@ export function Hero({
                 );
               })}
             </div>
-            <div className="hero-engine-rail-labels">
-              {RAIL_STAGES.map((stage, index) => {
-                const isActive = activeRailIndex === index;
-                return (
-                  <span
-                    key={`${stage.key}-label`}
-                    className={`hero-engine-rail-label${isActive ? " is-active" : ""}`}
-                  >
-                    {t(stage.labelKey)}
-                  </span>
-                );
-              })}
-            </div>
           </div>
-          <div className="hero-campaign-foot">
-            <div className="hero-foot-chip">
-              <span className="hero-foot-k">{t("hero.inventorySync")}</span>
-              <span className="hero-foot-v">{inventorySyncText}</span>
+          <dl className="hero-campaign-meta">
+            <div className="hero-meta-pair">
+              <dt className="hero-meta-label">{t("hero.inventorySync")}</dt>
+              <dd className="hero-meta-value">
+                {inventoryFetchedAtIso ? (
+                  <time dateTime={inventoryFetchedAtIso}>{inventorySyncText}</time>
+                ) : (
+                  inventorySyncText
+                )}
+              </dd>
             </div>
-            <div className="hero-foot-chip">
-              <span className="hero-foot-k">{t("hero.lastPing")}</span>
-              <span className="hero-foot-v">{lastPingText}</span>
+            <div className="hero-meta-pair">
+              <dt className="hero-meta-label">{t("hero.lastPing")}</dt>
+              <dd className="hero-meta-value">
+                {lastWatchOkIso ? (
+                  <time dateTime={lastWatchOkIso}>{lastPingText}</time>
+                ) : (
+                  lastPingText
+                )}
+              </dd>
             </div>
-          </div>
+          </dl>
         </section>
-        <section className="hero-card hero-card-ops motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
+        <section
+          className="hero-card hero-card-ops motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2"
+          aria-labelledby={opsHeadingId}
+        >
           <div className="hero-card-head">
-            <span className="hero-card-label">{t("hero.drops")}</span>
+            <h2 id={opsHeadingId} className="hero-card-label">
+              {t("hero.drops")}
+            </h2>
           </div>
-          <div className="hero-ops-progress-value">{dropProgress}</div>
-          <div className="hero-ops-kpis">
-            <div className="hero-kpi">
-              <span className="hero-kpi-label">{t("control.dropsOpen")}</span>
-              <span className="hero-kpi-value">{dropsOpenLabel}</span>
-            </div>
-            <div className="hero-kpi">
-              <span className="hero-kpi-label">{t("hero.opsClaimable")}</span>
-              <span className="hero-kpi-value">{dropsClaimableLabel}</span>
-            </div>
-            <div className="hero-kpi">
-              <span className="hero-kpi-label">{t("hero.opsBlocked")}</span>
-              <span className="hero-kpi-value">{dropsBlockedLabel}</span>
-            </div>
-          </div>
-          <div className="hero-current-drop">
-            <div className="hero-current-drop-head">
-              <span className="hero-stat-label">{t("control.currentDrop")}</span>
-            </div>
-            <span className="hero-current-drop-title" title={activeDropTitleText}>
+          <div className={currentDropClassName}>
+            <p
+              className="hero-current-drop-title"
+              title={hasLiveDropTitle ? activeDropTitle?.trim() : activeDropTitleText}
+              dir={hasLiveDropTitle ? "auto" : undefined}
+            >
               {activeDropTitleText}
-            </span>
-            <div className="hero-current-drop-meta">
-              <span className="pill ghost small">{activeDropRemainingText}</span>
-              {activeDropEtaText ? (
-                <span className="pill ghost small">
-                  {t("control.eta", { time: activeDropEtaText })}
-                </span>
-              ) : null}
-            </div>
+            </p>
+            {currentDropNoteText ? (
+              <p className="hero-current-drop-note">{currentDropNoteText}</p>
+            ) : null}
+            {activeDropRemainingText || activeDropEtaText ? (
+              <div className="hero-current-drop-meta">
+                {activeDropRemainingText ? (
+                  <span className="hero-current-drop-meta-item">{activeDropRemainingText}</span>
+                ) : null}
+                {activeDropEtaText ? (
+                  <time className="hero-current-drop-meta-item hero-time-pill" dateTime={activeDropEtaIso ?? ""}>
+                    {t("control.eta", { time: activeDropEtaText })}
+                  </time>
+                ) : null}
+              </div>
+            ) : null}
           </div>
+          {opsSummaryRows.length ? (
+            <dl className="hero-ops-summary">
+              {opsSummaryRows.map((row) => (
+                <div key={row.key} className={`hero-summary-item tone-${row.tone}`}>
+                  <dt className="hero-summary-label">{row.label}</dt>
+                  <dd className="hero-summary-value">{row.value}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : null}
         </section>
       </div>
     </header>

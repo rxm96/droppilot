@@ -39,6 +39,7 @@ function parseArgs(argv) {
     refresh: false,
     prefix: "tmp-electron-inspect",
     timeoutMs: 20000,
+    requireActiveControl: false,
   };
 
   for (let idx = 0; idx < argv.length; idx += 1) {
@@ -60,6 +61,9 @@ function parseArgs(argv) {
     }
     if (value === "--refresh") {
       options.refresh = true;
+    }
+    if (value === "--require-active-control") {
+      options.requireActiveControl = true;
     }
   }
 
@@ -173,6 +177,73 @@ async function waitForSettled(page, timeoutMs, view) {
   return { settled: false, theme };
 }
 
+async function readControlCaptureState(page) {
+  return page.evaluate(() => {
+    const heroCurrentDrop = document.querySelector(".hero-current-drop");
+    const heroCampaignName = document.querySelector(".hero-campaign-name");
+    const controlTarget = document.querySelector(".control-target");
+    const controlTargetTitle = document.querySelector(".control-target-empty-title");
+    const controlTargetValue = document.querySelector(".control-target-stat-v");
+    const heroCurrentDropTitle = document.querySelector(".hero-current-drop-title");
+
+    const heroIsEmpty = heroCurrentDrop?.classList.contains("is-empty") ?? false;
+    const heroIsComplete = heroCurrentDrop?.classList.contains("is-complete") ?? false;
+    const controlIsEmpty = controlTarget?.classList.contains("is-empty") ?? false;
+    const heroCampaignText = heroCampaignName?.textContent?.trim() ?? "";
+    const heroCurrentDropText = heroCurrentDropTitle?.textContent?.trim() ?? "";
+    const controlTargetText = controlTargetTitle?.textContent?.trim() ?? "";
+    const controlTargetValueText = controlTargetValue?.textContent?.trim() ?? "";
+    const looksEmpty =
+      heroIsEmpty ||
+      controlIsEmpty ||
+      /^(no target|kein ziel)$/i.test(heroCampaignText) ||
+      /^(pick a target to begin|ziel wählen und loslegen)$/i.test(heroCurrentDropText) ||
+      /^(no target selected|kein ziel gewählt\.?)$/i.test(controlTargetText);
+
+    const looksActive = Boolean(
+      !looksEmpty &&
+        (controlTargetValueText || (heroCampaignText && !/^(no target|kein ziel)$/i.test(heroCampaignText))),
+    );
+
+    return {
+      looksEmpty,
+      looksActive,
+      heroIsEmpty,
+      heroIsComplete,
+      controlIsEmpty,
+      heroCampaignText,
+      heroCurrentDropText,
+      controlTargetText,
+      controlTargetValueText,
+    };
+  });
+}
+
+async function waitForControlState(page, timeoutMs, requireActiveControl) {
+  const deadline = Date.now() + timeoutMs;
+  let stableSince = 0;
+  let lastState = await readControlCaptureState(page);
+
+  while (Date.now() < deadline) {
+    const state = await readControlCaptureState(page);
+    lastState = state;
+    const acceptable = requireActiveControl ? state.looksActive : true;
+
+    if (acceptable) {
+      if (!stableSince) stableSince = Date.now();
+      if (Date.now() - stableSince >= 1200) {
+        return state;
+      }
+    } else {
+      stableSince = 0;
+    }
+
+    await page.waitForTimeout(350);
+  }
+
+  return lastState;
+}
+
 async function ensureTheme(page, targetTheme) {
   const readTheme = async () =>
     page.evaluate(() => document.documentElement.dataset.theme || "light");
@@ -191,12 +262,17 @@ async function ensureTheme(page, targetTheme) {
 async function captureTheme(page, theme, options) {
   const activeTheme = await ensureTheme(page, theme);
   const settleState = await waitForSettled(page, options.timeoutMs, options.view);
+  const controlState =
+    options.view === "control"
+      ? await waitForControlState(page, options.timeoutMs, options.requireActiveControl)
+      : null;
   const screenshotPath = `${options.prefix}-${theme}.png`;
   await page.screenshot({ path: screenshotPath, fullPage: true });
   return {
     requestedTheme: theme,
     activeTheme,
     settled: settleState.settled,
+    controlState,
     screenshotPath,
   };
 }
@@ -284,8 +360,17 @@ async function main() {
     const summary = {
       view: options.view,
       refreshed: options.refresh,
+      requireActiveControl: options.requireActiveControl,
       captures: [light, dark],
     };
+    if (options.view === "control" && options.requireActiveControl) {
+      const emptyCapture = summary.captures.find((capture) => capture.controlState?.looksEmpty);
+      if (emptyCapture) {
+        throw new Error(
+          `Control capture stayed in an empty state for theme "${emptyCapture.requestedTheme}". Start or select an active campaign before using these screenshots for critique.`,
+        );
+      }
+    }
     console.log(JSON.stringify(summary, null, 2));
   } finally {
     await app.close();
