@@ -966,6 +966,8 @@ body {
   color: var(--viewer-chip-text);
   border-color: var(--viewer-chip-border);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  position: relative;
+  overflow: hidden;
 }
 
 .pill.small {
@@ -3553,7 +3555,7 @@ code {
 .control-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.65fr) minmax(320px, 1fr);
-  gap: 16px;
+  gap: 22px;
   align-items: start;
 }
 
@@ -3567,11 +3569,26 @@ code {
 .control-target {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   min-width: 0;
   max-width: none;
   width: 100%;
   justify-self: stretch;
+  padding-inline-start: 22px;
+  border-inline-start: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--panel) 62%, transparent),
+      transparent 34%
+    );
+  border-radius: 0;
+  box-shadow: none;
+  contain: layout paint;
+}
+
+.control-target.is-empty {
+  gap: 10px;
 }
 
 .control-tracker-row {
@@ -3579,9 +3596,29 @@ code {
   flex-wrap: wrap;
 }
 
+.control-campaigns-block,
+.control-channel-block {
+  display: grid;
+  gap: 10px;
+  contain: layout paint;
+}
+
+.control-campaigns-block {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+}
+
+.control-channel-block {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+}
+
 .control-watch-engine-disclosure {
   --ops-accent: var(--signal-accent);
-  margin-top: 8px;
+  margin-top: 0;
+  contain: layout paint;
 }
 
 .control-watch-engine-disclosure.tone-ok {
@@ -3601,6 +3638,7 @@ code {
 }
 
 .control-watch-engine-summary {
+  appearance: none;
   list-style: none;
   display: flex;
   align-items: center;
@@ -3608,13 +3646,14 @@ code {
   gap: 10px;
   width: 100%;
   border: 1px solid var(--border);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--background) 86%, var(--panel));
-  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+  padding: 9px 12px;
   cursor: pointer;
   transition:
-    border-color 180ms ease,
-    background-color 180ms ease;
+    border-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .control-watch-engine-summary::-webkit-details-marker {
@@ -3664,98 +3703,50 @@ code {
   border-color: color-mix(in srgb, var(--ops-accent) 24%, var(--border-strong));
 }
 
+.control-watch-engine-summary:hover {
+  background: color-mix(in srgb, var(--panel-strong) 72%, transparent);
+  border-color: color-mix(in srgb, var(--border-strong) 82%, transparent);
+}
+
+.control-watch-engine-summary:focus-visible {
+  background: color-mix(in srgb, var(--panel-strong) 78%, transparent);
+}
+
 .control-watch-engine-disclosure[open] .control-watch-engine-summary-chevron {
   transform: rotate(180deg);
 }
 
+.control-watch-engine-shell {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.control-watch-engine-disclosure[open] .control-watch-engine-shell {
+  grid-template-rows: 1fr;
+}
+
 .control-watch-engine {
   --ops-accent: var(--signal-accent);
-  position: relative;
   margin-top: 8px;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--panel-strong) 88%, var(--secondary));
+  min-height: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 9px;
-  overflow: hidden;
+  gap: 10px;
   color: var(--foreground);
   font-family: inherit;
+  opacity: 0;
+  transform: translateY(-6px);
   transition:
-    background-color 220ms ease,
-    border-color 220ms ease,
-    box-shadow 220ms ease,
-    color 180ms ease;
+    color 180ms ease,
+    opacity 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.control-watch-engine.tone-ok {
-  --ops-accent: color-mix(in srgb, var(--signal-accent) 62%, var(--foreground));
-}
-
-.control-watch-engine.tone-warn {
-  --ops-accent: var(--danger-chip-text);
-}
-
-.control-watch-engine.tone-neutral {
-  --ops-accent: var(--signal-accent);
-}
-
-.control-watch-engine.tone-hold {
-  --ops-accent: #f97316;
-}
-
-.control-watch-engine::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 3px;
-  background: color-mix(in srgb, var(--ops-accent) 42%, transparent);
-  pointer-events: none;
-  transition: background-color 220ms ease;
-}
-
-.control-watch-engine-head {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 10px;
-}
-
-.control-watch-engine-title-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.control-watch-engine-led {
-  width: 7px;
-  height: 7px;
-  flex: 0 0 7px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--ops-accent) 66%, var(--foreground));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ops-accent) 28%, transparent);
-  transition:
-    background-color 220ms ease,
-    box-shadow 220ms ease;
-}
-
-.control-watch-engine-head .label {
-  margin: 0;
-  font-family: inherit;
-  font-size: var(--type-overline-size);
-  font-weight: var(--type-overline-weight);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: color-mix(in srgb, var(--ops-accent) 42%, var(--muted-foreground));
-  transition: color 220ms ease;
-}
-
-.control-watch-engine-intro {
-  margin: 0;
-  color: var(--muted-foreground);
-  font-size: 12px;
-  line-height: 1.45;
+.control-watch-engine-disclosure[open] .control-watch-engine {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .control-watch-engine-main {
@@ -3768,40 +3759,22 @@ code {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 5px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--background) 88%, var(--panel));
-  padding: 8px 9px;
-  transition:
-    border-color 220ms ease,
-    background-color 220ms ease,
-    box-shadow 220ms ease;
+  gap: 4px;
+  min-width: 0;
 }
 
 .control-watch-engine-item.is-now {
-  border-color: color-mix(in srgb, var(--ops-accent) 24%, var(--border-strong));
-  background: color-mix(in srgb, var(--signal-accent-soft) 68%, var(--panel));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ops-accent) 8%, transparent);
+  color: var(--foreground);
 }
 
 .control-watch-engine-item-label {
-  display: inline-flex;
-  align-items: center;
   font-size: var(--type-overline-size);
   font-weight: var(--type-overline-weight);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: color-mix(in srgb, var(--ops-accent) 44%, var(--muted-foreground));
-  background: var(--secondary);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 1px 8px;
   line-height: 1.35;
-  transition:
-    color 220ms ease,
-    border-color 220ms ease,
-    background-color 220ms ease;
+  transition: color 220ms ease;
 }
 
 .control-watch-engine-item-value {
@@ -3833,23 +3806,22 @@ code {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 1px;
 }
 
 .control-watch-engine-help-trigger {
+  appearance: none;
+  box-shadow: none;
+  font: inherit;
+  line-height: inherit;
   cursor: help;
+  text-align: left;
 }
 
 .control-watch-engine-meta .pill {
   transition:
     color 180ms ease,
     border-color 180ms ease,
-    background-color 180ms ease,
-    transform 180ms ease;
-}
-
-.control-watch-engine-meta .pill:hover {
-  transform: translateY(-1px);
+    background-color 180ms ease;
 }
 
 .control-watch-engine-hovercard {
@@ -3869,9 +3841,8 @@ code {
 .control-watch-engine-details {
   display: grid;
   gap: 0;
-  margin-top: 1px;
-  border-top: 1px dashed var(--border);
-  padding-top: 7px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  padding-top: 8px;
   transition: border-color 220ms ease;
 }
 
@@ -3904,15 +3875,21 @@ code {
 
 .control-target-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
 }
 
+.control-target-subhead {
+  display: grid;
+  gap: 2px;
+  padding-top: 0;
+}
+
 .control-target-actions {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   flex-wrap: wrap;
 }
@@ -3924,42 +3901,57 @@ code {
 .control-drops {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
   min-width: 0;
+  padding-inline-end: 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.control-drops.is-live {
+  background: transparent;
 }
 
 .control-section-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 14px;
+}
+
+.control-section-head .label,
+.control-target-subhead .label {
+  line-height: 1.2;
+}
+
+.control-section-head .meta,
+.control-target-subhead .meta {
+  margin-top: 3px;
 }
 
 .control-now-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.9fr);
-  gap: 12px;
+  gap: 18px;
   align-items: start;
 }
 
 .control-now-stream,
-.control-now-drop-card,
-.control-sidebar-card {
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--muted) 34%, transparent), transparent),
-    color-mix(in srgb, var(--panel-strong) 88%, transparent);
+.control-now-drop-card {
+  min-width: 0;
 }
 
 .control-now-stream {
   display: grid;
-  grid-template-columns: 180px minmax(0, 1fr) auto;
-  gap: 14px;
+  grid-template-columns: minmax(172px, 188px) minmax(0, 1fr) auto;
+  gap: 16px;
   align-items: stretch;
   min-height: 178px;
   overflow: hidden;
-  padding: 14px;
+  padding: 0 4px 0 0;
+  position: relative;
 }
 
 .control-now-stream.is-paused {
@@ -3967,18 +3959,21 @@ code {
 }
 
 .control-now-drop-card {
-  padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 12px;
   justify-content: flex-start;
   min-height: 0;
+  padding: 4px 0 4px 20px;
+  border-left: 1px solid color-mix(in srgb, var(--border-strong) 72%, transparent);
+}
+
+.control-now-drop-card.has-active-drop {
+  padding-left: 24px;
 }
 
 .control-now-drop-card.is-empty {
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--muted) 24%, transparent), transparent),
-    color-mix(in srgb, var(--panel) 82%, transparent);
+  background: transparent;
 }
 
 .control-now-drop-head {
@@ -3989,23 +3984,23 @@ code {
 }
 
 .control-now-drop-title {
-  font-size: 18px;
-  line-height: 1.15;
+  font-size: 20px;
+  line-height: 1.08;
   letter-spacing: -0.03em;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .control-now-drop-progress {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
 }
 
 .control-now-drop-minutes {
-  font-size: 28px;
+  font-size: 34px;
   line-height: 1;
-  letter-spacing: -0.04em;
-  font-weight: 700;
+  letter-spacing: -0.05em;
+  font-weight: 800;
 }
 
 .control-now-drop-minutes span {
@@ -4020,6 +4015,11 @@ code {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-top: 2px;
+}
+
+.control-now-drop-card.has-active-drop .progress-bar {
+  height: 8px;
 }
 
 .control-now-drop-empty {
@@ -4028,10 +4028,30 @@ code {
   gap: 10px;
 }
 
+.control-now-empty {
+  display: grid;
+  gap: 5px;
+  max-width: 44ch;
+  padding: 2px 0 4px;
+}
+
+.control-now-empty-title {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.3;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
 .control-status-strip {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.control-status-strip + .meta.muted {
+  margin-top: -2px;
 }
 
 .control-drops .drop-grid {
@@ -4039,7 +4059,7 @@ code {
 }
 
 .control-drops .drop-campaigns {
-  margin-top: 6px;
+  margin-top: 4px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -4052,56 +4072,116 @@ code {
 }
 
 .drop-campaign-chip {
-  min-width: 180px;
-  flex: 1 1 220px;
+  appearance: none;
+  font: inherit;
+  cursor: pointer;
+  min-width: 0;
+  flex: 0 1 auto;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--panel) 86%, transparent);
+  gap: 2px;
+  min-height: 48px;
+  padding: 8px 11px;
+  border-radius: 11px;
+  border: 1px solid color-mix(in srgb, var(--border) 86%, transparent);
+  background: color-mix(in srgb, var(--panel) 68%, transparent);
   color: var(--foreground);
   text-align: left;
+  transition:
+    border-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.drop-campaign-chip:hover {
+  border-color: color-mix(in srgb, var(--border-strong) 82%, transparent);
+  background: color-mix(in srgb, var(--panel-strong) 84%, transparent);
+}
+
+.drop-campaign-chip:focus-visible {
+  background: color-mix(in srgb, var(--panel-strong) 88%, transparent);
 }
 
 .drop-campaign-chip.active {
-  border-color: color-mix(in srgb, var(--foreground) 34%, var(--border-strong));
+  border-color: color-mix(in srgb, var(--foreground) 22%, var(--border-strong));
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent 58%),
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent 70%),
     color-mix(in srgb, var(--panel-strong) 92%, transparent);
 }
 
 .drop-campaign-chip-title {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  text-transform: none;
 }
 
 .drop-campaign-chip-meta {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted-foreground);
+  line-height: 1.35;
 }
 
-.control-sidebar-grid {
+.control-target-summary {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 14px;
+  animation: controlSurfaceEnter 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 50ms;
 }
 
-.control-sidebar-card {
-  padding: 12px 14px;
+.control-target-stat {
   display: flex;
   flex-direction: column;
   gap: 5px;
+  min-width: 0;
+  padding-block: 2px 4px;
 }
 
-.control-sidebar-value {
+.control-target-stat + .control-target-stat {
+  border-inline-start: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  padding-inline-start: 12px;
+}
+
+.control-target-stat-k {
+  font-size: var(--type-overline-size);
+  font-weight: var(--type-overline-weight);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.control-target-stat-v {
   font-size: 18px;
   line-height: 1.15;
   letter-spacing: -0.02em;
+}
+
+.control-target-empty {
+  display: grid;
+  gap: 8px;
+  padding-block: 6px 0;
+  animation: controlSurfaceEnter 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.control-target-empty-head {
+  display: grid;
+  gap: 4px;
+  max-width: 56ch;
+}
+
+.control-target-empty-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--foreground);
+}
+
+.control-target-empty .meta {
+  margin: 0;
+  max-width: 58ch;
 }
 
 .control-channel-head {
@@ -4109,29 +4189,25 @@ code {
 }
 
 .drop-campaign-group {
-  border: 1px solid color-mix(in srgb, var(--border-strong) 76%, transparent);
-  border-radius: 14px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--muted) 28%, transparent), transparent 52%),
-    color-mix(in srgb, var(--panel-strong) 90%, transparent);
-  padding: 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  animation: controlSurfaceEnter 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .drop-campaign-group.active {
-  border-color: color-mix(in srgb, var(--foreground) 34%, var(--border-strong));
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
-    0 10px 24px rgba(10, 14, 28, 0.16);
+  box-shadow: none;
 }
 
 .drop-campaign-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
 }
 
@@ -4139,7 +4215,7 @@ code {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
 }
 
 .drop-campaign-title {
@@ -4148,10 +4224,10 @@ code {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--foreground);
-  font-size: 14px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+  text-transform: none;
+  font-weight: 750;
 }
 
 .drop-campaign-meta {
@@ -4160,36 +4236,21 @@ code {
   gap: 4px 10px;
   color: var(--muted-foreground);
   font-size: 12px;
-}
-
-.drop-campaign-summary {
-  flex: 0 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-}
-
-.drop-campaign-summary-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.drop-campaign-summary strong {
-  font-size: 22px;
-  line-height: 1;
-  letter-spacing: -0.04em;
+  line-height: 1.4;
 }
 
 .drop-campaign-progress {
-  margin-top: -2px;
+  margin-top: 0;
+  width: min(100%, 560px);
+  height: 7px;
 }
 
 .control-drops .drop-campaign-group .drop-grid {
   margin-top: 0;
+}
+
+.control-target-engine {
+  padding-top: 4px;
 }
 
 .settings-sections {
@@ -4668,6 +4729,18 @@ code {
     opacity: 0;
     transform: translateY(6px);
   }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes controlSurfaceEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -5350,11 +5423,14 @@ code {
 
 .channel-grid-wrapper {
   position: relative;
-  min-height: 240px;
+  min-height: 200px;
   max-height: min(420px, 52vh);
   overflow: hidden auto;
   scrollbar-gutter: stable;
   padding-right: 4px;
+  contain: layout paint;
+  content-visibility: auto;
+  contain-intrinsic-size: 320px;
 }
 
 .channel-grid-wrapper.refreshing::after {
@@ -5374,6 +5450,7 @@ code {
   transform: translateY(5px);
   filter: saturate(0.78);
   pointer-events: none;
+  will-change: transform, opacity, filter;
 }
 
 .channel-empty {
@@ -5381,28 +5458,50 @@ code {
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: var(--muted-foreground);
-  font-size: 13px;
+  min-height: 176px;
+  padding: 12px;
+}
+
+.channel-empty-body {
+  display: grid;
+  gap: 4px;
+  width: min(100%, 38ch);
+  text-align: center;
+}
+
+.channel-empty-title {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.3;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.channel-empty .meta {
+  margin: 0;
 }
 
 .channel-grid {
   list-style: none;
   padding: 0;
-  margin: 8px 0 0 0;
+  margin: 2px 0 0 0;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 8px;
   align-content: start;
   transition:
-    opacity 0.2s ease,
-    transform 0.2s ease,
-    gap 0.2s ease,
-    filter 0.2s ease;
+    opacity 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    filter 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: controlSurfaceEnter 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 90ms;
+  contain: layout paint;
 }
 
 .channel-grid.is-density-transitioning {
-  opacity: 0.78;
-  transform: translateY(3px);
+  opacity: 0.88;
+  transform: translateY(2px);
+  will-change: transform, opacity;
 }
 
 .channel-grid.channel-grid-comfortable {
@@ -5420,27 +5519,38 @@ code {
   gap: 6px;
 }
 
+.channel-tile-shell {
+  min-width: 0;
+  min-height: 0;
+  list-style: none;
+  contain: layout paint;
+}
+
 .channel-tile {
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
   position: relative;
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, var(--border) 84%, transparent);
   border-radius: 12px;
-  padding: 12px;
-  background: var(--panel-strong);
+  padding: 11px 12px;
+  background: color-mix(in srgb, var(--panel) 82%, transparent);
   overflow: hidden;
   display: grid;
   grid-template-columns: 1fr;
-  gap: 10px;
+  gap: 8px;
   min-height: 136px;
+  width: 100%;
   height: 100%;
   cursor: pointer;
-  box-shadow: 0 8px 18px rgba(28, 27, 26, 0.12);
+  box-shadow: none;
   transition:
-    transform 0.12s ease,
-    border-color 0.15s ease,
-    box-shadow 0.2s ease,
-    padding 0.2s ease,
-    min-height 0.2s ease,
-    gap 0.2s ease;
+    transform 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 180ms ease,
+    box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 180ms ease;
+  contain: layout paint;
 }
 
 .channel-grid.channel-grid-comfortable .channel-tile {
@@ -5487,9 +5597,6 @@ code {
   flex-direction: column;
   gap: 6px;
   min-height: 68px;
-  transition:
-    min-height 0.2s ease,
-    gap 0.2s ease;
 }
 
 .channel-header {
@@ -5510,22 +5617,28 @@ code {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: font-size 0.2s ease;
-}
-
-.channel-grid .meta {
-  transition: font-size 0.2s ease;
 }
 
 .channel-tile.active {
-  border-color: var(--foreground);
-  box-shadow: 0 10px 26px rgba(28, 27, 26, 0.18);
+  border-color: color-mix(in srgb, var(--foreground) 26%, var(--border-strong));
+  background: color-mix(in srgb, var(--panel-strong) 90%, transparent);
+}
+
+.channel-tile:disabled {
+  cursor: default;
+  opacity: 0.66;
 }
 
 .channel-tile:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgba(28, 27, 26, 0.14);
+  transform: translateY(-1px);
   border-color: var(--border-strong);
+  background: color-mix(in srgb, var(--panel-strong) 86%, transparent);
+}
+
+.channel-tile:focus-visible {
+  transform: none;
+  border-color: color-mix(in srgb, var(--border-strong) 88%, transparent);
+  background: color-mix(in srgb, var(--panel-strong) 90%, transparent);
 }
 
 .channel-tile .pill.active.small {
@@ -5544,29 +5657,30 @@ code {
   position: absolute;
   top: 10px;
   right: 10px;
-  background: var(--panel);
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
   color: var(--foreground);
-  padding: 6px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  min-height: 26px;
+  padding: 0 9px;
   border-radius: 10px;
   border: 1px solid var(--border-strong);
   font-size: 12px;
   font-weight: 700;
-  box-shadow: 0 6px 14px rgba(28, 27, 26, 0.12);
+  box-shadow: none;
+  transform-origin: top right;
   transition:
     border-color 0.18s ease,
     background-color 0.18s ease,
     box-shadow 0.18s ease,
-    top 0.2s ease,
-    right 0.2s ease,
-    padding 0.2s ease,
-    font-size 0.2s ease;
+    transform 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .channel-grid.channel-grid-compact .viewer-badge {
-  top: 6px;
-  right: 6px;
-  padding: 4px 7px;
-  font-size: 10px;
+  transform: scale(0.88);
 }
 
 .viewer-main {
@@ -5701,59 +5815,89 @@ code {
 
 .control-drops .drop-grid {
   grid-template-columns: 1fr;
-  gap: 8px;
+  gap: 0;
+}
+
+.control-drops .drop-grid > .drop-card:first-child {
+  border-top: 0;
+  padding-top: 0;
 }
 
 .control-drops .drop-card {
-  flex-direction: row;
-  align-items: stretch;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: center;
   gap: 12px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  min-height: 86px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent),
-    color-mix(in srgb, var(--panel) 88%, transparent);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  padding: 12px 0;
+  border-radius: 0;
+  min-height: 74px;
+  background: transparent;
+  box-shadow: none;
+  border-top: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  animation: controlSurfaceEnter 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--drop-index, 0) * 28ms + 90ms);
+  position: relative;
+  contain: layout paint;
 }
 
 .control-drops .drop-card::after {
-  border-radius: 12px;
+  display: none;
 }
 
 .control-drops .drop-card.active {
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent 55%),
-    color-mix(in srgb, var(--panel) 92%, transparent);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 8px 18px rgba(10, 14, 28, 0.16);
+  background: transparent;
+  border-radius: 0;
+  padding-inline: 0;
+  margin-inline: 0;
+  box-shadow: none;
+}
+
+.control-drops .drop-card.active::before {
+  display: none;
 }
 
 .control-drops .drop-card.claimed {
-  --drop-card-stroke: rgba(76, 175, 80, 0.55);
-  background:
-    linear-gradient(135deg, rgba(76, 175, 80, 0.18), rgba(76, 175, 80, 0.04)),
-    color-mix(in srgb, var(--panel-strong) 84%, transparent);
+  --drop-card-stroke: color-mix(in srgb, var(--success-chip-border) 78%, transparent);
+  background: transparent;
 }
 
 .control-drops .drop-card.claimed .drop-title {
-  color: color-mix(in srgb, var(--foreground) 85%, rgba(76, 175, 80, 1));
+  color: color-mix(in srgb, var(--foreground) 84%, var(--success-chip-text));
 }
 
 .control-drops .drop-card.claimed .progress-bar > span {
-  background: rgba(76, 175, 80, 0.8);
+  background: color-mix(in srgb, var(--success-chip-border) 84%, var(--success-chip-bg));
 }
 
 .control-drops .drop-image-frame {
-  width: 72px;
-  min-height: 72px;
+  width: 38px;
+  min-width: 38px;
+  max-width: 38px;
+  height: 38px;
+  min-height: 38px;
+  max-height: 38px;
   border-radius: 10px;
   flex: 0 0 auto;
-  align-self: stretch;
-  background: color-mix(in srgb, var(--panel-strong) 70%, transparent);
+  align-self: center;
+  overflow: hidden;
+  background: var(--panel-strong);
+  border: 1px solid color-mix(in srgb, var(--border) 34%, transparent);
   background-image: none !important;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  box-shadow: none;
+  display: grid;
+  place-items: center;
+}
+
+.control-drops .drop-card.active .drop-image-frame {
+  background: var(--panel-strong);
+}
+
+.control-drops .drop-main {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 280px);
+  align-items: center;
+  gap: 18px;
 }
 
 .control-drops .drop-image-frame::before,
@@ -5765,38 +5909,77 @@ code {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  padding: 7px;
+  object-position: center;
+  padding: 3px;
   box-sizing: border-box;
   filter: none;
+}
+
+.control-drops .drop-image-frame.is-fallback {
+  background-color: var(--panel-strong);
+  background-size: cover;
+  background-position: center;
+}
+
+.control-drops .drop-card.claimed .drop-image-frame {
+  border-color: color-mix(in srgb, var(--success-chip-border) 78%, transparent);
+  background: color-mix(in srgb, var(--success-chip-bg) 46%, var(--panel-strong));
+}
+
+.control-drops .drop-card.claimed .drop-image-frame img {
+  padding: 0;
+  object-fit: cover;
+  transform: scale(1.14);
 }
 
 .control-drops .drop-body {
   padding: 0;
   min-height: 0;
-  gap: 8px;
-  min-height: 66px;
+  gap: 4px;
+  min-height: 0;
+  justify-content: center;
 }
 
 .control-drops .drop-header {
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
 }
 
-.control-drops .drop-body .progress-bar {
-  margin-top: auto;
+.control-drops .drop-progress-column {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  justify-self: end;
+  width: min(100%, 280px);
+}
+
+.control-drops .drop-progress-column.progress {
+  width: min(100%, 300px);
 }
 
 .control-drops .drop-meta-line {
   margin-top: 0;
   margin-bottom: 0;
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.control-drops .drop-progress-column .progress-bar {
+  margin-top: 0;
+  height: 6px;
+}
+
+.control-drops .drop-progress-column .pill {
+  flex: 0 0 auto;
+  min-width: 80px;
+  justify-content: center;
 }
 
 .control-drops .drop-reason {
   font-size: 11px;
-  line-height: 1.25;
+  line-height: 1.35;
   color: var(--danger-chip-text);
   font-weight: 600;
   overflow: hidden;
@@ -5814,16 +5997,21 @@ code {
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
-.control-drops .drop-card.active .drop-title-text {
+.control-drops .drop-header .pill {
+  opacity: 0.92;
+}
+
+.control-drops .drop-card.active .drop-title-text,
+.control-drops .drop-card.active .drop-meta-item {
   color: var(--foreground);
 }
 
-.control-drops .drop-meta-line {
-  margin-top: 2px;
-  margin-bottom: 0;
+.dark .control-target {
+  background: transparent;
 }
 
 .drop-header {
@@ -6102,20 +6290,30 @@ code {
   }
 
   .control-watch-engine,
-  .control-watch-engine::before,
-  .control-watch-engine-led,
-  .control-watch-engine-head .label,
-  .control-watch-engine-item,
+  .control-watch-engine-shell,
   .control-watch-engine-item-label,
   .control-watch-engine-meta .pill,
   .control-watch-engine-details,
   .control-watch-engine-k,
-  .control-watch-engine-v {
+  .control-watch-engine-v,
+  .channel-grid,
+  .channel-tile {
     transition: none;
   }
 
   .control-watch-engine-animated-value,
-  .hero-engine-rail-status-animated {
+  .hero-engine-rail-status-animated,
+  .control-target-summary,
+  .control-target-empty,
+  .channel-grid,
+  .drop-campaign-group,
+  .control-drops .drop-card {
+    animation: none;
+  }
+
+  .control-drops.is-live .control-now-stream .viewers-chip,
+  .control-now-drop-card.has-active-drop .progress-bar > span::after,
+  .control-drops .drop-card.active.progress .drop-progress-column .progress-bar > span::after {
     animation: none;
   }
 
@@ -6189,7 +6387,7 @@ code {
     grid-template-columns: 1fr;
   }
   .control-now-grid,
-  .control-sidebar-grid,
+  .control-target-summary,
   .control-watch-engine-main {
     grid-template-columns: 1fr;
   }
@@ -6224,6 +6422,12 @@ code {
   .control-layout {
     grid-template-columns: 1fr;
   }
+  .control-target {
+    padding-inline-start: 0;
+    border-inline-start: 0;
+    border-top: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+    padding-top: 16px;
+  }
   .control-now-stream {
     grid-template-columns: 1fr;
     min-height: 0;
@@ -6234,10 +6438,6 @@ code {
   }
   .control-target-actions .select {
     min-width: 100%;
-  }
-  .control-watch-engine-head {
-    flex-direction: column;
-    align-items: flex-start;
   }
   .control-watch-engine-kv {
     grid-template-columns: 1fr;
@@ -6460,10 +6660,31 @@ code {
   .priority-summary-card {
     padding: 14px;
   }
-  .control-now-stream,
-  .control-now-drop-card,
-  .control-sidebar-card {
-    padding: 12px;
+  .control-now-stream {
+    padding: 0;
+  }
+  .control-now-drop-card {
+    padding: 12px 0 0;
+    border-left: 0;
+    border-top: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  }
+  .control-drops .drop-card {
+    grid-template-columns: 46px minmax(0, 1fr);
+    align-items: start;
+  }
+  .control-drops .drop-main {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .control-drops .drop-progress-column {
+    justify-self: stretch;
+    width: 100%;
+  }
+  .control-target-stat + .control-target-stat {
+    border-inline-start: 0;
+    border-top: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+    padding-inline-start: 0;
+    padding-top: 10px;
   }
   .control-now-drop-head {
     flex-direction: column;

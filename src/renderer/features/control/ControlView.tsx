@@ -492,105 +492,102 @@ export function ControlView({
           </svg>
         </span>
       </summary>
-      <div className={`control-watch-engine tone-${watchEngineTone}`}>
-        <div className="control-watch-engine-head">
-          <div className="control-watch-engine-title-row">
-            <span className="control-watch-engine-led" aria-hidden="true" />
-            <div className="label">{t("control.watchEngineTitle")}</div>
-          </div>
-        </div>
-        <p className="meta muted control-watch-engine-intro">{t("control.watchEngineIntro")}</p>
-        <div className="control-watch-engine-main">
-          <div className="control-watch-engine-item is-now">
-            <span className="control-watch-engine-item-label">{t("control.watchEngineNow")}</span>
-            <span
-              key={`watch-engine-now-${watchEngineDecisionMotionKey}`}
-              className="control-watch-engine-item-value control-watch-engine-animated-value"
-            >
-              {watchEngineDecisionLabel}
-            </span>
-          </div>
-          <div className="control-watch-engine-item">
-            <span className="control-watch-engine-item-label">
-              {t("control.watchEngineWhyLabel")}
-            </span>
-            <span
-              key={`watch-engine-why-${watchEngineDecisionMotionKey}`}
-              className="control-watch-engine-item-value control-watch-engine-animated-value"
-            >
-              {watchEngineDecisionDetails.why}
-            </span>
-          </div>
-          <div className="control-watch-engine-item">
-            <span className="control-watch-engine-item-label">
-              {t("control.watchEngineNextLabel")}
-            </span>
-            <span
-              key={`watch-engine-next-${watchEngineDecisionMotionKey}`}
-              className="control-watch-engine-item-value control-watch-engine-animated-value"
-            >
-              {watchEngineDecisionDetails.next}
-            </span>
-          </div>
-        </div>
-        <div className="control-watch-engine-meta">
-          <HoverCard openDelay={120} closeDelay={120}>
-            <HoverCardTrigger asChild>
+      <div className="control-watch-engine-shell">
+        <div className={`control-watch-engine tone-${watchEngineTone}`}>
+          <div className="control-watch-engine-main">
+            <div className="control-watch-engine-item is-now">
+              <span className="control-watch-engine-item-label">{t("control.watchEngineNow")}</span>
               <span
-                className="pill ghost small control-watch-engine-help-trigger"
-                aria-label={watchEngineAllowlistHint}
-                tabIndex={0}
+                key={`watch-engine-now-${watchEngineDecisionMotionKey}`}
+                className="control-watch-engine-item-value control-watch-engine-animated-value"
               >
-                {t("control.watchEngineAllowlist")}: {watchEngineAllowlistMode}
+                {watchEngineDecisionLabel}
               </span>
-            </HoverCardTrigger>
-            <HoverCardContent
-              align="start"
-              sideOffset={8}
-              className="control-watch-engine-hovercard"
-            >
-              <p className="meta">{watchEngineAllowlistHint}</p>
-            </HoverCardContent>
-          </HoverCard>
-          <HoverCard openDelay={120} closeDelay={120}>
-            <HoverCardTrigger asChild>
+            </div>
+            <div className="control-watch-engine-item">
+              <span className="control-watch-engine-item-label">
+                {t("control.watchEngineWhyLabel")}
+              </span>
               <span
-                className="pill ghost small control-watch-engine-help-trigger"
-                aria-label={watchEngineChannelsHint}
-                tabIndex={0}
+                key={`watch-engine-why-${watchEngineDecisionMotionKey}`}
+                className="control-watch-engine-item-value control-watch-engine-animated-value"
               >
-                {t("control.watchEngineChannels")}: {watchEngineSnapshot.allowlistedLiveChannels}/
-                {watchEngineSnapshot.totalLiveChannels}
+                {watchEngineDecisionDetails.why}
               </span>
-            </HoverCardTrigger>
-            <HoverCardContent
-              align="start"
-              sideOffset={8}
-              className="control-watch-engine-hovercard"
-            >
-              <p className="meta">{watchEngineChannelsHint}</p>
-            </HoverCardContent>
-          </HoverCard>
-        </div>
-        <div className="control-watch-engine-details" role="list">
-          <p className="meta control-watch-engine-kv" role="listitem">
-            <span className="control-watch-engine-k">{t("control.watchEngineTarget")}</span>
-            <span className="control-watch-engine-v">{watchEngineTargetText}</span>
-          </p>
-          <p className="meta control-watch-engine-kv" role="listitem">
-            <span className="control-watch-engine-k">{t("control.watchEngineSuppression")}</span>
-            <span className="control-watch-engine-v">{watchEngineSuppressionText}</span>
-          </p>
-          <p className="meta control-watch-engine-kv" role="listitem">
-            <span className="control-watch-engine-k">{t("control.watchEngineCooldowns")}</span>
-            <span className="control-watch-engine-v">{watchEngineCooldownText}</span>
-          </p>
-          {watchEngineNoProgressText ? (
+            </div>
+            <div className="control-watch-engine-item">
+              <span className="control-watch-engine-item-label">
+                {t("control.watchEngineNextLabel")}
+              </span>
+              <span
+                key={`watch-engine-next-${watchEngineDecisionMotionKey}`}
+                className="control-watch-engine-item-value control-watch-engine-animated-value"
+              >
+                {watchEngineDecisionDetails.next}
+              </span>
+            </div>
+          </div>
+          <div className="control-watch-engine-meta">
+            <HoverCard openDelay={120} closeDelay={120}>
+              <HoverCardTrigger asChild>
+                <button
+                  type="button"
+                  className="pill ghost small control-watch-engine-help-trigger"
+                  aria-label={`${t("control.watchEngineAllowlist")}: ${watchEngineAllowlistMode}. ${watchEngineAllowlistHint}`}
+                  title={watchEngineAllowlistHint}
+                >
+                  {t("control.watchEngineAllowlist")}: {watchEngineAllowlistMode}
+                </button>
+              </HoverCardTrigger>
+              <HoverCardContent
+                align="start"
+                sideOffset={8}
+                className="control-watch-engine-hovercard"
+              >
+                <p className="meta">{watchEngineAllowlistHint}</p>
+              </HoverCardContent>
+            </HoverCard>
+            <HoverCard openDelay={120} closeDelay={120}>
+              <HoverCardTrigger asChild>
+                <button
+                  type="button"
+                  className="pill ghost small control-watch-engine-help-trigger"
+                  aria-label={`${t("control.watchEngineChannels")}: ${watchEngineSnapshot.allowlistedLiveChannels}/${watchEngineSnapshot.totalLiveChannels}. ${watchEngineChannelsHint}`}
+                  title={watchEngineChannelsHint}
+                >
+                  {t("control.watchEngineChannels")}: {watchEngineSnapshot.allowlistedLiveChannels}/
+                  {watchEngineSnapshot.totalLiveChannels}
+                </button>
+              </HoverCardTrigger>
+              <HoverCardContent
+                align="start"
+                sideOffset={8}
+                className="control-watch-engine-hovercard"
+              >
+                <p className="meta">{watchEngineChannelsHint}</p>
+              </HoverCardContent>
+            </HoverCard>
+          </div>
+          <div className="control-watch-engine-details" role="list">
             <p className="meta control-watch-engine-kv" role="listitem">
-              <span className="control-watch-engine-k">{t("control.watchEngineNoProgress")}</span>
-              <span className="control-watch-engine-v">{watchEngineNoProgressText}</span>
+              <span className="control-watch-engine-k">{t("control.watchEngineTarget")}</span>
+              <span className="control-watch-engine-v">{watchEngineTargetText}</span>
             </p>
-          ) : null}
+            <p className="meta control-watch-engine-kv" role="listitem">
+              <span className="control-watch-engine-k">{t("control.watchEngineSuppression")}</span>
+              <span className="control-watch-engine-v">{watchEngineSuppressionText}</span>
+            </p>
+            <p className="meta control-watch-engine-kv" role="listitem">
+              <span className="control-watch-engine-k">{t("control.watchEngineCooldowns")}</span>
+              <span className="control-watch-engine-v">{watchEngineCooldownText}</span>
+            </p>
+            {watchEngineNoProgressText ? (
+              <p className="meta control-watch-engine-kv" role="listitem">
+                <span className="control-watch-engine-k">{t("control.watchEngineNoProgress")}</span>
+                <span className="control-watch-engine-v">{watchEngineNoProgressText}</span>
+              </p>
+            ) : null}
+          </div>
         </div>
       </div>
     </details>
@@ -631,7 +628,7 @@ export function ControlView({
     <span className="pill ghost small">{t("control.streamPaused")}</span>
   ) : null;
   const streamCardNote = watching
-    ? t("control.streamWatchingActive")
+    ? null
     : showNoDropsHint
       ? t("control.noDropsHint")
       : resumeChannel
@@ -736,6 +733,31 @@ export function ControlView({
   }, [campaignPanels, selectedCampaignKey]);
   const selectedCampaign =
     campaignPanels.find((group) => group.key === selectedCampaignKey) ?? campaignPanels[0] ?? null;
+  const hasTarget = Boolean(targetGame);
+  const controlNowEmptyState = (
+    <div className="control-now-empty">
+      <p className="control-now-empty-title">{t("control.nowEmptyTitle")}</p>
+      <p className="meta">{t("control.nowEmptyHint")}</p>
+    </div>
+  );
+  const controlTargetEmptyState = (
+    <div className="control-target-empty">
+      <div className="control-target-empty-head">
+        <p className="control-target-empty-title">{t("control.targetMissing")}</p>
+        <p className="meta">{t("control.targetEmptyIntro")}</p>
+      </div>
+      <p className="meta">{t("control.targetEmptySummary")}</p>
+      <p className="meta muted">{t("control.targetEmptyNext")}</p>
+    </div>
+  );
+  const channelEmptyState = targetGame ? (
+    <div className="channel-empty">
+      <div className="channel-empty-body">
+        <p className="channel-empty-title">{t("control.channelsEmptyTitle", { game: targetGame })}</p>
+        <p className="meta">{t("control.channelsEmptyHint")}</p>
+      </div>
+    </div>
+  ) : null;
   return (
     <>
       <div className="panel-head control-head">
@@ -771,7 +793,7 @@ export function ControlView({
       </div>
       <div className="control-layout">
         <div className="control-left">
-          <div className="card control-drops">
+          <section className={`control-drops${watching ? " is-live" : ""}`}>
             <div className="control-section-head">
               <div>
                 <div className="label">{t("control.nowTitle")}</div>
@@ -807,7 +829,7 @@ export function ControlView({
                         ? ` | @${streamCardLogin}`
                         : ""}
                   </div>
-                  <p className="meta muted">{streamCardNote}</p>
+                  {streamCardNote ? <p className="meta muted">{streamCardNote}</p> : null}
                 </div>
                 <div className="active-stream-actions">
                   {streamCardChannel && streamCardViewers ? (
@@ -819,7 +841,9 @@ export function ControlView({
                   )}
                 </div>
               </section>
-              <section className={`control-now-drop-card${activeDropInfo ? "" : " is-empty"}`}>
+              <section
+                className={`control-now-drop-card${activeDropInfo ? " has-active-drop" : " is-empty"}`}
+              >
                 <div className="control-now-drop-head">
                   <div>
                     <div className="label">{t("control.currentDrop")}</div>
@@ -847,24 +871,18 @@ export function ControlView({
                               time: formatDuration(liveProgress.activeRemainingMinutes * 60_000),
                             })
                           : t("control.done")}
-                        {activeEtaText ? ` • ${t("control.eta", { time: activeEtaText })}` : ""}
                       </div>
                     </div>
                     <div className="progress-bar">
                       <span style={{ width: `${activeDropProgressPct}%` }} />
                     </div>
-                    <div className="control-now-drop-meta">
-                      <span className="pill ghost small">
-                        {activeDropProgressPct < 100
-                          ? t("control.sidebarStateWatching")
-                          : t("control.done")}
-                      </span>
-                      {activeEtaText ? (
+                    {activeEtaText ? (
+                      <div className="control-now-drop-meta">
                         <span className="pill ghost small">
                           {t("control.eta", { time: activeEtaText })}
                         </span>
-                      ) : null}
-                    </div>
+                      </div>
+                    ) : null}
                   </>
                 ) : (
                   <div className="control-now-drop-empty">
@@ -898,13 +916,11 @@ export function ControlView({
             ) : null}
             {targetGame ? (
               <>
-                {watchEnginePanel}
                 {campaignGroups.length > 0 && (
-                  <>
+                  <div className="control-campaigns-block">
                     <div className="control-section-head">
                       <div>
                         <div className="label">{t("control.dropCampaignsTitle")}</div>
-                        <p className="meta">{t("control.dropCampaignsHint")}</p>
                       </div>
                     </div>
                     <div className="drop-campaigns">
@@ -953,14 +969,10 @@ export function ControlView({
                                       required: selectedCampaign.requiredMinutes,
                                     })}
                                   </span>
-                                </div>
-                              </div>
-                              <div className="drop-campaign-summary">
-                                <strong>{selectedCampaign.pct}%</strong>
-                                <div className="drop-campaign-summary-actions">
-                                  {selectedCampaign.active ? (
-                                    <span className="pill ghost small">
-                                      {t("control.sidebarStateWatching")}
+                                  <span>{selectedCampaign.pct}%</span>
+                                  {selectedCampaign.openDrops > 0 ? (
+                                    <span>
+                                      {t("control.campaignDrops", { count: selectedCampaign.openDrops })}
                                     </span>
                                   ) : null}
                                 </div>
@@ -1019,7 +1031,8 @@ export function ControlView({
                                   typeof d.campaignImageUrl === "string"
                                     ? d.campaignImageUrl.trim()
                                     : "";
-                                const imageSrc = dropImage || campaignImage;
+                                const hasDropImage = Boolean(dropImage);
+                                const hasCampaignImage = Boolean(campaignImage);
                                 const blockingReasonCode = pickDisplayBlockingReason(
                                   d.blockingReasonHints ?? [],
                                 );
@@ -1053,43 +1066,41 @@ export function ControlView({
                                       animate ? { animationDelay: `${idx * 30}ms` } : undefined
                                     }
                                   >
-                                    {imageSrc ? (
-                                      <div
-                                        className="drop-image-frame"
-                                        style={
-                                          campaignImage
-                                            ? {
-                                                backgroundImage: `linear-gradient(150deg, rgba(5, 10, 22, 0.6), rgba(8, 12, 26, 0.8)), url(${campaignImage})`,
-                                                backgroundSize: "cover",
-                                                backgroundPosition: "center",
-                                              }
-                                            : undefined
-                                        }
-                                      >
-                                        <img src={imageSrc} alt="" loading="lazy" />
+                                    {hasDropImage ? (
+                                      <div className="drop-image-frame">
+                                        <img src={dropImage} alt="" loading="lazy" />
                                       </div>
+                                    ) : hasCampaignImage ? (
+                                      <div
+                                        className="drop-image-frame is-fallback"
+                                        style={{
+                                          backgroundImage: `url(${campaignImage})`,
+                                        }}
+                                      />
                                     ) : null}
-                                    <div className="drop-body">
-                                      <div className="drop-header">
-                                        <div className="drop-title">
-                                          <span className="drop-title-text">{d.title}</span>
+                                    <div className="drop-main">
+                                      <div className="drop-body">
+                                        <div className="drop-header">
+                                          <div className="drop-title">
+                                            <span className="drop-title-text">{d.title}</span>
+                                          </div>
                                         </div>
-                                        {displayStatus !== "progress" ? (
-                                          <span className="pill ghost small">{statusLabel}</span>
+                                        {showDropReason ? (
+                                          <div className="drop-reason" title={dropReasonLabel}>
+                                            {dropReasonLabel}
+                                          </div>
                                         ) : null}
                                       </div>
-                                      <div className="meta muted drop-meta-line">
-                                        <span className="drop-meta-item">
-                                          {Math.floor(earnedDisplay)}/{req} min
-                                        </span>
-                                      </div>
-                                      {showDropReason ? (
-                                        <div className="drop-reason" title={dropReasonLabel}>
-                                          {dropReasonLabel}
+                                      <div className={`drop-progress-column ${statusClass}`}>
+                                        <div className="drop-meta-line">
+                                          <span className="drop-meta-item">
+                                            {Math.floor(earnedDisplay)}/{req} min
+                                          </span>
+                                          <span className="pill ghost small">{statusLabel}</span>
                                         </div>
-                                      ) : null}
-                                      <div className="progress-bar small">
-                                        <span style={{ width: `${pct}%` }} />
+                                        <div className="progress-bar small">
+                                          <span style={{ width: `${pct}%` }} />
+                                        </div>
                                       </div>
                                     </div>
                                   </li>
@@ -1100,16 +1111,16 @@ export function ControlView({
                         </section>
                       ) : null}
                     </div>
-                  </>
+                  </div>
                 )}
               </>
             ) : (
-              <p className="meta">{t("control.targetMissing")}</p>
+              controlNowEmptyState
             )}
-          </div>
+          </section>
         </div>
 
-        <div className="card control-target">
+        <section className={`control-target${hasTarget ? "" : " is-empty"}`}>
           <div className="control-target-head">
             <div>
               <div className="label">{t("control.watchControlsTitle")}</div>
@@ -1126,17 +1137,17 @@ export function ControlView({
               </button>
             </div>
           </div>
-          {targetGame ? (
+          {hasTarget ? (
             <>
-              <div className="control-sidebar-grid">
-                <div className="control-sidebar-card">
-                  <span className="label">{t("control.activeTarget")}</span>
-                  <strong className="control-sidebar-value">{targetGame}</strong>
+              <div className="control-target-summary" role="list">
+                <div className="control-target-stat" role="listitem">
+                  <span className="control-target-stat-k">{t("control.activeTarget")}</span>
+                  <strong className="control-target-stat-v">{targetGame}</strong>
                   <p className="meta">{controlStateText}</p>
                 </div>
-                <div className="control-sidebar-card">
-                  <span className="label">{t("control.streamsFound")}</span>
-                  <strong className="control-sidebar-value">
+                <div className="control-target-stat" role="listitem">
+                  <span className="control-target-stat-k">{t("control.streamsFound")}</span>
+                  <strong className="control-target-stat-v">
                     {channels.length > 0 ? channels.length : 0}
                   </strong>
                   <p className="meta">
@@ -1165,123 +1176,126 @@ export function ControlView({
                   ) : null}
                 </div>
               ) : null}
+              <div className="control-target-engine">{watchEnginePanel}</div>
             </>
           ) : (
-            <p className="meta">{t("control.targetMissing")}</p>
+            controlTargetEmptyState
           )}
-          {targetGame ? (
-            <div className="control-section-head control-channel-head">
-              <div>
+          {hasTarget ? (
+            <div className="control-channel-block">
+              <div className="control-target-subhead">
                 <div className="label">{t("control.channelListTitle")}</div>
                 <p className="meta">{t("control.channelListHint")}</p>
               </div>
+              {channelsLoading ? (
+                <p className="meta inline-loader">
+                  <span className="spinner" />
+                  {t("control.channelsLoading")}
+                </p>
+              ) : null}
+              {channelErrorText ? (
+                <p className="error">
+                  {t("control.channelError")}: {channelErrorText}
+                </p>
+              ) : null}
+              <div className={`channel-grid-wrapper ${channelGridStateClass}`}>
+                {channels.length > 0 ? (
+                <ul className={channelGridClass}>
+                  {combinedChannels.map((c, idx) => {
+                    const thumb = c.thumbnail
+                      ? c.thumbnail.replace("{width}", "320").replace("{height}", "180")
+                      : null;
+                    const isActive = watching?.id === c.id;
+                    const animatedViewerCount = c.exiting
+                      ? c.viewers
+                      : (animatedViewersById[c.id] ?? c.viewers);
+                    const loginLabel =
+                      c.login &&
+                      c.displayName &&
+                      c.displayName.toLowerCase() !== c.login.toLowerCase()
+                        ? `@${c.login}`
+                        : "";
+                    const languageTag = c.language ? c.language.toUpperCase() : "";
+                    const metaParts = [languageTag, loginLabel].filter(Boolean);
+                    const metaLine = metaParts.join(" â€¢ ");
+                    const title = c.title?.trim() ?? "";
+                    return (
+                      <li
+                        key={c.id}
+                        className={`channel-tile-shell ${
+                          c.exiting
+                            ? "animate-exit"
+                            : !firstRenderRef.current && channelChangedIds.has(c.id)
+                              ? "animate-item"
+                              : ""
+                        }`}
+                        style={
+                          !firstRenderRef.current && channelChangedIds.has(c.id) && !c.exiting
+                            ? { animationDelay: `${idx * 30}ms` }
+                            : undefined
+                        }
+                      >
+                        <button
+                          type="button"
+                          className={`channel-tile ${isActive ? "active" : ""}`}
+                          onClick={() => {
+                            if (!canWatchTarget) return;
+                            startWatching(c);
+                          }}
+                          disabled={!canWatchTarget}
+                          aria-pressed={isActive}
+                          aria-label={
+                            title
+                              ? `${c.displayName} - ${c.game}. ${title}`
+                              : `${c.displayName} - ${c.game}`
+                          }
+                        >
+                          {thumb ? (
+                            <div
+                              className="channel-thumb"
+                              style={{ backgroundImage: `url(${thumb})` }}
+                            />
+                          ) : null}
+                          <span className="viewer-badge">
+                            <span className="viewer-main">{formatViewers(animatedViewerCount)}</span>
+                          </span>
+                          <div className="channel-content">
+                            <div className="channel-header">
+                              <div>
+                                <div className="meta ellipsis">{c.game}</div>
+                                <div className="channel-name ellipsis">{c.displayName}</div>
+                              </div>
+                            </div>
+                            {metaLine ? <div className="meta muted ellipsis">{metaLine}</div> : null}
+                            {title ? <div className="meta muted ellipsis">{title}</div> : null}
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : null}
+                {!channelsLoading && !channelError && targetGame && channels.length === 0
+                  ? channelEmptyState
+                  : null}
+                {showChannelSkeleton ? (
+                  <ul className={`${channelGridClass} channel-grid-skeleton`} aria-hidden="true">
+                    {CHANNEL_SKELETON.map((sk) => (
+                      <li key={sk.key} className="channel-tile skeleton-tile">
+                        <div className="skeleton-head">
+                          <div className="skeleton-line tiny" />
+                          <div className="skeleton-chip" />
+                        </div>
+                        <div className="skeleton-line medium" />
+                        <div className="skeleton-line short" />
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
             </div>
           ) : null}
-          {targetGame && channelsLoading ? (
-            <p className="meta inline-loader">
-              <span className="spinner" />
-              {t("control.channelsLoading")}
-            </p>
-          ) : null}
-          {targetGame && channelErrorText && (
-            <p className="error">
-              {t("control.channelError")}: {channelErrorText}
-            </p>
-          )}
-          <div className={`channel-grid-wrapper ${channelGridStateClass}`}>
-            {targetGame && channels.length > 0 ? (
-              <ul className={channelGridClass}>
-                {combinedChannels.map((c, idx) => {
-                  const thumb = c.thumbnail
-                    ? c.thumbnail.replace("{width}", "320").replace("{height}", "180")
-                    : null;
-                  const isActive = watching?.id === c.id;
-                  const animatedViewerCount = c.exiting
-                    ? c.viewers
-                    : (animatedViewersById[c.id] ?? c.viewers);
-                  const loginLabel =
-                    c.login &&
-                    c.displayName &&
-                    c.displayName.toLowerCase() !== c.login.toLowerCase()
-                      ? `@${c.login}`
-                      : "";
-                  const languageTag = c.language ? c.language.toUpperCase() : "";
-                  const metaParts = [languageTag, loginLabel].filter(Boolean);
-                  const metaLine = metaParts.join(" â€¢ ");
-                  const title = c.title?.trim() ?? "";
-                  return (
-                    <li
-                      key={c.id}
-                      className={`channel-tile ${isActive ? "active" : ""} ${
-                        c.exiting
-                          ? "animate-exit"
-                          : !firstRenderRef.current && channelChangedIds.has(c.id)
-                            ? "animate-item"
-                            : ""
-                      }`}
-                      style={
-                        !firstRenderRef.current && channelChangedIds.has(c.id) && !c.exiting
-                          ? { animationDelay: `${idx * 30}ms` }
-                          : undefined
-                      }
-                      onClick={() => {
-                        if (!canWatchTarget) return;
-                        startWatching(c);
-                      }}
-                      role="button"
-                      tabIndex={canWatchTarget ? 0 : -1}
-                      aria-disabled={!canWatchTarget}
-                      onKeyDown={(evt) => {
-                        if (!canWatchTarget) return;
-                        if (evt.key === "Enter" || evt.key === " ") {
-                          evt.preventDefault();
-                          startWatching(c);
-                        }
-                      }}
-                    >
-                      {thumb ? (
-                        <div
-                          className="channel-thumb"
-                          style={{ backgroundImage: `url(${thumb})` }}
-                        />
-                      ) : null}
-                      <span className="viewer-badge">
-                        <span className="viewer-main">{formatViewers(animatedViewerCount)}</span>
-                      </span>
-                      <div className="channel-content">
-                        <div className="channel-header">
-                          <div>
-                            <div className="meta ellipsis">{c.game}</div>
-                            <div className="channel-name ellipsis">{c.displayName}</div>
-                          </div>
-                        </div>
-                        {metaLine ? <div className="meta muted ellipsis">{metaLine}</div> : null}
-                        {title ? <div className="meta muted ellipsis">{title}</div> : null}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : null}
-            {!channelsLoading && !channelError && targetGame && channels.length === 0 ? (
-              <div className="channel-empty">{t("control.channelsEmpty")}</div>
-            ) : null}
-            {showChannelSkeleton ? (
-              <ul className={`${channelGridClass} channel-grid-skeleton`} aria-hidden="true">
-                {CHANNEL_SKELETON.map((sk) => (
-                  <li key={sk.key} className="channel-tile skeleton-tile">
-                    <div className="skeleton-head">
-                      <div className="skeleton-line tiny" />
-                      <div className="skeleton-chip" />
-                    </div>
-                    <div className="skeleton-line medium" />
-                    <div className="skeleton-line short" />
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        </div>
+        </section>
       </div>
     </>
   );
