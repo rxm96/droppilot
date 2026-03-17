@@ -41,6 +41,15 @@ describe("isAutoClaimCandidate", () => {
     });
     expect(isAutoClaimCandidate(item, Date.now())).toBe(false);
   });
+
+  it("blocks fallback claim for badge or emote icon drops", () => {
+    const item = makeItem({
+      isClaimable: false,
+      dropHasBadgeOrEmote: true,
+      blockingReasonHints: ["missing_drop_instance_id"],
+    });
+    expect(isAutoClaimCandidate(item, Date.now())).toBe(false);
+  });
 });
 
 describe("InventoryClaimEngine.autoClaimFromInventory", () => {
@@ -64,7 +73,7 @@ describe("InventoryClaimEngine.autoClaimFromInventory", () => {
       dropId: "drop-1",
       campaignId: "camp-1",
     });
-    expect(result).toEqual({ claimedCount: 1 });
+    expect(result).toEqual({ claimedCount: 1, claimedIds: ["drop-1"] });
     expect(onClaimed).toHaveBeenCalledWith({ title: "Drop 1", game: "Game" });
     expect(setClaimStatus).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "success", message: "Auto-claimed: Drop 1" }),

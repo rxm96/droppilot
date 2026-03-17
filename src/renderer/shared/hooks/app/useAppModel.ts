@@ -1249,6 +1249,66 @@ export function useAppModel() {
     watching,
   ]);
 
+  const heroClaimableDrops = targetDrops.filter(
+    (drop) => drop.status !== "claimed" && drop.isClaimable === true,
+  ).length;
+  const heroBlockedDrops = targetDrops.filter(
+    (drop) =>
+      drop.status !== "claimed" &&
+      (drop.status === "locked" || drop.blocked === true || drop.excluded),
+  ).length;
+
+  useEffect(() => {
+    const syncTrayState = window.electronAPI?.app?.setTrayState;
+    if (!syncTrayState) return;
+
+    const watchingGame = (watching?.game ?? "").trim();
+    const activeDropTitle = (activeDropInfo?.title ?? "").trim();
+    const targetLabel = displayTargetGame.trim();
+    const watchError = (watchStats.lastError ?? "").trim();
+    const claimError = claimStatus?.kind === "error" ? claimStatus.message.trim() : "";
+
+    let state: "idle" | "active" | "claim" | "error" = "idle";
+    let label = "Idle";
+
+    if (!isLinkedOrDemo) {
+      label = "Login required";
+    } else if (claimError || watchError || auth.status === "error") {
+      state = "error";
+      label = claimError || watchError || "Attention needed";
+    } else if (heroClaimableDrops > 0) {
+      state = "claim";
+      label =
+        heroClaimableDrops === 1
+          ? "1 drop ready to claim"
+          : `${heroClaimableDrops} drops ready to claim`;
+    } else if (watchingGame && activeDropTitle) {
+      state = "active";
+      label = `Watching ${watchingGame}: ${activeDropTitle}`;
+    } else if (watchingGame) {
+      state = "active";
+      label = `Watching ${watchingGame}`;
+    } else if (inventoryRefreshing || channelsRefreshing) {
+      state = "active";
+      label = targetLabel ? `Refreshing ${targetLabel}` : "Refreshing inventory";
+    } else if (targetLabel) {
+      label = `Ready for ${targetLabel}`;
+    }
+
+    void syncTrayState({ state, label });
+  }, [
+    activeDropInfo?.title,
+    auth.status,
+    channelsRefreshing,
+    claimStatus,
+    displayTargetGame,
+    heroClaimableDrops,
+    inventoryRefreshing,
+    isLinkedOrDemo,
+    watchStats.lastError,
+    watching?.game,
+  ]);
+
   const navProps = {
     view,
     setView,
@@ -1258,14 +1318,6 @@ export function useAppModel() {
     logout,
     showDebug: debugEnabled,
   };
-  const heroClaimableDrops = targetDrops.filter(
-    (drop) => drop.status !== "claimed" && drop.isClaimable === true,
-  ).length;
-  const heroBlockedDrops = targetDrops.filter(
-    (drop) =>
-      drop.status !== "claimed" &&
-      (drop.status === "locked" || drop.blocked === true || drop.excluded),
-  ).length;
   const overviewProps = {
     inventory,
     stats,

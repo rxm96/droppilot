@@ -49,6 +49,7 @@ const CLAIM_RECONCILE_POLICY = {
   minGapMs: 2_000,
   baseDelayMs: 4_000,
 } as const;
+const AUTO_CLAIM_PUBSUB_FALLBACK_MS = 12_000;
 const GENERIC_RECONCILE_POLICY = {
   forceLoading: true,
   minGapMs: 2_000,
@@ -63,6 +64,45 @@ export const scheduleClaimReconcile = (
 ): void => {
   if (!reconciler) return;
   reconciler.schedule(CLAIM_RECONCILE_POLICY, run);
+};
+
+export const mergePendingAutoClaimIds = (
+  pendingIds: Set<string>,
+  claimedIds: string[],
+): Set<string> => {
+  const next = new Set(pendingIds);
+  for (const rawId of claimedIds) {
+    const id = rawId.trim();
+    if (!id) continue;
+    next.add(id);
+  }
+  return next;
+};
+
+export const settlePendingAutoClaimId = (
+  pendingIds: Set<string>,
+  claimedId?: string | null,
+): Set<string> => {
+  const id = claimedId?.trim();
+  if (!id || !pendingIds.has(id)) return pendingIds;
+  const next = new Set(pendingIds);
+  next.delete(id);
+  return next;
+};
+
+export const reconcilePendingAutoClaimIdsWithInventory = (
+  pendingIds: Set<string>,
+  items: InventoryItem[],
+): Set<string> => {
+  if (pendingIds.size === 0 || items.length === 0) return pendingIds;
+  let next: Set<string> | null = null;
+  for (const item of items) {
+    const id = item.id?.trim();
+    if (!id || !pendingIds.has(id) || item.status !== "claimed") continue;
+    if (next === null) next = new Set(pendingIds);
+    next.delete(id);
+  }
+  return next ?? pendingIds;
 };
 export {
   applyDropClaimToInventoryItems,
@@ -112,6 +152,8 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
   const fetchInFlightStartedAtRef = useRef(0);
   const fetchInFlightForceRef = useRef(false);
   const pendingFetchOptsRef = useRef<FetchInventoryOpts | null>(null);
+  const pendingAutoClaimIdsRef = useRef<Set<string>>(new Set());
+  const autoClaimFallbackTimerRef = useRef<number | null>(null);
   const fetchInventoryRef = useRef<(opts?: FetchInventoryOpts) => Promise<void>>(() =>
     Promise.resolve(),
   );
@@ -140,8 +182,41 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
       pubSubReconcilerRef.current?.reset();
       setProgressAnchorByDropId({});
       pendingFetchOptsRef.current = null;
+      pendingAutoClaimIdsRef.current = new Set();
+      if (autoClaimFallbackTimerRef.current !== null) {
+        window.clearTimeout(autoClaimFallbackTimerRef.current);
+        autoClaimFallbackTimerRef.current = null;
+      }
     }
   }, [demoMode, isLinked]);
+
+  const clearAutoClaimFallbackTimer = useCallback(() => {
+    if (autoClaimFallbackTimerRef.current === null) return;
+    window.clearTimeout(autoClaimFallbackTimerRef.current);
+    autoClaimFallbackTimerRef.current = null;
+  }, []);
+
+  const syncPendingAutoClaimIds = useCallback(
+    (nextPendingIds: Set<string>) => {
+      pendingAutoClaimIdsRef.current = nextPendingIds;
+      if (nextPendingIds.size === 0) {
+        clearAutoClaimFallbackTimer();
+      }
+    },
+    [clearAutoClaimFallbackTimer],
+  );
+
+  const scheduleAutoClaimPubSubFallback = useCallback(() => {
+    if (autoClaimFallbackTimerRef.current !== null) return;
+    autoClaimFallbackTimerRef.current = window.setTimeout(() => {
+      autoClaimFallbackTimerRef.current = null;
+      if (pendingAutoClaimIdsRef.current.size === 0) return;
+      pendingAutoClaimIdsRef.current = new Set();
+      scheduleClaimReconcile(pubSubReconcilerRef.current, (forceLoading) => {
+        void fetchInventoryRef.current({ forceLoading });
+      });
+    }, AUTO_CLAIM_PUBSUB_FALLBACK_MS);
+  }, []);
 
   useEffect(() => {
     if (!demoMode) {
@@ -278,6 +353,13 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
             return;
           }
           const nextItems = reconcileFetchedInventoryItems(prevItems, bundle.items);
+          const pendingAfterFetch = reconcilePendingAutoClaimIdsWithInventory(
+            pendingAutoClaimIdsRef.current,
+            nextItems,
+          );
+          if (pendingAfterFetch !== pendingAutoClaimIdsRef.current) {
+            syncPendingAutoClaimIds(pendingAfterFetch);
+          }
           setCampaigns(bundle.campaigns);
           const minutesUpdate = deriveMinutesUpdate(totalMinutesRef.current, nextItems);
           logInfo("inventory: fetch success", {
@@ -305,10 +387,11 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
                 setClaimStatus,
               })
               .then((result) => {
-                if (result.claimedCount <= 0) return;
-                scheduleClaimReconcile(pubSubReconcilerRef.current, (forceLoading) => {
-                  void fetchInventoryRef.current({ forceLoading });
-                });
+                if (result.claimedCount <= 0 || result.claimedIds.length === 0) return;
+                syncPendingAutoClaimIds(
+                  mergePendingAutoClaimIds(pendingAutoClaimIdsRef.current, result.claimedIds),
+                );
+                scheduleAutoClaimPubSubFallback();
               });
           }
         } catch (err) {
@@ -341,7 +424,17 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
         }
       }
     },
-    [inventory, onClaimed, onMinutesEarned, onAuthError, autoClaimEnabled, demoMode, isLinked],
+    [
+      inventory,
+      onClaimed,
+      onMinutesEarned,
+      onAuthError,
+      autoClaimEnabled,
+      demoMode,
+      isLinked,
+      scheduleAutoClaimPubSubFallback,
+      syncPendingAutoClaimIds,
+    ],
   );
 
   fetchInventoryRef.current = fetchInventory;
@@ -383,6 +476,13 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
       }
       if (result.claimedItem && autoClaimEnabled) {
         onClaimed({ title: result.claimedItem.title, game: result.claimedItem.game });
+      }
+      const settledPending = settlePendingAutoClaimId(
+        pendingAutoClaimIdsRef.current,
+        result.claimedItem?.id ?? event.dropId ?? null,
+      );
+      if (settledPending !== pendingAutoClaimIdsRef.current) {
+        syncPendingAutoClaimIds(settledPending);
       }
       const eventAt = resolvePubSubEventAt(event, Date.now());
       const anchorIds = getPatchedAnchorIds(result);
@@ -453,7 +553,15 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
       pubSubReconciler.clearScheduledReconcile();
       if (typeof unsubscribe === "function") unsubscribe();
     };
-  }, [demoMode, isLinked, onClaimed, onMinutesEarned, onAuthError, autoClaimEnabled]);
+  }, [
+    demoMode,
+    isLinked,
+    onClaimed,
+    onMinutesEarned,
+    onAuthError,
+    autoClaimEnabled,
+    syncPendingAutoClaimIds,
+  ]);
 
   useEffect(() => {
     if (inventoryChanges.added.size === 0 && inventoryChanges.updated.size === 0) return;

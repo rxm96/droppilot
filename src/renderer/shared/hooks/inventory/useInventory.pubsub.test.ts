@@ -3,7 +3,10 @@ import type { InventoryItem, UserPubSubEvent } from "@renderer/shared/types";
 import {
   applyDropClaimToInventoryItems,
   applyDropProgressToInventoryItems,
+  mergePendingAutoClaimIds,
+  reconcilePendingAutoClaimIdsWithInventory,
   scheduleClaimReconcile,
+  settlePendingAutoClaimId,
   shouldDeduplicateInFlightForceFetch,
 } from "./useInventory";
 
@@ -206,5 +209,25 @@ describe("scheduleClaimReconcile", () => {
       },
       expect.any(Function),
     );
+  });
+});
+
+describe("pending auto-claim tracking", () => {
+  it("merges new claimed ids into the pending set", () => {
+    const pending = mergePendingAutoClaimIds(new Set(["drop-1"]), ["drop-2", " drop-3 ", ""]);
+    expect(Array.from(pending)).toEqual(["drop-1", "drop-2", "drop-3"]);
+  });
+
+  it("settles a pending claim once the matching pubsub claim arrives", () => {
+    const pending = settlePendingAutoClaimId(new Set(["drop-1", "drop-2"]), "drop-2");
+    expect(Array.from(pending)).toEqual(["drop-1"]);
+  });
+
+  it("clears pending claims that already appear as claimed in a later fetch", () => {
+    const pending = reconcilePendingAutoClaimIdsWithInventory(
+      new Set(["drop-1", "drop-2"]),
+      [makeItem({ id: "drop-1", status: "claimed", earnedMinutes: 60 }), makeItem({ id: "drop-2" })],
+    );
+    expect(Array.from(pending)).toEqual(["drop-2"]);
   });
 });

@@ -47,6 +47,7 @@ export const isAutoClaimCandidate = (item: InventoryItem, now = Date.now()): boo
 
 export type AutoClaimRunResult = {
   claimedCount: number;
+  claimedIds: string[];
 };
 
 const throwIfClaimErrorResponse = (response: unknown): void => {
@@ -118,6 +119,7 @@ export class InventoryClaimEngine {
       });
     }
     let claimedCount = 0;
+    const claimedIds: string[] = [];
     let suppressedClaimErrorLogs = 0;
     let emittedClaimErrorLogs = 0;
     for (const drop of claimable) {
@@ -140,6 +142,7 @@ export class InventoryClaimEngine {
         this.claimRetryByDropId.delete(drop.id);
         this.claimAttemptsById.delete(drop.id);
         claimedCount += 1;
+        claimedIds.push(drop.id);
         logInfo("inventory: auto-claimed", {
           title: drop.title,
           game: drop.game,
@@ -154,7 +157,7 @@ export class InventoryClaimEngine {
         if (err instanceof Error && err.name === "ClaimAuthError") {
           logWarn("inventory: claim auth error", { message: err.message });
           deps.onAuthError(err.message);
-          return { claimedCount };
+          return { claimedCount, claimedIds };
         }
 
         if (emittedClaimErrorLogs < MAX_CLAIM_ERROR_LOGS_PER_RUN) {
@@ -190,7 +193,7 @@ export class InventoryClaimEngine {
         emitted: emittedClaimErrorLogs,
       });
     }
-    return { claimedCount };
+    return { claimedCount, claimedIds };
   }
 
   async claimFromPubSubDropClaim(deps: PubSubClaimDeps): Promise<void> {

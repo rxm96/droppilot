@@ -79,6 +79,16 @@ describe("canClaimDrop", () => {
     expect(canClaimDrop(item)).toBe(true);
   });
 
+  it("rejects fallback claim for badge or emote icon drops without explicit claimability", () => {
+    const item = makeItem({
+      earnedMinutes: 60,
+      isClaimable: false,
+      dropHasBadgeOrEmote: true,
+      blockingReasonHints: ["missing_drop_instance_id"],
+    });
+    expect(canClaimDrop(item)).toBe(false);
+  });
+
   it("rejects hard blockers, missing claim ids, and closed claim windows", () => {
     expect(
       canClaimDrop(

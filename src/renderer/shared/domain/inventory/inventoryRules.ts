@@ -91,6 +91,7 @@ export const canClaimDrop = (
   if (!progressDone) return false;
 
   if (item.isClaimable === true) return true;
+  if (item.dropHasBadgeOrEmote === true) return false;
   if (!allowFallbackWhenNotExplicit) return false;
   if (item.isClaimable === false && hasHardClaimBlockers(item)) return false;
   return true;

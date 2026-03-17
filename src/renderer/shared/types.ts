@@ -24,6 +24,7 @@ export type InventoryItem = {
   status: "locked" | "progress" | "claimed";
   imageUrl?: string;
   campaignImageUrl?: string;
+  dropHasBadgeOrEmote?: boolean;
   linked?: boolean;
   campaignHasBadgeOrEmote?: boolean;
   campaignStatus?: string;
