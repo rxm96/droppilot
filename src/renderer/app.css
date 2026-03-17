@@ -1282,7 +1282,7 @@ a {
   border: 1px solid var(--shell-line);
   background: var(--shell-band);
   box-shadow: none;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   position: relative;
   overflow: hidden;
 }
@@ -1291,7 +1291,7 @@ a {
   display: flex;
   align-items: center;
   gap: 2px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -1317,6 +1317,7 @@ a {
   transition:
     background 0.15s ease,
     color 0.15s ease,
+    box-shadow 0.15s ease,
     transform 0.1s ease;
 }
 
@@ -1327,10 +1328,23 @@ a {
   transform: none;
 }
 
+.top-nav-tab:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px color-mix(in srgb, var(--signal-accent) 72%, var(--foreground));
+}
+
 .top-nav-tab.active {
-  background: color-mix(in srgb, var(--card) 88%, transparent);
+  background: var(--signal-accent-soft);
   color: var(--foreground);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 52%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--signal-accent) 28%, transparent);
+}
+
+.top-nav-tab.active:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--signal-accent) 28%, transparent),
+    0 0 0 2px var(--background),
+    0 0 0 4px color-mix(in srgb, var(--signal-accent) 72%, var(--foreground));
 }
 
 .top-nav-icon {
@@ -1352,7 +1366,7 @@ a {
 }
 
 .top-nav-tab.active .top-nav-icon {
-  color: var(--foreground);
+  color: var(--signal-accent);
 }
 
 .top-nav-label {
@@ -1397,7 +1411,13 @@ a {
   white-space: nowrap;
   transition:
     opacity 0.15s ease,
+    box-shadow 0.15s ease,
     transform 0.1s ease;
+}
+
+.top-nav-action:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px color-mix(in srgb, var(--signal-accent) 72%, var(--foreground));
 }
 
 .top-nav-action:hover {
@@ -7041,6 +7061,12 @@ button.priority-remove-button {
   .layout {
     margin-top: 12px;
   }
+  .top-nav {
+    flex-wrap: wrap;
+  }
+  .top-nav-tabs {
+    flex-wrap: wrap;
+  }
   .top-nav-session {
     width: 100%;
     justify-content: flex-start;
@@ -7049,8 +7075,13 @@ button.priority-remove-button {
     padding-top: 6px;
     border-top: 1px solid var(--shell-line);
   }
+  .top-nav-label {
+    display: none;
+  }
   .top-nav-tab {
-    flex: 1 1 180px;
+    padding: 8px;
+    justify-content: center;
+    flex: 0 0 auto;
   }
   .settings-head {
     flex-direction: column;
