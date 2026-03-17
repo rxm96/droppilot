@@ -213,7 +213,8 @@ export function Hero({
       : isAllDone
         ? t("control.allDone")
         : t("hero.opsWaitingTitle");
-  const useCompactCurrentDropTitle = hasLiveDropTitle && shouldCompactCurrentDropTitle(activeDropTitleText);
+  const useCompactCurrentDropTitle =
+    hasLiveDropTitle && shouldCompactCurrentDropTitle(activeDropTitleText);
   const currentDropClassName = [
     "hero-current-drop",
     hasTarget ? "" : "is-empty",
@@ -432,7 +433,10 @@ export function Hero({
                   <span className="hero-current-drop-meta-item">{activeDropRemainingText}</span>
                 ) : null}
                 {activeDropEtaText ? (
-                  <time className="hero-current-drop-meta-item hero-time-pill" dateTime={activeDropEtaIso ?? ""}>
+                  <time
+                    className="hero-current-drop-meta-item hero-time-pill"
+                    dateTime={activeDropEtaIso ?? ""}
+                  >
                     {t("control.eta", { time: activeDropEtaText })}
                   </time>
                 ) : null}

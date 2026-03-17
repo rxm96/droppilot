@@ -708,27 +708,27 @@ export function InventoryView({
                           </div>
                         </div>
                         <ul className="campaign-drop-list campaign-skeleton-drop-list">
-                            {Array.from({ length: sk.drops }).map((_, dropIdx) => (
-                              <li
-                                key={`${sk.key}-drop-${dropIdx}`}
-                                className="campaign-drop campaign-skeleton-drop"
-                              >
-                                <div className="campaign-drop-main">
-                                  <div className="skeleton-line skeleton-thumb campaign-skeleton-drop-thumb" />
-                                  <div className="campaign-drop-body skeleton-body">
-                                    <div className="skeleton-line short" />
-                                    <div className="skeleton-line tiny" />
-                                  </div>
-                                </div>
-                                <div className="campaign-drop-progress-column campaign-skeleton-drop-progress">
-                                  <div className="skeleton-line bar" />
+                          {Array.from({ length: sk.drops }).map((_, dropIdx) => (
+                            <li
+                              key={`${sk.key}-drop-${dropIdx}`}
+                              className="campaign-drop campaign-skeleton-drop"
+                            >
+                              <div className="campaign-drop-main">
+                                <div className="skeleton-line skeleton-thumb campaign-skeleton-drop-thumb" />
+                                <div className="campaign-drop-body skeleton-body">
+                                  <div className="skeleton-line short" />
                                   <div className="skeleton-line tiny" />
                                 </div>
-                                <div className="campaign-drop-meta">
-                                  <div className="skeleton-chip wide" />
-                                </div>
-                              </li>
-                            ))}
+                              </div>
+                              <div className="campaign-drop-progress-column campaign-skeleton-drop-progress">
+                                <div className="skeleton-line bar" />
+                                <div className="skeleton-line tiny" />
+                              </div>
+                              <div className="campaign-drop-meta">
+                                <div className="skeleton-chip wide" />
+                              </div>
+                            </li>
+                          ))}
                         </ul>
                       </div>
                     </div>
@@ -821,7 +821,9 @@ export function InventoryView({
                   >
                     <div className="campaign-inline-detail">
                       {view.showCampaignActions ? (
-                        <div className={`campaign-action-rail-shell${isSelected ? " is-open" : ""}`}>
+                        <div
+                          className={`campaign-action-rail-shell${isSelected ? " is-open" : ""}`}
+                        >
                           <div className="campaign-action-rail-body">
                             <div className="campaign-detail-stage">
                               <div className="campaign-detail-head">
@@ -830,7 +832,9 @@ export function InventoryView({
                                     <button
                                       type="button"
                                       className={`pill ghost small ${view.needsLink ? "danger-chip" : ""}`}
-                                      onClick={() => onOpenAccountLink(view.accountLinkUrl || undefined)}
+                                      onClick={() =>
+                                        onOpenAccountLink(view.accountLinkUrl || undefined)
+                                      }
                                       title={view.accountLinkUrl || undefined}
                                     >
                                       {t("inventory.campaigns.linkRequiredAction")}

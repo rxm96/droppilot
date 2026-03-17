@@ -97,13 +97,21 @@ export function TopNav({
                 {sessionInitial}
               </span>
             )}
-            <span className="truncate text-sm font-medium text-foreground" title={sessionDisplayName}>
+            <span
+              className="truncate text-sm font-medium text-foreground"
+              title={sessionDisplayName}
+            >
               {sessionDisplayName}
             </span>
           </div>
         ) : null}
         {isLinked ? (
-          <button type="button" className="top-nav-action ghost" onClick={logout} aria-label={t("session.logout")}>
+          <button
+            type="button"
+            className="top-nav-action ghost"
+            onClick={logout}
+            aria-label={t("session.logout")}
+          >
             {t("session.logout")}
           </button>
         ) : (

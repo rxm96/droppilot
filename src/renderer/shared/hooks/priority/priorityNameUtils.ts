@@ -1,5 +1,4 @@
-export const normalizePriorityGameName = (name: string): string =>
-  name.trim().toLocaleLowerCase();
+export const normalizePriorityGameName = (name: string): string => name.trim().toLocaleLowerCase();
 
 export const hasPriorityGameName = (priorityGames: string[], name: string): boolean => {
   const normalized = normalizePriorityGameName(name);

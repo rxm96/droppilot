@@ -753,7 +753,9 @@ export function ControlView({
   const channelEmptyState = targetGame ? (
     <div className="channel-empty">
       <div className="channel-empty-body">
-        <p className="channel-empty-title">{t("control.channelsEmptyTitle", { game: targetGame })}</p>
+        <p className="channel-empty-title">
+          {t("control.channelsEmptyTitle", { game: targetGame })}
+        </p>
         <p className="meta">{t("control.channelsEmptyHint")}</p>
       </div>
     </div>
@@ -972,7 +974,9 @@ export function ControlView({
                                   <span>{selectedCampaign.pct}%</span>
                                   {selectedCampaign.openDrops > 0 ? (
                                     <span>
-                                      {t("control.campaignDrops", { count: selectedCampaign.openDrops })}
+                                      {t("control.campaignDrops", {
+                                        count: selectedCampaign.openDrops,
+                                      })}
                                     </span>
                                   ) : null}
                                 </div>
@@ -1200,81 +1204,85 @@ export function ControlView({
               ) : null}
               <div className={`channel-grid-wrapper ${channelGridStateClass}`}>
                 {channels.length > 0 ? (
-                <ul className={channelGridClass}>
-                  {combinedChannels.map((c, idx) => {
-                    const thumb = c.thumbnail
-                      ? c.thumbnail.replace("{width}", "320").replace("{height}", "180")
-                      : null;
-                    const isActive = watching?.id === c.id;
-                    const animatedViewerCount = c.exiting
-                      ? c.viewers
-                      : (animatedViewersById[c.id] ?? c.viewers);
-                    const loginLabel =
-                      c.login &&
-                      c.displayName &&
-                      c.displayName.toLowerCase() !== c.login.toLowerCase()
-                        ? `@${c.login}`
-                        : "";
-                    const languageTag = c.language ? c.language.toUpperCase() : "";
-                    const metaParts = [languageTag, loginLabel].filter(Boolean);
-                    const metaLine = metaParts.join(" â€¢ ");
-                    const title = c.title?.trim() ?? "";
-                    return (
-                      <li
-                        key={c.id}
-                        className={`channel-tile-shell ${
-                          c.exiting
-                            ? "animate-exit"
-                            : !firstRenderRef.current && channelChangedIds.has(c.id)
-                              ? "animate-item"
-                              : ""
-                        }`}
-                        style={
-                          !firstRenderRef.current && channelChangedIds.has(c.id) && !c.exiting
-                            ? { animationDelay: `${idx * 30}ms` }
-                            : undefined
-                        }
-                      >
-                        <button
-                          type="button"
-                          className={`channel-tile ${isActive ? "active" : ""}`}
-                          onClick={() => {
-                            if (!canWatchTarget) return;
-                            startWatching(c);
-                          }}
-                          disabled={!canWatchTarget}
-                          aria-pressed={isActive}
-                          aria-label={
-                            title
-                              ? `${c.displayName} - ${c.game}. ${title}`
-                              : `${c.displayName} - ${c.game}`
+                  <ul className={channelGridClass}>
+                    {combinedChannels.map((c, idx) => {
+                      const thumb = c.thumbnail
+                        ? c.thumbnail.replace("{width}", "320").replace("{height}", "180")
+                        : null;
+                      const isActive = watching?.id === c.id;
+                      const animatedViewerCount = c.exiting
+                        ? c.viewers
+                        : (animatedViewersById[c.id] ?? c.viewers);
+                      const loginLabel =
+                        c.login &&
+                        c.displayName &&
+                        c.displayName.toLowerCase() !== c.login.toLowerCase()
+                          ? `@${c.login}`
+                          : "";
+                      const languageTag = c.language ? c.language.toUpperCase() : "";
+                      const metaParts = [languageTag, loginLabel].filter(Boolean);
+                      const metaLine = metaParts.join(" â€¢ ");
+                      const title = c.title?.trim() ?? "";
+                      return (
+                        <li
+                          key={c.id}
+                          className={`channel-tile-shell ${
+                            c.exiting
+                              ? "animate-exit"
+                              : !firstRenderRef.current && channelChangedIds.has(c.id)
+                                ? "animate-item"
+                                : ""
+                          }`}
+                          style={
+                            !firstRenderRef.current && channelChangedIds.has(c.id) && !c.exiting
+                              ? { animationDelay: `${idx * 30}ms` }
+                              : undefined
                           }
                         >
-                          {thumb ? (
-                            <div
-                              className="channel-thumb"
-                              style={{ backgroundImage: `url(${thumb})` }}
-                            />
-                          ) : null}
-                          <span className="viewer-badge">
-                            <span className="viewer-main">{formatViewers(animatedViewerCount)}</span>
-                          </span>
-                          <div className="channel-content">
-                            <div className="channel-header">
-                              <div>
-                                <div className="meta ellipsis">{c.game}</div>
-                                <div className="channel-name ellipsis">{c.displayName}</div>
+                          <button
+                            type="button"
+                            className={`channel-tile ${isActive ? "active" : ""}`}
+                            onClick={() => {
+                              if (!canWatchTarget) return;
+                              startWatching(c);
+                            }}
+                            disabled={!canWatchTarget}
+                            aria-pressed={isActive}
+                            aria-label={
+                              title
+                                ? `${c.displayName} - ${c.game}. ${title}`
+                                : `${c.displayName} - ${c.game}`
+                            }
+                          >
+                            {thumb ? (
+                              <div
+                                className="channel-thumb"
+                                style={{ backgroundImage: `url(${thumb})` }}
+                              />
+                            ) : null}
+                            <span className="viewer-badge">
+                              <span className="viewer-main">
+                                {formatViewers(animatedViewerCount)}
+                              </span>
+                            </span>
+                            <div className="channel-content">
+                              <div className="channel-header">
+                                <div>
+                                  <div className="meta ellipsis">{c.game}</div>
+                                  <div className="channel-name ellipsis">{c.displayName}</div>
+                                </div>
                               </div>
+                              {metaLine ? (
+                                <div className="meta muted ellipsis">{metaLine}</div>
+                              ) : null}
+                              {title ? <div className="meta muted ellipsis">{title}</div> : null}
                             </div>
-                            {metaLine ? <div className="meta muted ellipsis">{metaLine}</div> : null}
-                            {title ? <div className="meta muted ellipsis">{title}</div> : null}
-                          </div>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : null}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : null}
                 {!channelsLoading && !channelError && targetGame && channels.length === 0
                   ? channelEmptyState
                   : null}

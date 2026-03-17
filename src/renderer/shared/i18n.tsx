@@ -14,8 +14,7 @@ const translations: Translations = {
     "hero.activeCampaign": "Active campaign",
     "hero.activeCampaignHint": "Choose a target to turn this into live campaign progress.",
     "hero.noTarget": "No target",
-    "hero.noTargetHint":
-      "Pick a target. Then this area shows the drop progressing right now.",
+    "hero.noTargetHint": "Pick a target. Then this area shows the drop progressing right now.",
     "hero.nextPing": "Next update in {time}",
     "hero.nextPingPaused": "Updates paused",
     "hero.nextPingIdle": "Waiting for target",
@@ -37,8 +36,7 @@ const translations: Translations = {
     "hero.engineRailStatus.noTarget": "Waiting for target",
     "hero.engineRailStatus.noDrops": "Waiting for drops",
     "hero.engineRailLive": "Auto-watch: {status}",
-    "hero.engineRailSummary":
-      "{status}. Step {current} of {total}. Stages: {stages}.",
+    "hero.engineRailSummary": "{status}. Step {current} of {total}. Stages: {stages}.",
     "hero.engineRailStage.standby": "Ready",
     "hero.engineRailStage.scan": "Search",
     "hero.engineRailStage.watch": "Watch",
@@ -700,8 +698,7 @@ const translations: Translations = {
     "hero.activeCampaign": "Aktive Kampagne",
     "hero.activeCampaignHint": "Wähle ein Ziel, damit hier Live-Fortschritt erscheint.",
     "hero.noTarget": "Kein Ziel",
-    "hero.noTargetHint":
-      "Wähle ein Ziel. Dann siehst du hier den Drop, der gerade fortschreitet.",
+    "hero.noTargetHint": "Wähle ein Ziel. Dann siehst du hier den Drop, der gerade fortschreitet.",
     "hero.nextPing": "Nächste Aktualisierung in {time}",
     "hero.nextPingPaused": "Updates pausiert",
     "hero.nextPingIdle": "Warte auf Ziel",
@@ -723,8 +720,7 @@ const translations: Translations = {
     "hero.engineRailStatus.noTarget": "Wartet auf Ziel",
     "hero.engineRailStatus.noDrops": "Wartet auf Drops",
     "hero.engineRailLive": "Auto-Watching: {status}",
-    "hero.engineRailSummary":
-      "{status}. Schritt {current} von {total}. Phasen: {stages}.",
+    "hero.engineRailSummary": "{status}. Schritt {current} von {total}. Phasen: {stages}.",
     "hero.engineRailStage.standby": "Bereit",
     "hero.engineRailStage.scan": "Suche",
     "hero.engineRailStage.watch": "Schaut",

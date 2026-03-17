@@ -18,13 +18,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useI18n } from "@renderer/shared/i18n";
 import { hasPriorityGameName } from "@renderer/shared/hooks/priority/priorityNameUtils";
-import {
-  useEffect,
-  useId,
-  useState,
-  type ButtonHTMLAttributes,
-  type CSSProperties,
-} from "react";
+import { useEffect, useId, useState, type ButtonHTMLAttributes, type CSSProperties } from "react";
 import {
   Select,
   SelectContent,
@@ -142,7 +136,11 @@ function PriorityCard({
   const { dragLabel, removeLabel } = getPriorityActionLabels(game, t);
   const stateChip = getPriorityStateChip({ isTarget, isWatching, isLive }, t);
   return (
-    <div className={["priority-list-card", isOverlay ? "is-drag-overlay" : ""].filter(Boolean).join(" ")}>
+    <div
+      className={["priority-list-card", isOverlay ? "is-drag-overlay" : ""]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <div className="priority-item-main">
         <div className="priority-order-tools">
           <div className="priority-rank" aria-label={t("priorities.rank", { rank })}>
@@ -180,10 +178,7 @@ function PriorityCard({
         </div>
       </div>
       <div
-        className={[
-          "priority-actions",
-          stateChip ? "has-status" : "is-remove-only",
-        ]
+        className={["priority-actions", stateChip ? "has-status" : "is-remove-only"]
           .filter(Boolean)
           .join(" ")}
       >
@@ -197,12 +192,7 @@ function PriorityCard({
           aria-label={removeLabel}
           title={removeLabel}
         >
-          <svg
-            className="priority-remove-icon"
-            aria-hidden="true"
-            viewBox="0 0 16 16"
-            fill="none"
-          >
+          <svg className="priority-remove-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none">
             <path d="M4 4L12 12" />
             <path d="M12 4L4 12" />
           </svg>
@@ -314,8 +304,7 @@ export function PriorityView({
   const emptyStateModeClass = queueState === "empty-live" ? "is-live" : "is-manual";
   const emptyStateTitleKey =
     queueState === "empty-live" ? "priorities.emptyTitleLive" : "priorities.emptyTitleManual";
-  const emptyPreviewRows =
-    queueState === "queue" ? [] : getPriorityEmptyPreviewRows(queueState, t);
+  const emptyPreviewRows = queueState === "queue" ? [] : getPriorityEmptyPreviewRows(queueState, t);
   const activeDragIndex = activeDragGame ? priorityGames.indexOf(activeDragGame) : -1;
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -361,7 +350,11 @@ export function PriorityView({
   };
 
   return (
-    <div className={["priority-view", !hasSelectableDropGames ? "is-manual-only" : ""].filter(Boolean).join(" ")}>
+    <div
+      className={["priority-view", !hasSelectableDropGames ? "is-manual-only" : ""]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <div className="priority-head">
         <div className="priority-head-main">
           <h2>{t("priorities.title")}</h2>
@@ -452,15 +445,16 @@ export function PriorityView({
               <span className="toggle-label">
                 <span className="toggle-title">{t("priorities.orderTitle")}</span>
                 <span id={priorityRuleHintId} className="toggle-hint">
-                  {obeyPriority
-                    ? t("priorities.ruleStrictHint")
-                    : t("priorities.ruleFlexibleHint")}
+                  {obeyPriority ? t("priorities.ruleStrictHint") : t("priorities.ruleFlexibleHint")}
                 </span>
               </span>
             </label>
           </div>
         </section>
-        <section className="priority-panel priority-panel-list" aria-label={t("settings.priorityGames")}>
+        <section
+          className="priority-panel priority-panel-list"
+          aria-label={t("settings.priorityGames")}
+        >
           <p id={queueKeyboardHintId} className="sr-only">
             {t("priorities.queueKeyboardHint")}
           </p>
@@ -481,10 +475,7 @@ export function PriorityView({
                 {emptyPreviewRows.map((row, index) => (
                   <div
                     key={`${queueState}-${index}`}
-                    className={[
-                      "priority-empty-preview-row",
-                      row.isLeading ? "is-leading" : "",
-                    ]
+                    className={["priority-empty-preview-row", row.isLeading ? "is-leading" : ""]
                       .filter(Boolean)
                       .join(" ")}
                   >
