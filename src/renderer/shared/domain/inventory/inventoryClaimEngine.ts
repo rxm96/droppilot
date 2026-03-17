@@ -79,10 +79,12 @@ const getClaimErrorInfo = (err: unknown) =>
 export class InventoryClaimEngine {
   private readonly claimAttemptsById = new Map<string, number>();
   private readonly claimRetryByDropId = new Map<string, ClaimRetryState>();
+  private readonly successfullyClaimedIds = new Set<string>();
 
   reset(): void {
     this.claimAttemptsById.clear();
     this.claimRetryByDropId.clear();
+    this.successfullyClaimedIds.clear();
   }
 
   getAutoClaimCandidates(items: InventoryItem[], now = Date.now()): InventoryItem[] {
@@ -123,6 +125,8 @@ export class InventoryClaimEngine {
     let suppressedClaimErrorLogs = 0;
     let emittedClaimErrorLogs = 0;
     for (const drop of claimable) {
+      if (this.successfullyClaimedIds.has(drop.id)) continue;
+
       const retrySignature = buildClaimRetrySignature(drop);
       const retryState = this.claimRetryByDropId.get(drop.id);
       if (retryState && retryState.signature === retrySignature && now < retryState.nextAllowedAt) {
@@ -139,8 +143,8 @@ export class InventoryClaimEngine {
         throwIfClaimErrorResponse(response);
 
         deps.onClaimed({ title: drop.title, game: drop.game });
+        this.successfullyClaimedIds.add(drop.id);
         this.claimRetryByDropId.delete(drop.id);
-        this.claimAttemptsById.delete(drop.id);
         claimedCount += 1;
         claimedIds.push(drop.id);
         logInfo("inventory: auto-claimed", {
@@ -204,6 +208,7 @@ export class InventoryClaimEngine {
     const dropIdFromEvent = event.dropId?.trim();
     const claimId = dropIdFromEvent || claimedItem?.id || dropInstanceIdFromEvent;
     if (!claimId) return;
+    if (this.successfullyClaimedIds.has(claimId)) return;
 
     const now = deps.now?.() ?? Date.now();
     if (!this.canAttemptClaim(claimId, now)) return;
@@ -218,6 +223,7 @@ export class InventoryClaimEngine {
     try {
       const response = await deps.claimDrop(claimPayload);
       throwIfClaimErrorResponse(response);
+      this.successfullyClaimedIds.add(claimId);
       if (claimedItem) {
         deps.setClaimStatus({
           kind: "success",

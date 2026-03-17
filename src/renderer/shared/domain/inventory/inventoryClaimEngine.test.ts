@@ -164,10 +164,39 @@ describe("InventoryClaimEngine.claimFromPubSubDropClaim", () => {
       now: () => now,
     });
 
-    expect(claimDrop).toHaveBeenCalledTimes(2);
+    // After first successful claim, the drop ID is permanently tracked —
+    // subsequent attempts for the same drop are skipped entirely.
+    expect(claimDrop).toHaveBeenCalledTimes(1);
     expect(setClaimStatus).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "success", message: "Auto-claimed: Drop 1" }),
     );
+  });
+
+  it("does not re-claim a drop that was already successfully claimed via auto-claim", async () => {
+    const engine = new InventoryClaimEngine();
+    const claimDrop = vi.fn(async () => ({ ok: true }));
+    const setClaimStatus = vi.fn<(status: ClaimStatus) => void>();
+
+    // First: auto-claim succeeds
+    await engine.autoClaimFromInventory([makeItem()], {
+      claimDrop,
+      onAuthError: vi.fn(),
+      onClaimed: vi.fn(),
+      setClaimStatus,
+      now: () => 1_000,
+    });
+    expect(claimDrop).toHaveBeenCalledTimes(1);
+
+    // Second: same item still appears as claimable (Twitch hasn't updated yet)
+    await engine.autoClaimFromInventory([makeItem()], {
+      claimDrop,
+      onAuthError: vi.fn(),
+      onClaimed: vi.fn(),
+      setClaimStatus,
+      now: () => 100_000,
+    });
+    // Should NOT claim again
+    expect(claimDrop).toHaveBeenCalledTimes(1);
   });
 
   it("surfaces auth errors via onAuthError", async () => {
