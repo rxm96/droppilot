@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { arrayMove } from "@dnd-kit/sortable";
+import { hasPriorityGameName } from "./priorityNameUtils";
 
 type Params = {
   newGame: string;
@@ -32,7 +33,7 @@ export function usePriorityActions({
   const addGame = useCallback(() => {
     const name = newGame.trim();
     if (!name) return;
-    if (priorityGames.includes(name)) {
+    if (hasPriorityGameName(priorityGames, name)) {
       setNewGame("");
       return;
     }
@@ -63,7 +64,7 @@ export function usePriorityActions({
   const addGameFromSelect = useCallback(() => {
     const name = selectedGame.trim();
     if (!name) return;
-    if (priorityGames.includes(name)) return;
+    if (hasPriorityGameName(priorityGames, name)) return;
     setAutoSelectEnabled(true);
     void savePriorityGames([...priorityGames, name]);
   }, [priorityGames, savePriorityGames, selectedGame, setAutoSelectEnabled]);
@@ -72,7 +73,7 @@ export function usePriorityActions({
     (name: string) => {
       const trimmed = name.trim();
       if (!trimmed) return;
-      if (priorityGames.includes(trimmed)) return;
+      if (hasPriorityGameName(priorityGames, trimmed)) return;
       setAutoSelectEnabled(true);
       void savePriorityGames([...priorityGames, trimmed]);
     },
