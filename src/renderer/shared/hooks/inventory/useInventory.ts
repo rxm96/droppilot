@@ -44,6 +44,26 @@ const NOOP = () => {};
 const NOOP_CLAIM = () => {};
 const NOOP_AUTH = (_message?: string) => {};
 type FetchInventoryOpts = { forceLoading?: boolean };
+const CLAIM_RECONCILE_POLICY = {
+  forceLoading: true,
+  minGapMs: 2_000,
+  baseDelayMs: 4_000,
+} as const;
+const GENERIC_RECONCILE_POLICY = {
+  forceLoading: true,
+  minGapMs: 2_000,
+  baseDelayMs: 450,
+} as const;
+
+type InventoryReconcileRunner = (forceLoading: boolean) => void;
+
+export const scheduleClaimReconcile = (
+  reconciler: Pick<InventoryPubSubReconciler, "schedule"> | null | undefined,
+  run: InventoryReconcileRunner,
+): void => {
+  if (!reconciler) return;
+  reconciler.schedule(CLAIM_RECONCILE_POLICY, run);
+};
 export {
   applyDropClaimToInventoryItems,
   applyDropProgressToInventoryItems,
@@ -277,12 +297,19 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
           setCampaignsLoading(false);
 
           if (autoClaimEnabled) {
-            void claimEngineRef.current.autoClaimFromInventory(nextItems, {
-              claimDrop: (payload) => window.electronAPI.twitch.claimDrop(payload),
-              onAuthError,
-              onClaimed,
-              setClaimStatus,
-            });
+            void claimEngineRef.current
+              .autoClaimFromInventory(nextItems, {
+                claimDrop: (payload) => window.electronAPI.twitch.claimDrop(payload),
+                onAuthError,
+                onClaimed,
+                setClaimStatus,
+              })
+              .then((result) => {
+                if (result.claimedCount <= 0) return;
+                scheduleClaimReconcile(pubSubReconcilerRef.current, (forceLoading) => {
+                  void fetchInventoryRef.current({ forceLoading });
+                });
+              });
           }
         } catch (err) {
           logError("inventory: fetch failed", err);
@@ -411,29 +438,15 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
         }
         // Claim availability and prerequisite unlocks can lag for a few seconds after the event.
         // Reconcile after a short delay so next-drop state becomes visible quickly.
-        pubSubReconciler.schedule(
-          {
-            forceLoading: true,
-            minGapMs: 2_000,
-            baseDelayMs: 4_000,
-          },
-          (forceLoading) => {
-            void fetchInventoryRef.current({ forceLoading });
-          },
-        );
+        scheduleClaimReconcile(pubSubReconciler, (forceLoading) => {
+          void fetchInventoryRef.current({ forceLoading });
+        });
         return;
       }
 
-      pubSubReconciler.schedule(
-        {
-          forceLoading: true,
-          minGapMs: 2_000,
-          baseDelayMs: 450,
-        },
-        (forceLoading) => {
-          void fetchInventoryRef.current({ forceLoading });
-        },
-      );
+      pubSubReconciler.schedule(GENERIC_RECONCILE_POLICY, (forceLoading) => {
+        void fetchInventoryRef.current({ forceLoading });
+      });
     });
 
     return () => {

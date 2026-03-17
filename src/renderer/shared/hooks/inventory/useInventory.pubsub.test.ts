@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { InventoryItem, UserPubSubEvent } from "@renderer/shared/types";
 import {
   applyDropClaimToInventoryItems,
   applyDropProgressToInventoryItems,
+  scheduleClaimReconcile,
   shouldDeduplicateInFlightForceFetch,
 } from "./useInventory";
 
@@ -186,5 +187,24 @@ describe("shouldDeduplicateInFlightForceFetch", () => {
       dedupeWindowMs: 8_000,
     });
     expect(noInFlightForce).toBe(false);
+  });
+});
+
+describe("scheduleClaimReconcile", () => {
+  it("uses the delayed forced reconcile policy shared by claim refresh paths", () => {
+    const schedule = vi.fn();
+    const reconciler = {
+      schedule,
+    };
+
+    scheduleClaimReconcile(reconciler, () => {});
+    expect(schedule).toHaveBeenCalledWith(
+      {
+        forceLoading: true,
+        minGapMs: 2_000,
+        baseDelayMs: 4_000,
+      },
+      expect.any(Function),
+    );
   });
 });

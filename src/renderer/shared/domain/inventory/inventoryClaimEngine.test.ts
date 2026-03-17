@@ -50,7 +50,7 @@ describe("InventoryClaimEngine.autoClaimFromInventory", () => {
     const onClaimed = vi.fn<(payload: { title: string; game: string }) => void>();
     const claimDrop = vi.fn(async () => ({ ok: true }));
 
-    await engine.autoClaimFromInventory([makeItem()], {
+    const result = await engine.autoClaimFromInventory([makeItem()], {
       claimDrop,
       onAuthError: vi.fn(),
       onClaimed,
@@ -64,6 +64,7 @@ describe("InventoryClaimEngine.autoClaimFromInventory", () => {
       dropId: "drop-1",
       campaignId: "camp-1",
     });
+    expect(result).toEqual({ claimedCount: 1 });
     expect(onClaimed).toHaveBeenCalledWith({ title: "Drop 1", game: "Game" });
     expect(setClaimStatus).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "success", message: "Auto-claimed: Drop 1" }),

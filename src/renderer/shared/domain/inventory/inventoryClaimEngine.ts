@@ -45,6 +45,10 @@ export const isAutoClaimCandidate = (item: InventoryItem, now = Date.now()): boo
   return canClaimDrop(item, { now, allowFallbackWhenNotExplicit: true });
 };
 
+export type AutoClaimRunResult = {
+  claimedCount: number;
+};
+
 const throwIfClaimErrorResponse = (response: unknown): void => {
   if (isIpcErrorResponse(response)) {
     if (isIpcAuthErrorResponse(response)) {
@@ -97,7 +101,10 @@ export class InventoryClaimEngine {
     this.claimAttemptsById.set(id, at);
   }
 
-  async autoClaimFromInventory(items: InventoryItem[], deps: AutoClaimDeps): Promise<void> {
+  async autoClaimFromInventory(
+    items: InventoryItem[],
+    deps: AutoClaimDeps,
+  ): Promise<AutoClaimRunResult> {
     const now = deps.now?.() ?? Date.now();
     const candidates = this.getAutoClaimCandidates(items, now);
     const explicitClaimable = candidates.filter((drop) => drop.isClaimable === true);
@@ -110,6 +117,7 @@ export class InventoryClaimEngine {
         processedFallbackCandidates: fallbackQueue.length,
       });
     }
+    let claimedCount = 0;
     let suppressedClaimErrorLogs = 0;
     let emittedClaimErrorLogs = 0;
     for (const drop of claimable) {
@@ -131,6 +139,7 @@ export class InventoryClaimEngine {
         deps.onClaimed({ title: drop.title, game: drop.game });
         this.claimRetryByDropId.delete(drop.id);
         this.claimAttemptsById.delete(drop.id);
+        claimedCount += 1;
         logInfo("inventory: auto-claimed", {
           title: drop.title,
           game: drop.game,
@@ -145,7 +154,7 @@ export class InventoryClaimEngine {
         if (err instanceof Error && err.name === "ClaimAuthError") {
           logWarn("inventory: claim auth error", { message: err.message });
           deps.onAuthError(err.message);
-          return;
+          return { claimedCount };
         }
 
         if (emittedClaimErrorLogs < MAX_CLAIM_ERROR_LOGS_PER_RUN) {
@@ -181,6 +190,7 @@ export class InventoryClaimEngine {
         emitted: emittedClaimErrorLogs,
       });
     }
+    return { claimedCount };
   }
 
   async claimFromPubSubDropClaim(deps: PubSubClaimDeps): Promise<void> {
