@@ -123,6 +123,7 @@ type StructuredLogRow = {
 const LEVELS: LogLevel[] = ["debug", "info", "warn", "error"];
 const LOG_WINDOW_STEP = 120;
 const SEARCH_LOG_WINDOW = 200;
+const TRACKER_SHARD_PREVIEW_COUNT = 3;
 
 const safeStringify = (value: unknown) => {
   if (typeof value === "string") return value;
@@ -416,17 +417,44 @@ type DebugMetricCardProps = {
   value: string;
   meta: string;
   tone: SummaryTone;
+  priority?: "lead" | "support";
 };
 
-function DebugMetricCard({ label, value, meta, tone }: DebugMetricCardProps) {
+function DebugMetricCard({
+  label,
+  value,
+  meta,
+  tone,
+  priority = "support",
+}: DebugMetricCardProps) {
   return (
-    <Card className={cn("debug-panel debug-metric-card", `tone-${tone}`)}>
+    <Card className={cn("debug-panel debug-metric-card", `tone-${tone}`, priority === "lead" && "is-lead")}>
       <CardContent className="debug-metric-content">
         <div className="debug-metric-label">{label}</div>
         <div className="debug-metric-value">{value}</div>
         <div className="debug-metric-meta">{meta}</div>
       </CardContent>
     </Card>
+  );
+}
+
+type DebugSupportStripItemProps = {
+  label: string;
+  value: string;
+  meta: string;
+  tone: SummaryTone;
+};
+
+function DebugSupportStripItem({ label, value, meta, tone }: DebugSupportStripItemProps) {
+  return (
+    <div className={cn("debug-support-stat", `tone-${tone}`)}>
+      <div className="debug-support-stat-head">
+        <span className="debug-support-stat-dot" aria-hidden="true" />
+        <span>{label}</span>
+      </div>
+      <div className="debug-support-stat-value">{value}</div>
+      <div className="debug-support-stat-meta">{meta}</div>
+    </div>
   );
 }
 
@@ -439,9 +467,11 @@ type DebugFactTileProps = {
 function DebugFactTile({ label, value, meta }: DebugFactTileProps) {
   return (
     <div className="debug-fact-tile">
-      <div className="debug-fact-label">{label}</div>
+      <div className="debug-fact-main">
+        <div className="debug-fact-label">{label}</div>
+        {meta ? <div className="debug-fact-meta">{meta}</div> : null}
+      </div>
       <div className="debug-fact-value">{value}</div>
-      {meta ? <div className="debug-fact-meta">{meta}</div> : null}
     </div>
   );
 }
@@ -452,10 +482,12 @@ export function DebugView({ snapshot }: DebugViewProps) {
   const [paused, setPaused] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [showSnapshotPanel, setShowSnapshotPanel] = useState(false);
   const [query, setQuery] = useState("");
   const [simDropId, setSimDropId] = useState("");
   const [simProgress, setSimProgress] = useState("1");
   const [simBusy, setSimBusy] = useState(false);
+  const [showAllTrackerShards, setShowAllTrackerShards] = useState(false);
   const [levels, setLevels] = useState<LevelFilter>({
     debug: true,
     info: true,
@@ -578,7 +610,31 @@ export function DebugView({ snapshot }: DebugViewProps) {
     const candidate = snapshot["tracker"];
     return isChannelTrackerStatus(candidate) ? candidate : null;
   }, [snapshot]);
-  const trackerShards = trackerStatus?.shards ?? [];
+  const trackerShards = useMemo(() => trackerStatus?.shards ?? [], [trackerStatus]);
+  const trackerShardSummary = useMemo(() => {
+    return trackerShards.reduce(
+      (summary, shard) => {
+        summary.total += 1;
+        if (shard.connectionState === "connected") {
+          summary.connected += 1;
+        } else if (shard.connectionState === "connecting") {
+          summary.connecting += 1;
+        } else {
+          summary.disconnected += 1;
+        }
+        return summary;
+      },
+      { total: 0, connected: 0, connecting: 0, disconnected: 0 },
+    );
+  }, [trackerShards]);
+  const visibleTrackerShards = useMemo(
+    () =>
+      showAllTrackerShards
+        ? trackerShards
+        : trackerShards.slice(0, TRACKER_SHARD_PREVIEW_COUNT),
+    [showAllTrackerShards, trackerShards],
+  );
+  const hiddenTrackerShardCount = Math.max(0, trackerShards.length - visibleTrackerShards.length);
   const suggestedDropId = useMemo(() => {
     const candidate = snapshot["activeDropInfo"];
     if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return "";
@@ -597,6 +653,12 @@ export function DebugView({ snapshot }: DebugViewProps) {
       setVisibleCount(LOG_WINDOW_STEP);
     }
   }, [highlightTerm]);
+
+  useEffect(() => {
+    if (trackerShards.length <= TRACKER_SHARD_PREVIEW_COUNT && showAllTrackerShards) {
+      setShowAllTrackerShards(false);
+    }
+  }, [showAllTrackerShards, trackerShards.length]);
 
   const numberFormatter = useMemo(
     () => new Intl.NumberFormat(language === "de" ? "de-DE" : "en-US"),
@@ -656,6 +718,7 @@ export function DebugView({ snapshot }: DebugViewProps) {
           snapshotData.priority?.activeTargetGame?.trim() ||
           t("debug.runtime.none"),
         tone: (snapshotData.watching ? "ok" : "idle") satisfies SummaryTone,
+        priority: "lead" as const,
       },
       {
         key: "tracker",
@@ -675,6 +738,25 @@ export function DebugView({ snapshot }: DebugViewProps) {
             : trackerStatus?.state === "ok"
               ? "ok"
               : "idle") satisfies SummaryTone,
+        priority: "lead" as const,
+      },
+      {
+        key: "watch",
+        label: t("debug.summary.watchPing"),
+        value: formatRelativeTime(snapshotData.watch?.lastOk),
+        meta: snapshotData.watch?.error?.message
+          ? snapshotData.watch.error.message
+          : t("debug.summary.nextCheck", {
+              time: formatRelativeTime(snapshotData.watch?.nextAt),
+            }),
+        tone: (snapshotData.watch?.error
+          ? "error"
+          : watchAgeMs === null
+            ? "idle"
+            : watchAgeMs > WATCH_INTERVAL_MS * 2
+              ? "warn"
+              : "ok") satisfies SummaryTone,
+        priority: "support" as const,
       },
       {
         key: "pubsub",
@@ -692,6 +774,7 @@ export function DebugView({ snapshot }: DebugViewProps) {
             : snapshotData.userPubSub?.connectionState === "connected"
               ? "ok"
               : "idle") satisfies SummaryTone,
+        priority: "support" as const,
       },
       {
         key: "inventory",
@@ -714,23 +797,7 @@ export function DebugView({ snapshot }: DebugViewProps) {
             : snapshotData.inventory?.status === "ready"
               ? "ok"
               : "idle") satisfies SummaryTone,
-      },
-      {
-        key: "watch",
-        label: t("debug.summary.watchPing"),
-        value: formatRelativeTime(snapshotData.watch?.lastOk),
-        meta: snapshotData.watch?.error?.message
-          ? snapshotData.watch.error.message
-          : t("debug.summary.nextCheck", {
-              time: formatRelativeTime(snapshotData.watch?.nextAt),
-            }),
-        tone: (snapshotData.watch?.error
-          ? "error"
-          : watchAgeMs === null
-            ? "idle"
-            : watchAgeMs > WATCH_INTERVAL_MS * 2
-              ? "warn"
-              : "ok") satisfies SummaryTone,
+        priority: "support" as const,
       },
       {
         key: "cpu",
@@ -750,6 +817,7 @@ export function DebugView({ snapshot }: DebugViewProps) {
           : snapshotData.cpu?.lastAt
             ? "ok"
             : "idle") satisfies SummaryTone,
+        priority: "support" as const,
       },
     ],
     [
@@ -781,6 +849,14 @@ export function DebugView({ snapshot }: DebugViewProps) {
       trackerStatus?.subscriptions,
       watchAgeMs,
     ],
+  );
+  const leadSummaryCards = useMemo(
+    () => summaryCards.filter((card) => card.priority === "lead"),
+    [summaryCards],
+  );
+  const supportSummaryCards = useMemo(
+    () => summaryCards.filter((card) => card.priority === "support"),
+    [summaryCards],
   );
   const runtimeFacts = useMemo(
     () => [
@@ -880,6 +956,10 @@ export function DebugView({ snapshot }: DebugViewProps) {
       t,
     ],
   );
+  const runtimeFactGroups = useMemo(
+    () => [runtimeFacts.slice(0, 3), runtimeFacts.slice(3)].filter((group) => group.length > 0),
+    [runtimeFacts],
+  );
 
   const togglePaused = () => {
     setPaused((prev) => !prev);
@@ -951,77 +1031,131 @@ export function DebugView({ snapshot }: DebugViewProps) {
           <h2 className="text-lg font-semibold">{t("debug.title")}</h2>
           <p className="text-sm text-muted-foreground">{t("debug.subtitle")}</p>
         </div>
-        <Badge variant="muted">
+        <Badge variant="outline" className="debug-header-total">
           {t("debug.total")}: {formatNumber(logs.length)}
         </Badge>
       </div>
-      <div className="debug-summary-grid">
-        {summaryCards.map((card) => (
-          <DebugMetricCard
-            key={card.key}
-            label={card.label}
-            value={card.value}
-            meta={card.meta}
-            tone={card.tone}
-          />
-        ))}
+      <div className="debug-summary-shell">
+        <div className="debug-summary-grid debug-summary-grid-lead">
+          {leadSummaryCards.map((card) => (
+            <DebugMetricCard
+              key={card.key}
+              label={card.label}
+              value={card.value}
+              meta={card.meta}
+              tone={card.tone}
+              priority={card.priority}
+            />
+          ))}
+        </div>
+        <div className="debug-support-strip" role="list" aria-label={t("debug.summary.supportStrip")}>
+          {supportSummaryCards.map((card) => (
+            <DebugSupportStripItem
+              key={card.key}
+              label={card.label}
+              value={card.value}
+              meta={card.meta}
+              tone={card.tone}
+            />
+          ))}
+        </div>
       </div>
       <div className="debug-investigation-grid">
         <div className="debug-side-stack">
-          <Card className="debug-panel">
+          <Card className="debug-panel debug-support-panel">
             <div>
-              <CardHeader>
+              <CardHeader className="debug-section-header">
                 <CardTitle>{t("debug.runtime.title")}</CardTitle>
                 <p className="text-xs text-muted-foreground">{t("debug.runtime.subtitle")}</p>
               </CardHeader>
-              <CardContent>
+              <CardContent className="debug-support-content">
                 <div className="debug-facts-grid">
-                  {runtimeFacts.map((fact) => (
-                    <DebugFactTile
-                      key={fact.key}
-                      label={fact.label}
-                      value={fact.value}
-                      meta={fact.meta}
-                    />
+                  {runtimeFactGroups.map((group, groupIndex) => (
+                    <div key={`runtime-group-${groupIndex}`} className="debug-fact-group">
+                      {group.map((fact) => (
+                        <DebugFactTile
+                          key={fact.key}
+                          label={fact.label}
+                          value={fact.value}
+                          meta={fact.meta}
+                        />
+                      ))}
+                    </div>
                   ))}
                 </div>
               </CardContent>
             </div>
           </Card>
-          <Card className="debug-panel">
-            <CardHeader>
+          <Card className="debug-panel debug-support-panel">
+            <CardHeader className="debug-section-header">
               <CardTitle>{t("debug.trackerShards")}</CardTitle>
               <p className="text-xs text-muted-foreground">{t("debug.trackerShardsHelp")}</p>
             </CardHeader>
-            <CardContent className="flex flex-col gap-3">
+            <CardContent className="debug-support-content flex flex-col gap-3">
               <p className="text-xs text-muted-foreground">{t("debug.websocketHelp")}</p>
               {trackerShards.length > 0 ? (
-                <ul className="debug-shard-list">
-                  {trackerShards.map((shard) => (
-                    <li key={shard.id} className="debug-shard-row">
-                      <div className="flex flex-col gap-1">
-                        <span className="font-medium">
-                          {t("debug.trackerShard", { id: String(shard.id) })}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {t("debug.summary.subscriptions", {
-                            active: formatNumber(shard.subscriptions),
-                            desired: formatNumber(shard.desiredSubscriptions),
-                          })}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
-                        <Badge variant="outline">
-                          {t(`control.trackerConn.${shard.connectionState}`)}
-                        </Badge>
-                        <span>
-                          {t("debug.trackerReconnectsShort")}:{" "}
-                          {formatNumber(shard.reconnectAttempts)}
-                        </span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  <div className="debug-shard-overview">
+                    <span className="debug-shard-overview-copy">
+                      {t("debug.trackerShardSummary", {
+                        total: formatNumber(trackerShardSummary.total),
+                        connected: formatNumber(trackerShardSummary.connected),
+                        connecting: formatNumber(trackerShardSummary.connecting),
+                        disconnected: formatNumber(trackerShardSummary.disconnected),
+                      })}
+                    </span>
+                    {hiddenTrackerShardCount > 0 ? (
+                      <span className="debug-shard-overview-copy">
+                        {t("debug.trackerShardPreview", {
+                          visible: formatNumber(visibleTrackerShards.length),
+                          total: formatNumber(trackerShards.length),
+                        })}
+                      </span>
+                    ) : null}
+                  </div>
+                  <ul className="debug-shard-list">
+                    {visibleTrackerShards.map((shard) => (
+                      <li key={shard.id} className="debug-shard-row">
+                        <div className="debug-shard-main">
+                          <span className="debug-shard-name">
+                            {t("debug.trackerShard", { id: String(shard.id) })}
+                          </span>
+                          <span className="debug-shard-subscriptions">
+                            {t("debug.summary.subscriptions", {
+                              active: formatNumber(shard.subscriptions),
+                              desired: formatNumber(shard.desiredSubscriptions),
+                            })}
+                          </span>
+                        </div>
+                        <div className="debug-shard-meta">
+                          <span className={`debug-shard-state state-${shard.connectionState}`}>
+                            {t(`control.trackerConn.${shard.connectionState}`)}
+                          </span>
+                          <span className="debug-shard-reconnects">
+                            {t("debug.trackerReconnectsShort")}:{" "}
+                            {formatNumber(shard.reconnectAttempts)}
+                          </span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  {trackerShards.length > TRACKER_SHARD_PREVIEW_COUNT ? (
+                    <div className="debug-shard-actions">
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        type="button"
+                        onClick={() => setShowAllTrackerShards((prev) => !prev)}
+                      >
+                        {showAllTrackerShards
+                          ? t("debug.trackerShowLess")
+                          : t("debug.trackerShowAll", {
+                              count: formatNumber(hiddenTrackerShardCount),
+                            })}
+                      </Button>
+                    </div>
+                  ) : null}
+                </>
               ) : (
                 <div className="rounded-lg border border-dashed border-border bg-muted/10 px-3 py-4 text-sm text-muted-foreground">
                   {t("debug.summary.noSignal")}
@@ -1030,194 +1164,249 @@ export function DebugView({ snapshot }: DebugViewProps) {
             </CardContent>
           </Card>
         </div>
-        <Card className="debug-panel">
-          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
-            <div>
-              <CardTitle>{t("debug.log")}</CardTitle>
-              <p className="text-xs text-muted-foreground">{t("debug.logHelp")}</p>
-            </div>
-            <div className="debug-log-statuses">
-              <Badge variant={paused ? "outline" : "muted"}>
-                {paused ? t("debug.status.paused") : t("debug.status.live")}
-              </Badge>
-              <Badge variant="outline">
-                {autoScroll ? t("debug.status.autoScrollOn") : t("debug.status.autoScrollOff")}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <div className="debug-log-toolbar">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  clearLogBuffer();
-                  resetPerfStore();
-                  setLogs([]);
-                }}
-              >
-                {t("debug.clear")}
-              </Button>
-              <Button variant="outline" size="sm" onClick={togglePaused}>
-                {paused ? t("debug.resume") : t("debug.pause")}
-              </Button>
-              <Button
-                variant={autoScroll ? "secondary" : "outline"}
-                size="sm"
-                onClick={toggleAutoScroll}
-              >
-                {t("debug.autoScroll")}
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">{t("debug.logControlsHelp")}</p>
-            <div className="debug-log-filters">
-              <div className="debug-log-search">
-                <Input
-                  type="text"
-                  placeholder={t("debug.search")}
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                />
+        <div className="debug-investigation-main">
+          <Card className="debug-panel debug-log-panel">
+            <CardHeader className="debug-log-panel-header">
+              <div>
+                <CardTitle>{t("debug.log")}</CardTitle>
+                <p className="text-xs text-muted-foreground">{t("debug.logHelp")}</p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {LEVELS.map((level) => (
-                  <Button
-                    key={level}
-                    type="button"
-                    size="xs"
-                    variant={levels[level] ? "secondary" : "outline"}
-                    onClick={() => setLevels((prev) => ({ ...prev, [level]: !prev[level] }))}
-                  >
-                    {level} ({formatNumber(counts[level])})
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">{t("debug.searchHelp")}</p>
-            <div className="debug-log-overview">
-              <span className="debug-log-overview-copy">
-                {hiddenCount > 0
-                  ? t("debug.logWindow", {
-                      visible: formatNumber(visibleLogs.length),
-                      total: formatNumber(filtered.length),
-                    })
-                  : t("debug.logWindowAll", { total: formatNumber(filtered.length) })}
-              </span>
-              <div className="debug-log-overview-actions">
-                {hiddenCount > 0 ? (
+              <div className="debug-log-header-side">
+                <div className="debug-log-statuses">
+                  <Badge variant={paused ? "outline" : "muted"}>
+                    {paused ? t("debug.status.paused") : t("debug.status.live")}
+                  </Badge>
+                  <Badge variant="outline">
+                    {autoScroll ? t("debug.status.autoScrollOn") : t("debug.status.autoScrollOff")}
+                  </Badge>
+                </div>
+                <div className="debug-log-utility-actions">
                   <Button
                     type="button"
-                    variant="outline"
+                    variant={paused ? "secondary" : "ghost"}
                     size="xs"
-                    onClick={() => setVisibleCount((prev) => prev + LOG_WINDOW_STEP)}
+                    onClick={togglePaused}
                   >
-                    {t("debug.showOlder")}
+                    {paused ? t("debug.resume") : t("debug.pause")}
                   </Button>
-                ) : null}
-                {visibleCount > LOG_WINDOW_STEP && !highlightTerm ? (
                   <Button
                     type="button"
-                    variant="outline"
+                    variant={autoScroll ? "secondary" : "ghost"}
                     size="xs"
-                    onClick={() => setVisibleCount(LOG_WINDOW_STEP)}
+                    onClick={toggleAutoScroll}
                   >
-                    {t("debug.jumpToLatest")}
+                    {t("debug.autoScroll")}
                   </Button>
-                ) : null}
+                </div>
               </div>
-            </div>
-            <div ref={listRef} className="debug-log-frame">
-              {structuredRows.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{t("debug.empty")}</p>
-              ) : (
-                <ul className="log-timeline">
-                  {structuredRows.map((row) => (
-                    <LogRow
-                      key={row.id}
-                      row={row}
-                      detailsLabel={t("debug.details")}
-                      highlightTerm={highlightTerm}
+            </CardHeader>
+            <CardContent className="debug-log-content">
+              <div className="debug-log-controls">
+                <div className="debug-log-filters">
+                  <div className="debug-log-search">
+                    <Input
+                      type="text"
+                      placeholder={t("debug.search")}
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
                     />
-                  ))}
-                </ul>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {LEVELS.map((level) => (
+                      <Button
+                        key={level}
+                        type="button"
+                        size="xs"
+                        variant={levels[level] ? "secondary" : "outline"}
+                        onClick={() => setLevels((prev) => ({ ...prev, [level]: !prev[level] }))}
+                      >
+                        {level} ({formatNumber(counts[level])})
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="debug-log-overview">
+                <span className="debug-log-overview-copy">
+                  {hiddenCount > 0
+                    ? t("debug.logWindow", {
+                        visible: formatNumber(visibleLogs.length),
+                        total: formatNumber(filtered.length),
+                      })
+                    : t("debug.logWindowAll", { total: formatNumber(filtered.length) })}
+                </span>
+                <div className="debug-log-overview-actions">
+                  {hiddenCount > 0 ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="xs"
+                      onClick={() => setVisibleCount((prev) => prev + LOG_WINDOW_STEP)}
+                    >
+                      {t("debug.showOlder")}
+                    </Button>
+                  ) : null}
+                  {visibleCount > LOG_WINDOW_STEP && !highlightTerm ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="xs"
+                      onClick={() => setVisibleCount(LOG_WINDOW_STEP)}
+                    >
+                      {t("debug.jumpToLatest")}
+                    </Button>
+                  ) : null}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="xs"
+                    className="debug-log-clear-action"
+                    onClick={() => {
+                      clearLogBuffer();
+                      resetPerfStore();
+                      setLogs([]);
+                    }}
+                  >
+                    {t("debug.clear")}
+                  </Button>
+                </div>
+              </div>
+              <div ref={listRef} className="debug-log-frame">
+                {structuredRows.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">{t("debug.empty")}</p>
+                ) : (
+                  <ul className="log-timeline">
+                    {structuredRows.map((row) => (
+                      <LogRow
+                        key={row.id}
+                        row={row}
+                        detailsLabel={t("debug.details")}
+                        highlightTerm={highlightTerm}
+                      />
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="debug-panel debug-advanced-panel">
+            <CardHeader className="debug-section-header debug-advanced-header">
+              <CardTitle>{t("debug.advanced.title")}</CardTitle>
+              <p className="text-xs text-muted-foreground">{t("debug.advanced.subtitle")}</p>
+            </CardHeader>
+            <CardContent className="debug-advanced-stack">
+              <section className="debug-toolbox-section" aria-labelledby="debug-sim-title">
+                <div className="debug-toolbox-head">
+                  <div className="debug-toolbox-copy-block">
+                    <h3 id="debug-sim-title" className="debug-toolbox-title">
+                      {t("debug.sim.title")}
+                    </h3>
+                    <p className="debug-toolbox-copy">{t("debug.sim.help")}</p>
+                  </div>
+                </div>
+                <div className="debug-toolbox-body">
+                  <div className="debug-toolbox-fields">
+                    <label className="debug-toolbox-field">
+                      <span className="debug-toolbox-label">{t("debug.sim.dropId")}</span>
+                      <Input
+                        type="text"
+                        placeholder={t("debug.sim.dropId")}
+                        value={simDropId}
+                        onChange={(e) => setSimDropId(e.target.value)}
+                      />
+                    </label>
+                    <label className="debug-toolbox-field">
+                      <span className="debug-toolbox-label">{t("debug.sim.progress")}</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        placeholder={t("debug.sim.progress")}
+                        value={simProgress}
+                        onChange={(e) => setSimProgress(e.target.value)}
+                      />
+                    </label>
+                  </div>
+                  <div className="debug-toolbox-actions">
+                    <div className="debug-toolbox-action-group">
+                      <p className="debug-toolbox-label">{t("debug.sim.dropEvents")}</p>
+                      <div className="debug-toolbox-action-row">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          disabled={simBusy || simDropId.trim().length === 0}
+                          onClick={() => void emitDebugEvent("drop-progress")}
+                        >
+                          {t("debug.sim.progressBtn")}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          disabled={simBusy || simDropId.trim().length === 0}
+                          onClick={() => void emitDebugEvent("drop-claim")}
+                        >
+                          {t("debug.sim.claimBtn")}
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="debug-toolbox-action-group">
+                      <p className="debug-toolbox-label">{t("debug.sim.systemEvents")}</p>
+                      <div className="debug-toolbox-action-row">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          disabled={simBusy}
+                          onClick={() => void emitDebugEvent("notification")}
+                        >
+                          {t("debug.sim.notificationBtn")}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+              <section className="debug-toolbox-disclosure" aria-labelledby="debug-snapshot-title">
+                <div className="debug-toolbox-head">
+                  <div className="debug-toolbox-copy-block">
+                    <h3 id="debug-snapshot-title" className="debug-toolbox-title">
+                      {t("debug.snapshot")}
+                    </h3>
+                    <p className="debug-toolbox-copy">{t("debug.snapshotHelp")}</p>
+                  </div>
+                  <div className="debug-toolbox-disclosure-actions">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      onClick={() => setShowSnapshotPanel((prev) => !prev)}
+                    >
+                      {showSnapshotPanel ? t("debug.snapshotHide") : t("debug.snapshotShow")}
+                    </Button>
+                    {showSnapshotPanel ? (
+                      <Button variant="outline" size="sm" onClick={copySnapshot} type="button">
+                        {copied ? t("debug.copied") : t("debug.copy")}
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+                {showSnapshotPanel ? (
+                  <div className="debug-toolbox-body debug-toolbox-body-tight">
+                    <ol className="code-panel debug-snapshot-panel" aria-label={t("debug.snapshot")}>
+                      {snapshotLines.map((line, index) => (
+                        <li key={`${index}`} className="code-line">
+                          {line}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                ) : null}
+              </section>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-      <Card className="debug-panel">
-        <CardHeader>
-          <CardTitle>{t("debug.advanced.title")}</CardTitle>
-          <p className="text-xs text-muted-foreground">{t("debug.advanced.subtitle")}</p>
-        </CardHeader>
-        <CardContent className="debug-advanced-grid">
-          <details className="debug-advanced-details" open>
-            <summary className="debug-advanced-summary">{t("debug.sim.title")}</summary>
-            <div className="debug-advanced-body">
-              <p className="text-xs text-muted-foreground">{t("debug.sim.help")}</p>
-              <div className="grid gap-2 sm:grid-cols-2">
-                <Input
-                  type="text"
-                  placeholder={t("debug.sim.dropId")}
-                  value={simDropId}
-                  onChange={(e) => setSimDropId(e.target.value)}
-                />
-                <Input
-                  type="number"
-                  min={0}
-                  placeholder={t("debug.sim.progress")}
-                  value={simProgress}
-                  onChange={(e) => setSimProgress(e.target.value)}
-                />
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  size="xs"
-                  disabled={simBusy || simDropId.trim().length === 0}
-                  onClick={() => void emitDebugEvent("drop-progress")}
-                >
-                  {t("debug.sim.progressBtn")}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="xs"
-                  disabled={simBusy || simDropId.trim().length === 0}
-                  onClick={() => void emitDebugEvent("drop-claim")}
-                >
-                  {t("debug.sim.claimBtn")}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="xs"
-                  disabled={simBusy}
-                  onClick={() => void emitDebugEvent("notification")}
-                >
-                  {t("debug.sim.notificationBtn")}
-                </Button>
-              </div>
-            </div>
-          </details>
-          <details className="debug-advanced-details">
-            <summary className="debug-advanced-summary">
-              <span>{t("debug.snapshot")}</span>
-              <Button variant="outline" size="sm" onClick={copySnapshot} type="button">
-                {copied ? t("debug.copied") : t("debug.copy")}
-              </Button>
-            </summary>
-            <div className="debug-advanced-body">
-              <p className="text-xs text-muted-foreground">{t("debug.snapshotHelp")}</p>
-              <ol className="code-panel" aria-label={t("debug.snapshot")}>
-                {snapshotLines.map((line, index) => (
-                  <li key={`${index}`} className="code-line">
-                    {line}
-                  </li>
-                ))}
-              </ol>
-            </div>
-          </details>
-        </CardContent>
-      </Card>
     </div>
   );
 }

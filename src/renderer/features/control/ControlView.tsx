@@ -12,11 +12,6 @@ import { DropChannelRestriction } from "@renderer/shared/domain/dropDomain";
 import { mapStatusLabel } from "@renderer/shared/utils";
 import { useI18n } from "@renderer/shared/i18n";
 import { resolveErrorMessage } from "@renderer/shared/utils/errors";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@renderer/shared/components/ui/hover-card";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useControlViewState } from "./useControlViewState";
 
@@ -465,113 +460,87 @@ export function ControlView({
     watchEngineCollapseTopRef.current = null;
   };
   const watchEnginePanel = (
-    <details
-      ref={watchEngineDetailsRef}
-      className={`control-watch-engine-disclosure tone-${watchEngineTone}`}
-      onToggle={handleWatchEnginePanelToggle}
-    >
-      <summary
-        ref={watchEngineSummaryRef}
-        className="control-watch-engine-summary"
-        onClickCapture={handleWatchEngineSummaryClickCapture}
-      >
-        <span className="control-watch-engine-summary-main">
-          <span className="control-watch-engine-summary-k">{t("control.watchEngineTitle")}</span>
-          <span className="control-watch-engine-summary-v">{watchEngineDecisionLabel}</span>
-        </span>
-        <span className="control-watch-engine-summary-chevron" aria-hidden="true">
-          <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
-            <path
-              d="M3.5 6.5 8 11l4.5-4.5"
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="1.8"
-            />
-          </svg>
-        </span>
-      </summary>
-      <div className="control-watch-engine-shell">
-        <div className={`control-watch-engine tone-${watchEngineTone}`}>
-          <div className="control-watch-engine-main">
-            <div className="control-watch-engine-item is-now">
-              <span className="control-watch-engine-item-label">{t("control.watchEngineNow")}</span>
-              <span
-                key={`watch-engine-now-${watchEngineDecisionMotionKey}`}
-                className="control-watch-engine-item-value control-watch-engine-animated-value"
-              >
-                {watchEngineDecisionLabel}
-              </span>
-            </div>
-            <div className="control-watch-engine-item">
-              <span className="control-watch-engine-item-label">
-                {t("control.watchEngineWhyLabel")}
-              </span>
-              <span
-                key={`watch-engine-why-${watchEngineDecisionMotionKey}`}
-                className="control-watch-engine-item-value control-watch-engine-animated-value"
-              >
-                {watchEngineDecisionDetails.why}
-              </span>
-            </div>
-            <div className="control-watch-engine-item">
-              <span className="control-watch-engine-item-label">
-                {t("control.watchEngineNextLabel")}
-              </span>
-              <span
-                key={`watch-engine-next-${watchEngineDecisionMotionKey}`}
-                className="control-watch-engine-item-value control-watch-engine-animated-value"
-              >
-                {watchEngineDecisionDetails.next}
-              </span>
-            </div>
+    <div className={`control-watch-engine-disclosure tone-${watchEngineTone}`}>
+      <div className={`control-watch-engine tone-${watchEngineTone}`}>
+        <div className="control-watch-engine-head">
+          <div className="label">{t("control.watchEngineTitle")}</div>
+        </div>
+        <div className="control-watch-engine-brief">
+          <p
+            key={`watch-engine-why-${watchEngineDecisionMotionKey}`}
+            className="control-watch-engine-summary control-watch-engine-animated-value"
+          >
+            {watchEngineDecisionDetails.why}
+          </p>
+          <div className="control-watch-engine-next">
+            <span className="control-watch-engine-next-label">
+              {t("control.watchEngineNextLabel")}
+            </span>
+            <span
+              key={`watch-engine-next-${watchEngineDecisionMotionKey}`}
+              className="control-watch-engine-next-value control-watch-engine-animated-value"
+            >
+              {watchEngineDecisionDetails.next}
+            </span>
           </div>
-          <div className="control-watch-engine-meta">
-            <HoverCard openDelay={120} closeDelay={120}>
-              <HoverCardTrigger asChild>
-                <button
-                  type="button"
-                  className="pill ghost small control-watch-engine-help-trigger"
-                  aria-label={`${t("control.watchEngineAllowlist")}: ${watchEngineAllowlistMode}. ${watchEngineAllowlistHint}`}
-                  title={watchEngineAllowlistHint}
-                >
-                  {t("control.watchEngineAllowlist")}: {watchEngineAllowlistMode}
-                </button>
-              </HoverCardTrigger>
-              <HoverCardContent
-                align="start"
-                sideOffset={8}
-                className="control-watch-engine-hovercard"
-              >
-                <p className="meta">{watchEngineAllowlistHint}</p>
-              </HoverCardContent>
-            </HoverCard>
-            <HoverCard openDelay={120} closeDelay={120}>
-              <HoverCardTrigger asChild>
-                <button
-                  type="button"
-                  className="pill ghost small control-watch-engine-help-trigger"
-                  aria-label={`${t("control.watchEngineChannels")}: ${watchEngineSnapshot.allowlistedLiveChannels}/${watchEngineSnapshot.totalLiveChannels}. ${watchEngineChannelsHint}`}
-                  title={watchEngineChannelsHint}
-                >
-                  {t("control.watchEngineChannels")}: {watchEngineSnapshot.allowlistedLiveChannels}/
-                  {watchEngineSnapshot.totalLiveChannels}
-                </button>
-              </HoverCardTrigger>
-              <HoverCardContent
-                align="start"
-                sideOffset={8}
-                className="control-watch-engine-hovercard"
-              >
-                <p className="meta">{watchEngineChannelsHint}</p>
-              </HoverCardContent>
-            </HoverCard>
-          </div>
+        </div>
+        <details
+          ref={watchEngineDetailsRef}
+          className="control-watch-engine-internals"
+          onToggle={handleWatchEnginePanelToggle}
+        >
+          <summary
+            ref={watchEngineSummaryRef}
+            className="control-watch-engine-internals-summary"
+            onClickCapture={handleWatchEngineSummaryClickCapture}
+          >
+            <span className="control-watch-engine-summary-copy">
+              <span className="control-watch-engine-summary-label">
+                {t("control.watchEngineDetailsToggle")}
+              </span>
+              <span className="control-watch-engine-summary-hint">
+                {t("control.watchEngineDetailsHint")}
+              </span>
+            </span>
+            <span className="control-watch-engine-summary-action">
+              <span className="control-watch-engine-summary-action-label is-collapsed">
+                {t("control.watchEngineDetailsShow")}
+              </span>
+              <span className="control-watch-engine-summary-action-label is-expanded">
+                {t("control.watchEngineDetailsHide")}
+              </span>
+              <span className="control-watch-engine-summary-chevron" aria-hidden="true">
+                <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+                  <path
+                    d="M3.5 6.5 8 11l4.5-4.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="1.8"
+                  />
+                </svg>
+              </span>
+            </span>
+          </summary>
           <div className="control-watch-engine-details" role="list">
+            <p className="meta control-watch-engine-kv" role="listitem">
+              <span className="control-watch-engine-k">{t("control.watchEngineStatus")}</span>
+              <span className="control-watch-engine-v">{watchEngineDecisionLabel}</span>
+            </p>
             <p className="meta control-watch-engine-kv" role="listitem">
               <span className="control-watch-engine-k">{t("control.watchEngineTarget")}</span>
               <span className="control-watch-engine-v">{watchEngineTargetText}</span>
+            </p>
+            <p className="meta control-watch-engine-kv" role="listitem">
+              <span className="control-watch-engine-k">{t("control.watchEngineAllowlist")}</span>
+              <span className="control-watch-engine-v">
+                {watchEngineAllowlistMode}. {watchEngineAllowlistHint}
+              </span>
+            </p>
+            <p className="meta control-watch-engine-kv" role="listitem">
+              <span className="control-watch-engine-k">{t("control.watchEngineChannels")}</span>
+              <span className="control-watch-engine-v">{watchEngineChannelsHint}</span>
             </p>
             <p className="meta control-watch-engine-kv" role="listitem">
               <span className="control-watch-engine-k">{t("control.watchEngineSuppression")}</span>
@@ -588,9 +557,9 @@ export function ControlView({
               </p>
             ) : null}
           </div>
-        </div>
+        </details>
       </div>
-    </details>
+    </div>
   );
   const watchControlLabel = watching ? t("control.stop") : t("control.resume");
   const watchControlClass = watching ? "ghost danger" : "ghost";
@@ -636,6 +605,24 @@ export function ControlView({
         : t("control.pickStream");
   const hasOpenTargetDrops = targetDrops.some((drop) => drop.status !== "claimed");
   const openTargetDropsCount = targetDrops.filter((drop) => drop.status !== "claimed").length;
+  const controlTargetHead = (
+    <div className="control-target-head">
+      <div className="control-target-head-main">
+        <div className="label">{t("control.watchControlsTitle")}</div>
+        <p className="meta">{t("control.sidebarHint")}</p>
+      </div>
+      <div className="control-target-actions">
+        <button
+          type="button"
+          className={`control-target-primary-action ${watchControlClass}`}
+          onClick={handleWatchControlToggle}
+          disabled={!canToggleWatchControl}
+        >
+          {watchControlLabel}
+        </button>
+      </div>
+    </div>
+  );
   const inactiveDropText = showNoDropsHint
     ? t("control.noDropsHint")
     : watching && hasOpenTargetDrops
@@ -660,13 +647,6 @@ export function ControlView({
           Math.round((activeDropLiveEarnedMinutes / activeDropInfo.requiredMinutes) * 100),
         )
       : 0;
-  const controlStateText = watching
-    ? t("control.sidebarStateWatching")
-    : resumeChannel
-      ? t("control.sidebarStatePaused")
-      : canWatchTarget
-        ? t("control.sidebarStateReady")
-        : t("control.sidebarStateIdle");
   const campaignPanels = useMemo(
     () =>
       campaignGroups.map((group) => {
@@ -733,6 +713,11 @@ export function ControlView({
   }, [campaignPanels, selectedCampaignKey]);
   const selectedCampaign =
     campaignPanels.find((group) => group.key === selectedCampaignKey) ?? campaignPanels[0] ?? null;
+  const nextProgressionDropId = selectedCampaign
+    ? selectedCampaign.items.find(
+        (item) => item.status !== "claimed" && item.id !== activeDropInfo?.id,
+      )?.id ?? null
+    : null;
   const hasTarget = Boolean(targetGame);
   const controlNowEmptyState = (
     <div className="control-now-empty">
@@ -1021,6 +1006,16 @@ export function ControlView({
                                   liveProgressVisible && d.status === "locked"
                                     ? "progress"
                                     : d.status;
+                                const progressionClass = isActive
+                                  ? "is-current"
+                                  : d.id === nextProgressionDropId
+                                    ? "is-next"
+                                    : "is-later";
+                                const progressionLabel = isActive
+                                  ? t("control.dropStageCurrent")
+                                  : d.id === nextProgressionDropId
+                                    ? t("control.dropStageNext")
+                                    : null;
                                 const statusLabel = mapStatusLabel(displayStatus, (key) => t(key));
                                 const statusClass =
                                   displayStatus === "claimed"
@@ -1065,7 +1060,7 @@ export function ControlView({
                                 return (
                                   <li
                                     key={d.id}
-                                    className={`drop-card ${statusClass} ${isActive ? "active" : ""} ${animate ? "animate-item" : ""}`}
+                                    className={`drop-card ${statusClass} ${progressionClass} ${isActive ? "active" : ""} ${animate ? "animate-item" : ""}`}
                                     style={
                                       animate ? { animationDelay: `${idx * 30}ms` } : undefined
                                     }
@@ -1084,6 +1079,11 @@ export function ControlView({
                                     ) : null}
                                     <div className="drop-main">
                                       <div className="drop-body">
+                                        {progressionLabel ? (
+                                          <div className={`drop-stage-label ${progressionClass}`}>
+                                            {progressionLabel}
+                                          </div>
+                                        ) : null}
                                         <div className="drop-header">
                                           <div className="drop-title">
                                             <span className="drop-title-text">{d.title}</span>
@@ -1125,86 +1125,76 @@ export function ControlView({
         </div>
 
         <section className={`control-target${hasTarget ? "" : " is-empty"}`}>
-          <div className="control-target-head">
-            <div>
-              <div className="label">{t("control.watchControlsTitle")}</div>
-              <p className="meta">{t("control.sidebarHint")}</p>
-            </div>
-            <div className="control-target-actions">
-              <button
-                type="button"
-                className={watchControlClass}
-                onClick={handleWatchControlToggle}
-                disabled={!canToggleWatchControl}
-              >
-                {watchControlLabel}
-              </button>
-            </div>
-          </div>
           {hasTarget ? (
             <>
-              <div className="control-target-summary" role="list">
-                <div className="control-target-stat" role="listitem">
-                  <span className="control-target-stat-k">{t("control.activeTarget")}</span>
-                  <strong className="control-target-stat-v">{targetGame}</strong>
-                  <p className="meta">{controlStateText}</p>
-                </div>
-                <div className="control-target-stat" role="listitem">
-                  <span className="control-target-stat-k">{t("control.streamsFound")}</span>
-                  <strong className="control-target-stat-v">
-                    {channels.length > 0 ? channels.length : 0}
-                  </strong>
-                  <p className="meta">
-                    {t("control.dropsOpen")}: {openTargetDropsCount}
-                  </p>
-                </div>
+              <div className={`control-operator-stage tone-${watchEngineTone}`}>
+                {controlTargetHead}
+                <div className="control-target-engine">{watchEnginePanel}</div>
+                {trackerStatus ? (
+                  <div className="status-row control-tracker-row control-rail-support">
+                    {trackerStatus.connectionState &&
+                    trackerStatus.connectionState !== "connected" ? (
+                      <span className="pill ghost small">
+                        {t("control.trackerConnection")}:{" "}
+                        {t(`control.trackerConn.${trackerStatus.connectionState}`)}
+                      </span>
+                    ) : null}
+                    {trackerStatus.fallbackActive ? (
+                      <span className="pill small danger-chip">
+                        {t("control.trackerFallback", {
+                          time:
+                            trackerFallbackRemainingMs !== null
+                              ? formatDuration(trackerFallbackRemainingMs)
+                              : "n/a",
+                        })}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
-              {trackerStatus ? (
-                <div className="status-row control-tracker-row">
-                  {trackerStatus.connectionState &&
-                  trackerStatus.connectionState !== "connected" ? (
-                    <span className="pill ghost small">
-                      {t("control.trackerConnection")}:{" "}
-                      {t(`control.trackerConn.${trackerStatus.connectionState}`)}
-                    </span>
-                  ) : null}
-                  {trackerStatus.fallbackActive ? (
-                    <span className="pill small danger-chip">
-                      {t("control.trackerFallback", {
-                        time:
-                          trackerFallbackRemainingMs !== null
-                            ? formatDuration(trackerFallbackRemainingMs)
-                            : "n/a",
+              <div className="control-rail-flow">
+              <div className="control-rail-section control-channel-block">
+                <div className="control-target-subhead control-channel-head">
+                  <div className="control-channel-head-copy">
+                    <div className="control-channel-eyebrow">
+                      {t("control.channelListEyebrow")}
+                    </div>
+                    <div className="label">{t("control.channelListTitle")}</div>
+                    <p className="meta">{t("control.channelListHint")}</p>
+                  </div>
+                  {targetGame ? (
+                    <div
+                      className="control-channel-summary"
+                      aria-label={t("control.channelListContext", {
+                        game: targetGame,
+                        streams: channels.length,
+                        drops: openTargetDropsCount,
                       })}
-                    </span>
+                    >
+                      <span className="control-channel-summary-game ellipsis">{targetGame}</span>
+                      <span className="control-channel-summary-meta">
+                        {t("control.channelListSummary", {
+                          streams: channels.length,
+                          drops: openTargetDropsCount,
+                        })}
+                      </span>
+                    </div>
                   ) : null}
                 </div>
-              ) : null}
-              <div className="control-target-engine">{watchEnginePanel}</div>
-            </>
-          ) : (
-            controlTargetEmptyState
-          )}
-          {hasTarget ? (
-            <div className="control-channel-block">
-              <div className="control-target-subhead">
-                <div className="label">{t("control.channelListTitle")}</div>
-                <p className="meta">{t("control.channelListHint")}</p>
-              </div>
-              {channelsLoading ? (
-                <p className="meta inline-loader">
-                  <span className="spinner" />
-                  {t("control.channelsLoading")}
-                </p>
-              ) : null}
-              {channelErrorText ? (
-                <p className="error">
-                  {t("control.channelError")}: {channelErrorText}
-                </p>
-              ) : null}
-              <div className={`channel-grid-wrapper ${channelGridStateClass}`}>
-                {channels.length > 0 ? (
-                  <ul className={channelGridClass}>
+                {channelsLoading ? (
+                  <p className="meta inline-loader">
+                    <span className="spinner" />
+                    {t("control.channelsLoading")}
+                  </p>
+                ) : null}
+                {channelErrorText ? (
+                  <p className="error">
+                    {t("control.channelError")}: {channelErrorText}
+                  </p>
+                ) : null}
+                <div className={`channel-grid-wrapper ${channelGridStateClass}`}>
+                  {channels.length > 0 ? (
+                    <ul className={channelGridClass}>
                     {combinedChannels.map((c, idx) => {
                       const thumb = c.thumbnail
                         ? c.thumbnail.replace("{width}", "320").replace("{height}", "180")
@@ -1213,6 +1203,8 @@ export function ControlView({
                       const animatedViewerCount = c.exiting
                         ? c.viewers
                         : (animatedViewersById[c.id] ?? c.viewers);
+                      const channelDisplayName =
+                        c.displayName?.trim() || c.login?.trim() || c.id;
                       const loginLabel =
                         c.login &&
                         c.displayName &&
@@ -1223,6 +1215,7 @@ export function ControlView({
                       const metaParts = [languageTag, loginLabel].filter(Boolean);
                       const metaLine = metaParts.join(" â€¢ ");
                       const title = c.title?.trim() ?? "";
+                      const metaDisplayLine = metaParts.join(" / ");
                       return (
                         <li
                           key={c.id}
@@ -1241,7 +1234,7 @@ export function ControlView({
                         >
                           <button
                             type="button"
-                            className={`channel-tile ${isActive ? "active" : ""}`}
+                            className={`channel-tile ${isActive ? "active" : "idle"}`}
                             onClick={() => {
                               if (!canWatchTarget) return;
                               startWatching(c);
@@ -1250,59 +1243,82 @@ export function ControlView({
                             aria-pressed={isActive}
                             aria-label={
                               title
-                                ? `${c.displayName} - ${c.game}. ${title}`
-                                : `${c.displayName} - ${c.game}`
+                                ? `${channelDisplayName} - ${c.game}. ${title}`
+                                : `${channelDisplayName} - ${c.game}`
                             }
                           >
-                            {thumb ? (
-                              <div
-                                className="channel-thumb"
-                                style={{ backgroundImage: `url(${thumb})` }}
-                              />
-                            ) : null}
-                            <span className="viewer-badge">
-                              <span className="viewer-main">
-                                {formatViewers(animatedViewerCount)}
-                              </span>
-                            </span>
+                            <div className={`channel-thumb-tile${thumb ? "" : " is-empty"}`}>
+                              {thumb ? (
+                                <div
+                                  className="channel-thumb-image"
+                                  style={{ backgroundImage: `url(${thumb})` }}
+                                />
+                              ) : (
+                                <span aria-hidden="true">
+                                  {channelDisplayName.slice(0, 1).toUpperCase()}
+                                </span>
+                              )}
+                            </div>
                             <div className="channel-content">
-                              <div className="channel-header">
-                                <div>
-                                  <div className="meta ellipsis">{c.game}</div>
-                                  <div className="channel-name ellipsis">{c.displayName}</div>
-                                </div>
+                              <div className="channel-context ellipsis">{c.game}</div>
+                              <div className="channel-name-row">
+                                <div className="channel-name ellipsis">{channelDisplayName}</div>
+                                {isActive ? (
+                                  <span className="channel-state-chip">
+                                    {t("control.channelWatching")}
+                                  </span>
+                                ) : null}
                               </div>
-                              {metaLine ? (
-                                <div className="meta muted ellipsis">{metaLine}</div>
+                              {metaDisplayLine ? (
+                                <div className="meta muted ellipsis">{metaDisplayLine}</div>
                               ) : null}
-                              {title ? <div className="meta muted ellipsis">{title}</div> : null}
+                              {title ? (
+                                <div className="channel-title-preview ellipsis">{title}</div>
+                              ) : null}
+                            </div>
+                            <div className="channel-utility">
+                              <span className="viewer-badge">
+                                <span className="viewer-main">
+                                  {formatViewers(animatedViewerCount)}
+                                </span>
+                              </span>
                             </div>
                           </button>
                         </li>
                       );
                     })}
-                  </ul>
-                ) : null}
-                {!channelsLoading && !channelError && targetGame && channels.length === 0
-                  ? channelEmptyState
-                  : null}
-                {showChannelSkeleton ? (
-                  <ul className={`${channelGridClass} channel-grid-skeleton`} aria-hidden="true">
-                    {CHANNEL_SKELETON.map((sk) => (
-                      <li key={sk.key} className="channel-tile skeleton-tile">
-                        <div className="skeleton-head">
-                          <div className="skeleton-line tiny" />
-                          <div className="skeleton-chip" />
-                        </div>
-                        <div className="skeleton-line medium" />
-                        <div className="skeleton-line short" />
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
+                    </ul>
+                  ) : null}
+                  {!channelsLoading && !channelError && targetGame && channels.length === 0
+                    ? channelEmptyState
+                    : null}
+                  {showChannelSkeleton ? (
+                    <ul className={`${channelGridClass} channel-grid-skeleton`} aria-hidden="true">
+                      {CHANNEL_SKELETON.map((sk) => (
+                        <li key={sk.key} className="channel-tile skeleton-tile">
+                          <div className="skeleton-line skeleton-thumb large" />
+                          <div className="skeleton-body channel-skeleton-body">
+                            <div className="skeleton-line tiny" />
+                            <div className="skeleton-line medium" />
+                            <div className="skeleton-line short" />
+                          </div>
+                          <div className="channel-skeleton-utility">
+                            <div className="skeleton-chip" />
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
               </div>
-            </div>
-          ) : null}
+              </div>
+            </>
+          ) : (
+            <>
+              {controlTargetHead}
+              {controlTargetEmptyState}
+            </>
+          )}
         </section>
       </div>
     </>

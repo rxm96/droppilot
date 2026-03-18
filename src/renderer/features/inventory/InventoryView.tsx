@@ -5,7 +5,7 @@ import type {
   InventoryState,
 } from "@renderer/shared/types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { formatRange, categoryLabel, mapStatusLabel } from "@renderer/shared/utils";
+import { formatRange, mapStatusLabel } from "@renderer/shared/utils";
 import { useI18n } from "@renderer/shared/i18n";
 import { resolveErrorMessage } from "@renderer/shared/utils/errors";
 import {
@@ -13,6 +13,8 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@renderer/shared/components/ui/select";
@@ -96,9 +98,9 @@ type InventoryCampaignView = {
   campaignKey: string;
   name: string;
   game: string;
+  contextLabel: string;
   imageUrl: string;
   accountLinkUrl: string;
-  phaseLabel: string;
   isPriority: boolean;
   addPriorityLabel: string;
   allClaimed: boolean;
@@ -106,7 +108,9 @@ type InventoryCampaignView = {
   showLinkAction: boolean;
   showAddPriorityAction: boolean;
   showCampaignActions: boolean;
-  statusChip: { className: string; label: string } | null;
+  campaignStateLabel: string;
+  campaignStateTone: "ready" | "blocked" | "link" | "completed" | "progress" | "upcoming";
+  collapsedFacts: string[];
   drops: Array<{
     id: string;
     title: string;
@@ -115,6 +119,7 @@ type InventoryCampaignView = {
     status?: string;
     imageUrl?: string;
     blocked: boolean;
+    claimable: boolean;
     blockingReasonHints: string[];
   }>;
   campaignProgressMinutes: number;
@@ -122,9 +127,6 @@ type InventoryCampaignView = {
   campaignProgressPct: number;
   campaignOpenDropCount: number;
   campaignBlockedDropCount: number;
-  progressLabel: string;
-  rewardSummary: string;
-  scheduleLabel: string;
 };
 
 type InventoryCampaignVisibilityOptions = {
@@ -232,6 +234,17 @@ export function InventoryView({
   onOpenAccountLink,
 }: InventoryProps) {
   const { t } = useI18n();
+  const primaryFilters = [
+    { key: "all" as FilterKey, label: t("inventory.filter.all") },
+    { key: "priority-games" as FilterKey, label: t("inventory.filter.priorityGames") },
+    { key: "in-progress" as FilterKey, label: t("inventory.filter.active") },
+    { key: "not-linked" as FilterKey, label: t("inventory.filter.notLinked") },
+  ];
+  const secondaryFilters = [
+    { key: "upcoming" as FilterKey, label: t("inventory.filter.upcoming") },
+    { key: "finished" as FilterKey, label: t("inventory.filter.finished") },
+    { key: "expired" as FilterKey, label: t("inventory.filter.expired") },
+  ];
   const isInventoryLoading = inventory.status === "loading";
   const showCampaignSkeleton = isInventoryLoading;
   const isInventoryError = inventory.status === "error";
@@ -358,9 +371,12 @@ export function InventoryView({
   );
   const priorityGameSet = useMemo(() => createPriorityGameSet(priorityGames), [priorityGames]);
   const normalizedFilter: FilterKey = filter === "excluded" ? "all" : filter;
-  const visibleCampaigns = useMemo(() => {
+  const activeSecondaryFilter = secondaryFilters.some(({ key }) => key === normalizedFilter)
+    ? normalizedFilter
+    : undefined;
+  const campaignEntries = useMemo(() => {
     const now = Date.now();
-    const withPhase = campaigns.map((campaign) => {
+    return campaigns.map((campaign) => {
       const derivedHasUnclaimedDrops = resolveHasUnclaimedDrops(campaign);
       const basePhase = getCampaignPhase(campaign, now);
       const phase =
@@ -372,7 +388,9 @@ export function InventoryView({
         derivedHasUnclaimedDrops,
       };
     });
-    return withPhase
+  }, [campaigns, resolveHasUnclaimedDrops]);
+  const visibleCampaigns = useMemo(() => {
+    return campaignEntries
       .filter((entry) =>
         shouldDisplayCampaignEntry(entry, {
           normalizedFilter,
@@ -393,12 +411,11 @@ export function InventoryView({
         return (a.campaign.game ?? "").localeCompare(b.campaign.game ?? "");
       });
   }, [
-    campaigns,
+    campaignEntries,
     gameFilter,
     isCampaignUnlinked,
     normalizedFilter,
     priorityGameSet,
-    resolveHasUnclaimedDrops,
   ]);
   const { hasUnlinkedCampaigns, unlinkedCampaignCount } = useMemo(() => {
     let count = 0;
@@ -453,7 +470,9 @@ export function InventoryView({
         const accountLinkUrl =
           typeof campaign.accountLinkUrl === "string" ? campaign.accountLinkUrl.trim() : "";
         const campaignKey = campaign.id ?? `${game}:${name}`;
-        const phaseLabel = categoryLabel(phase, (key) => t(key));
+        const contextLabel = [game.trim(), formatRange(campaign.startsAt, campaign.endsAt, t)]
+          .filter(Boolean)
+          .join(" • ");
         const campaignDrops = Array.isArray(campaign.drops) ? campaign.drops : [];
         const trimmedGame = game.trim();
         const isPriority = trimmedGame ? priorityGames.includes(trimmedGame) : false;
@@ -465,17 +484,6 @@ export function InventoryView({
         const needsLink = shouldShowLinkRequired(campaign);
         const showAddPriorityAction = Boolean(trimmedGame) && !isPriority;
         const showCampaignActions = showLinkAction || showAddPriorityAction;
-        const statusChip = allClaimed
-          ? {
-              className: "pill ghost small success-chip",
-              label: t("inventory.campaigns.allClaimed"),
-            }
-          : needsLink
-            ? {
-                className: "pill ghost small danger-chip",
-                label: t("inventory.campaigns.linkRequired"),
-              }
-            : null;
         const drops = campaignDrops
           .map((drop) => {
             const inventoryDrop = inventoryByDropId.get(drop.id);
@@ -495,6 +503,7 @@ export function InventoryView({
               blocked:
                 inventoryDrop?.blocked === true ||
                 (inventoryDrop?.blockingReasonHints?.length ?? 0) > 0,
+              claimable: inventoryDrop?.isClaimable === true,
               blockingReasonHints: Array.isArray(inventoryDrop?.blockingReasonHints)
                 ? inventoryDrop.blockingReasonHints
                 : [],
@@ -515,15 +524,59 @@ export function InventoryView({
             : 0;
         const campaignOpenDropCount = drops.filter((item) => item.status !== "claimed").length;
         const campaignBlockedDropCount = drops.filter((item) => item.blocked).length;
+        const claimableDropCount = drops.filter((item) => item.claimable).length;
+        const progressLabel =
+          campaignRequiredMinutes > 0
+            ? `${campaignProgressMinutes}/${campaignRequiredMinutes} ${t("inventory.minutes")}`
+            : t("inventory.campaigns.noDrops");
+        const campaignStateTone = allClaimed
+          ? "completed"
+          : needsLink
+            ? "link"
+            : claimableDropCount > 0
+              ? "ready"
+              : campaignBlockedDropCount > 0
+                ? "blocked"
+                : phase === "upcoming"
+                  ? "upcoming"
+                  : "progress";
+        const campaignStateLabel =
+          campaignStateTone === "completed"
+            ? t("inventory.campaigns.state.completed")
+            : campaignStateTone === "link"
+              ? t("inventory.campaigns.state.link")
+              : campaignStateTone === "ready"
+                ? t("inventory.campaigns.state.ready", { count: claimableDropCount })
+                : campaignStateTone === "blocked"
+                  ? t("inventory.campaigns.state.blocked", { count: campaignBlockedDropCount })
+                  : campaignStateTone === "upcoming"
+                    ? t("inventory.campaigns.state.upcoming")
+                    : t("inventory.campaigns.state.progress", { count: campaignOpenDropCount });
+        const collapsedFacts = (
+          campaignStateTone === "completed"
+            ? [t("inventory.campaigns.completedCount", { count: drops.length })]
+            : campaignStateTone === "upcoming"
+              ? [campaignOpenDropCount > 0 ? t("overview.openRewards", { count: campaignOpenDropCount }) : null]
+              : campaignStateTone === "progress"
+                ? [progressLabel]
+                : [
+                    progressLabel,
+                    campaignStateTone === "blocked" || campaignStateTone === "link"
+                      ? campaignOpenDropCount > 0
+                        ? t("overview.openRewards", { count: campaignOpenDropCount })
+                        : null
+                      : null,
+                  ]
+        ).filter((value): value is string => Boolean(value));
         return {
           campaign,
           phase,
           campaignKey,
           name,
           game,
+          contextLabel,
           imageUrl,
           accountLinkUrl,
-          phaseLabel,
           isPriority,
           addPriorityLabel,
           allClaimed,
@@ -531,21 +584,15 @@ export function InventoryView({
           showLinkAction,
           showAddPriorityAction,
           showCampaignActions,
-          statusChip,
+          campaignStateLabel,
+          campaignStateTone,
+          collapsedFacts,
           drops,
           campaignProgressMinutes,
           campaignRequiredMinutes,
           campaignProgressPct,
           campaignOpenDropCount,
           campaignBlockedDropCount,
-          progressLabel:
-            campaignRequiredMinutes > 0
-              ? `${campaignProgressMinutes}/${campaignRequiredMinutes} ${t("inventory.minutes")}`
-              : t("inventory.campaigns.noDrops"),
-          rewardSummary: allClaimed
-            ? t("inventory.campaigns.allClaimed")
-            : t("overview.openRewards", { count: campaignOpenDropCount }),
-          scheduleLabel: formatRange(campaign.startsAt, campaign.endsAt, t),
         };
       }),
     [
@@ -574,6 +621,26 @@ export function InventoryView({
     () => paginatedCampaignViews.find((item) => item.campaignKey === selectedCampaignKey) ?? null,
     [paginatedCampaignViews, selectedCampaignKey],
   );
+  const orderedCampaignViews = useMemo(() => {
+    const getRank = (view: InventoryCampaignView) => {
+      if (view.campaignStateTone === "ready" || view.campaignStateTone === "progress") return 0;
+      if (view.campaignStateTone === "blocked" || view.campaignStateTone === "link") return 1;
+      if (view.campaignStateTone === "upcoming") return 2;
+      return 3;
+    };
+
+    return paginatedCampaignViews
+      .map((view, index) => ({
+        view,
+        index,
+        rank: getRank(view),
+      }))
+      .sort((a, b) => (a.rank !== b.rank ? a.rank - b.rank : a.index - b.index))
+      .map(({ view }) => view);
+  }, [paginatedCampaignViews]);
+  const toggleCampaignSelection = useCallback((campaignKey: string) => {
+    setSelectedCampaignKey((current) => (current === campaignKey ? null : campaignKey));
+  }, []);
 
   return (
     <>
@@ -581,25 +648,42 @@ export function InventoryView({
         <h2>{t("inventory.title")}</h2>
         <div className="inventory-controls">
           <div className="filters-buttons inventory-filter-row">
-            {[
-              { key: "all", label: t("inventory.filter.all") },
-              { key: "priority-games", label: t("inventory.filter.priorityGames") },
-              { key: "in-progress", label: t("inventory.filter.active") },
-              { key: "upcoming", label: t("inventory.filter.upcoming") },
-              { key: "finished", label: t("inventory.filter.finished") },
-              { key: "not-linked", label: t("inventory.filter.notLinked") },
-              { key: "expired", label: t("inventory.filter.expired") },
-            ].map((f) => (
+            {primaryFilters.map((f) => (
               <button
                 key={f.key}
-                className={filter === f.key ? "pill active" : "pill ghost"}
-                onClick={() => onFilterChange(f.key as FilterKey)}
+                className={normalizedFilter === f.key ? "pill active" : "pill ghost"}
+                onClick={() => onFilterChange(f.key)}
               >
                 {f.label}
               </button>
             ))}
           </div>
           <div className="filters-actions inventory-head-actions">
+            <Select
+              value={activeSecondaryFilter}
+              onValueChange={(value) => onFilterChange(value as FilterKey)}
+            >
+              <SelectTrigger
+                className="inventory-secondary-filter"
+                aria-label={t("inventory.filter.more")}
+              >
+                <SelectValue placeholder={t("inventory.filter.more")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>{t("inventory.filter.more")}</SelectLabel>
+                  {secondaryFilters.map((item) => (
+                    <SelectItem key={item.key} value={item.key}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+                <SelectSeparator />
+                <SelectGroup>
+                  <SelectItem value="all">{t("inventory.filter.reset")}</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
             <button
               type="button"
               className="ghost subtle-btn"
@@ -649,11 +733,6 @@ export function InventoryView({
               <span className="meta inventory-link-meta">
                 {t("inventory.campaigns.linkNeeds", { count: unlinkedCampaignCount })}
               </span>
-            )}
-            {!showCampaignSkeleton && hasUnlinkedCampaigns && (
-              <button type="button" className="ghost subtle-btn" onClick={onOpenAccountLink}>
-                {t("inventory.campaigns.linkAction")}
-              </button>
             )}
           </div>
         </div>
@@ -744,34 +823,39 @@ export function InventoryView({
           visibleCampaigns.length === 0 && <p className="meta">{campaignsEmptyText}</p>}
         {!showCampaignSkeleton && visibleCampaigns.length > 0 && (
           <ul className={`campaign-list campaign-ledger${campaignsEntering ? " is-entering" : ""}`}>
-            {paginatedCampaignViews.map((view, index) => {
+            {orderedCampaignViews.map((view, index) => {
               const isSelected = selectedCampaign?.campaignKey === view.campaignKey;
               const isLeading = index === 0;
-              const collapsedMetaParts = [
-                `${view.campaignProgressPct}%`,
-                t("overview.openRewards", { count: view.campaignOpenDropCount }),
-              ];
-              if (view.campaignBlockedDropCount > 0) {
-                collapsedMetaParts.push(`${t("hero.opsBlocked")} ${view.campaignBlockedDropCount}`);
-              }
-              const collapsedMeta = collapsedMetaParts.join(" / ");
+              const previous = index > 0 ? orderedCampaignViews[index - 1] : null;
+              const currentBucket =
+                view.campaignStateTone === "ready" || view.campaignStateTone === "progress"
+                  ? "actionable"
+                  : view.campaignStateTone === "blocked" || view.campaignStateTone === "link"
+                    ? "blocked"
+                    : "passive";
+              const previousBucket =
+                previous === null
+                  ? null
+                  : previous.campaignStateTone === "ready" ||
+                      previous.campaignStateTone === "progress"
+                    ? "actionable"
+                    : previous.campaignStateTone === "blocked" ||
+                        previous.campaignStateTone === "link"
+                      ? "blocked"
+                      : "passive";
               return (
                 <li
                   key={view.campaignKey}
-                  className={`campaign-card ${view.phase}${isSelected ? " is-selected" : ""}${isLeading ? " is-leading" : ""}`}
+                  className={`campaign-card ${view.phase} state-${view.campaignStateTone}${isSelected ? " is-selected" : ""}${isLeading ? " is-leading" : ""}${previousBucket !== null && previousBucket !== currentBucket ? " is-group-shift" : ""}`}
                 >
-                  <button
-                    type="button"
-                    className="campaign-card-select"
-                    aria-pressed={isSelected}
-                    aria-expanded={isSelected}
-                    onClick={() =>
-                      setSelectedCampaignKey((current) =>
-                        current === view.campaignKey ? null : view.campaignKey,
-                      )
-                    }
-                  >
-                    <div className="campaign-card-top">
+                  <div className="campaign-card-top">
+                    <button
+                      type="button"
+                      className="campaign-card-select"
+                      aria-pressed={isSelected}
+                      aria-expanded={isSelected}
+                      onClick={() => toggleCampaignSelection(view.campaignKey)}
+                    >
                       <div className="campaign-card-main">
                         {view.imageUrl ? (
                           <img
@@ -783,38 +867,60 @@ export function InventoryView({
                         ) : null}
                         <div className="campaign-card-body">
                           <div className="campaign-card-heading">
-                            {view.game ? <div className="meta">{view.game}</div> : null}
+                            {view.contextLabel ? (
+                              <div className="meta campaign-card-context">{view.contextLabel}</div>
+                            ) : null}
                             <div className="campaign-card-title">{view.name}</div>
                           </div>
-                          <div className="meta">{view.scheduleLabel}</div>
+                          <div className={`campaign-card-state state-${view.campaignStateTone}`}>
+                            {view.campaignStateLabel}
+                          </div>
+                          {view.collapsedFacts.length > 0 ? (
+                            <div className="campaign-card-facts">
+                              {view.collapsedFacts.map((fact) => (
+                                <span
+                                  key={`${view.campaignKey}-${fact}`}
+                                  className="campaign-card-fact"
+                                >
+                                  {fact}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
                           {view.drops.length > 0 ? (
-                            <>
-                              <div className="meta campaign-card-collapsed-meta">
-                                {collapsedMeta}
-                              </div>
-                              <div className="campaign-card-progress-bar" aria-hidden="true">
-                                <span style={{ width: `${view.campaignProgressPct}%` }} />
-                              </div>
-                            </>
+                            <div className="campaign-card-progress-bar" aria-hidden="true">
+                              <span style={{ width: `${view.campaignProgressPct}%` }} />
+                            </div>
                           ) : null}
                         </div>
                       </div>
-                      <div className="campaign-card-meta">
-                        <span className="pill ghost small">{view.phaseLabel}</span>
-                        {view.statusChip ? (
-                          <span className={view.statusChip.className}>{view.statusChip.label}</span>
-                        ) : null}
-                        {view.isPriority ? (
-                          <span className="pill ghost small">{view.addPriorityLabel}</span>
-                        ) : null}
-                        <span className="meta campaign-card-toggle">
-                          {isSelected
-                            ? t("inventory.campaigns.closeDetails")
-                            : t("inventory.campaigns.openDetails")}
-                        </span>
-                      </div>
+                    </button>
+                    <div className="campaign-card-meta">
+                      {view.isPriority ? (
+                        <span className="pill ghost small">{view.addPriorityLabel}</span>
+                      ) : null}
+                      {view.showLinkAction ? (
+                        <button
+                          type="button"
+                          className={`pill ghost small campaign-card-inline-action ${view.needsLink ? "danger-chip" : ""}`}
+                          onClick={() => onOpenAccountLink(view.accountLinkUrl || undefined)}
+                          title={view.accountLinkUrl || undefined}
+                        >
+                          {t("inventory.campaigns.linkRequiredAction")}
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="meta campaign-card-toggle campaign-card-toggle-button"
+                        aria-expanded={isSelected}
+                        onClick={() => toggleCampaignSelection(view.campaignKey)}
+                      >
+                        {isSelected
+                          ? t("inventory.campaigns.closeDetails")
+                          : t("inventory.campaigns.openDetails")}
+                      </button>
                     </div>
-                  </button>
+                  </div>
                   <div
                     className={`campaign-inline-detail-shell${isSelected ? " is-open" : ""}`}
                     aria-hidden={!isSelected}
@@ -828,18 +934,6 @@ export function InventoryView({
                             <div className="campaign-detail-stage">
                               <div className="campaign-detail-head">
                                 <div className="campaign-card-actions">
-                                  {view.showLinkAction ? (
-                                    <button
-                                      type="button"
-                                      className={`pill ghost small ${view.needsLink ? "danger-chip" : ""}`}
-                                      onClick={() =>
-                                        onOpenAccountLink(view.accountLinkUrl || undefined)
-                                      }
-                                      title={view.accountLinkUrl || undefined}
-                                    >
-                                      {t("inventory.campaigns.linkRequiredAction")}
-                                    </button>
-                                  ) : null}
                                   {view.showAddPriorityAction ? (
                                     <button
                                       type="button"
@@ -920,10 +1014,7 @@ export function InventoryView({
                                   <div className="campaign-drop-body">
                                     <div className="campaign-drop-title">{item.title}</div>
                                     {blockingReasonLabel ? (
-                                      <div
-                                        className="campaign-drop-reason"
-                                        title={blockingReasonLabel}
-                                      >
+                                      <div className="campaign-drop-reason" title={blockingReasonLabel}>
                                         {blockingReasonLabel}
                                       </div>
                                     ) : req > 0 ? null : (
