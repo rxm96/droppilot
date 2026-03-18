@@ -928,7 +928,7 @@ export function ControlView({
                             >
                               <span className="drop-campaign-chip-title">{group.title}</span>
                               <span className="drop-campaign-chip-meta">
-                                {group.pct}% •{" "}
+                                {group.pct}% /{" "}
                                 {t("control.campaignDrops", { count: group.openDrops })}
                               </span>
                             </button>
@@ -1213,7 +1213,6 @@ export function ControlView({
                               : "";
                           const languageTag = c.language ? c.language.toUpperCase() : "";
                           const metaParts = [languageTag, loginLabel].filter(Boolean);
-                          const metaLine = metaParts.join(" â€¢ ");
                           const title = c.title?.trim() ?? "";
                           const metaDisplayLine = metaParts.join(" / ");
                           return (

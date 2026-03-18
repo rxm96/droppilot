@@ -1088,6 +1088,7 @@ export function useAppModel() {
     stallCheckHeartbeat,
     targetDrops,
     targetGame,
+    watchStats.lastOk,
     watching,
   ]);
 
