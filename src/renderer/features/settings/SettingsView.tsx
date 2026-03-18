@@ -75,6 +75,7 @@ type SettingsProps = {
       | "checking"
       | "available"
       | "downloading"
+      | "installing"
       | "downloaded"
       | "none"
       | "error"
@@ -219,6 +220,8 @@ export function SettingsView({
         });
       case "downloaded":
         return t("settings.updateDownloaded");
+      case "installing":
+        return t("updateOverlay.installing");
       case "none":
         return t("settings.updateNone");
       case "unsupported":

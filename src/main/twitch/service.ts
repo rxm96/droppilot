@@ -905,7 +905,9 @@ export class TwitchService {
         const blocked = hardBlockingReasonHints.length > 0;
         const canBuildFallbackClaimId = Boolean(campaignId && drop.id);
         const canonicalClaimKey =
-          currentUserId && campaignId && drop.id ? `${currentUserId}#${campaignId}#${drop.id}` : null;
+          currentUserId && campaignId && drop.id
+            ? `${currentUserId}#${campaignId}#${drop.id}`
+            : null;
         const recentlyClaimed =
           !isClaimed &&
           ((typeof dropInstanceId === "string" && recentlyClaimedIds.has(dropInstanceId)) ||

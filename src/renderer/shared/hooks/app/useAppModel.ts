@@ -38,6 +38,10 @@ import { useStats } from "./useStats";
 import { useTheme } from "@renderer/shared/theme";
 import { DropChannelRestriction } from "@renderer/shared/domain/dropDomain";
 import { canEarnDrop } from "@renderer/shared/domain/inventory";
+import {
+  getUpdateOverlayDevStatus,
+  resolveUpdateOverlayDevState,
+} from "@renderer/shared/components/updateOverlayDev";
 import type { FilterKey, View } from "@renderer/shared/types";
 import { isVerboseLoggingEnabled, logDebug, logInfo } from "@renderer/shared/utils/logger";
 
@@ -1485,10 +1489,19 @@ export function useAppModel() {
     onInstallUpdate: actions.handleInstallUpdate,
   };
 
-  const updateOverlayProps = {
-    updateStatus,
-    onInstallUpdate: actions.handleInstallUpdate,
-  };
+  const overlayDevState =
+    typeof window !== "undefined" ? resolveUpdateOverlayDevState(window.location.search) : null;
+  const updateOverlayProps = overlayDevState
+    ? {
+        updateStatus: getUpdateOverlayDevStatus(overlayDevState),
+        onInstallUpdate: () => undefined,
+        devState: overlayDevState,
+      }
+    : {
+        updateStatus,
+        onInstallUpdate: actions.handleInstallUpdate,
+        devState: null,
+      };
 
   return {
     language,

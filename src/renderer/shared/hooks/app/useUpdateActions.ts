@@ -6,6 +6,26 @@ type Params = {
   setUpdateStatus: Dispatch<SetStateAction<AppUpdateStatus>>;
 };
 
+export function toInstallingUpdateStatus(prev: AppUpdateStatus): AppUpdateStatus {
+  return {
+    state: "installing",
+    version: prev.version,
+    releaseNotes: prev.releaseNotes,
+  };
+}
+
+export function recoverInstallableUpdateStatus(
+  prev: AppUpdateStatus,
+  message?: string,
+): AppUpdateStatus {
+  return {
+    state: "downloaded",
+    version: prev.version,
+    releaseNotes: prev.releaseNotes,
+    message,
+  };
+}
+
 export function useUpdateActions({ setUpdateStatus }: Params) {
   const handleCheckUpdates = useCallback(async () => {
     if (!window.electronAPI?.app?.checkUpdates) {
@@ -88,20 +108,29 @@ export function useUpdateActions({ setUpdateStatus }: Params) {
       setUpdateStatus({ state: "error", message: "error.update.install_api_unavailable" });
       return;
     }
+    setUpdateStatus((prev) => toInstallingUpdateStatus(prev));
     try {
+      const noResponseMessage = "error.update.no_response";
       const res = await window.electronAPI.app.installUpdate();
+      if (!res) {
+        setUpdateStatus((prev) => recoverInstallableUpdateStatus(prev, noResponseMessage));
+        return;
+      }
       if (res && !res.ok && res.status === "unsupported") {
-        setUpdateStatus({ state: "unsupported" });
+        setUpdateStatus((prev) =>
+          recoverInstallableUpdateStatus(prev, "settings.updateUnsupported"),
+        );
         return;
       }
       if (res && !res.ok) {
-        setUpdateStatus({ state: "error", message: res.message || "error.update.install_failed" });
+        setUpdateStatus((prev) =>
+          recoverInstallableUpdateStatus(prev, res.message || "error.update.install_failed"),
+        );
       }
     } catch (err) {
-      setUpdateStatus({
-        state: "error",
-        message: err instanceof Error ? err.message : String(err),
-      });
+      setUpdateStatus((prev) =>
+        recoverInstallableUpdateStatus(prev, err instanceof Error ? err.message : String(err)),
+      );
     }
   }, [setUpdateStatus]);
 

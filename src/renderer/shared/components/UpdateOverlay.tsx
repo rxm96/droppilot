@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-import { useInterval } from "@renderer/shared/hooks/useInterval";
+import { useEffect } from "react";
 import { useI18n } from "@renderer/shared/i18n";
+import type { UpdateOverlayDevState } from "./updateOverlayDev";
 
 type UpdateStatus = {
   state:
@@ -8,6 +8,7 @@ type UpdateStatus = {
     | "checking"
     | "available"
     | "downloading"
+    | "installing"
     | "downloaded"
     | "none"
     | "error"
@@ -24,6 +25,7 @@ type UpdateStatus = {
 type Props = {
   updateStatus?: UpdateStatus;
   onInstallUpdate?: () => void;
+  devState?: UpdateOverlayDevState | null;
 };
 
 const formatBytes = (bytes?: number) => {
@@ -56,103 +58,44 @@ function parseReleaseNotes(raw: string): string[] {
     .filter(Boolean);
 }
 
-export function UpdateOverlay({ updateStatus, onInstallUpdate }: Props) {
+export function UpdateOverlay({ updateStatus, onInstallUpdate, devState = null }: Props) {
   const { t } = useI18n();
   const resolvedStatus: UpdateStatus = updateStatus ?? { state: "idle" };
-  const statusState = resolvedStatus.state;
-  const [installing, setInstalling] = useState(false);
-  const [showSplash, setShowSplash] = useState(false);
-
-  const forcePreview = false;
-  const previewVersion = "2.5.0";
-  const previewReleaseNotes = [
-    "- Improved update flow stability and error handling",
-    "- Added release notes in the update overlay",
-    "- Hardened drag-and-drop reorder edge cases",
-    "- Reduced unnecessary priority-plan IPC refreshes",
-  ].join("\n");
-
-  // --- Simulation: fake download 0→100% then transition to ready ---
-  const SIMULATE_TOTAL = 48 * 1024 * 1024; // 48 MB
-  const SIMULATE_SPEED = 8.2 * 1024 * 1024; // 8.2 MB/s
-  const SIMULATE_DURATION_MS = 5_000;
-  const SIMULATE_INSTALL_MS = 3_000;
-  const [simProgress, setSimProgress] = useState(forcePreview ? 0 : -1);
-  const simulating = forcePreview && simProgress >= 0 && simProgress < 100;
-  const simDone = forcePreview && simProgress >= 100;
-
-  useInterval(
-    () => {
-      setSimProgress((prev) => {
-        const step = 100 / (SIMULATE_DURATION_MS / 250);
-        const jitter = 0.7 + Math.random() * 0.6;
-        return Math.min(100, prev + step * jitter);
-      });
-    },
-    250,
-    simulating,
-  );
-
-  const needsPreview =
-    forcePreview && statusState !== "downloading" && statusState !== "downloaded";
-  const effectiveState = needsPreview ? (simDone ? "downloaded" : "downloading") : statusState;
-
-  const isDownloading = effectiveState === "downloading";
-  const isReady = effectiveState === "downloaded" && !installing;
-  const isInstalling = installing;
+  const explicitSplash = resolvedStatus.state === "installing" || devState === "installing";
+  const isDownloading = resolvedStatus.state === "downloading";
+  const isReady = resolvedStatus.state === "downloaded" && !explicitSplash;
 
   const handleInstallClick = () => {
-    setInstalling(true);
-    if (forcePreview) {
-      // Simulate: installing state → splash screen → reset
-      setTimeout(() => {
-        setInstalling(false);
-        setShowSplash(true);
-      }, 1_200);
-      setTimeout(() => {
-        setShowSplash(false);
-        setSimProgress(0);
-      }, SIMULATE_INSTALL_MS + 1_200);
-      return;
-    }
-    onInstallUpdate?.();
+    if (devState) return;
+    if (typeof onInstallUpdate !== "function") return;
+    onInstallUpdate();
   };
-  const releaseNotes = (() => {
-    const provided =
-      typeof resolvedStatus.releaseNotes === "string" ? resolvedStatus.releaseNotes.trim() : "";
-    if (provided) return provided;
-    return needsPreview ? previewReleaseNotes : "";
-  })();
 
-  const progressPct = simulating
-    ? Math.min(100, Math.max(0, Math.round(simProgress)))
-    : Math.min(100, Math.max(0, Math.round(resolvedStatus.progress ?? 0)));
-  const simTransferred = (simProgress / 100) * SIMULATE_TOTAL;
+  const releaseNotes =
+    typeof resolvedStatus.releaseNotes === "string" ? resolvedStatus.releaseNotes.trim() : "";
+  const progressPct = Math.min(100, Math.max(0, Math.round(resolvedStatus.progress ?? 0)));
   const showProgress = isDownloading && Number.isFinite(progressPct);
-  const effectiveVersion = resolvedStatus.version ?? (needsPreview ? previewVersion : undefined);
-  const canInstall = isReady && typeof onInstallUpdate === "function";
+  const effectiveVersion = resolvedStatus.version;
+  const canInstall = isReady && (typeof onInstallUpdate === "function" || Boolean(devState));
   const subtitle = isDownloading
     ? t("settings.updateDownloading", {
         percent: progressPct,
-        transferred: simulating
-          ? formatBytes(simTransferred)
-          : formatBytes(resolvedStatus.transferred),
-        total: simulating ? formatBytes(SIMULATE_TOTAL) : formatBytes(resolvedStatus.total),
+        transferred: formatBytes(resolvedStatus.transferred),
+        total: formatBytes(resolvedStatus.total),
       })
     : t("settings.updateDownloaded");
+  const statusLine = subtitle;
   const releaseNotesTitle = effectiveVersion
     ? t("updateOverlay.whatsNewVersion", { version: effectiveVersion })
     : t("updateOverlay.whatsNew");
-
-  const speed = simulating
-    ? formatSpeed(SIMULATE_SPEED)
-    : formatSpeed(resolvedStatus.bytesPerSecond);
-  const eta = simulating
-    ? formatEta(simTransferred, SIMULATE_TOTAL, SIMULATE_SPEED)
-    : formatEta(resolvedStatus.transferred, resolvedStatus.total, resolvedStatus.bytesPerSecond);
+  const speed = formatSpeed(resolvedStatus.bytesPerSecond);
+  const eta = formatEta(
+    resolvedStatus.transferred,
+    resolvedStatus.total,
+    resolvedStatus.bytesPerSecond,
+  );
   const noteLines = releaseNotes ? parseReleaseNotes(releaseNotes) : [];
-
-  const showOverlay = isDownloading || isReady || isInstalling || showSplash;
+  const showOverlay = isDownloading || isReady || explicitSplash;
 
   useEffect(() => {
     if (!showOverlay) return;
@@ -170,17 +113,17 @@ export function UpdateOverlay({ updateStatus, onInstallUpdate }: Props) {
 
   if (!showOverlay) return null;
 
-  // Splash screen: simulates the frameless BrowserWindow from the main process
-  if (showSplash) {
+  if (explicitSplash) {
     return (
       <div className="update-splash-backdrop" role="status" aria-live="polite">
-        <div className="update-splash-card">
-          <div className="update-overlay-orb installing" aria-hidden="true" />
-          <h2 className="update-splash-title">{t("updateOverlay.installing")}</h2>
-          <p className="update-splash-hint">{t("updateOverlay.restartingShortly")}</p>
-          <div className="update-overlay-progress">
-            <div className="progress-bar" aria-hidden="true">
-              <span className="progress-bar-fill installing" style={{ width: "100%" }} />
+        <div className="update-splash-stage">
+          <div className="update-splash-card">
+            <h2 className="update-splash-title">{t("updateOverlay.installing")}</h2>
+            <p className="update-splash-hint">{t("updateOverlay.restartingShortly")}</p>
+            <div className="update-overlay-progress">
+              <div className="progress-bar" aria-hidden="true">
+                <span className="progress-bar-fill installing" style={{ width: "100%" }} />
+              </div>
             </div>
           </div>
         </div>
@@ -188,70 +131,75 @@ export function UpdateOverlay({ updateStatus, onInstallUpdate }: Props) {
     );
   }
 
-  const orbClass = isInstalling ? "installing" : isDownloading ? "downloading" : "ready";
-
   const cardClass = [
     "update-overlay-card",
+    isDownloading ? "is-downloading" : "",
     isReady ? "is-ready" : "",
-    isInstalling ? "is-installing" : "",
   ]
     .filter(Boolean)
     .join(" ");
 
-  const title = isInstalling
-    ? t("updateOverlay.installing")
-    : isDownloading
-      ? t("titlebar.updateDownloading")
-      : t("titlebar.updateReady");
-
-  const displaySubtitle = isInstalling ? t("updateOverlay.installingHint") : subtitle;
+  const title = isDownloading ? t("titlebar.updateDownloading") : t("titlebar.updateReady");
 
   return (
-    <div className="update-overlay" role="status" aria-live="polite">
-      <div className={cardClass}>
-        <div className={`update-overlay-orb ${orbClass}`} aria-hidden="true" />
-        <h2 className="update-overlay-title">{title}</h2>
-        <p className="meta">{displaySubtitle}</p>
-        {noteLines.length > 0 && !isInstalling ? (
-          <section className="update-overlay-notes" aria-label={releaseNotesTitle}>
-            <h3 className="update-overlay-notes-title">{releaseNotesTitle}</h3>
-            <ul className="update-overlay-notes-list">
-              {noteLines.map((line, i) => (
-                <li key={i}>{line}</li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-        {showProgress ? (
-          <div className="update-overlay-progress">
-            <div className="progress-bar" aria-hidden="true">
-              <span className="progress-bar-fill" style={{ width: `${progressPct}%` }} />
-            </div>
-            {speed || eta ? (
-              <div className="update-overlay-stats">
-                <span className="meta">{speed ?? ""}</span>
-                <span className="meta">{eta ?? ""}</span>
-              </div>
+    <div
+      className="update-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="update-overlay-title"
+    >
+      <div className="update-overlay-stage">
+        <div className={cardClass}>
+          <div className="update-overlay-head">
+            <p className="update-overlay-kicker">{t("updateOverlay.label")}</p>
+            <h2 id="update-overlay-title" className="update-overlay-title">
+              {title}
+            </h2>
+            <p className="update-overlay-status">{statusLine}</p>
+          </div>
+          <div className="update-overlay-body">
+            {showProgress ? (
+              <section className="update-overlay-progress-block" aria-label={title}>
+                <div className="update-overlay-progress-meta">
+                  <span className="update-overlay-progress-value">{progressPct}%</span>
+                </div>
+                <div className="update-overlay-progress">
+                  <div className="progress-bar" aria-hidden="true">
+                    <span className="progress-bar-fill" style={{ width: `${progressPct}%` }} />
+                  </div>
+                  {speed || eta ? (
+                    <div className="update-overlay-stats">
+                      {speed ? <span className="meta">{speed}</span> : null}
+                      {eta ? <span className="meta">{eta}</span> : null}
+                    </div>
+                  ) : null}
+                </div>
+              </section>
+            ) : null}
+            {noteLines.length > 0 ? (
+              <details className="update-overlay-notes">
+                <summary className="update-overlay-notes-title">{releaseNotesTitle}</summary>
+                <ul className="update-overlay-notes-list">
+                  {noteLines.map((line, i) => (
+                    <li key={i}>{line}</li>
+                  ))}
+                </ul>
+              </details>
             ) : null}
           </div>
-        ) : null}
-        {isInstalling ? (
-          <div className="update-overlay-progress">
-            <div className="progress-bar" aria-hidden="true">
-              <span className="progress-bar-fill installing" style={{ width: "100%" }} />
+          {isReady ? (
+            <div className="update-overlay-footer">
+              <button
+                type="button"
+                className="update-overlay-install"
+                onClick={handleInstallClick}
+                disabled={!canInstall}
+              >
+                {t("settings.updateInstall")}
+              </button>
             </div>
-          </div>
-        ) : null}
-        {isReady ? (
-          <button
-            type="button"
-            className="update-overlay-install"
-            onClick={handleInstallClick}
-            disabled={!canInstall}
-          >
-            {t("settings.updateInstall")}
-          </button>
-        ) : null}
+          ) : null}
+        </div>
       </div>
     </div>
   );

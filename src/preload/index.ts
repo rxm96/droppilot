@@ -108,8 +108,7 @@ const api = {
       dropId?: string;
       campaignId?: string;
       endsAt?: string;
-    }) =>
-      ipcRenderer.invoke("twitch/claimDrop", payload),
+    }) => ipcRenderer.invoke("twitch/claimDrop", payload),
     onChannelsDiff: (handler: (payload: ChannelsDiffPayload) => void) => {
       const listener = (_event: unknown, payload: ChannelsDiffPayload) => handler(payload);
       ipcRenderer.on("twitch/channelsDiff", listener);

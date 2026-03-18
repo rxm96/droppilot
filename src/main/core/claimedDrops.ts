@@ -106,7 +106,9 @@ export async function markRecentClaimedDrop(
   const claimedAt = opts?.claimedAt ?? Date.now();
   const fallbackExpiresAt = resolveRecentClaimExpiry({ claimedAt, endsAt: opts?.endsAt });
   const expiresAt =
-    typeof opts?.expiresAt === "number" && Number.isFinite(opts.expiresAt) && opts.expiresAt > claimedAt
+    typeof opts?.expiresAt === "number" &&
+    Number.isFinite(opts.expiresAt) &&
+    opts.expiresAt > claimedAt
       ? opts.expiresAt
       : fallbackExpiresAt;
   const file = opts?.file ?? resolveClaimedDropsFile();

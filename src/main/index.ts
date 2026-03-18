@@ -19,6 +19,7 @@ const devToolsEnabled = isDev;
 const devServerUrl = process.env.VITE_DEV_SERVER_URL ?? "http://127.0.0.1:5173";
 const debugLogsOptIn =
   process.argv.includes("--debug-logs") || process.env.DROPPILOT_DEBUG_LOGS === "1";
+const rendererQueryOptIn = process.env.DROPPILOT_RENDERER_QUERY?.trim() ?? "";
 const verboseLogsEnabled = isDev || debugLogsOptIn;
 const trackerMode = normalizeTrackerMode(process.env.DROPPILOT_TRACKER_MODE);
 const auth = new AuthController();
@@ -95,13 +96,26 @@ function normalizeReleaseNotes(value: unknown): string | undefined {
 }
 
 function withDebugLogsQuery(url: string): string {
-  if (!verboseLogsEnabled) return url;
+  const queryEntries = new URLSearchParams(rendererQueryOptIn);
   try {
     const parsed = new URL(url);
-    parsed.searchParams.set("debugLogs", "1");
+    if (verboseLogsEnabled) {
+      parsed.searchParams.set("debugLogs", "1");
+    }
+    for (const [key, value] of queryEntries.entries()) {
+      parsed.searchParams.set(key, value);
+    }
     return parsed.toString();
   } catch {
-    return `${url}${url.includes("?") ? "&" : "?"}debugLogs=1`;
+    const parts: string[] = [];
+    if (verboseLogsEnabled) {
+      parts.push("debugLogs=1");
+    }
+    for (const [key, value] of queryEntries.entries()) {
+      parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+    }
+    if (parts.length === 0) return url;
+    return `${url}${url.includes("?") ? "&" : "?"}${parts.join("&")}`;
   }
 }
 

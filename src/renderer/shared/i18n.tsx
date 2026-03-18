@@ -358,7 +358,8 @@ const translations: Translations = {
     "control.watchEngineNext.noTarget": "Select a target game from the list.",
     "control.watchEngineNext.suppressed":
       "Auto-Watch will stay on other priority games until this pause ends.",
-    "control.watchEngineNext.suppressedManualStop": "Press Resume to continue with your last stream.",
+    "control.watchEngineNext.suppressedManualStop":
+      "Press Resume to continue with your last stream.",
     "control.watchEngineNext.cooldown":
       "When the wait timer ends, this game can be picked again automatically.",
     "control.watchEngineNext.watchingProgress":
@@ -584,6 +585,7 @@ const translations: Translations = {
     "settings.updateChannel.preview": "Preview",
     "updateOverlay.whatsNew": "What's new",
     "updateOverlay.whatsNewVersion": "What's new in v{version}",
+    "updateOverlay.label": "Software update",
     "updateOverlay.installing": "Installing update",
     "updateOverlay.installingHint": "The app will restart automatically.",
     "updateOverlay.restartingShortly": "Restarting shortly\u2026",
@@ -883,7 +885,8 @@ const translations: Translations = {
     "inventory.campaigns.state.progress": "{count} Rewards noch offen",
     "inventory.campaigns.state.upcoming": "Kampagne noch nicht live",
     "inventory.campaigns.cluster.actionableEyebrow": "Jetzt relevant",
-    "inventory.campaigns.cluster.actionableTitle": "Offener Fortschritt und direkt verfügbare Rewards",
+    "inventory.campaigns.cluster.actionableTitle":
+      "Offener Fortschritt und direkt verfügbare Rewards",
     "inventory.campaigns.cluster.actionableDescription":
       "Diese Kampagnen lohnen sich zuerst, weil du direkt Fortschritt machen oder Rewards abholen kannst.",
     "inventory.campaigns.cluster.blockedEyebrow": "Blocker",
@@ -962,8 +965,7 @@ const translations: Translations = {
     "control.channelListTitle": "Live-Streams",
     "control.channelListHint":
       "Wähle einen Stream selbst oder überlass diese Liste dem Auto-Select.",
-    "control.channelListContext":
-      "Für {game}: {streams} Live-Streams, {drops} offene Drops.",
+    "control.channelListContext": "Für {game}: {streams} Live-Streams, {drops} offene Drops.",
     "control.channelListSummary": "{streams} live / {drops} offen",
     "control.pingError": "Ping-Fehler",
     "control.autoClaim": "Auto-Abholung",
@@ -1040,8 +1042,7 @@ const translations: Translations = {
     "control.watchEngineTitle": "Auto-Watch",
     "control.watchEngineIntro": "Zeigt, warum Auto-Watch sich gerade so verhält.",
     "control.watchEngineDetailsToggle": "Diagnose",
-    "control.watchEngineDetailsHint":
-      "Status, Ziel, Kanal-Eignung und Recovery-Wartezeiten.",
+    "control.watchEngineDetailsHint": "Status, Ziel, Kanal-Eignung und Recovery-Wartezeiten.",
     "control.watchEngineDetailsShow": "Öffnen",
     "control.watchEngineDetailsHide": "Schließen",
     "control.watchEngineStatus": "Status",
@@ -1066,8 +1067,7 @@ const translations: Translations = {
     "control.watchEngineWhy.noTarget": "Aktuell ist kein Zielspiel ausgewählt.",
     "control.watchEngineWhy.suppressed":
       "Dieses Game wurde nach einem Stall kurz pausiert, damit Auto-Watch nicht sofort zurückspringt.",
-    "control.watchEngineWhy.suppressedManualStop":
-      "Du hast Auto-Watch für dieses Ziel pausiert.",
+    "control.watchEngineWhy.suppressedManualStop": "Du hast Auto-Watch für dieses Ziel pausiert.",
     "control.watchEngineWhy.cooldown":
       "Dieses Game wartet nach mehreren Prüfungen ohne bestätigten Fortschritt kurz ab.",
     "control.watchEngineWhy.watchingProgress":
@@ -1104,7 +1104,8 @@ const translations: Translations = {
       "Sobald die Aktualisierung fertig ist, kann Auto-Watch wieder starten.",
     "control.watchEngineNext.idleNoChannels":
       "Wenn kein passender Stream online kommt, wechselt Auto-Watch zum nächsten Prioritäts-Game.",
-    "control.watchEngineNext.idleReady": "Auto-Watch kann einen der passenden Live-Streams starten.",
+    "control.watchEngineNext.idleReady":
+      "Auto-Watch kann einen der passenden Live-Streams starten.",
     "control.watchEngineNext.idleNoWatchableDrops":
       "Auto-Watch wartet auf Änderungen bei Streams oder Inventar, oder wechselt das Ziel.",
     "control.watchEngineSuppression.manualStop": "manuell pausiert",
@@ -1135,8 +1136,7 @@ const translations: Translations = {
     "debug.title": "Debug",
     "debug.subtitle": "Live-Diagnose und aktueller Renderer-Snapshot.",
     "debug.snapshot": "Renderer-Snapshot",
-    "debug.snapshotHelp":
-      "Aktueller Renderer-Status für Bugreports und reproduzierbare Fehler.",
+    "debug.snapshotHelp": "Aktueller Renderer-Status für Bugreports und reproduzierbare Fehler.",
     "debug.log": "Event-Log",
     "debug.logHelp":
       "Live-App-Events und Renderer-Logs. Im Verbose-Modus erscheinen hier auch weitergeleitete Main-Process-Einträge.",
@@ -1210,7 +1210,8 @@ const translations: Translations = {
     "debug.runtime.attempts": "{count} Versuche",
     "debug.runtime.updated": "aktualisiert",
     "debug.advanced.title": "Erweiterte Werkzeuge",
-    "debug.advanced.subtitle": "Werkzeuge, um Beobachtungen aus dem Event-Log gezielt nachzustellen.",
+    "debug.advanced.subtitle":
+      "Werkzeuge, um Beobachtungen aus dem Event-Log gezielt nachzustellen.",
     "debug.sim.title": "Event-Feed simulieren",
     "debug.sim.help":
       "Sendet synthetische Drop- oder System-Events, damit du Fortschritt und Claims testen kannst, ohne auf Twitch zu warten.",
@@ -1318,6 +1319,7 @@ const translations: Translations = {
     "settings.updateChannel.preview": "Vorschau",
     "updateOverlay.whatsNew": "Was ist neu",
     "updateOverlay.whatsNewVersion": "Was ist neu in v{version}",
+    "updateOverlay.label": "Software-Update",
     "updateOverlay.installing": "Update wird installiert",
     "updateOverlay.installingHint": "Die App startet automatisch neu.",
     "updateOverlay.restartingShortly": "Startet gleich neu\u2026",

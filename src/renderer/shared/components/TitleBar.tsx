@@ -14,6 +14,7 @@ type Props = {
       | "checking"
       | "available"
       | "downloading"
+      | "installing"
       | "downloaded"
       | "none"
       | "error"
@@ -78,7 +79,10 @@ export function TitleBar({
   };
   const updateState = updateStatus?.state;
   const showUpdate =
-    updateState === "available" || updateState === "downloading" || updateState === "downloaded";
+    updateState === "available" ||
+    updateState === "downloading" ||
+    updateState === "downloaded" ||
+    updateState === "installing";
   const updateProgress =
     updateState === "downloading" && typeof updateStatus?.progress === "number"
       ? Math.round(updateStatus.progress)
@@ -88,7 +92,9 @@ export function TitleBar({
       ? t("titlebar.updateDownload")
       : updateState === "downloading"
         ? t("titlebar.updateDownloading")
-        : t("titlebar.updateInstall");
+        : updateState === "installing"
+          ? t("updateOverlay.installing")
+          : t("titlebar.updateInstall");
   const updateTitle =
     updateState === "available"
       ? updateStatus?.version
@@ -98,7 +104,9 @@ export function TitleBar({
         ? updateProgress !== null
           ? `${t("titlebar.updateDownloading")} ${updateProgress}%`
           : t("titlebar.updateDownloading")
-        : t("titlebar.updateReady");
+        : updateState === "installing"
+          ? t("updateOverlay.installing")
+          : t("titlebar.updateReady");
   const canDownloadUpdate = updateState === "available" && typeof onDownloadUpdate === "function";
   const canInstallUpdate = updateState === "downloaded" && typeof onInstallUpdate === "function";
   const updateAction = canDownloadUpdate
@@ -106,7 +114,8 @@ export function TitleBar({
     : canInstallUpdate
       ? onInstallUpdate
       : undefined;
-  const disableUpdateAction = updateState === "downloading" || !updateAction;
+  const disableUpdateAction =
+    updateState === "downloading" || updateState === "installing" || !updateAction;
   const themeLabelKey = theme === "light" ? "theme.light" : "theme.dark";
   const themeLabel = t(themeLabelKey);
   const themeTitle = `${t("titlebar.themeSwitch")}: ${themeLabel}`;

@@ -28,6 +28,7 @@ export type AppUpdateStatus = {
     | "checking"
     | "available"
     | "downloading"
+    | "installing"
     | "downloaded"
     | "none"
     | "error"

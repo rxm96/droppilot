@@ -554,16 +554,15 @@ body {
   position: fixed;
   inset: 0;
   z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background:
-    radial-gradient(140% 120% at 20% 10%, rgba(136, 208, 255, 0.18), transparent 55%),
-    radial-gradient(120% 120% at 80% 0%, rgba(156, 139, 255, 0.18), transparent 60%),
-    rgba(4, 8, 20, 0.92);
-  backdrop-filter: blur(10px);
-  animation: overlayFadeIn 0.35s ease both;
+  display: grid;
+  place-items: center;
+  padding: clamp(24px, 4vw, 40px);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--background) 94%, rgb(18 20 24 / 0.98)),
+    color-mix(in srgb, var(--background) 97%, rgb(12 14 18 / 0.98))
+  );
+  animation: overlayFadeIn 0.24s ease both;
 }
 
 @property --border-angle {
@@ -572,236 +571,187 @@ body {
   inherits: false;
 }
 
+.update-overlay-stage,
+.update-splash-stage {
+  width: min(560px, 100%);
+  display: grid;
+}
+
 .update-overlay-card {
-  --border-angle: 0deg;
   position: relative;
-  width: min(520px, 92vw);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  text-align: center;
-  padding: 32px 28px 28px;
-  border-radius: 20px;
-  border: none;
-  background: linear-gradient(160deg, rgba(12, 18, 34, 0.96), rgba(8, 12, 24, 0.98)), var(--panel);
+  width: 100%;
+  display: grid;
+  gap: clamp(18px, 2vw, 22px);
+  padding: clamp(24px, 3vw, 32px);
+  border-radius: 24px;
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--card) 98%, var(--background) 2%),
+    color-mix(in srgb, var(--panel-strong) 98%, transparent)
+  );
   box-shadow:
-    0 24px 64px rgba(0, 0, 0, 0.55),
-    0 0 0 1px rgba(136, 208, 255, 0.06);
-  animation:
-    cardEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both,
-    borderSpin 4s linear infinite;
-  isolation: isolate;
+    0 30px 60px rgba(12, 16, 24, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  text-align: left;
+  animation: cardEnter 0.28s cubic-bezier(0.16, 1, 0.3, 1) 0.04s both;
 }
 
-/* Animated gradient border */
 .update-overlay-card::before {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  border-radius: 21px;
-  padding: 1px;
-  background: conic-gradient(
-    from var(--border-angle),
-    rgba(136, 208, 255, 0.4),
-    rgba(156, 139, 255, 0.5),
-    rgba(178, 154, 255, 0.3),
-    transparent 40%,
-    transparent 60%,
-    rgba(136, 208, 255, 0.4)
-  );
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  z-index: -1;
+  display: none;
 }
 
+.update-overlay-card.is-downloading,
 .update-overlay-card.is-ready {
-  animation:
-    cardEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1) both,
-    borderSpin 3s linear infinite,
-    readyGlow 3s ease-in-out infinite;
+  border-color: color-mix(in srgb, var(--border-strong) 78%, transparent);
 }
 
-.update-overlay-card.is-ready::before {
-  background: conic-gradient(
-    from var(--border-angle),
-    rgba(136, 208, 255, 0.6),
-    rgba(156, 139, 255, 0.7),
-    rgba(178, 154, 255, 0.5),
-    transparent 35%,
-    transparent 55%,
-    rgba(136, 208, 255, 0.6)
-  );
+.update-overlay-card.is-installing {
+  border-color: color-mix(in srgb, var(--border-strong) 74%, transparent);
+}
+
+.update-overlay-head {
+  display: grid;
+  gap: 8px;
+}
+
+.update-overlay-body {
+  display: grid;
+  gap: 16px;
+}
+
+.update-overlay-kicker {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--foreground) 46%, var(--muted-foreground));
 }
 
 .update-overlay-title {
   margin: 0;
-  font-size: 24px;
+  font-size: clamp(24px, 3vw, 30px);
   font-weight: 700;
-  letter-spacing: -0.4px;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  max-width: 14ch;
 }
 
-/* --- Gradient Orb --- */
-
-.update-overlay-orb {
-  position: relative;
-  width: 72px;
-  height: 72px;
-  margin: 0 0 4px;
-  border-radius: 50%;
+.update-overlay-status {
+  margin: 0;
+  max-width: 46ch;
+  font-size: 15px;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--foreground) 68%, var(--muted-foreground));
 }
 
-.update-overlay-orb::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: conic-gradient(from 0deg, #88d0ff, #9c8bff, #b29aff, #88d0ff);
-  animation: orbSpin 3s linear infinite;
+.update-overlay-progress-block {
+  display: grid;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 62%, transparent);
 }
 
-.update-overlay-orb::after {
-  content: "";
-  position: absolute;
-  inset: 4px;
-  border-radius: 50%;
-  background: linear-gradient(160deg, rgba(12, 18, 34, 0.98), rgba(8, 12, 24, 1));
+.update-overlay-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.update-overlay-orb.downloading {
-  animation: orbBreathe 1.8s ease-in-out infinite;
+.update-overlay-progress-value {
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: color-mix(in srgb, var(--foreground) 78%, var(--muted-foreground));
 }
-
-.update-overlay-orb.downloading::before {
-  animation: orbSpin 3s linear infinite;
-  box-shadow:
-    0 0 30px rgba(136, 208, 255, 0.35),
-    0 0 60px rgba(156, 139, 255, 0.15);
-}
-
-.update-overlay-orb.ready {
-  animation: orbBreathe 3s ease-in-out infinite;
-}
-
-.update-overlay-orb.ready::before {
-  animation: orbSpin 8s linear infinite;
-  box-shadow:
-    0 0 40px rgba(136, 208, 255, 0.5),
-    0 0 80px rgba(156, 139, 255, 0.25);
-}
-
-.update-overlay-orb.installing {
-  animation: orbBreathe 1.4s ease-in-out infinite;
-}
-
-.update-overlay-orb.installing::before {
-  animation: orbSpin 2s linear infinite;
-  box-shadow:
-    0 0 40px rgba(136, 208, 255, 0.5),
-    0 0 70px rgba(156, 139, 255, 0.25);
-}
-
-/* Installing state: card + progress */
-.update-overlay-card.is-installing {
-  animation:
-    cardEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1) both,
-    borderSpin 2.5s linear infinite,
-    readyGlow 2s ease-in-out infinite;
-}
-
-.update-overlay-progress .progress-bar-fill.installing {
-  background: linear-gradient(90deg, #88d0ff, #9c8bff, #88d0ff);
-  background-size: 200% 100%;
-  animation: installingShimmer 1.5s ease-in-out infinite;
-  box-shadow: 0 0 16px rgba(136, 208, 255, 0.5);
-}
-
-/* --- Splash Screen (simulates standalone BrowserWindow) --- */
 
 .update-splash-backdrop {
   position: fixed;
   inset: 0;
   z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.92);
-  animation: overlayFadeIn 0.3s ease both;
+  display: grid;
+  place-items: center;
+  padding: clamp(24px, 4vw, 40px);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--background) 95%, rgb(18 20 24 / 0.98)),
+    color-mix(in srgb, var(--background) 98%, rgb(12 14 18 / 0.98))
+  );
+  animation: overlayFadeIn 0.24s ease both;
 }
 
 .update-splash-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: grid;
   gap: 14px;
-  padding: 32px 40px;
-  border-radius: 20px;
-  text-align: center;
-  background: linear-gradient(160deg, rgba(12, 18, 34, 0.97), rgba(8, 12, 24, 0.99));
+  padding: clamp(24px, 3vw, 30px);
+  border-radius: 24px;
+  text-align: left;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--card) 98%, var(--background) 2%),
+    color-mix(in srgb, var(--panel-strong) 98%, transparent)
+  );
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
   box-shadow:
-    0 24px 64px rgba(0, 0, 0, 0.6),
-    0 0 0 1px rgba(136, 208, 255, 0.1);
-  animation: cardEnter 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
-  width: 320px;
+    0 30px 60px rgba(12, 16, 24, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  animation: cardEnter 0.28s cubic-bezier(0.16, 1, 0.3, 1) 0.04s both;
+  width: 100%;
 }
 
 .update-splash-title {
   margin: 0;
-  font-size: 17px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 700;
   color: var(--foreground);
-  letter-spacing: -0.3px;
+  letter-spacing: -0.03em;
 }
 
 .update-splash-hint {
   margin: 0;
-  font-size: 12px;
-  color: var(--muted-foreground);
+  font-size: 14px;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--foreground) 68%, var(--muted-foreground));
 }
 
 .update-splash-card .update-overlay-progress {
   width: 100%;
 }
 
-.update-splash-card .update-overlay-orb {
-  width: 56px;
-  height: 56px;
-}
-
 /* --- Release Notes --- */
 
 .update-overlay-notes {
   width: 100%;
-  max-height: 200px;
-  overflow: auto;
   text-align: left;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: rgba(6, 10, 20, 0.55);
+  margin: 0;
+  padding-top: 14px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 58%, transparent);
 }
 
 .update-overlay-notes-title {
-  margin: 0 0 8px 0;
-  font-size: 11px;
+  list-style: none;
+  cursor: pointer;
+  margin: 0;
+  font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--muted-foreground);
+  letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--foreground) 48%, var(--muted-foreground));
+}
+
+.update-overlay-notes-title::-webkit-details-marker {
+  display: none;
 }
 
 .update-overlay-notes-list {
-  margin: 0;
+  margin: 8px 0 0 0;
   padding: 0 0 0 16px;
   font-size: 13px;
-  line-height: 1.55;
-  color: var(--foreground);
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--foreground) 76%, var(--muted-foreground));
 }
 
 .update-overlay-notes-list li {
@@ -809,7 +759,7 @@ body {
 }
 
 .update-overlay-notes-list li::marker {
-  color: var(--muted-foreground);
+  color: color-mix(in srgb, var(--foreground) 38%, var(--muted-foreground));
 }
 
 /* --- Progress --- */
@@ -818,13 +768,13 @@ body {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .update-overlay-progress .progress-bar {
-  height: 8px;
+  height: 10px;
   border-radius: 999px;
-  background: var(--progress-track);
+  background: color-mix(in srgb, var(--muted) 38%, var(--panel-strong));
   overflow: hidden;
   position: relative;
 }
@@ -833,82 +783,113 @@ body {
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #88d0ff, #9c8bff);
-  box-shadow: 0 0 12px rgba(136, 208, 255, 0.4);
-  transition: width 0.3s linear;
-  position: relative;
+  background: color-mix(in srgb, var(--signal-accent) 42%, var(--foreground));
+  transition: width 0.25s linear;
 }
 
 .update-overlay-progress .progress-bar-fill::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.22) 50%,
-    transparent 100%
-  );
-  animation: progressShine 1.8s ease-in-out infinite;
+  display: none;
+}
+
+.update-overlay-progress .progress-bar-fill.installing {
+  background: color-mix(in srgb, var(--signal-accent) 34%, var(--foreground));
 }
 
 .update-overlay-stats {
   display: flex;
-  justify-content: space-between;
-  padding: 0 2px;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  padding: 0;
 }
 
 .update-overlay-stats .meta {
-  font-size: 11px;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
+  margin: 0;
+  color: color-mix(in srgb, var(--foreground) 56%, var(--muted-foreground));
 }
 
 /* --- Install Button --- */
 
+.update-overlay-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 6px;
+}
+
 .update-overlay-install {
-  margin-top: 4px;
-  padding: 12px 32px;
+  min-height: 46px;
+  min-width: 148px;
+  padding: 0 20px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 650;
   border-radius: 12px;
-  border: none;
-  background: linear-gradient(135deg, #88d0ff, #9c8bff);
-  color: #0f0f10;
+  border: 1px solid color-mix(in srgb, var(--border-strong) 82%, transparent);
+  background: color-mix(in srgb, var(--panel) 92%, var(--background));
+  color: var(--foreground);
   cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  box-shadow:
-    0 0 24px rgba(136, 208, 255, 0.3),
-    0 0 48px rgba(156, 139, 255, 0.12);
   transition:
-    transform 0.15s ease,
-    box-shadow 0.25s ease;
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .update-overlay-install::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    105deg,
-    transparent 30%,
-    rgba(255, 255, 255, 0.25) 50%,
-    transparent 70%
-  );
-  animation: installShine 3s ease-in-out infinite;
+  display: none;
 }
 
 .update-overlay-install:hover {
-  transform: translateY(-1px);
-  box-shadow:
-    0 0 32px rgba(136, 208, 255, 0.45),
-    0 0 64px rgba(156, 139, 255, 0.2);
+  background: color-mix(in srgb, var(--panel-strong) 92%, var(--background));
+  border-color: color-mix(in srgb, var(--border-strong) 88%, transparent);
 }
 
 .update-overlay-install:active {
-  transform: translateY(1px);
-  box-shadow: 0 0 16px rgba(136, 208, 255, 0.2);
+  background: color-mix(in srgb, var(--panel-strong) 96%, var(--background));
+}
+
+.dark .update-overlay {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--background) 96%, rgb(4 6 10 / 0.98)),
+    color-mix(in srgb, var(--background) 99%, rgb(3 4 7 / 0.99))
+  );
+}
+
+.dark .update-splash-backdrop {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--background) 97%, rgb(4 6 10 / 0.98)),
+    color-mix(in srgb, var(--background) 99%, rgb(3 4 7 / 0.99))
+  );
+}
+
+.dark .update-overlay-card,
+.dark .update-splash-card {
+  border-color: color-mix(in srgb, var(--border) 78%, transparent);
+  box-shadow:
+    0 34px 64px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+@media (max-width: 640px) {
+  .update-overlay-status,
+  .update-splash-hint {
+    font-size: 14px;
+  }
+
+  .update-overlay-notes-list {
+    font-size: 12px;
+  }
+
+  .update-overlay-footer {
+    justify-content: stretch;
+  }
+
+  .update-overlay-install {
+    width: 100%;
+    min-height: 48px;
+  }
 }
 
 /* Scrollbar styling */
@@ -1330,7 +1311,9 @@ a {
 
 .top-nav-tab:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px color-mix(in srgb, var(--signal-accent) 72%, var(--foreground));
+  box-shadow:
+    0 0 0 2px var(--background),
+    0 0 0 4px color-mix(in srgb, var(--signal-accent) 72%, var(--foreground));
 }
 
 .top-nav-tab.active {
@@ -1417,7 +1400,9 @@ a {
 
 .top-nav-action:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px color-mix(in srgb, var(--signal-accent) 72%, var(--foreground));
+  box-shadow:
+    0 0 0 2px var(--background),
+    0 0 0 4px color-mix(in srgb, var(--signal-accent) 72%, var(--foreground));
 }
 
 .top-nav-action:hover {
@@ -4028,11 +4013,7 @@ code {
   padding-inline-start: 18px;
   border-inline-start: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
   background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--panel) 30%, transparent),
-      transparent 24%
-    ),
+    linear-gradient(180deg, color-mix(in srgb, var(--panel) 30%, transparent), transparent 24%),
     linear-gradient(
       90deg,
       color-mix(in srgb, var(--panel-strong) 26%, transparent),
@@ -4053,25 +4034,25 @@ code {
 }
 
 .control-operator-stage {
-  --operator-accent: color-mix(in srgb, var(--signal-accent) 62%, var(--foreground));
+  --operator-accent: color-mix(in srgb, var(--signal-accent) 44%, var(--foreground));
   display: grid;
   gap: 12px;
-  padding: 14px 14px 12px;
-  border-radius: 18px;
+  padding: 13px 13px 11px;
+  border-radius: 16px;
   background:
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--card) 92%, var(--background) 8%),
+      color-mix(in srgb, var(--card) 95%, var(--background) 5%),
       color-mix(in srgb, var(--card) 98%, transparent)
     ),
     linear-gradient(
       135deg,
-      color-mix(in srgb, var(--operator-accent) 10%, transparent),
-      transparent 42%
+      color-mix(in srgb, var(--operator-accent) 5%, transparent),
+      transparent 46%
     );
   box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--border-strong) 86%, transparent),
-    0 14px 30px rgba(43, 32, 20, 0.04);
+    inset 0 0 0 1px color-mix(in srgb, var(--border-strong) 78%, transparent),
+    0 8px 20px rgba(43, 32, 20, 0.028);
 }
 
 .control-operator-stage.tone-warn {
@@ -4100,14 +4081,14 @@ code {
 
 .control-rail-support {
   padding-top: 10px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--border) 54%, transparent);
 }
 
 .control-rail-section {
   display: grid;
   gap: 10px;
   padding-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--border) 56%, transparent);
 }
 
 .control-campaigns-block {
@@ -4118,23 +4099,23 @@ code {
 
 .control-channel-block {
   margin-top: 6px;
-  padding: 14px 14px 12px;
+  padding: 13px 13px 11px;
   border-top: 0;
-  border-radius: 18px;
+  border-radius: 16px;
   background:
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--card) 94%, var(--background) 6%),
+      color-mix(in srgb, var(--card) 96%, var(--background) 4%),
       color-mix(in srgb, var(--card) 98%, transparent)
     ),
     linear-gradient(
       135deg,
-      color-mix(in srgb, var(--signal-accent) 8%, transparent),
-      transparent 44%
+      color-mix(in srgb, var(--signal-accent) 4%, transparent),
+      transparent 48%
     );
   box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--border-strong) 84%, transparent),
-    0 10px 24px rgba(31, 26, 19, 0.035);
+    inset 0 0 0 1px color-mix(in srgb, var(--border-strong) 76%, transparent),
+    0 8px 18px rgba(31, 26, 19, 0.024);
 }
 
 .control-watch-engine-disclosure {
@@ -4194,7 +4175,7 @@ code {
 }
 
 .control-watch-engine-head .label {
-  color: color-mix(in srgb, var(--foreground) 82%, var(--operator-accent, var(--ops-accent)));
+  color: color-mix(in srgb, var(--foreground) 78%, var(--operator-accent, var(--ops-accent)));
 }
 
 .control-watch-engine-brief {
@@ -4207,7 +4188,7 @@ code {
   margin: 0;
   font-size: 13.5px;
   line-height: 1.52;
-  font-weight: 500;
+  font-weight: 460;
   color: var(--foreground);
 }
 
@@ -4215,17 +4196,11 @@ code {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 11px 12px 12px;
+  padding: 10px 11px 11px;
   border-radius: 14px;
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--operator-accent, var(--ops-accent)) 11%, transparent),
-      color-mix(in srgb, var(--muted) 22%, transparent)
-    );
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--operator-accent, var(--ops-accent)) 18%, var(--border) 82%),
-    inset 0 1px 0 color-mix(in srgb, white 44%, transparent);
+  background: color-mix(in srgb, var(--muted) 18%, transparent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--operator-accent, var(--ops-accent)) 10%, var(--border) 90%);
 }
 
 .control-watch-engine-next-label {
@@ -4233,7 +4208,7 @@ code {
   font-weight: var(--type-overline-weight);
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--ops-accent) 44%, var(--muted-foreground));
+  color: color-mix(in srgb, var(--ops-accent) 28%, var(--muted-foreground));
   line-height: 1.35;
 }
 
@@ -4251,18 +4226,11 @@ code {
   justify-content: space-between;
   gap: 12px;
   width: 100%;
-  padding: 10px 12px;
+  padding: 9px 11px;
   border: 0;
   border-radius: 14px;
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--muted) 24%, transparent),
-      color-mix(in srgb, var(--panel-strong) 84%, transparent)
-    );
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--border) 84%, transparent),
-    inset 0 1px 0 color-mix(in srgb, white 38%, transparent);
+  background: color-mix(in srgb, var(--muted) 12%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 74%, transparent);
   cursor: pointer;
   color: color-mix(in srgb, var(--foreground) 78%, var(--muted-foreground));
   transition:
@@ -4281,42 +4249,24 @@ code {
 
 .control-watch-engine-internals-summary:hover {
   color: var(--foreground);
-  box-shadow:
-    inset 0 0 0 1px color-mix(
-      in srgb,
-      var(--operator-accent, var(--ops-accent)) 24%,
-      var(--border) 76%
-    ),
-    inset 0 1px 0 color-mix(in srgb, white 46%, transparent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--operator-accent, var(--ops-accent)) 16%, var(--border) 84%);
 }
 
 .control-watch-engine-internals-summary:focus-visible {
   outline: none;
   color: var(--foreground);
   box-shadow:
-    inset 0 0 0 1px color-mix(
-      in srgb,
-      var(--operator-accent, var(--ops-accent)) 36%,
-      var(--border) 64%
-    ),
-    0 0 0 3px color-mix(in srgb, var(--operator-accent, var(--ops-accent)) 12%, transparent);
+    inset 0 0 0 1px
+      color-mix(in srgb, var(--operator-accent, var(--ops-accent)) 24%, var(--border) 76%),
+    0 0 0 3px color-mix(in srgb, var(--operator-accent, var(--ops-accent)) 8%, transparent);
 }
 
 .control-watch-engine-internals[open] .control-watch-engine-internals-summary {
   color: var(--foreground);
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--operator-accent, var(--ops-accent)) 9%, transparent),
-      color-mix(in srgb, var(--muted) 18%, transparent)
-    );
-  box-shadow:
-    inset 0 0 0 1px color-mix(
-      in srgb,
-      var(--operator-accent, var(--ops-accent)) 22%,
-      var(--border) 78%
-    ),
-    inset 0 1px 0 color-mix(in srgb, white 42%, transparent);
+  background: color-mix(in srgb, var(--muted) 16%, transparent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--operator-accent, var(--ops-accent)) 14%, var(--border) 86%);
 }
 
 .control-watch-engine-internals[open] .control-watch-engine-summary-chevron {
@@ -4452,7 +4402,7 @@ code {
   align-items: start;
   gap: 12px;
   padding-bottom: 10px;
-  border-bottom: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 56%, transparent);
 }
 
 .control-channel-head-copy {
@@ -4465,9 +4415,9 @@ code {
   font-size: var(--type-overline-size);
   line-height: 1.2;
   font-weight: var(--type-overline-weight);
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--foreground) 76%, var(--signal-accent));
+  color: color-mix(in srgb, var(--foreground) 62%, var(--signal-accent));
 }
 
 .control-channel-summary {
@@ -4475,15 +4425,10 @@ code {
   max-width: 168px;
   display: grid;
   gap: 3px;
-  padding: 8px 10px;
+  padding: 7px 9px;
   border-radius: 14px;
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--signal-accent) 9%, transparent),
-      color-mix(in srgb, var(--panel-strong) 92%, transparent)
-    );
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--signal-accent) 14%, var(--border) 86%);
+  background: color-mix(in srgb, var(--muted) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 72%, transparent);
   text-align: right;
 }
 
@@ -4516,17 +4461,17 @@ code {
 }
 
 .control-operator-stage .control-target-primary-action.ghost {
-  background: color-mix(in srgb, var(--background) 82%, transparent);
-  border-color: color-mix(in srgb, var(--border-strong) 88%, transparent);
+  background: color-mix(in srgb, var(--background) 72%, transparent);
+  border-color: color-mix(in srgb, var(--border-strong) 78%, transparent);
 }
 
 .control-operator-stage .control-target-primary-action.ghost:hover {
-  background: color-mix(in srgb, var(--muted) 76%, var(--background));
+  background: color-mix(in srgb, var(--muted) 56%, var(--background));
 }
 
 .control-operator-stage .control-target-primary-action.ghost.danger {
-  background: color-mix(in srgb, var(--danger) 5%, var(--background));
-  border-color: color-mix(in srgb, var(--danger) 72%, var(--border-strong));
+  background: color-mix(in srgb, var(--danger) 4%, var(--background));
+  border-color: color-mix(in srgb, var(--danger) 42%, var(--border-strong));
 }
 
 .control-target-actions .select {
@@ -6737,12 +6682,11 @@ button.priority-remove-button {
   border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
   border-radius: 14px;
   padding: 10px 11px;
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--panel) 82%, transparent),
-      color-mix(in srgb, var(--background) 68%, transparent)
-    );
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--panel) 82%, transparent),
+    color-mix(in srgb, var(--background) 68%, transparent)
+  );
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
@@ -6795,12 +6739,11 @@ button.priority-remove-button {
 
 .channel-tile.idle {
   border-color: color-mix(in srgb, var(--border) 76%, transparent);
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--panel) 74%, transparent),
-      color-mix(in srgb, var(--background) 76%, transparent)
-    );
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--panel) 74%, transparent),
+    color-mix(in srgb, var(--background) 76%, transparent)
+  );
 }
 
 .channel-thumb-tile {
@@ -6833,12 +6776,11 @@ button.priority-remove-button {
 }
 
 .channel-thumb-tile.is-empty {
-  background:
-    linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--muted) 42%, transparent),
-      color-mix(in srgb, var(--panel-strong) 90%, transparent)
-    );
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--muted) 42%, transparent),
+    color-mix(in srgb, var(--panel-strong) 90%, transparent)
+  );
 }
 
 .channel-content {
@@ -6869,15 +6811,15 @@ button.priority-remove-button {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  padding: 3px 7px;
+  padding: 3px 6px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--signal-accent) 36%, transparent);
-  background: color-mix(in srgb, var(--signal-accent) 14%, transparent);
-  color: color-mix(in srgb, var(--signal-accent) 66%, var(--foreground));
+  border: 1px solid color-mix(in srgb, var(--signal-accent) 24%, transparent);
+  background: color-mix(in srgb, var(--signal-accent) 8%, transparent);
+  color: color-mix(in srgb, var(--signal-accent) 44%, var(--foreground));
   font-size: 10px;
   line-height: 1;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-weight: 650;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
@@ -6906,33 +6848,32 @@ button.priority-remove-button {
 }
 
 .channel-tile.active {
-  border-color: color-mix(in srgb, var(--signal-accent) 48%, var(--border-strong));
-  background:
-    linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--signal-accent) 15%, transparent),
-      color-mix(in srgb, var(--panel-strong) 96%, transparent) 38%
-    );
+  border-color: color-mix(in srgb, var(--signal-accent) 24%, var(--border-strong));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--signal-accent) 7%, transparent),
+    color-mix(in srgb, var(--panel-strong) 96%, transparent) 42%
+  );
   box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--signal-accent) 24%, transparent),
-    0 12px 24px rgba(24, 22, 18, 0.09);
-  transform: translateY(-1px);
+    inset 0 0 0 1px color-mix(in srgb, var(--signal-accent) 14%, transparent),
+    0 6px 14px rgba(24, 22, 18, 0.045);
+  transform: none;
 }
 
 .channel-tile.active .channel-thumb-tile {
   box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--signal-accent) 36%, transparent),
-    0 0 0 4px color-mix(in srgb, var(--signal-accent) 10%, transparent);
+    inset 0 0 0 1px color-mix(in srgb, var(--signal-accent) 20%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--signal-accent) 6%, transparent);
 }
 
 .channel-tile.active .channel-name {
-  color: color-mix(in srgb, var(--foreground) 92%, var(--signal-accent));
+  color: color-mix(in srgb, var(--foreground) 88%, var(--signal-accent));
 }
 
 .channel-tile.active .channel-context,
 .channel-tile.active .channel-title-preview,
 .channel-tile.active .meta {
-  color: color-mix(in srgb, var(--foreground) 74%, var(--signal-accent));
+  color: color-mix(in srgb, var(--foreground) 68%, var(--signal-accent));
 }
 
 .channel-tile.idle .channel-name,
@@ -6957,12 +6898,11 @@ button.priority-remove-button {
 
 .channel-tile.idle:hover {
   border-color: color-mix(in srgb, var(--border-strong) 92%, transparent);
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--panel-strong) 86%, transparent),
-      color-mix(in srgb, var(--background) 60%, transparent)
-    );
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--panel-strong) 86%, transparent),
+    color-mix(in srgb, var(--background) 60%, transparent)
+  );
 }
 
 .channel-tile:focus-visible {
@@ -6983,7 +6923,7 @@ button.priority-remove-button {
 }
 
 .viewer-badge {
-  background: color-mix(in srgb, var(--panel) 90%, transparent);
+  background: color-mix(in srgb, var(--panel) 82%, transparent);
   color: var(--foreground);
   display: inline-flex;
   align-items: center;
@@ -6992,7 +6932,7 @@ button.priority-remove-button {
   min-height: 26px;
   padding: 0 9px;
   border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--border-strong) 90%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-strong) 82%, transparent);
   font-size: 12px;
   font-weight: 700;
   box-shadow: none;
@@ -7004,14 +6944,9 @@ button.priority-remove-button {
 }
 
 .channel-tile.active .viewer-badge {
-  border-color: color-mix(in srgb, var(--signal-accent) 40%, var(--border-strong));
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--signal-accent) 12%, transparent),
-      color-mix(in srgb, var(--panel-strong) 96%, transparent)
-    );
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--signal-accent) 14%, transparent);
+  border-color: color-mix(in srgb, var(--signal-accent) 20%, var(--border-strong));
+  background: color-mix(in srgb, var(--panel-strong) 92%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--signal-accent) 8%, transparent);
 }
 
 .channel-tile.idle .viewer-badge {
@@ -7464,21 +7399,21 @@ button.priority-remove-button {
   background:
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--card) 94%, var(--background) 6%),
+      color-mix(in srgb, var(--card) 95%, var(--background) 5%),
       color-mix(in srgb, var(--panel-strong) 96%, transparent)
     ),
     linear-gradient(
       135deg,
-      color-mix(in srgb, var(--operator-accent) 12%, transparent),
-      transparent 46%
+      color-mix(in srgb, var(--operator-accent) 6%, transparent),
+      transparent 50%
     );
   box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--border-strong) 82%, transparent),
-    0 16px 28px rgba(0, 0, 0, 0.22);
+    inset 0 0 0 1px color-mix(in srgb, var(--border-strong) 74%, transparent),
+    0 10px 20px rgba(0, 0, 0, 0.16);
 }
 
 .dark .control-operator-stage .control-target-primary-action.ghost {
-  background: color-mix(in srgb, var(--panel) 84%, transparent);
+  background: color-mix(in srgb, var(--panel) 74%, transparent);
 }
 
 .drop-header {

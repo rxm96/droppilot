@@ -410,13 +410,7 @@ export function InventoryView({
         if (aName !== bName) return aName.localeCompare(bName);
         return (a.campaign.game ?? "").localeCompare(b.campaign.game ?? "");
       });
-  }, [
-    campaignEntries,
-    gameFilter,
-    isCampaignUnlinked,
-    normalizedFilter,
-    priorityGameSet,
-  ]);
+  }, [campaignEntries, gameFilter, isCampaignUnlinked, normalizedFilter, priorityGameSet]);
   const { hasUnlinkedCampaigns, unlinkedCampaignCount } = useMemo(() => {
     let count = 0;
     for (const { campaign } of visibleCampaigns) {
@@ -556,7 +550,11 @@ export function InventoryView({
           campaignStateTone === "completed"
             ? [t("inventory.campaigns.completedCount", { count: drops.length })]
             : campaignStateTone === "upcoming"
-              ? [campaignOpenDropCount > 0 ? t("overview.openRewards", { count: campaignOpenDropCount }) : null]
+              ? [
+                  campaignOpenDropCount > 0
+                    ? t("overview.openRewards", { count: campaignOpenDropCount })
+                    : null,
+                ]
               : campaignStateTone === "progress"
                 ? [progressLabel]
                 : [
@@ -1014,7 +1012,10 @@ export function InventoryView({
                                   <div className="campaign-drop-body">
                                     <div className="campaign-drop-title">{item.title}</div>
                                     {blockingReasonLabel ? (
-                                      <div className="campaign-drop-reason" title={blockingReasonLabel}>
+                                      <div
+                                        className="campaign-drop-reason"
+                                        title={blockingReasonLabel}
+                                      >
                                         {blockingReasonLabel}
                                       </div>
                                     ) : req > 0 ? null : (

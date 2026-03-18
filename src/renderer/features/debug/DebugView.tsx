@@ -420,15 +420,15 @@ type DebugMetricCardProps = {
   priority?: "lead" | "support";
 };
 
-function DebugMetricCard({
-  label,
-  value,
-  meta,
-  tone,
-  priority = "support",
-}: DebugMetricCardProps) {
+function DebugMetricCard({ label, value, meta, tone, priority = "support" }: DebugMetricCardProps) {
   return (
-    <Card className={cn("debug-panel debug-metric-card", `tone-${tone}`, priority === "lead" && "is-lead")}>
+    <Card
+      className={cn(
+        "debug-panel debug-metric-card",
+        `tone-${tone}`,
+        priority === "lead" && "is-lead",
+      )}
+    >
       <CardContent className="debug-metric-content">
         <div className="debug-metric-label">{label}</div>
         <div className="debug-metric-value">{value}</div>
@@ -629,9 +629,7 @@ export function DebugView({ snapshot }: DebugViewProps) {
   }, [trackerShards]);
   const visibleTrackerShards = useMemo(
     () =>
-      showAllTrackerShards
-        ? trackerShards
-        : trackerShards.slice(0, TRACKER_SHARD_PREVIEW_COUNT),
+      showAllTrackerShards ? trackerShards : trackerShards.slice(0, TRACKER_SHARD_PREVIEW_COUNT),
     [showAllTrackerShards, trackerShards],
   );
   const hiddenTrackerShardCount = Math.max(0, trackerShards.length - visibleTrackerShards.length);
@@ -1048,7 +1046,11 @@ export function DebugView({ snapshot }: DebugViewProps) {
             />
           ))}
         </div>
-        <div className="debug-support-strip" role="list" aria-label={t("debug.summary.supportStrip")}>
+        <div
+          className="debug-support-strip"
+          role="list"
+          aria-label={t("debug.summary.supportStrip")}
+        >
           {supportSummaryCards.map((card) => (
             <DebugSupportStripItem
               key={card.key}
@@ -1393,7 +1395,10 @@ export function DebugView({ snapshot }: DebugViewProps) {
                 </div>
                 {showSnapshotPanel ? (
                   <div className="debug-toolbox-body debug-toolbox-body-tight">
-                    <ol className="code-panel debug-snapshot-panel" aria-label={t("debug.snapshot")}>
+                    <ol
+                      className="code-panel debug-snapshot-panel"
+                      aria-label={t("debug.snapshot")}
+                    >
                       {snapshotLines.map((line, index) => (
                         <li key={`${index}`} className="code-line">
                           {line}

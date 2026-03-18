@@ -224,10 +224,10 @@ describe("pending auto-claim tracking", () => {
   });
 
   it("clears pending claims that already appear as claimed in a later fetch", () => {
-    const pending = reconcilePendingAutoClaimIdsWithInventory(
-      new Set(["drop-1", "drop-2"]),
-      [makeItem({ id: "drop-1", status: "claimed", earnedMinutes: 60 }), makeItem({ id: "drop-2" })],
-    );
+    const pending = reconcilePendingAutoClaimIdsWithInventory(new Set(["drop-1", "drop-2"]), [
+      makeItem({ id: "drop-1", status: "claimed", earnedMinutes: 60 }),
+      makeItem({ id: "drop-2" }),
+    ]);
     expect(Array.from(pending)).toEqual(["drop-2"]);
   });
 });

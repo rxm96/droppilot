@@ -8,6 +8,9 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite dev",
+    "dev:update-overlay": "node scripts/dev-update-overlay-preview.cjs",
+    "dev:update-overlay:ready": "node scripts/dev-update-overlay-preview.cjs ready",
+    "dev:update-overlay:installing": "node scripts/dev-update-overlay-preview.cjs installing",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
