@@ -82,6 +82,7 @@ export const canClaimDrop = (
   const allowFallbackWhenNotExplicit = opts?.allowFallbackWhenNotExplicit !== false;
 
   if (item.status === "claimed") return false;
+  if (item.recentlyClaimed === true) return false;
   if (!isWithinClaimWindow(item, now)) return false;
   if (!hasClaimIdCandidate(item)) return false;
 
@@ -108,6 +109,7 @@ export const buildClaimRetrySignature = (item: InventoryItem): string =>
     item.dropInstanceId ?? "",
     item.campaignId ?? "",
     typeof item.isClaimable === "boolean" ? String(item.isClaimable) : "",
+    item.recentlyClaimed === true ? "recentlyClaimed" : "",
     (item.blockingReasonHints ?? []).join("|"),
   ].join("#");
 

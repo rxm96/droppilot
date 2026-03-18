@@ -118,4 +118,16 @@ describe("canClaimDrop", () => {
       ),
     ).toBe(false);
   });
+
+  it("rejects drops that were only recently claimed locally", () => {
+    expect(
+      canClaimDrop(
+        makeItem({
+          earnedMinutes: 60,
+          isClaimable: false,
+          recentlyClaimed: true,
+        }),
+      ),
+    ).toBe(false);
+  });
 });

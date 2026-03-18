@@ -35,6 +35,7 @@ export type InventoryItem = {
   dropInstanceId?: string;
   campaignId?: string;
   isClaimable?: boolean;
+  recentlyClaimed?: boolean;
   blocked?: boolean;
   blockingReasonHints?: string[];
   allowedChannelIds?: string[];

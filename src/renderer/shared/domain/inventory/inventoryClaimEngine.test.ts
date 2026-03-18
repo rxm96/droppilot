@@ -12,6 +12,7 @@ const makeItem = (overrides: Partial<InventoryItem> = {}): InventoryItem => ({
   status: "progress",
   campaignId: "camp-1",
   dropInstanceId: "inst-1",
+  endsAt: "2026-03-20T00:00:00Z",
   ...overrides,
 });
 
@@ -50,6 +51,14 @@ describe("isAutoClaimCandidate", () => {
     });
     expect(isAutoClaimCandidate(item, Date.now())).toBe(false);
   });
+
+  it("blocks auto-claim when the drop was already claimed locally recently", () => {
+    const item = makeItem({
+      isClaimable: false,
+      recentlyClaimed: true,
+    });
+    expect(isAutoClaimCandidate(item, Date.now())).toBe(false);
+  });
 });
 
 describe("InventoryClaimEngine.autoClaimFromInventory", () => {
@@ -72,6 +81,7 @@ describe("InventoryClaimEngine.autoClaimFromInventory", () => {
       dropInstanceId: "inst-1",
       dropId: "drop-1",
       campaignId: "camp-1",
+      endsAt: "2026-03-20T00:00:00Z",
     });
     expect(result).toEqual({ claimedCount: 1, claimedIds: ["drop-1"] });
     expect(onClaimed).toHaveBeenCalledWith({ title: "Drop 1", game: "Game" });

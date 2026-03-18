@@ -1,4 +1,5 @@
 import type { SessionData } from "../core/storage";
+import { loadRecentClaimedDropIds, markRecentClaimedDrop } from "../core/claimedDrops";
 import { TWITCH_WEB_USER_AGENT } from "../config";
 import { TwitchClient, TwitchAuthError, type RevalidateResult, type TwitchUser } from "./client";
 import { buildPriorityPlan, type PriorityPlan } from "./channels";
@@ -58,6 +59,7 @@ export interface InventoryItem {
   dropInstanceId?: string;
   campaignId?: string;
   isClaimable?: boolean;
+  recentlyClaimed?: boolean;
   blocked?: boolean;
   blockingReasonHints?: string[];
   allowedChannelIds?: string[];
@@ -115,6 +117,8 @@ export class TwitchService {
   }
 
   async getInventoryBundle(): Promise<InventoryBundle> {
+    const validate = await this.client.getValidateInfo();
+    const recentlyClaimedIds = await loadRecentClaimedDropIds();
     const { edges, summary, claimedBenefitIds } = await this.fetchCampaignEdges({
       includeAvailable: true,
       availableStatuses: ["ACTIVE", "UPCOMING"],
@@ -123,7 +127,13 @@ export class TwitchService {
       return { items: [], campaigns: [] };
     }
     const detailed = await this.enrichCampaigns(edges);
-    const items = this.buildInventoryItems(detailed, claimedBenefitIds, summary);
+    const items = this.buildInventoryItems(
+      detailed,
+      claimedBenefitIds,
+      summary,
+      recentlyClaimedIds,
+      validate.userId,
+    );
     const campaigns = buildCampaignSummaries(detailed, claimedBenefitIds);
     return { items, campaigns };
   }
@@ -262,10 +272,16 @@ export class TwitchService {
     return channels;
   }
 
-  async claimDrop(payload: { dropInstanceId?: string; dropId?: string; campaignId?: string }) {
+  async claimDrop(payload: {
+    dropInstanceId?: string;
+    dropId?: string;
+    campaignId?: string;
+    endsAt?: string;
+  }) {
     this.debug("claim: start", payload);
     const claimId =
       payload.dropInstanceId ?? (await this.buildClaimId(payload.dropId, payload.campaignId));
+    const canonicalClaimKey = await this.buildClaimId(payload.dropId, payload.campaignId);
     if (!claimId) {
       this.debug("claim: missing claim id", payload);
       throw new TwitchServiceError(TWITCH_ERROR_CODES.CLAIM_MISSING_ID, "Claim id missing");
@@ -294,6 +310,18 @@ export class TwitchService {
         status ? `Claim failed: ${status}` : "Claim failed",
       );
     }
+    const persistedClaimKeys = new Set<string>(
+      [claimId, canonicalClaimKey].filter(
+        (key): key is string => typeof key === "string" && key.trim().length > 0,
+      ),
+    );
+    await Promise.all(
+      Array.from(persistedClaimKeys, (key) =>
+        markRecentClaimedDrop(key, {
+          endsAt: payload.endsAt,
+        }),
+      ),
+    );
     this.debug("claim: success", { claimId, status });
     return { ok: true, status, claimId };
   }
@@ -754,6 +782,8 @@ export class TwitchService {
     detailed: CampaignNode[],
     claimedBenefitIds: Set<string>,
     summary: string,
+    recentlyClaimedIds: Set<string> = new Set(),
+    currentUserId?: string,
   ): InventoryItem[] {
     const items: InventoryItem[] = [];
     let dropsCount = 0;
@@ -874,9 +904,16 @@ export class TwitchService {
         );
         const blocked = hardBlockingReasonHints.length > 0;
         const canBuildFallbackClaimId = Boolean(campaignId && drop.id);
+        const canonicalClaimKey =
+          currentUserId && campaignId && drop.id ? `${currentUserId}#${campaignId}#${drop.id}` : null;
+        const recentlyClaimed =
+          !isClaimed &&
+          ((typeof dropInstanceId === "string" && recentlyClaimedIds.has(dropInstanceId)) ||
+            (typeof canonicalClaimKey === "string" && recentlyClaimedIds.has(canonicalClaimKey)));
         const isClaimable =
           (Boolean(dropInstanceId) || canBuildFallbackClaimId) &&
           !isClaimed &&
+          !recentlyClaimed &&
           status !== "claimed" &&
           progressDone &&
           withinClaimWindow &&
@@ -925,6 +962,7 @@ export class TwitchService {
           earnedMinutes,
           isClaimed,
           benefitClaimed,
+          recentlyClaimed,
           dropInstanceId,
           excluded,
           isClaimable,
@@ -958,6 +996,7 @@ export class TwitchService {
           campaignId,
           dropInstanceId,
           isClaimable,
+          recentlyClaimed,
           blocked,
           blockingReasonHints,
           allowedChannelIds:

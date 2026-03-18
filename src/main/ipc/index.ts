@@ -313,7 +313,10 @@ export function registerIpcHandlers(deps: {
 
   ipcMain.handle(
     "twitch/claimDrop",
-    async (_e, payload: { dropInstanceId?: string; dropId?: string; campaignId?: string }) => {
+    async (
+      _e,
+      payload: { dropInstanceId?: string; dropId?: string; campaignId?: string; endsAt?: string },
+    ) => {
       try {
         return await twitch.claimDrop(payload);
       } catch (err) {

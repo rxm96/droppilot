@@ -23,6 +23,7 @@ export type ClaimDropPayload = {
   dropInstanceId?: string;
   dropId?: string;
   campaignId?: string;
+  endsAt?: string;
 };
 
 type ClaimEngineBaseDeps = {
@@ -139,6 +140,7 @@ export class InventoryClaimEngine {
           dropInstanceId: drop.dropInstanceId,
           dropId: drop.id,
           campaignId: drop.campaignId,
+          endsAt: drop.endsAt,
         });
         throwIfClaimErrorResponse(response);
 
@@ -218,6 +220,7 @@ export class InventoryClaimEngine {
       dropInstanceId: dropInstanceIdFromEvent || claimedItem?.dropInstanceId,
       dropId: dropIdFromEvent || claimedItem?.id,
       campaignId: claimedItem?.campaignId,
+      endsAt: claimedItem?.endsAt,
     };
 
     try {

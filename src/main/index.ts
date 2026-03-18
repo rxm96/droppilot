@@ -6,6 +6,7 @@ import { format } from "node:url";
 import { allowsPrereleaseBuilds } from "../shared/updateChannels";
 import { AuthController } from "./auth";
 import { loadSession, clearSession } from "./core/storage";
+import { clearRecentClaimedDrops } from "./core/claimedDrops";
 import { TwitchService } from "./twitch/service";
 import { createChannelTracker, normalizeTrackerMode } from "./twitch/tracker";
 import { UserPubSub } from "./twitch/userPubSub";
@@ -390,7 +391,10 @@ app.whenReady().then(() => {
     channelTracker,
     userPubSub,
     loadSession,
-    clearSession,
+    clearSession: async () => {
+      await clearSession();
+      await clearRecentClaimedDrops();
+    },
     loadSettings,
     saveSettings,
     loadStats,

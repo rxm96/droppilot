@@ -103,7 +103,12 @@ const api = {
       ipcRenderer.invoke("twitch/debugEmitUserPubSubEvent", payload),
     watch: (payload: { channelId: string; login: string; streamId?: string }) =>
       ipcRenderer.invoke("twitch/watch", payload),
-    claimDrop: (payload: { dropInstanceId?: string; dropId?: string; campaignId?: string }) =>
+    claimDrop: (payload: {
+      dropInstanceId?: string;
+      dropId?: string;
+      campaignId?: string;
+      endsAt?: string;
+    }) =>
       ipcRenderer.invoke("twitch/claimDrop", payload),
     onChannelsDiff: (handler: (payload: ChannelsDiffPayload) => void) => {
       const listener = (_event: unknown, payload: ChannelsDiffPayload) => handler(payload);
