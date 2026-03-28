@@ -9,13 +9,14 @@ see `docs/watch-flow.puml`.
 ## Purpose
 
 `watchEngine` prevents unstable auto-watch behavior when users stop manually or when
-stall recovery detects no progress.
+stall recovery needs a temporary visibility hold.
 
 Core goals:
 
 - avoid immediate re-selection of a game that was just stopped or stalled
 - keep priority progression moving to the next game
-- prevent bounce loops back to a recently stalled game
+- keep suppression state aligned with what the UI should hide
+- avoid deciding recovery strategy inside the suppression reducer
 
 ## State
 
@@ -23,7 +24,7 @@ Core goals:
 
 - `suppressedTargetGame`: currently suppressed game (empty string means none)
 - `suppressionReason`: `"manual-stop" | "stall-stop" | null`
-- `suppressedAt`: timestamp used by stall hold logic (`null` when unsuppressed)
+- `suppressedAt`: timestamp used for suppression hold timing (`null` when unsuppressed)
 
 ## Events
 
@@ -32,7 +33,7 @@ Core goals:
 - `target/manual_set`: user picked a target manually; clears suppression
 - `watch/manual_start`: user started watching; clears only if it matches suppressed game
 - `watch/stop`: manual stop on active target; sets suppression with reason `manual-stop`
-- `watch/stall_stop`: stall-recovery stop; sets suppression with reason `stall-stop`
+- `watch/stall_stop`: stall-recovery stop; records the suppression hold with reason `stall-stop`
 - `sync`: periodic reconciliation from current target + current watching game
 
 ## Suppression Rules
@@ -40,22 +41,53 @@ Core goals:
 ### manual-stop
 
 - Suppression starts immediately on `watch/stop`.
+- Hold window is `MANUAL_STOP_SUPPRESSION_HOLD_MS` (currently `120_000` ms).
 - It clears on:
   - manual target selection (`target/manual_set`)
   - manual start of same game (`watch/manual_start`)
   - `sync` once a different game is actively watched
+  - `sync` after the hold window expires while idle or still on the same game
+
+The manual-stop hold exists to prevent bounce-back while the user is idle, but it
+still allows a later re-target once the window has passed.
 
 ### stall-stop
 
-- Suppression starts on `watch/stall_stop`.
-- Hold window is `STALL_STOP_SUPPRESSION_HOLD_MS` (currently `60_000` ms).
-- During hold, suppression always remains.
-- After hold:
-  - if the same stalled game is still being watched, suppression remains
-  - if watch state is idle (`watchingGame === ""`) or a different game is watched, suppression clears
+Suppression starts on `watch/stall_stop`.
+Hold window is `STALL_STOP_SUPPRESSION_HOLD_MS` (currently `60_000` ms).
+During hold, suppression always remains.
+After hold:
 
-This policy avoids bounce-back while still allowing stalled games to re-enter
-priority flow after stabilization.
+- if the same stalled game is still being watched, suppression remains
+- if watch state is idle (`watchingGame === ""`) or a different game is watched, suppression clears
+
+This policy keeps the target hidden long enough to avoid bounce-back, but it does
+not decide whether recovery should retry the same game or escalate elsewhere.
+
+## Stall Recovery
+
+Stall recovery is driven by `src/renderer/shared/hooks/watch/watchStallRecovery.ts`.
+It owns the explicit recovery state machine and the same-game-first decision flow.
+
+Phases:
+
+- `healthy`
+- `suspect_no_progress`
+- `confirming_stall`
+- `same_game_retry`
+- `same_game_cooloff`
+- `escalate_to_next_game`
+
+Policy:
+
+1. Detect likely no-progress without acting immediately.
+2. Request a confirmation probe.
+3. Retry inside the same game first, preferring another eligible channel.
+4. Cool off after each same-game action.
+5. Escalate to the next priority game only after same-game recovery is exhausted.
+
+`watchEngine` only owns suppression visibility and hold timing. Recovery decisions
+and escalation timing stay in the stall-recovery machine and `useAppModel`.
 
 ## Integration in `useAppModel`
 
@@ -67,13 +99,8 @@ priority flow after stabilization.
 - hold expiry: a timeout dispatches a `sync` event when stall hold expires, so
   suppression can resolve even without unrelated React state changes
 
-Stall recovery flow:
-
-1. detect no progress window
-2. try channel-level recovery first
-3. limit channel-level retries (`STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS` in `useAppModel`)
-4. if retries are exhausted (or no channel is viable), retarget to next priority candidate
-5. apply `watch/stall_stop` suppression
+When stall recovery escalates, `useAppModel` emits `watch/stall_stop` so the
+reducer can hold the suppressed target visible until the hold expires.
 
 ## Priority Interaction
 

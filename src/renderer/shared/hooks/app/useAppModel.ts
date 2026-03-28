@@ -14,12 +14,11 @@ import {
   buildChannelAllowlist,
   useChannels,
   useWatchPing,
-  WATCH_INTERVAL_MS,
   useWatchingController,
+  advanceWatchStallRecovery,
   buildWatchStallTrackerKey,
-  evaluateNoProgressStall,
   pickStallRecoveryChannel,
-  shouldProbeNoProgressConfirmation,
+  shouldResetWatchStallRecoveryOnIdle,
   STALL_STOP_SUPPRESSION_HOLD_MS,
   MANUAL_STOP_SUPPRESSION_HOLD_MS,
   selectVisibleTargetGame,
@@ -27,7 +26,8 @@ import {
   watchEngineReducer,
   type WatchEngineEvent,
   WATCH_ENGINE_INITIAL_STATE,
-  type WatchStallTracker,
+  WATCH_STALL_RECOVERY_INITIAL_STATE,
+  type WatchStallRecoveryState,
 } from "@renderer/shared/hooks/watch";
 import { useDebugCpu } from "./useDebugCpu";
 import { useDebugSnapshot } from "./useDebugSnapshot";
@@ -146,12 +146,9 @@ export function useAppModel() {
   const [autoSelectEnabled, setAutoSelectEnabled] = useState<boolean>(true);
   const claimProbeInFlightRef = useRef(false);
   const claimProbeLastAtRef = useRef(0);
-  const watchStallTrackerRef = useRef<WatchStallTracker | null>(null);
-  const watchConfirmationProbeRef = useRef<{
-    key: string;
-    baselineProgressAt: number;
-    lastProbeAt: number;
-  } | null>(null);
+  const watchStallRecoveryRef = useRef<WatchStallRecoveryState>(
+    WATCH_STALL_RECOVERY_INITIAL_STATE,
+  );
   const noFarmableDropRef = useRef<{ key: string; sinceAt: number } | null>(null);
   const [stalledGameCooldownUntil, setStalledGameCooldownUntil] = useState<Record<string, number>>(
     {},
@@ -464,6 +461,7 @@ export function useAppModel() {
 
   authErrorHandlerRef.current = actions.handleAuthError;
   const stopWatchingForAutomation = useCallback(() => {
+    watchStallRecoveryRef.current = WATCH_STALL_RECOVERY_INITIAL_STATE;
     clearWatching();
   }, [clearWatching]);
 
@@ -555,6 +553,7 @@ export function useAppModel() {
   const startWatching = actions.startWatching;
   const handleStartWatching = useCallback(
     (channel: Parameters<typeof startWatching>[0]) => {
+      watchStallRecoveryRef.current = WATCH_STALL_RECOVERY_INITIAL_STATE;
       clearStalledGameCooldown(channel.game, "manual-watch-start");
       dispatchWatchEngineEvent(
         { type: "watch/manual_start", watchingGame: channel.game },
@@ -565,12 +564,14 @@ export function useAppModel() {
     [clearStalledGameCooldown, dispatchWatchEngineEvent, startWatching],
   );
   const handleStopWatchingWithSuppressedTarget = useCallback(() => {
+    watchStallRecoveryRef.current = WATCH_STALL_RECOVERY_INITIAL_STATE;
     handleStopWatching();
     dispatchWatchEngineEvent({ type: "watch/stop", activeTargetGame }, "manual-watch-stop");
   }, [activeTargetGame, dispatchWatchEngineEvent, handleStopWatching]);
 
   useEffect(() => {
     if (shouldClearSuppressedWatching) {
+      watchStallRecoveryRef.current = WATCH_STALL_RECOVERY_INITIAL_STATE;
       clearWatching();
       return;
     }
@@ -808,8 +809,9 @@ export function useAppModel() {
 
   useEffect(() => {
     if (!watching) {
-      watchStallTrackerRef.current = null;
-      watchConfirmationProbeRef.current = null;
+      if (shouldResetWatchStallRecoveryOnIdle(watchStallRecoveryRef.current)) {
+        watchStallRecoveryRef.current = WATCH_STALL_RECOVERY_INITIAL_STATE;
+      }
       const shouldEvaluateIdleNoFarmable = allowWatching && autoSelectEnabled && !!targetGame;
       if (!shouldEvaluateIdleNoFarmable) {
         noFarmableDropRef.current = null;
@@ -926,21 +928,18 @@ export function useAppModel() {
         { type: "watch/stall_stop", activeTargetGame: stalledGame || activeTargetGame },
         "stall-no-farmable",
       );
-      watchStallTrackerRef.current = null;
-      watchConfirmationProbeRef.current = null;
+      watchStallRecoveryRef.current = WATCH_STALL_RECOVERY_INITIAL_STATE;
       noFarmableDropRef.current = null;
       return;
     }
     noFarmableDropRef.current = null;
     if (!activeDropInfo) {
-      watchStallTrackerRef.current = null;
-      watchConfirmationProbeRef.current = null;
+      watchStallRecoveryRef.current = WATCH_STALL_RECOVERY_INITIAL_STATE;
       return;
     }
     const dropId = activeDropInfo.id?.trim();
     if (!dropId) {
-      watchStallTrackerRef.current = null;
-      watchConfirmationProbeRef.current = null;
+      watchStallRecoveryRef.current = WATCH_STALL_RECOVERY_INITIAL_STATE;
       return;
     }
     const earnedMinutes = Math.max(0, Number(activeDropInfo.earnedMinutes) || 0);
@@ -950,122 +949,103 @@ export function useAppModel() {
     const noProgressWindowMs = nearEndNoProgressProbe
       ? STALL_NO_PROGRESS_WINDOW_NEAR_END_MS
       : STALL_NO_PROGRESS_WINDOW_MS;
-    const evaluation = evaluateNoProgressStall({
-      tracker: watchStallTrackerRef.current,
+    const maxSameGameRetries = nearEndNoProgressProbe
+      ? STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS_NEAR_END
+      : STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS;
+    const recovery = advanceWatchStallRecovery({
+      state: watchStallRecoveryRef.current,
       key,
       earnedMinutes,
       now,
+      lastWatchOk: watchStats.lastOk,
       noProgressWindowMs,
+      probeLeadMs: Math.min(2 * 60_000, Math.floor(noProgressWindowMs / 3)),
+      probeCooldownMs: STALL_CONFIRMATION_PROBE_COOLDOWN_MS,
       actionCooldownMs: STALL_RECOVERY_COOLDOWN_MS,
+      maxSameGameRetries,
+      channels,
+      watching,
+      drop: {
+        id: activeDropInfo.id,
+        earnedMinutes: activeDropInfo.earnedMinutes,
+        allowedChannelIds: activeDropInfo.allowedChannelIds,
+        allowedChannelLogins: activeDropInfo.allowedChannelLogins,
+      },
     });
-    watchStallTrackerRef.current = evaluation.tracker;
-    const activeProbe = watchConfirmationProbeRef.current;
-    if (
-      activeProbe &&
-      (activeProbe.key !== key ||
-        activeProbe.baselineProgressAt < evaluation.tracker.lastProgressAt)
-    ) {
-      watchConfirmationProbeRef.current = null;
-    }
-    const probeLeadMs = Math.min(2 * 60_000, Math.floor(noProgressWindowMs / 3));
-    const recentWatchPingGraceMs = WATCH_INTERVAL_MS + 30_000;
-    const lastProbeAt =
-      watchConfirmationProbeRef.current?.key === key &&
-      watchConfirmationProbeRef.current?.baselineProgressAt === evaluation.tracker.lastProgressAt
-        ? watchConfirmationProbeRef.current.lastProbeAt
-        : 0;
-    if (
-      shouldProbeNoProgressConfirmation({
-        tracker: evaluation.tracker,
-        key,
-        now,
-        noProgressWindowMs,
-        probeLeadMs,
-        lastWatchOk: watchStats.lastOk,
-        watchPingGraceMs: recentWatchPingGraceMs,
-        lastProbeAt,
-        probeCooldownMs: STALL_CONFIRMATION_PROBE_COOLDOWN_MS,
-      })
-    ) {
-      watchConfirmationProbeRef.current = {
-        key,
-        baselineProgressAt: evaluation.tracker.lastProgressAt,
-        lastProbeAt: now,
-      };
-      logInfo("watch-engine: confirmation probe", {
-        reason: "stall-no-progress-confirmation-probe",
-        key,
-        noProgressWindowMs,
-        probeLeadMs,
-        lastConfirmedProgressMsAgo: Math.max(0, now - evaluation.tracker.lastProgressAt),
-      });
-      void fetchInventory({ forceLoading: true });
-    }
-    if (!evaluation.shouldRecover) return;
-    const maxChannelRecoveryAttempts = nearEndNoProgressProbe
-      ? STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS_NEAR_END
-      : STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS;
-    const allowChannelRecovery = evaluation.tracker.recoveryCount <= maxChannelRecoveryAttempts;
-
-    if (allowChannelRecovery) {
-      const nextChannel = pickStallRecoveryChannel({
-        channels,
-        watching,
-        drop: {
-          id: activeDropInfo.id,
-          earnedMinutes: activeDropInfo.earnedMinutes,
-          allowedChannelIds: activeDropInfo.allowedChannelIds,
-          allowedChannelLogins: activeDropInfo.allowedChannelLogins,
-        },
-      });
-      if (nextChannel) {
-        setWatchingFromChannel(nextChannel);
+    watchStallRecoveryRef.current = recovery.state;
+    switch (recovery.action.type) {
+      case "request_confirmation_probe":
+        logInfo("watch-engine: confirmation probe", {
+          reason: "stall-no-progress-confirmation-probe",
+          key,
+          noProgressWindowMs,
+          probeLeadMs: Math.min(2 * 60_000, Math.floor(noProgressWindowMs / 3)),
+          lastConfirmedProgressMsAgo:
+            typeof recovery.state.lastProgressAt === "number"
+              ? Math.max(0, now - recovery.state.lastProgressAt)
+              : null,
+        });
+        void fetchInventory({ forceLoading: true });
+        return;
+      case "switch_same_game_channel": {
+        const nextChannel = channels.find((channel) => channel.id === recovery.action.channelId);
+        if (nextChannel) {
+          setWatchingFromChannel(nextChannel);
+        }
         return;
       }
-      // No alternate channel currently visible: force-refresh state before game-level retarget.
-      // This avoids premature target jumps when tracker/inventory snapshots are briefly stale.
-      const recoveryGame = activeTargetGame.trim() || targetGame.trim() || watching.game.trim();
-      logInfo("watch-engine: no-progress refresh", {
-        reason: "stall-no-progress-refresh",
-        game: recoveryGame || null,
-        nearEndProbe: nearEndNoProgressProbe,
-        noProgressWindowMs,
-        attempts: evaluation.tracker.recoveryCount,
-        maxChannelRecoveryAttempts,
-      });
-      if (recoveryGame) {
-        void fetchChannels(recoveryGame, { force: true });
+      case "restart_same_game_watch":
+        logInfo("watch-engine: no-progress refresh", {
+          reason: "stall-no-progress-refresh",
+          game: recovery.state.targetGame || activeTargetGame || targetGame || watching.game || null,
+          nearEndProbe: nearEndNoProgressProbe,
+          noProgressWindowMs,
+          attempts: recovery.state.sameGameRetryCount,
+          maxSameGameRetries,
+        });
+        clearWatching();
+        void fetchInventory({ forceLoading: true });
+        if (recovery.state.targetGame) {
+          void fetchChannels(recovery.state.targetGame, { force: true });
+        }
+        return;
+      case "suppress_and_escalate": {
+        logInfo("watch-engine: retarget escalation", {
+          reason: "stall-no-progress-recovery-budget",
+          from: activeTargetGame || null,
+          nearEndProbe: nearEndNoProgressProbe,
+          noProgressWindowMs,
+          attempts: recovery.state.sameGameRetryCount,
+          maxSameGameRetries,
+        });
+        const stalledGame =
+          recovery.action.targetGame.trim() || activeTargetGame.trim() || targetGame.trim();
+        setStalledGameCooldown(stalledGame, NO_PROGRESS_GAME_COOLDOWN_MS, "stall-no-progress");
+        const currentForRetarget = activeTargetGame.trim() || targetGame.trim();
+        const nextTargetGame = currentForRetarget
+          ? getNextPriorityTargetGame(currentForRetarget)
+          : "";
+        if (nextTargetGame) {
+          logInfo("watch-engine: retarget", {
+            reason: "stall-no-progress-direct",
+            from: activeTargetGame,
+            to: nextTargetGame,
+          });
+          setActiveTargetGame(nextTargetGame);
+        }
+        setAutoSelectEnabled(true);
+        clearWatching();
+        dispatchWatchEngineEvent(
+          { type: "watch/stall_stop", activeTargetGame: stalledGame || activeTargetGame },
+          "stall-no-progress",
+        );
+        return;
       }
-      void fetchInventory({ forceLoading: true });
-      return;
-    } else {
-      logInfo("watch-engine: retarget escalation", {
-        reason: "stall-no-progress-recovery-budget",
-        from: activeTargetGame || null,
-        nearEndProbe: nearEndNoProgressProbe,
-        noProgressWindowMs,
-        attempts: evaluation.tracker.recoveryCount,
-        maxChannelRecoveryAttempts,
-      });
+      case "enter_cooloff":
+      case "none":
+      default:
+        return;
     }
-    const stalledGame = activeTargetGame.trim() || targetGame.trim() || watching.game.trim();
-    setStalledGameCooldown(stalledGame, NO_PROGRESS_GAME_COOLDOWN_MS, "stall-no-progress");
-    const currentForRetarget = activeTargetGame.trim() || targetGame.trim();
-    const nextTargetGame = currentForRetarget ? getNextPriorityTargetGame(currentForRetarget) : "";
-    if (nextTargetGame) {
-      logInfo("watch-engine: retarget", {
-        reason: "stall-no-progress-direct",
-        from: activeTargetGame,
-        to: nextTargetGame,
-      });
-      setActiveTargetGame(nextTargetGame);
-    }
-    setAutoSelectEnabled(true);
-    clearWatching();
-    dispatchWatchEngineEvent(
-      { type: "watch/stall_stop", activeTargetGame: stalledGame || activeTargetGame },
-      "stall-no-progress",
-    );
   }, [
     allowWatching,
     activeTargetGame,
@@ -1161,12 +1141,21 @@ export function useAppModel() {
     const allowlistedLiveChannels = allowlistRestriction.hasConstraints
       ? channels.filter((channel) => allowlistRestriction.allowsChannel(channel)).length
       : channels.length;
-    const stallTracker = watchStallTrackerRef.current;
+    const stallRecovery = watchStallRecoveryRef.current;
     const noProgressTracker =
-      stallTracker && watching
+      stallRecovery.phase !== "healthy" && stallRecovery.key
         ? {
-            recoveryCount: stallTracker.recoveryCount,
-            sinceProgressMs: Math.max(0, now - stallTracker.lastProgressAt),
+            phase: stallRecovery.phase,
+            recoveryCount: stallRecovery.sameGameRetryCount,
+            sinceProgressMs:
+              typeof stallRecovery.lastProgressAt === "number"
+                ? Math.max(0, now - stallRecovery.lastProgressAt)
+                : null,
+            lastRecoveryActionMsAgo:
+              typeof stallRecovery.lastRecoveryActionAt === "number"
+                ? Math.max(0, now - stallRecovery.lastRecoveryActionAt)
+                : null,
+            escalationReason: stallRecovery.escalationReason,
           }
         : null;
     const hasPredictiveProgress = Boolean(
@@ -1175,9 +1164,7 @@ export function useAppModel() {
       Number.isFinite(activeDropInfo.eta),
     );
     const hasFarmableActiveDrop = Boolean(activeDropInfo);
-    const isRecoveringNoProgress = Boolean(
-      noProgressTracker && noProgressTracker.recoveryCount > 0,
-    );
+    const isRecoveringNoProgress = stallRecovery.phase !== "healthy";
 
     let decision:
       | "no-target"

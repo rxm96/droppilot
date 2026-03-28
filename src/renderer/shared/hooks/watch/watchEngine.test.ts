@@ -97,6 +97,22 @@ describe("watchEngine", () => {
     expect(synced.suppressionReason).toBe("stall-stop");
   });
 
+  it("keeps stall suppression as a visibility hold, not as the recovery decision maker", () => {
+    const suppressed = watchEngineReducer(WATCH_ENGINE_INITIAL_STATE, {
+      type: "watch/stall_stop",
+      activeTargetGame: "Game",
+      at: 1_000,
+    });
+    const synced = watchEngineReducer(suppressed, {
+      type: "sync",
+      activeTargetGame: "Other Game",
+      watchingGame: "",
+      now: 1_000 + STALL_STOP_SUPPRESSION_HOLD_MS - 1,
+    });
+    expect(synced.suppressedTargetGame).toBe("Game");
+    expect(synced.suppressionReason).toBe("stall-stop");
+  });
+
   it("clears stall-stop suppression after hold window while another game is being watched", () => {
     const suppressed = watchEngineReducer(WATCH_ENGINE_INITIAL_STATE, {
       type: "watch/stall_stop",
