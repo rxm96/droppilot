@@ -64,7 +64,7 @@ export function PriorityRow({ rank, game, state, onRemove }: PriorityRowProps) {
         title={`Drag ${game}`}
         className={cn(
           "flex h-6 w-6 items-center justify-center rounded-[var(--dp-radius-xs)] cursor-grab active:cursor-grabbing",
-          "text-[color:var(--dp-text-dimmer)] opacity-0 group-hover:opacity-100",
+          "text-[color:var(--dp-text-dimmer)] opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[color:var(--dp-accent)]",
           "hover:bg-[color:var(--dp-bg-elevated)] hover:text-[color:var(--dp-text-dim)]",
           isDragging && "opacity-100",
         )}
@@ -100,7 +100,7 @@ export function PriorityRow({ rank, game, state, onRemove }: PriorityRowProps) {
         title={`Remove ${game}`}
         className={cn(
           "flex h-6 w-6 items-center justify-center rounded-[var(--dp-radius-xs)]",
-          "text-[color:var(--dp-text-dimmer)] opacity-0 group-hover:opacity-100",
+          "text-[color:var(--dp-text-dimmer)] opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[color:var(--dp-signal-err)]",
           "hover:bg-[rgba(248,113,113,0.10)] hover:text-[color:var(--dp-signal-err)]",
           "transition-colors",
         )}
