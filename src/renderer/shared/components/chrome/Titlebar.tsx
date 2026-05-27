@@ -44,7 +44,7 @@ export function Titlebar({
       {/* Brand */}
       <div className="flex items-center gap-2">
         <Logo size={14} />
-        <span className="font-mono text-[11px] font-semibold tracking-[0.04em] text-[color:var(--dp-text)]">
+        <span className="font-mono text-[11px] font-medium tracking-[0.04em] text-[color:var(--dp-text-dim)]">
           {title}
         </span>
         {version && (
