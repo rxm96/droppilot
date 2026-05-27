@@ -1,6 +1,7 @@
 import { AppContent, Hero, TitleBar, UpdateOverlay } from "@renderer/shared/components";
 import { useAppModel } from "@renderer/shared/hooks";
 import { I18nProvider } from "@renderer/shared/i18n";
+import { DevPrimitivesView } from "@renderer/features/dev-primitives";
 
 function App() {
   const {
@@ -18,6 +19,17 @@ function App() {
     debugSnapshot,
     debugEnabled,
   } = useAppModel();
+
+  // Dev-only primitives showcase. Open with #dev-primitives in the URL.
+  // Lives outside the normal View enum so it never appears in the nav
+  // or i18n tables — it is purely for engineering preview.
+  if (import.meta.env.DEV && typeof window !== "undefined" && window.location.hash === "#dev-primitives") {
+    return (
+      <I18nProvider language={language}>
+        <DevPrimitivesView />
+      </I18nProvider>
+    );
+  }
 
   return (
     <I18nProvider language={language}>
