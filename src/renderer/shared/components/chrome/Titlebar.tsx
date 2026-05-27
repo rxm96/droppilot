@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Logo } from "@renderer/shared/components/Logo";
 import { Pill } from "@renderer/shared/components/ui/pill";
-import { Sun, Moon, Settings, Minus, Square, X } from "@renderer/shared/lib/icons";
+import { Sun, Moon, Settings } from "@renderer/shared/lib/icons";
 import { cn } from "@renderer/shared/lib/utils";
 
 export type TitlebarTheme = "light" | "dark";
@@ -36,7 +36,7 @@ export function Titlebar({
   return (
     <div
       className={cn(
-        "flex h-9 items-center gap-3.5 border-b border-[color:var(--dp-border)] bg-[color:var(--dp-bg-chrome)] px-3.5",
+        "flex h-9 items-center gap-3.5 border-b border-[color:var(--dp-border)] bg-[color:var(--dp-bg-chrome)] pl-3.5 pr-[140px]",
         "app-drag",
         className,
       )}
@@ -100,36 +100,6 @@ export function Titlebar({
           >
             <Settings size={13} strokeWidth={1.7} />
           </button>
-        )}
-
-        {/* Window controls — same visual weight as icon actions, no dedicated "button" look */}
-        {onWindowAction && (
-          <div className="ml-1 flex items-center gap-0.5">
-            <button
-              type="button"
-              onClick={() => onWindowAction("minimize")}
-              aria-label="Minimize"
-              className="flex h-[26px] w-[26px] items-center justify-center rounded-[var(--dp-radius-xs)] text-[color:var(--dp-text-dimmer)] transition-colors hover:bg-[color:var(--dp-bg-elevated)] hover:text-[color:var(--dp-text-dim)]"
-            >
-              <Minus size={13} strokeWidth={1.7} />
-            </button>
-            <button
-              type="button"
-              onClick={() => onWindowAction("maximize")}
-              aria-label="Maximize"
-              className="flex h-[26px] w-[26px] items-center justify-center rounded-[var(--dp-radius-xs)] text-[color:var(--dp-text-dimmer)] transition-colors hover:bg-[color:var(--dp-bg-elevated)] hover:text-[color:var(--dp-text-dim)]"
-            >
-              <Square size={11} strokeWidth={1.7} />
-            </button>
-            <button
-              type="button"
-              onClick={() => onWindowAction("close")}
-              aria-label="Close"
-              className="flex h-[26px] w-[26px] items-center justify-center rounded-[var(--dp-radius-xs)] text-[color:var(--dp-text-dimmer)] transition-colors hover:bg-[rgba(248,113,113,0.18)] hover:text-[color:var(--dp-signal-err)]"
-            >
-              <X size={13} strokeWidth={1.7} />
-            </button>
-          </div>
         )}
       </div>
     </div>
