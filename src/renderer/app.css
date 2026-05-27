@@ -37,6 +37,29 @@
 
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+
+  /* === DESIGN OVERHAUL: new token bindings === */
+  --color-dp-bg-app: var(--dp-bg-app);
+  --color-dp-bg-chrome: var(--dp-bg-chrome);
+  --color-dp-bg-elevated: var(--dp-bg-elevated);
+  --color-dp-bg-elevated-2: var(--dp-bg-elevated-2);
+  --color-dp-border: var(--dp-border);
+  --color-dp-border-soft: var(--dp-border-soft);
+  --color-dp-text: var(--dp-text);
+  --color-dp-text-dim: var(--dp-text-dim);
+  --color-dp-text-dimmer: var(--dp-text-dimmer);
+  --color-dp-accent: var(--dp-accent);
+  --color-dp-accent-soft: var(--dp-accent-soft);
+  --color-dp-signal-ok: var(--dp-signal-ok);
+  --color-dp-signal-warn: var(--dp-signal-warn);
+  --color-dp-signal-err: var(--dp-signal-err);
+  --color-dp-signal-info: var(--dp-signal-info);
+
+  --radius-dp-xs: var(--dp-radius-xs);
+  --radius-dp-sm: var(--dp-radius-sm);
+  --radius-dp-md: var(--dp-radius-md);
+  --radius-dp-lg: var(--dp-radius-lg);
+  --radius-dp-xl: var(--dp-radius-xl);
 }
 
 @plugin "tailwindcss-animate";
@@ -228,6 +251,64 @@
   --skeleton-line-1: color-mix(in srgb, var(--foreground) 8%, var(--panel));
   --skeleton-line-2: color-mix(in srgb, var(--foreground) 14%, var(--panel));
   --skeleton-chip-border: color-mix(in srgb, var(--border-strong) 70%, var(--foreground) 10%);
+}
+
+/* === DESIGN OVERHAUL: NEW TOKEN SYSTEM ===
+ * Additive layer. Coexists with legacy --background/--foreground/etc.
+ * Consumed by new primitives in src/renderer/shared/components/ui/* and chrome/*.
+ * Legacy variables remain in use by old components until per-view migration.
+ */
+:root {
+  /* Dark surfaces — primary mode for the overhaul */
+  --dp-bg-app: #0a0b0d;
+  --dp-bg-chrome: #08090b;
+  --dp-bg-elevated: #101216;
+  --dp-bg-elevated-2: #14171c;
+  --dp-border: #1c2026;
+  --dp-border-soft: #16191e;
+
+  /* Text */
+  --dp-text: #e8eaed;
+  --dp-text-dim: #9aa0a8;
+  --dp-text-dimmer: #6b7280;
+
+  /* Accent: Soft Violet */
+  --dp-accent: #a78bfa;
+  --dp-accent-soft: rgba(167, 139, 250, 0.12);
+  --dp-accent-glow: rgba(167, 139, 250, 0.4);
+
+  /* Signal colors */
+  --dp-signal-ok: #4ade80;
+  --dp-signal-warn: #fbbf24;
+  --dp-signal-err: #f87171;
+  --dp-signal-info: #60a5fa;
+
+  /* Radius hierarchy */
+  --dp-radius-xs: 3px;
+  --dp-radius-sm: 5px;
+  --dp-radius-md: 6px;
+  --dp-radius-lg: 8px;
+  --dp-radius-xl: 10px;
+}
+
+/* Light overrides — parallel map with reduced saturation, functional but un-hero'd */
+:root:not(.dark) {
+  --dp-bg-app: #fafaf9;
+  --dp-bg-chrome: #f4f3ef;
+  --dp-bg-elevated: #ffffff;
+  --dp-bg-elevated-2: #f7f6f3;
+  --dp-border: #e5e3de;
+  --dp-border-soft: #ededea;
+  --dp-text: #1a1c1f;
+  --dp-text-dim: #555a62;
+  --dp-text-dimmer: #8a8f96;
+  --dp-accent: #7c5fe6;
+  --dp-accent-soft: rgba(124, 95, 230, 0.10);
+  --dp-accent-glow: rgba(124, 95, 230, 0.25);
+  --dp-signal-ok: #16a34a;
+  --dp-signal-warn: #ca8a04;
+  --dp-signal-err: #dc2626;
+  --dp-signal-info: #2563eb;
 }
 
 .dark .label {
