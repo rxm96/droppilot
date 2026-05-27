@@ -361,12 +361,6 @@ body {
   color: var(--foreground);
 }
 
-.app-shell {
-  padding: 24px 28px 48px;
-  max-width: 1640px;
-  margin: 0 auto;
-}
-
 .app-drag {
   -webkit-app-region: drag;
 }
