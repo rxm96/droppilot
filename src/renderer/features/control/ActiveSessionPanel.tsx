@@ -126,7 +126,7 @@ export function ActiveSessionPanel({
                   }}
                 />
               </div>
-              <span className="font-mono text-[12px] text-[color:var(--dp-text)] tabular-nums">
+              <span className="font-mono text-[12px] text-[color:var(--dp-text)] tabular-nums w-[40px] text-right flex-shrink-0">
                 {formatPercent(progressPct)}
               </span>
             </div>
