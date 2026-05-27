@@ -35,7 +35,10 @@ export function formatPercent(n: number): string {
   return `${Math.max(0, Math.min(100, Math.round(n)))}%`;
 }
 
-export function formatRelative(timestamp: number | null | undefined, now: number = Date.now()): string {
+export function formatRelative(
+  timestamp: number | null | undefined,
+  now: number = Date.now(),
+): string {
   if (typeof timestamp !== "number" || !Number.isFinite(timestamp)) return "--";
   const diff = Math.max(0, now - timestamp);
   const seconds = Math.floor(diff / 1000);

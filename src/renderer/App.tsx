@@ -50,19 +50,25 @@ function AppShell({ model }: { model: Model }) {
     updateOverlayProps,
   } = model;
 
+  const {
+    theme: titleBarTheme,
+    setTheme: titleBarSetTheme,
+    version: titleBarVersion,
+  } = titleBarProps;
+
   // Resolve theme: titleBarProps.theme may be "system" — coerce to the rendered light/dark.
   const resolvedTheme: "light" | "dark" = React.useMemo(() => {
-    if (titleBarProps.theme === "dark") return "dark";
-    if (titleBarProps.theme === "light") return "light";
+    if (titleBarTheme === "dark") return "dark";
+    if (titleBarTheme === "light") return "light";
     if (typeof document !== "undefined") {
       return document.documentElement.classList.contains("dark") ? "dark" : "light";
     }
     return "light";
-  }, [titleBarProps.theme]);
+  }, [titleBarTheme]);
 
   const toggleTheme = React.useCallback(() => {
-    titleBarProps.setTheme((current) => (current === "dark" ? "light" : "dark"));
-  }, [titleBarProps.setTheme]);
+    titleBarSetTheme((current) => (current === "dark" ? "light" : "dark"));
+  }, [titleBarSetTheme]);
 
   const openSettings = React.useCallback(() => navProps.setView("settings"), [navProps]);
 
@@ -136,7 +142,7 @@ function AppShell({ model }: { model: Model }) {
       {!isMac && (
         <Titlebar
           title="droppilot"
-          version={titleBarProps.version}
+          version={titleBarVersion}
           theme={resolvedTheme}
           onThemeToggle={toggleTheme}
           onSettingsClick={openSettings}
@@ -171,7 +177,7 @@ function AppShell({ model }: { model: Model }) {
           { label: `last sync · ${formatRelative(overviewProps.lastWatchOk)}` },
         ]}
         right={[
-          { label: `v${titleBarProps.version ?? "—"}` },
+          { label: `v${titleBarVersion ?? "—"}` },
           { label: <span style={{ color: "var(--dp-accent)" }}>⌘K</span> },
         ]}
       />

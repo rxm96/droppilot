@@ -67,9 +67,7 @@ export function OverviewView({
         ? (inventory.items ?? [])
         : [];
 
-  const isLive =
-    watchDecision === "watching-progress" ||
-    watchDecision === "watching-recover";
+  const isLive = watchDecision === "watching-progress" || watchDecision === "watching-recover";
 
   return (
     <div className="grid gap-7" style={{ gridTemplateColumns: "1fr 320px" }}>

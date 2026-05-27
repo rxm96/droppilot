@@ -51,8 +51,7 @@ export function AppContent({
       {view === "overview" && renderWithPerf("OverviewView", <OverviewView {...overviewProps} />)}
       {view === "inventory" &&
         renderWithPerf("InventoryView", <InventoryView {...inventoryProps} />)}
-      {view === "priorities" &&
-        renderWithPerf("PriorityView", <PriorityView {...priorityProps} />)}
+      {view === "priorities" && renderWithPerf("PriorityView", <PriorityView {...priorityProps} />)}
       {view === "settings" && renderWithPerf("SettingsView", <SettingsView {...settingsProps} />)}
       {view === "control" && renderWithPerf("ControlView", <ControlView {...controlProps} />)}
       {view === "debug" && renderWithPerf("DebugView", <DebugView snapshot={debugSnapshot} />)}

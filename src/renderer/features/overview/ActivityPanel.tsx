@@ -11,9 +11,7 @@ export type ActivityPanelProps = {
 
 export function ActivityPanel({ items, maxItems = 5 }: ActivityPanelProps) {
   const claimed = React.useMemo(() => {
-    return items
-      .filter((it) => it.status === "claimed")
-      .slice(0, maxItems);
+    return items.filter((it) => it.status === "claimed").slice(0, maxItems);
   }, [items, maxItems]);
 
   return (

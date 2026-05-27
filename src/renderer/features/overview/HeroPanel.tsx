@@ -3,10 +3,7 @@ import { Stat } from "@renderer/shared/components/ui/stat";
 import { Button } from "@renderer/shared/components/ui/button";
 import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { Check, Pause, RotateCw } from "@renderer/shared/lib/icons";
-import {
-  formatRemainingFromEta,
-  formatPercent,
-} from "./formatters";
+import { formatRemainingFromEta } from "./formatters";
 
 export type HeroPanelProps = {
   activeGame?: string;
@@ -43,9 +40,7 @@ export function HeroPanel({
   return (
     <div>
       <SectionLabel>currently watching</SectionLabel>
-      <div
-        className="mt-3 relative overflow-hidden rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] p-6"
-      >
+      <div className="mt-3 relative overflow-hidden rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] p-6">
         {/* Top-right radial glow */}
         <div
           aria-hidden="true"
@@ -82,19 +77,13 @@ export function HeroPanel({
           style={{ gridTemplateColumns: "1.4fr 1fr 1fr 1fr" }}
         >
           <div className="pr-4">
-            <Stat
-              label="eta"
-              value={etaText}
-              sub={`${progressPct}% complete`}
-              accent
-            />
+            <Stat label="eta" value={etaText} sub={`${progressPct}% complete`} accent />
             <div className="mt-2.5 h-[3px] rounded-[2px] bg-[color:var(--dp-border)] overflow-hidden">
               <div
                 className="h-full rounded-[2px]"
                 style={{
                   width: `${progressPct}%`,
-                  background:
-                    "linear-gradient(90deg, var(--dp-accent), #c4b5fd)",
+                  background: "linear-gradient(90deg, var(--dp-accent), #c4b5fd)",
                   boxShadow: "0 0 12px var(--dp-accent-glow)",
                 }}
               />
@@ -118,7 +107,12 @@ export function HeroPanel({
 
         {/* Quick actions row */}
         <div className="flex gap-2 mt-4">
-          <Button variant="dp-primary" size="dp-md" disabled={!hasClaimable} title="Use Inventory view to claim">
+          <Button
+            variant="dp-primary"
+            size="dp-md"
+            disabled={!hasClaimable}
+            title="Use Inventory view to claim"
+          >
             <Check size={11} strokeWidth={2.2} /> claim now
           </Button>
           <Button variant="dp-secondary" size="dp-md" disabled title="Phase 4 will wire this">

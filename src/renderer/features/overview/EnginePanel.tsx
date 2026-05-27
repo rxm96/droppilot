@@ -34,10 +34,7 @@ export function EnginePanel({
       </span>
       <div className="grid gap-2">
         {rows.map((row) => (
-          <div
-            key={row.key}
-            className="flex justify-between font-mono text-[11px]"
-          >
+          <div key={row.key} className="flex justify-between font-mono text-[11px]">
             <span className="text-[color:var(--dp-text-dimmer)]">{row.key}</span>
             <span
               className={
