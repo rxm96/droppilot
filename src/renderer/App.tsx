@@ -143,15 +143,16 @@ function AppShell({ model }: { model: Model }) {
         ? "warn"
         : "dim";
 
+  const setView = navProps.setView;
   const overviewPropsExtended = React.useMemo(
     () => ({
       ...overviewProps,
       onPause: controlProps.stopWatching,
-      onSwitchTarget: () => navProps.setView("priorities"),
+      onSwitchTarget: () => setView("priorities"),
       refreshMinMs: settingsProps.refreshMinMs,
       refreshMaxMs: settingsProps.refreshMaxMs,
     }),
-    [overviewProps, controlProps.stopWatching, navProps, settingsProps.refreshMinMs, settingsProps.refreshMaxMs],
+    [overviewProps, controlProps.stopWatching, setView, settingsProps.refreshMinMs, settingsProps.refreshMaxMs],
   );
 
   return (
