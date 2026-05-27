@@ -121,9 +121,11 @@ function AppShell({ model }: { model: Model }) {
   const engineLabel = React.useMemo(() => {
     const d = overviewProps.watchDecision;
     if (d === "watching-progress" || d === "watching-recover") return "engine: running";
+    if (d === "watching-no-farmable" || d === "watching-no-watchable") return "engine: standby";
     if (d === "suppressed" || d === "cooldown") return "engine: paused";
+    if (d === "no-target") return "engine: idle";
     if (d.startsWith("idle")) return "engine: idle";
-    return `engine: ${d}`;
+    return "engine: idle";
   }, [overviewProps.watchDecision]);
 
   const engineTone =
