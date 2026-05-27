@@ -1047,7 +1047,6 @@ body {
   height: 4px;
 }
 
-.campaign-card.skeleton-card,
 .inv-card.skeleton-card {
   border-color: var(--skeleton-border);
   background: var(--skeleton-surface);
@@ -1055,13 +1054,11 @@ body {
   transform: none;
 }
 
-.campaign-card.skeleton-card:hover,
 .inv-card.skeleton-card:hover {
   transform: none;
   border-color: var(--skeleton-border);
 }
 
-.campaign-list-skeleton .campaign-card,
 .inventory-list-skeleton .inv-card {
   pointer-events: none;
 }
@@ -1095,10 +1092,6 @@ body {
   background-size: 200% 100%;
   animation: skeletonShimmer var(--skeleton-shimmer-duration) ease-in-out infinite;
   border: 1px solid var(--skeleton-chip-border);
-}
-
-.campaign-list.is-entering .campaign-card {
-  animation: skeletonFadeIn 0.28s ease-out both;
 }
 
 .skeleton-chip.small {
@@ -1939,188 +1932,6 @@ a {
   letter-spacing: 0.01em;
   text-transform: none;
   color: var(--foreground);
-}
-
-.campaign-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: 10px;
-}
-
-.campaign-card {
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--panel-strong);
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: flex-start;
-  gap: 12px;
-  box-shadow: 0 8px 18px rgba(28, 27, 26, 0.12);
-}
-
-.campaign-card.in-progress {
-  border-color: var(--foreground);
-}
-
-.campaign-card.upcoming {
-  border-color: var(--border-strong);
-}
-
-.campaign-card.finished {
-  border-color: rgba(76, 175, 80, 0.45);
-  background: linear-gradient(135deg, rgba(76, 175, 80, 0.08), var(--panel-strong));
-}
-
-.campaign-card-main {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-
-.campaign-card-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.campaign-card-thumb {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  object-fit: cover;
-  border: 1px solid var(--border);
-  background: var(--panel);
-  flex: 0 0 auto;
-}
-
-.campaign-card-body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.campaign-card-heading {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.campaign-card-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--foreground);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.campaign-card-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.campaign-card-toggle {
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.campaign-card-action {
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.campaign-card-drops {
-  padding-top: 4px;
-}
-
-.campaign-card-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-bottom: 8px;
-}
-
-.campaign-drop-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: 8px;
-}
-
-.campaign-drop {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 8px 10px;
-  background: var(--panel);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.campaign-drop-main {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.campaign-drop-thumb {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  object-fit: cover;
-  border: 1px solid var(--border);
-  background: var(--panel-strong);
-  flex: 0 0 auto;
-}
-
-.campaign-drop-body {
-  min-width: 0;
-  display: grid;
-  gap: 4px;
-}
-
-.campaign-drop-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--foreground);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.campaign-drop-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  flex: 0 0 auto;
-}
-
-.campaign-drop-reason {
-  font-size: 12px;
-  color: var(--danger-chip-text);
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .inv-card {
