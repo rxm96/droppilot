@@ -16,7 +16,7 @@ export const buttonVariants = cva(
 
         // === Design-overhaul variants (Pro Console palette) ===
         "dp-primary":
-          "bg-[var(--dp-accent)] text-[#0a0b0d] font-semibold hover:bg-[#b89bff] rounded-[var(--dp-radius-sm)] font-mono tracking-[0.02em]",
+          "bg-[var(--dp-accent)] text-[#0a0b0d] font-semibold hover:bg-[var(--dp-accent-hover)] rounded-[var(--dp-radius-sm)] font-mono tracking-[0.02em]",
         "dp-secondary":
           "bg-[var(--dp-bg-elevated)] text-[var(--dp-text)] border border-[var(--dp-border)] hover:bg-[var(--dp-bg-elevated-2)] hover:border-[var(--dp-accent-soft)] rounded-[var(--dp-radius-sm)] font-mono tracking-[0.02em]",
         "dp-outline":
