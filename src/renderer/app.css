@@ -985,7 +985,7 @@ body {
   flex-wrap: wrap;
 }
 
-button {
+:where(button) {
   border: 1px solid var(--foreground);
   background: var(--foreground);
   color: var(--background);
@@ -1002,27 +1002,27 @@ button {
     color 0.15s ease;
 }
 
-button:hover {
+:where(button):hover {
   opacity: 0.9;
 }
 
-button:active {
+:where(button):active {
   transform: translateY(1px);
 }
 
-button.ghost {
+:where(button.ghost) {
   background: transparent;
   border: 1px solid var(--border-strong);
   color: var(--foreground);
   box-shadow: none;
 }
 
-button.ghost:hover {
+:where(button.ghost):hover {
   border-color: var(--border-strong);
   background: var(--muted);
 }
 
-button.ghost.subtle-btn {
+:where(button.ghost.subtle-btn) {
   border-color: var(--border);
   color: var(--muted-foreground);
   background: transparent;
@@ -1035,24 +1035,24 @@ button.ghost.subtle-btn {
     background 0.15s ease;
 }
 
-button.ghost.subtle-btn:hover {
+:where(button.ghost.subtle-btn):hover {
   border-color: var(--border-strong);
   color: var(--foreground);
   background: var(--muted);
   transform: none;
 }
 
-button.ghost.subtle-btn:active {
+:where(button.ghost.subtle-btn):active {
   transform: none;
 }
 
-button.ghost.danger {
+:where(button.ghost.danger) {
   border-color: var(--destructive);
   color: var(--destructive);
   background: transparent;
 }
 
-button.ghost.danger:hover {
+:where(button.ghost.danger):hover {
   background: var(--destructive);
   color: var(--destructive-foreground);
 }
