@@ -41,13 +41,9 @@ type WatchEngineSnapshot = {
 type ControlProps = {
   targetGame: string;
   targetDrops: InventoryItem[];
-  targetProgress: number;
-  totalDrops: number;
-  claimedDrops: number;
   inventoryRefreshing: boolean;
   inventoryFetchedAt: number | null;
   fetchInventory: () => void;
-  refreshPriorityPlan: () => void;
   watching: WatchingState;
   lastWatchedChannelIdentity: { id: string; login: string } | null;
   stopWatching: () => void;
@@ -70,7 +66,6 @@ type ControlProps = {
     campaignId?: string;
   } | null;
   claimStatus: ClaimStatus | null;
-  canWatchTarget: boolean;
   showNoDropsHint: boolean;
   lastWatchOk?: number;
   watchError?: ErrorInfo | null;
