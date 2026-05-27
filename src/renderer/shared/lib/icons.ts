@@ -38,6 +38,7 @@ export {
   ExternalLink,
   Search,
   Filter,
+  Plus,
 
   // Domain
   User,
