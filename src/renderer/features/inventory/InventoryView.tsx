@@ -160,13 +160,16 @@ export function InventoryView({
     resetPage();
   }, [filter, gameFilter, resetPage]);
 
-  // Unlinked count for header banner
+  // Unlinked count for header banner — mirrors shouldDisplayDropEntry's
+  // "not-linked" logic: a drop is unlinked if its campaign is unlinked OR
+  // the drop has the account_not_linked blocking-reason hint.
   const unlinkedCount = React.useMemo(() => {
+    if (allowUnlinkedGames) return 0;
     return filteredItems.filter((item) => {
       const campaign = campaignLookup.byId(item.campaignId);
-      if (!campaign) return false;
-      if (!campaignLookup.isUnlinked(campaign)) return false;
-      return !allowUnlinkedGames;
+      const campaignUnlinked = campaign ? campaignLookup.isUnlinked(campaign) : false;
+      const hintUnlinked = (item.blockingReasonHints ?? []).includes("account_not_linked");
+      return campaignUnlinked || hintUnlinked;
     }).length;
   }, [filteredItems, campaignLookup, allowUnlinkedGames]);
 
