@@ -45,7 +45,12 @@ export function PriorityHeader({
         style={{ gridTemplateColumns: "1fr 1fr 1fr" }}
       >
         <div className="pr-4">
-          <Stat label="current target" value={currentTargetValue} sub={currentTargetSub} accent={!!activeTargetGame} />
+          <Stat
+            label="current target"
+            value={currentTargetValue}
+            sub={currentTargetSub}
+            accent={!!activeTargetGame}
+          />
         </div>
         <div className="px-4 border-l border-[color:var(--dp-border-soft)]">
           <Stat label="queue live" value={queueHealthValue} sub="live / total" />

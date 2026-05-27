@@ -173,10 +173,7 @@ export function InventoryView({
     }).length;
   }, [filteredItems, campaignLookup, allowUnlinkedGames]);
 
-  const handleDrawerClose = React.useCallback(
-    () => state.selectDrop(null),
-    [state.selectDrop],
-  );
+  const handleDrawerClose = React.useCallback(() => state.selectDrop(null), [state.selectDrop]);
 
   // Selected drop + its campaign (for drawer)
   const selectedDrop = React.useMemo(

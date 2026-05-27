@@ -2,10 +2,8 @@
  * Helpers for the Priorities view. Pure functions, no React.
  */
 
-export const getSelectableDropGames = (
-  uniqueGames: string[],
-  priorityGames: string[],
-): string[] => uniqueGames.filter((game) => !priorityGames.includes(game));
+export const getSelectableDropGames = (uniqueGames: string[], priorityGames: string[]): string[] =>
+  uniqueGames.filter((game) => !priorityGames.includes(game));
 
 export type PriorityRowState = "watching" | "target" | "live" | "idle";
 

@@ -104,12 +104,7 @@ export function PriorityAddPanel({
             className="flex-1"
             aria-label="Add game manually"
           />
-          <Button
-            variant="dp-primary"
-            size="dp-md"
-            onClick={addGame}
-            disabled={!newGame.trim()}
-          >
+          <Button variant="dp-primary" size="dp-md" onClick={addGame} disabled={!newGame.trim()}>
             <Plus size={11} strokeWidth={2} /> add
           </Button>
         </div>
