@@ -120,7 +120,7 @@ function SortHeader({
       type="button"
       onClick={() => onToggleSort(col.key!)}
       className={cn(
-        "inline-flex items-center gap-1 -ml-1 px-1 py-0.5 rounded-[var(--dp-radius-xs)] transition-colors",
+        "inline-flex items-center gap-1 transition-colors cursor-pointer",
         "font-mono text-[9px] uppercase tracking-[0.12em]",
         isActive
           ? "text-[color:var(--dp-accent)]"
