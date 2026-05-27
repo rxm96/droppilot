@@ -7,10 +7,25 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
+        // === Legacy ===
         default: "border-transparent bg-secondary text-secondary-foreground",
         outline: "border-border bg-transparent text-foreground",
         muted: "border-border bg-muted text-muted-foreground",
         destructive: "border-destructive/30 bg-destructive/10 text-destructive",
+
+        // === Design overhaul ===
+        "dp-accent":
+          "rounded-[var(--dp-radius-xs)] border-[color:var(--dp-accent-soft)] bg-[color:var(--dp-accent-soft)] text-[color:var(--dp-accent)] font-mono uppercase tracking-[0.08em] text-[10px] px-1.5 py-0.5",
+        "dp-ok":
+          "rounded-[var(--dp-radius-xs)] border-[rgba(74,222,128,0.18)] bg-[rgba(74,222,128,0.10)] text-[color:var(--dp-signal-ok)] font-mono uppercase tracking-[0.08em] text-[10px] px-1.5 py-0.5",
+        "dp-warn":
+          "rounded-[var(--dp-radius-xs)] border-[rgba(251,191,36,0.20)] bg-[rgba(251,191,36,0.10)] text-[color:var(--dp-signal-warn)] font-mono uppercase tracking-[0.08em] text-[10px] px-1.5 py-0.5",
+        "dp-err":
+          "rounded-[var(--dp-radius-xs)] border-[rgba(248,113,113,0.20)] bg-[rgba(248,113,113,0.10)] text-[color:var(--dp-signal-err)] font-mono uppercase tracking-[0.08em] text-[10px] px-1.5 py-0.5",
+        "dp-info":
+          "rounded-[var(--dp-radius-xs)] border-[rgba(96,165,250,0.20)] bg-[rgba(96,165,250,0.10)] text-[color:var(--dp-signal-info)] font-mono uppercase tracking-[0.08em] text-[10px] px-1.5 py-0.5",
+        "dp-dim":
+          "rounded-[var(--dp-radius-xs)] border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated-2)] text-[color:var(--dp-text-dim)] font-mono uppercase tracking-[0.08em] text-[10px] px-1.5 py-0.5",
       },
     },
     defaultVariants: {
