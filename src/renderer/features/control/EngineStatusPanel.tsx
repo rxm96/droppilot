@@ -1,6 +1,5 @@
 import * as React from "react";
 import { SectionLabel } from "@renderer/shared/components/ui/section-label";
-import { Pill } from "@renderer/shared/components/ui/pill";
 import { ChevronDown } from "@renderer/shared/lib/icons";
 import { cn } from "@renderer/shared/lib/utils";
 import { useI18n } from "@renderer/shared/i18n";
@@ -36,13 +35,6 @@ const TONE_DOT: Record<ReturnType<typeof watchEngineTone>, string> = {
   warn: "var(--dp-signal-warn)",
   hold: "var(--dp-signal-warn)",
   neutral: "var(--dp-text-dimmer)",
-};
-
-const TONE_PILL: Record<ReturnType<typeof watchEngineTone>, "ok" | "warn" | "dim"> = {
-  ok: "ok",
-  warn: "warn",
-  hold: "warn",
-  neutral: "dim",
 };
 
 export function EngineStatusPanel(props: EngineStatusPanelProps) {
@@ -149,11 +141,7 @@ export function EngineStatusPanel(props: EngineStatusPanelProps) {
           <DetailRow label="target" value={targetText} />
           <DetailRow label="suppression" value={suppressionText} />
           <DetailRow label="cooldowns" value={cooldownText} />
-          <DetailRow
-            label="allowlist"
-            value={allowlistText}
-            sub={channelsText}
-          />
+          <DetailRow label="allowlist" value={allowlistText} sub={channelsText} />
           {noProgressText && <DetailRow label="no-progress" value={noProgressText} tone="warn" />}
         </div>
       )}

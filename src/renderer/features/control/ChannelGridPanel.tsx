@@ -113,7 +113,9 @@ export function ChannelGridPanel({
                     className={cn(
                       "block w-full text-left rounded-[var(--dp-radius-md)] border bg-[color:var(--dp-bg-elevated-2)] overflow-hidden transition-all",
                       "border-[color:var(--dp-border)]",
-                      !isWatching && !isExiting && "hover:border-[color:var(--dp-accent-soft)] hover:bg-[color:var(--dp-bg-elevated)]",
+                      !isWatching &&
+                        !isExiting &&
+                        "hover:border-[color:var(--dp-accent-soft)] hover:bg-[color:var(--dp-bg-elevated)]",
                       isWatching &&
                         "border-[color:var(--dp-accent)] bg-[color:var(--dp-accent-soft)] cursor-default",
                       isExiting && "opacity-30 pointer-events-none",

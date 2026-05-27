@@ -134,7 +134,13 @@ export function HeroPanel({
             size="dp-md"
             onClick={onPause}
             disabled={!onPause || !isLive}
-            title={!onPause ? "Phase 5 will wire this" : !isLive ? "Engine is not running" : "Pause the watch engine"}
+            title={
+              !onPause
+                ? "Phase 5 will wire this"
+                : !isLive
+                  ? "Engine is not running"
+                  : "Pause the watch engine"
+            }
           >
             <Pause size={11} strokeWidth={1.8} /> pause
           </Button>
@@ -143,7 +149,9 @@ export function HeroPanel({
             size="dp-md"
             onClick={onSwitchTarget}
             disabled={!onSwitchTarget}
-            title={onSwitchTarget ? "Open Priorities view to switch target" : "Phase 5 will wire this"}
+            title={
+              onSwitchTarget ? "Open Priorities view to switch target" : "Phase 5 will wire this"
+            }
           >
             <RotateCw size={11} strokeWidth={1.8} /> switch target
           </Button>

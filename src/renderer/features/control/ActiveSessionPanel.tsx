@@ -121,8 +121,7 @@ export function ActiveSessionPanel({
                   className="h-full"
                   style={{
                     width: `${Math.max(0, Math.min(100, progressPct))}%`,
-                    background:
-                      "linear-gradient(90deg, var(--dp-accent), #c4b5fd)",
+                    background: "linear-gradient(90deg, var(--dp-accent), #c4b5fd)",
                     boxShadow: "0 0 8px var(--dp-accent-glow)",
                   }}
                 />
@@ -133,9 +132,7 @@ export function ActiveSessionPanel({
             </div>
             <div className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
               {formatHourMinute(activeDropEarnedMinutes)} watched ·{" "}
-              {activeDropRequiredMinutes > 0
-                ? formatHourMinute(activeDropRequiredMinutes)
-                : "—"}{" "}
+              {activeDropRequiredMinutes > 0 ? formatHourMinute(activeDropRequiredMinutes) : "—"}{" "}
               required
               {activeEtaText && ` · eta ${activeEtaText}`}
             </div>

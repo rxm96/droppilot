@@ -19,10 +19,7 @@ import { EngineStatusPanel } from "./EngineStatusPanel";
 import { ActiveSessionPanel } from "./ActiveSessionPanel";
 import { ChannelGridPanel } from "./ChannelGridPanel";
 import { CampaignsPanel, type CampaignGroup } from "./CampaignsPanel";
-import type {
-  WatchEngineDecision,
-  WatchEngineSuppressionReason,
-} from "./controlHelpers";
+import type { WatchEngineDecision, WatchEngineSuppressionReason } from "./controlHelpers";
 
 type WatchEngineSnapshot = {
   decision: WatchEngineDecision;
@@ -127,8 +124,7 @@ export function ControlView(props: ControlProps) {
     claimStatus?.kind === "error"
       ? resolveErrorMessage(t, { code: claimStatus.code, message: claimStatus.message })
       : null;
-  const claimSuccessText =
-    claimStatus?.kind === "success" ? (claimStatus.message ?? null) : null;
+  const claimSuccessText = claimStatus?.kind === "success" ? (claimStatus.message ?? null) : null;
 
   const isWatching = !!watching;
   const handleToggleWatch = React.useCallback(() => {
@@ -138,7 +134,11 @@ export function ControlView(props: ControlProps) {
       startWatching(state.resumeChannel);
     }
   }, [isWatching, state.resumeChannel, startWatching, stopWatching]);
-  const toggleLabel = isWatching ? t("control.stop") : state.resumeChannel ? t("control.resume") : null;
+  const toggleLabel = isWatching
+    ? t("control.stop")
+    : state.resumeChannel
+      ? t("control.resume")
+      : null;
 
   // Adapt useControlViewState's campaignGroups (key/title/items/active) to CampaignsPanel shape (id/name/drops/hasActiveDrop).
   // The hook's local CampaignGroup uses: key (not id), title (not name), items[] (not drops[]), active (not hasActiveDrop).

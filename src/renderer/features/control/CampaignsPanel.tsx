@@ -3,10 +3,7 @@ import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { Pill } from "@renderer/shared/components/ui/pill";
 import { cn } from "@renderer/shared/lib/utils";
 import { useI18n } from "@renderer/shared/i18n";
-import {
-  formatBlockingReason,
-  pickDisplayBlockingReason,
-} from "./controlHelpers";
+import { formatBlockingReason, pickDisplayBlockingReason } from "./controlHelpers";
 import { formatHourMinute, formatPercent } from "@renderer/features/overview/formatters";
 
 export type CampaignGroupDrop = {
@@ -126,9 +123,7 @@ export function CampaignsPanel({
               style={{ gridTemplateColumns: "1fr 160px 100px" }}
             >
               <div className="min-w-0">
-                <div className="truncate text-[13px] text-[color:var(--dp-text)]">
-                  {drop.title}
-                </div>
+                <div className="truncate text-[13px] text-[color:var(--dp-text)]">{drop.title}</div>
                 {blockingLabel && (
                   <div className="font-mono text-[10px] text-[color:var(--dp-signal-warn)] truncate mt-0.5">
                     {blockingLabel}
@@ -163,9 +158,12 @@ export function CampaignsPanel({
 
       <div className="px-5 py-3 border-t border-[color:var(--dp-border-soft)] flex items-center justify-between font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
         <span>
-          {formatHourMinute(activeGroup.totalEarned)} / {formatHourMinute(activeGroup.totalRequired)} total
+          {formatHourMinute(activeGroup.totalEarned)} /{" "}
+          {formatHourMinute(activeGroup.totalRequired)} total
         </span>
-        <span>{activeGroup.drops.length} drop{activeGroup.drops.length === 1 ? "" : "s"}</span>
+        <span>
+          {activeGroup.drops.length} drop{activeGroup.drops.length === 1 ? "" : "s"}
+        </span>
       </div>
     </div>
   );
