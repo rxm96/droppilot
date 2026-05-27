@@ -50,6 +50,7 @@
   --color-dp-text-dimmer: var(--dp-text-dimmer);
   --color-dp-accent: var(--dp-accent);
   --color-dp-accent-soft: var(--dp-accent-soft);
+  --color-dp-accent-glow: var(--dp-accent-glow);
   --color-dp-signal-ok: var(--dp-signal-ok);
   --color-dp-signal-warn: var(--dp-signal-warn);
   --color-dp-signal-err: var(--dp-signal-err);
