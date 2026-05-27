@@ -63,7 +63,7 @@ export function PriorityList({
   }
 
   return (
-    <div className="rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] overflow-hidden">
+    <div className="rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)]">
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={priorityGames} strategy={verticalListSortingStrategy}>
           <ul className="list-none p-0 m-0">
