@@ -170,6 +170,11 @@ export function InventoryView({
     }).length;
   }, [filteredItems, campaignLookup, allowUnlinkedGames]);
 
+  const handleDrawerClose = React.useCallback(
+    () => state.selectDrop(null),
+    [state.selectDrop],
+  );
+
   // Selected drop + its campaign (for drawer)
   const selectedDrop = React.useMemo(
     () =>
@@ -258,7 +263,7 @@ export function InventoryView({
         drop={selectedDrop}
         campaign={selectedCampaign}
         isPriorityGame={selectedIsPriority}
-        onClose={() => state.selectDrop(null)}
+        onClose={handleDrawerClose}
         onOpenAccountLink={onOpenAccountLink}
         onAddPriorityGame={onAddPriorityGame}
       />
