@@ -40,6 +40,7 @@ const TONE_DOT: Record<ReturnType<typeof watchEngineTone>, string> = {
 export function EngineStatusPanel(props: EngineStatusPanelProps) {
   const { t } = useI18n();
   const [expanded, setExpanded] = React.useState(false);
+  const detailsId = React.useId();
   const tone = watchEngineTone(props.decision);
   const suppressionReason = props.suppression?.reason ?? null;
   const label = mapWatchEngineDecisionLabel(props.decision, suppressionReason, t);
@@ -90,6 +91,7 @@ export function EngineStatusPanel(props: EngineStatusPanelProps) {
         type="button"
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
+        aria-controls={detailsId}
         className="flex w-full items-center justify-between px-5 py-4 hover:bg-[color:var(--dp-bg-elevated-2)] transition-colors"
       >
         <div className="flex items-center gap-3 min-w-0">
@@ -137,7 +139,7 @@ export function EngineStatusPanel(props: EngineStatusPanelProps) {
       </div>
 
       {expanded && (
-        <div className="border-t border-[color:var(--dp-border-soft)] px-5 py-4 grid gap-2">
+        <div id={detailsId} className="border-t border-[color:var(--dp-border-soft)] px-5 py-4 grid gap-2">
           <DetailRow label="target" value={targetText} />
           <DetailRow label="suppression" value={suppressionText} />
           <DetailRow label="cooldowns" value={cooldownText} />
