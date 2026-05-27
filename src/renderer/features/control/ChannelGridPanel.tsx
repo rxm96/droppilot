@@ -149,7 +149,7 @@ export function ChannelGridPanel({
                       <div className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)] uppercase tracking-[0.08em] truncate">
                         {channel.game}
                       </div>
-                      <div className="text-[13px] font-medium text-[color:var(--dp-text)] truncate mt-0.5">
+                      <div className="text-[13px] font-medium text-[color:var(--dp-text-dim)] truncate mt-0.5">
                         {channel.displayName}
                       </div>
                       {channel.title && (
