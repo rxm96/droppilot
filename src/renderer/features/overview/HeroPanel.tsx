@@ -16,6 +16,10 @@ export type HeroPanelProps = {
   totalDrops: number;
   claimedDrops: number;
   isLive: boolean;
+  /** Pause the watch engine (Phase 5 wiring). When null/undefined, pause button stays disabled. */
+  onPause?: () => void;
+  /** Navigate to Priorities (Phase 5 wiring). When null/undefined, switch button stays disabled. */
+  onSwitchTarget?: () => void;
 };
 
 export function HeroPanel({
@@ -29,6 +33,8 @@ export function HeroPanel({
   totalDrops,
   claimedDrops,
   isLive,
+  onPause,
+  onSwitchTarget,
 }: HeroPanelProps) {
   const [now, setNow] = React.useState<number>(() => Date.now());
   React.useEffect(() => {
@@ -123,10 +129,22 @@ export function HeroPanel({
           >
             <Check size={11} strokeWidth={2.2} /> claim now
           </Button>
-          <Button variant="dp-secondary" size="dp-md" disabled title="Phase 4 will wire this">
+          <Button
+            variant="dp-secondary"
+            size="dp-md"
+            onClick={onPause}
+            disabled={!onPause || !isLive}
+            title={!onPause ? "Phase 5 will wire this" : !isLive ? "Engine is not running" : "Pause the watch engine"}
+          >
             <Pause size={11} strokeWidth={1.8} /> pause
           </Button>
-          <Button variant="dp-outline" size="dp-md" disabled title="Phase 4 will wire this">
+          <Button
+            variant="dp-outline"
+            size="dp-md"
+            onClick={onSwitchTarget}
+            disabled={!onSwitchTarget}
+            title={onSwitchTarget ? "Open Priorities view to switch target" : "Phase 5 will wire this"}
+          >
             <RotateCw size={11} strokeWidth={1.8} /> switch target
           </Button>
         </div>

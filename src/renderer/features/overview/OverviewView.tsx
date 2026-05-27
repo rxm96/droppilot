@@ -42,6 +42,8 @@ type OverviewProps = {
   inventoryFetchedAt?: number | null;
   trackerStatus?: ChannelTrackerStatus | null;
   watchError?: ErrorInfo | null;
+  onPause?: () => void;
+  onSwitchTarget?: () => void;
 };
 
 export function OverviewView({
@@ -59,6 +61,8 @@ export function OverviewView({
   lastWatchOk,
   trackerStatus,
   watchError,
+  onPause,
+  onSwitchTarget,
 }: OverviewProps) {
   const items =
     inventory.status === "ready"
@@ -90,6 +94,8 @@ export function OverviewView({
           totalDrops={totalDrops}
           claimedDrops={claimedDrops}
           isLive={isLive}
+          onPause={onPause}
+          onSwitchTarget={onSwitchTarget}
         />
         <QueuePanel items={items} />
       </div>

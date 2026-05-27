@@ -142,6 +142,15 @@ function AppShell({ model }: { model: Model }) {
         ? "warn"
         : "dim";
 
+  const overviewPropsExtended = React.useMemo(
+    () => ({
+      ...overviewProps,
+      onPause: controlProps.stopWatching,
+      onSwitchTarget: () => navProps.setView("priorities"),
+    }),
+    [overviewProps, controlProps.stopWatching, navProps],
+  );
+
   return (
     <div
       className="min-h-screen flex flex-col"
@@ -167,7 +176,7 @@ function AppShell({ model }: { model: Model }) {
       <div className="flex-1">
         <AppContent
           navProps={navProps}
-          overviewProps={overviewProps}
+          overviewProps={overviewPropsExtended}
           inventoryProps={inventoryProps}
           priorityProps={priorityProps}
           settingsProps={settingsProps}
