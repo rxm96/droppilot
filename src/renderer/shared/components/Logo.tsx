@@ -38,7 +38,7 @@ export const Logo = React.forwardRef<SVGSVGElement, LogoProps>(
         width="15"
         height="15"
         rx="3"
-        stroke="rgba(167,139,250,0.35)"
+        stroke="color-mix(in srgb, var(--dp-accent) 35%, transparent)"
         strokeWidth="1"
       />
       <path
