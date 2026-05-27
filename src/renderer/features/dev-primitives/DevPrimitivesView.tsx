@@ -23,7 +23,6 @@ import {
   RotateCw,
   AlertTriangle,
   Pause,
-  ArrowRight,
 } from "@renderer/shared/lib/icons";
 
 export function DevPrimitivesView() {
