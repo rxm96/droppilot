@@ -50,6 +50,12 @@ function AppShell({ model }: { model: Model }) {
     updateOverlayProps,
   } = model;
 
+  const [now, setNow] = React.useState<number>(() => Date.now());
+  React.useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 5000);
+    return () => window.clearInterval(id);
+  }, []);
+
   const {
     theme: titleBarTheme,
     setTheme: titleBarSetTheme,
@@ -176,7 +182,7 @@ function AppShell({ model }: { model: Model }) {
           {
             label: `drops · ${overviewProps.claimedDrops}/${overviewProps.totalDrops}`,
           },
-          { label: `last sync · ${formatRelative(overviewProps.lastWatchOk)}` },
+          { label: `last sync · ${formatRelative(overviewProps.lastWatchOk, now)}` },
         ]}
         right={[
           { label: `v${titleBarVersion ?? "—"}` },
