@@ -27,8 +27,9 @@ export function AttentionStrip({
     );
   }
   if (watchError) {
+    const tooltip = watchError.message ?? watchError.code ?? "watch error";
     pills.push(
-      <Pill key="watch-err" tone="err" dot title={watchError.message}>
+      <Pill key="watch-err" tone="err" dot title={tooltip}>
         watch error
       </Pill>,
     );
