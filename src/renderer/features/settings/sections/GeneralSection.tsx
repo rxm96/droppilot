@@ -4,6 +4,7 @@ import { Button } from "@renderer/shared/components/ui/button";
 import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { SettingRow } from "../SettingRow";
 import { SettingsToggle } from "../SettingsToggle";
+import { useI18n } from "@renderer/shared/i18n";
 
 export type GeneralSectionProps = {
   language: "de" | "en";
@@ -14,15 +15,16 @@ export type GeneralSectionProps = {
 };
 
 export function GeneralSection(props: GeneralSectionProps) {
+  const { t } = useI18n();
   return (
     <div className="flex flex-col">
-      <SectionLabel>language &amp; mode</SectionLabel>
+      <SectionLabel>{t("settings.subsection.languageMode")}</SectionLabel>
       <SettingRow
-        label="Language"
-        description="Interface language for labels, alerts, and onboarding text."
+        label={t("settings.language")}
+        description={t("settings.row.language.description")}
         control={
           <Select value={props.language} onValueChange={(v) => props.setLanguage(v as "de" | "en")}>
-            <SelectTrigger tone="dp" aria-label="Language">
+            <SelectTrigger tone="dp" aria-label={t("settings.aria.language")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -36,19 +38,19 @@ export function GeneralSection(props: GeneralSectionProps) {
       />
       <SettingRow
         divided
-        label="Demo mode"
-        description="Use synthetic data so you can preview the UI without a Twitch login."
+        label={t("settings.demoMode")}
+        description={t("settings.row.demoMode.description")}
         control={<SettingsToggle checked={props.demoMode} onChange={props.setDemoMode} />}
       />
 
       <div className="mt-6">
-        <SectionLabel>diagnostics</SectionLabel>
+        <SectionLabel>{t("settings.subsection.diagnostics")}</SectionLabel>
         <SettingRow
-          label="Send test alert"
-          description="Triggers a desktop notification to verify alerts work on this OS."
+          label={t("settings.row.sendTestAlert.label")}
+          description={t("settings.row.sendTestAlert.description")}
           control={
             <Button variant="dp-secondary" size="dp-md" onClick={props.sendTestAlert}>
-              send test
+              {t("settings.button.sendTest")}
             </Button>
           }
         />

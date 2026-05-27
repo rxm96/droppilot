@@ -3,6 +3,7 @@ import { Input } from "@renderer/shared/components/ui/input";
 import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { SettingRow } from "../SettingRow";
 import { SettingsToggle } from "../SettingsToggle";
+import { useI18n } from "@renderer/shared/i18n";
 
 export type AlertsSectionProps = {
   alertsEnabled: boolean;
@@ -24,13 +25,14 @@ export type AlertsSectionProps = {
 };
 
 export function AlertsSection(props: AlertsSectionProps) {
+  const { t } = useI18n();
   const disabledByMaster = !props.alertsEnabled;
   return (
     <div className="flex flex-col">
-      <SectionLabel>master switch</SectionLabel>
+      <SectionLabel>{t("settings.subsection.masterSwitch")}</SectionLabel>
       <SettingRow
-        label="Desktop alerts"
-        description="Master toggle. When off, no notifications are sent regardless of the per-event settings below."
+        label={t("settings.row.alertsEnabled.label")}
+        description={t("settings.row.alertsEnabled.description")}
         control={
           <SettingsToggle checked={props.alertsEnabled} onChange={props.setAlertsEnabled} />
         }
@@ -38,8 +40,8 @@ export function AlertsSection(props: AlertsSectionProps) {
       <SettingRow
         divided
         disabled={disabledByMaster}
-        label="Notify while the app is focused"
-        description="Show notifications even when Droppilot is the active window."
+        label={t("settings.row.alertsNotifyWhileFocused.label")}
+        description={t("settings.row.alertsNotifyWhileFocused.description")}
         control={
           <SettingsToggle
             checked={props.alertsNotifyWhileFocused}
@@ -50,11 +52,11 @@ export function AlertsSection(props: AlertsSectionProps) {
       />
 
       <div className="mt-6">
-        <SectionLabel>drops</SectionLabel>
+        <SectionLabel>{t("settings.subsection.drops")}</SectionLabel>
         <SettingRow
           disabled={disabledByMaster}
-          label="Drop claimed"
-          description="A drop you were watching for has been claimed."
+          label={t("settings.row.alertsDropClaimed.label")}
+          description={t("settings.row.alertsDropClaimed.description")}
           control={
             <SettingsToggle
               checked={props.alertsDropClaimed}
@@ -66,8 +68,8 @@ export function AlertsSection(props: AlertsSectionProps) {
         <SettingRow
           divided
           disabled={disabledByMaster}
-          label="Drop ending soon"
-          description="A drop is close to expiring. Warn you N minutes before."
+          label={t("settings.row.alertsDropEndingSoon.label")}
+          description={t("settings.row.alertsDropEndingSoon.description")}
           control={
             <SettingsToggle
               checked={props.alertsDropEndingSoon}
@@ -79,8 +81,8 @@ export function AlertsSection(props: AlertsSectionProps) {
         <SettingRow
           divided
           disabled={disabledByMaster || !props.alertsDropEndingSoon}
-          label="Ending-soon threshold"
-          description="How many minutes before expiry the warning fires."
+          label={t("settings.row.alertsDropEndingMinutes.label")}
+          description={t("settings.row.alertsDropEndingMinutes.description")}
           control={
             <div className="flex items-center gap-2">
               <Input
@@ -92,18 +94,18 @@ export function AlertsSection(props: AlertsSectionProps) {
                   props.setAlertsDropEndingMinutes(Math.max(1, Number(e.target.value) || 1))
                 }
                 disabled={disabledByMaster || !props.alertsDropEndingSoon}
-                aria-label="Ending-soon minutes"
+                aria-label={t("settings.aria.endingSoonMinutes")}
                 className="w-24"
               />
-              <span className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">min</span>
+              <span className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">{t("settings.unit.min")}</span>
             </div>
           }
         />
         <SettingRow
           divided
           disabled={disabledByMaster}
-          label="New drops available"
-          description="A new campaign or drop just dropped (pun intended)."
+          label={t("settings.row.alertsNewDrops.label")}
+          description={t("settings.row.alertsNewDrops.description")}
           control={
             <SettingsToggle
               checked={props.alertsNewDrops}
@@ -115,11 +117,11 @@ export function AlertsSection(props: AlertsSectionProps) {
       </div>
 
       <div className="mt-6">
-        <SectionLabel>engine</SectionLabel>
+        <SectionLabel>{t("settings.subsection.engine")}</SectionLabel>
         <SettingRow
           disabled={disabledByMaster}
-          label="Watch errors"
-          description="Watcher failed (auth expired, network issue, etc.)."
+          label={t("settings.row.alertsWatchError.label")}
+          description={t("settings.row.alertsWatchError.description")}
           control={
             <SettingsToggle
               checked={props.alertsWatchError}
@@ -131,8 +133,8 @@ export function AlertsSection(props: AlertsSectionProps) {
         <SettingRow
           divided
           disabled={disabledByMaster}
-          label="Auto-switch happened"
-          description="The watch engine moved to a different channel automatically."
+          label={t("settings.row.alertsAutoSwitch.label")}
+          description={t("settings.row.alertsAutoSwitch.description")}
           control={
             <SettingsToggle
               checked={props.alertsAutoSwitch}

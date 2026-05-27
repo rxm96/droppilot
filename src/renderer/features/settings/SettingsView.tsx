@@ -10,6 +10,7 @@ import { UpdatesSection } from "./sections/UpdatesSection";
 import { AlertsSection } from "./sections/AlertsSection";
 import { AccountSection } from "./sections/AccountSection";
 import { AdvancedSection } from "./sections/AdvancedSection";
+import { useI18n } from "@renderer/shared/i18n";
 
 type SettingsProps = {
   isLinked: boolean;
@@ -89,33 +90,34 @@ type SettingsProps = {
 };
 
 export function SettingsView(props: SettingsProps) {
+  const { t } = useI18n();
   const { active, setActive } = useSettingsViewState("general");
 
   const items: { key: SettingsSectionKey; label: string }[] = [
-    { key: "general", label: "general" },
-    { key: "engine", label: "engine" },
-    { key: "appearance", label: "appearance" },
-    ...(props.showUpdateCheck ? [{ key: "updates" as SettingsSectionKey, label: "updates" }] : []),
-    { key: "alerts", label: "alerts" },
-    { key: "account", label: "account" },
-    { key: "advanced", label: "advanced" },
+    { key: "general", label: t("settings.section.general.sidebar") },
+    { key: "engine", label: t("settings.section.engine.sidebar") },
+    { key: "appearance", label: t("settings.section.appearance.sidebar") },
+    ...(props.showUpdateCheck ? [{ key: "updates" as SettingsSectionKey, label: t("settings.section.updates.sidebar") }] : []),
+    { key: "alerts", label: t("settings.section.alerts.sidebar") },
+    { key: "account", label: t("settings.section.account.sidebar") },
+    { key: "advanced", label: t("settings.section.advanced.sidebar") },
   ];
 
   const sectionTitle: Record<SettingsSectionKey, string> = {
-    general: "General",
-    engine: "Engine",
-    appearance: "Appearance",
-    updates: "Updates",
-    alerts: "Alerts",
-    account: "Account",
-    advanced: "Advanced",
+    general: t("settings.section.general"),
+    engine: t("settings.section.engine"),
+    appearance: t("settings.section.appearance"),
+    updates: t("settings.section.updates"),
+    alerts: t("settings.section.alerts"),
+    account: t("settings.section.account"),
+    advanced: t("settings.section.advanced"),
   };
 
   return (
     <div className="flex flex-col gap-5">
       <div>
         <h2 className="text-[22px] font-medium tracking-[-0.01em] text-[color:var(--dp-text)] leading-tight">
-          Settings
+          {t("settings.pageTitle")}
         </h2>
         <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[color:var(--dp-text-dimmer)] mt-1">
           {sectionTitle[active]}

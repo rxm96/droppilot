@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { SettingRow } from "../SettingRow";
 import type { UpdateChannel } from "../../../../shared/updateChannels";
+import { useI18n } from "@renderer/shared/i18n";
 
 export type UpdatesSectionProps = {
   updateChannel: UpdateChannel;
@@ -29,53 +30,54 @@ export type UpdatesSectionProps = {
 };
 
 export function UpdatesSection(props: UpdatesSectionProps) {
+  const { t } = useI18n();
   const state = props.updateStatus?.state ?? "idle";
   const version = props.updateStatus?.version;
   const progress = props.updateStatus?.progress;
   const statusPill = (() => {
     switch (state) {
       case "available":
-        return <Pill tone="accent" dot>update available{version ? ` · v${version}` : ""}</Pill>;
+        return <Pill tone="accent" dot>{t("settings.status.available")}{version ? ` · v${version}` : ""}</Pill>;
       case "downloading":
         return (
           <Pill tone="info" dot>
-            downloading{typeof progress === "number" ? ` · ${Math.round(progress)}%` : ""}
+            {t("settings.status.downloading")}{typeof progress === "number" ? ` · ${Math.round(progress)}%` : ""}
           </Pill>
         );
       case "downloaded":
-        return <Pill tone="ok" dot>downloaded{version ? ` · v${version}` : ""}</Pill>;
+        return <Pill tone="ok" dot>{t("settings.status.downloaded")}{version ? ` · v${version}` : ""}</Pill>;
       case "error":
         return (
           <Pill tone="err" dot title={props.updateStatus?.message}>
-            update error
+            {t("settings.status.error")}
           </Pill>
         );
       case "checking":
-        return <Pill tone="info" dot>checking…</Pill>;
+        return <Pill tone="info" dot>{t("settings.status.checking")}</Pill>;
       case "none":
-        return <Pill tone="dim">up to date</Pill>;
+        return <Pill tone="dim">{t("settings.status.upToDate")}</Pill>;
       case "unsupported":
-        return <Pill tone="dim">updates unsupported</Pill>;
+        return <Pill tone="dim">{t("settings.status.unsupported")}</Pill>;
       default:
-        return <Pill tone="dim">idle</Pill>;
+        return <Pill tone="dim">{t("settings.status.idle")}</Pill>;
     }
   })();
 
   return (
     <div className="flex flex-col">
-      <SectionLabel>release channel</SectionLabel>
+      <SectionLabel>{t("settings.subsection.releaseChannel")}</SectionLabel>
       <SettingRow
-        label="Update channel"
-        description="Switch between stable and pre-release releases."
+        label={t("settings.updateChannel")}
+        description={t("settings.row.updateChannel.description")}
         control={
           <Select value={props.updateChannel} onValueChange={(v) => props.setUpdateChannel(v as UpdateChannel)}>
-            <SelectTrigger tone="dp" aria-label="Update channel">
+            <SelectTrigger tone="dp" aria-label={t("settings.aria.updateChannel")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value="stable">Stable</SelectItem>
-                <SelectItem value="preview">Preview</SelectItem>
+                <SelectItem value="stable">{t("settings.updateChannel.stable")}</SelectItem>
+                <SelectItem value="preview">{t("settings.updateChannel.preview")}</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -83,16 +85,16 @@ export function UpdatesSection(props: UpdatesSectionProps) {
       />
 
       <div className="mt-6">
-        <SectionLabel>current state</SectionLabel>
+        <SectionLabel>{t("settings.subsection.currentState")}</SectionLabel>
         <SettingRow
-          label="Status"
-          description="Last known update status reported by the auto-updater."
+          label={t("settings.row.updateStatus.label")}
+          description={t("settings.row.updateStatus.description")}
           control={<div>{statusPill}</div>}
         />
         <SettingRow
           divided
-          label="Actions"
-          description="Manually trigger a check, download, or install."
+          label={t("settings.row.updateActions.label")}
+          description={t("settings.row.updateActions.description")}
           control={
             <div className="flex flex-wrap gap-2">
               {props.checkUpdates && (
@@ -102,17 +104,17 @@ export function UpdatesSection(props: UpdatesSectionProps) {
                   onClick={props.checkUpdates}
                   disabled={state === "checking" || state === "downloading"}
                 >
-                  check
+                  {t("settings.button.check")}
                 </Button>
               )}
               {props.downloadUpdate && state === "available" && (
                 <Button variant="dp-primary" size="dp-sm" onClick={props.downloadUpdate}>
-                  download
+                  {t("settings.button.download")}
                 </Button>
               )}
               {props.installUpdate && state === "downloaded" && (
                 <Button variant="dp-primary" size="dp-sm" onClick={props.installUpdate}>
-                  install &amp; restart
+                  {t("settings.button.installRestart")}
                 </Button>
               )}
             </div>

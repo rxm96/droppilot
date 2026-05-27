@@ -4,6 +4,7 @@ import { Input } from "@renderer/shared/components/ui/input";
 import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { SettingRow } from "../SettingRow";
 import { SettingsToggle } from "../SettingsToggle";
+import { useI18n } from "@renderer/shared/i18n";
 
 export type EngineSectionProps = {
   autoStart?: boolean;
@@ -24,14 +25,15 @@ export type EngineSectionProps = {
 };
 
 export function EngineSection(props: EngineSectionProps) {
+  const { t } = useI18n();
   return (
     <div className="flex flex-col">
       {props.showAutoStart && (
         <>
-          <SectionLabel>app lifecycle</SectionLabel>
+          <SectionLabel>{t("settings.subsection.appLifecycle")}</SectionLabel>
           <SettingRow
-            label="Launch at login"
-            description="Starts Droppilot automatically when you log into your OS."
+            label={t("settings.row.autoStart.label")}
+            description={t("settings.row.autoStart.description")}
             control={
               <SettingsToggle
                 checked={!!props.autoStart}
@@ -43,22 +45,22 @@ export function EngineSection(props: EngineSectionProps) {
       )}
 
       <div className={props.showAutoStart ? "mt-6" : undefined}>
-        <SectionLabel>automation</SectionLabel>
+        <SectionLabel>{t("settings.subsection.automation")}</SectionLabel>
         <SettingRow
-          label="Auto-claim"
-          description="Automatically claim earned drops when they're available."
+          label={t("settings.autoClaim")}
+          description={t("settings.autoClaimHint")}
           control={<SettingsToggle checked={props.autoClaim} onChange={props.setAutoClaim} />}
         />
         <SettingRow
           divided
-          label="Auto-select target game"
-          description="Pick the next watchable game based on your priorities."
+          label={t("settings.autoSelect")}
+          description={t("settings.autoSelectHint")}
           control={<SettingsToggle checked={props.autoSelect} onChange={props.setAutoSelect} />}
         />
         <SettingRow
           divided
-          label="Auto-switch on stall"
-          description="If no progress is detected, switch to a different live channel."
+          label={t("settings.autoSwitch")}
+          description={t("settings.autoSwitchHint")}
           control={
             <SettingsToggle
               checked={props.autoSwitchEnabled}
@@ -68,8 +70,8 @@ export function EngineSection(props: EngineSectionProps) {
         />
         <SettingRow
           divided
-          label="Warm up watcher"
-          description="Send a probe before binding to detect cookie/auth issues early."
+          label={t("settings.warmup")}
+          description={t("settings.warmupHint")}
           control={
             <SettingsToggle checked={props.warmupEnabled} onChange={props.setWarmupEnabled} />
           }
@@ -77,10 +79,10 @@ export function EngineSection(props: EngineSectionProps) {
       </div>
 
       <div className="mt-6">
-        <SectionLabel>refresh cadence</SectionLabel>
+        <SectionLabel>{t("settings.subsection.refreshCadence")}</SectionLabel>
         <SettingRow
-          label="Channels refresh interval"
-          description="How often the channel tracker re-queries Twitch (random jitter between min and max)."
+          label={t("settings.row.refreshInterval.label")}
+          description={t("settings.row.refreshInterval.description")}
           control={
             <div className="flex items-center gap-2">
               <Input
@@ -92,10 +94,10 @@ export function EngineSection(props: EngineSectionProps) {
                   const min = Math.max(5, Number(e.target.value) || 0) * 1000;
                   props.setRefreshIntervals(min, Math.max(min, props.refreshMaxMs));
                 }}
-                aria-label="Minimum interval seconds"
+                aria-label={t("settings.aria.minIntervalSeconds")}
                 className="w-20"
               />
-              <span className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">to</span>
+              <span className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">{t("settings.unit.to")}</span>
               <Input
                 tone="dp"
                 type="number"
@@ -105,23 +107,23 @@ export function EngineSection(props: EngineSectionProps) {
                   const max = Math.max(5, Number(e.target.value) || 0) * 1000;
                   props.setRefreshIntervals(Math.min(max, props.refreshMinMs), max);
                 }}
-                aria-label="Maximum interval seconds"
+                aria-label={t("settings.aria.maxIntervalSeconds")}
                 className="w-20"
               />
-              <span className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">sec</span>
+              <span className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">{t("settings.unit.sec")}</span>
             </div>
           }
         />
       </div>
 
       <div className="mt-6">
-        <SectionLabel>danger zone</SectionLabel>
+        <SectionLabel>{t("settings.subsection.dangerZone")}</SectionLabel>
         <SettingRow
-          label="Reset automation flags"
-          description="Clears auto-claim, auto-switch, warmup, etc. back to defaults. Does not log you out."
+          label={t("settings.row.resetAutomation.label")}
+          description={t("settings.row.resetAutomation.description")}
           control={
             <Button variant="dp-outline" size="dp-md" onClick={props.resetAutomation}>
-              reset
+              {t("settings.button.reset")}
             </Button>
           }
         />

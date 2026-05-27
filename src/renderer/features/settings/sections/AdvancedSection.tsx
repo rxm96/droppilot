@@ -3,6 +3,7 @@ import { Button } from "@renderer/shared/components/ui/button";
 import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { SettingRow } from "../SettingRow";
 import { SettingsToggle } from "../SettingsToggle";
+import { useI18n } from "@renderer/shared/i18n";
 
 export type AdvancedSectionProps = {
   debugEnabled: boolean;
@@ -16,25 +17,26 @@ export type AdvancedSectionProps = {
 };
 
 export function AdvancedSection(props: AdvancedSectionProps) {
+  const { t } = useI18n();
   return (
     <div className="flex flex-col">
-      <SectionLabel>diagnostics</SectionLabel>
+      <SectionLabel>{t("settings.subsection.diagnostics")}</SectionLabel>
       <SettingRow
-        label="Show Debug view"
-        description="Adds a 'debug' tab to the top nav with logs, perf snapshots, and a state dump."
+        label={t("settings.row.debugView.label")}
+        description={t("settings.row.debugView.description")}
         control={
           <SettingsToggle checked={props.debugEnabled} onChange={props.setDebugEnabled} />
         }
       />
 
       <div className="mt-6">
-        <SectionLabel>settings export &amp; import</SectionLabel>
+        <SectionLabel>{t("settings.subsection.backup")}</SectionLabel>
         <div className="py-4">
           <div className="text-[13px] font-medium text-[color:var(--dp-text)] mb-1">
-            Settings JSON
+            {t("settings.row.settingsJson.label")}
           </div>
           <div className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)] mb-3">
-            Paste a JSON blob and click Import, or click Export to copy your current settings.
+            {t("settings.row.settingsJson.description")}
           </div>
           <textarea
             value={props.settingsJson}
@@ -44,10 +46,10 @@ export function AdvancedSection(props: AdvancedSectionProps) {
           />
           <div className="flex gap-2 mt-3">
             <Button variant="dp-secondary" size="dp-md" onClick={props.exportSettings}>
-              export
+              {t("settings.button.export")}
             </Button>
             <Button variant="dp-outline" size="dp-md" onClick={props.importSettings}>
-              import
+              {t("settings.button.import")}
             </Button>
           </div>
           {props.settingsInfo && (

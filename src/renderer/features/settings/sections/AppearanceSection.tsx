@@ -4,6 +4,7 @@ import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { SettingRow } from "../SettingRow";
 import { SettingsToggle } from "../SettingsToggle";
 import type { ThemePreference } from "@renderer/shared/theme";
+import { useI18n } from "@renderer/shared/i18n";
 
 export type AppearanceSectionProps = {
   theme: ThemePreference;
@@ -13,21 +14,22 @@ export type AppearanceSectionProps = {
 };
 
 export function AppearanceSection(props: AppearanceSectionProps) {
+  const { t } = useI18n();
   return (
     <div className="flex flex-col">
-      <SectionLabel>theme</SectionLabel>
+      <SectionLabel>{t("settings.subsection.theme")}</SectionLabel>
       <SettingRow
-        label="Color scheme"
-        description="Light or dark interface."
+        label={t("settings.row.theme.label")}
+        description={t("settings.row.theme.description")}
         control={
           <Select value={props.theme} onValueChange={(v) => props.setTheme(v as ThemePreference)}>
-            <SelectTrigger tone="dp" aria-label="Theme">
+            <SelectTrigger tone="dp" aria-label={t("settings.aria.theme")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value="dark">Dark</SelectItem>
-                <SelectItem value="light">Light</SelectItem>
+                <SelectItem value="dark">{t("settings.row.theme.dark")}</SelectItem>
+                <SelectItem value="light">{t("settings.row.theme.light")}</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -35,10 +37,10 @@ export function AppearanceSection(props: AppearanceSectionProps) {
       />
 
       <div className="mt-6">
-        <SectionLabel>content</SectionLabel>
+        <SectionLabel>{t("settings.subsection.content")}</SectionLabel>
         <SettingRow
-          label="Show badges &amp; emotes"
-          description="Display Twitch badges and emotes in chat-like elements."
+          label={t("settings.badgesEmotes")}
+          description={t("settings.row.badgesEmotes.description")}
           control={
             <SettingsToggle
               checked={props.enableBadgesEmotes}
