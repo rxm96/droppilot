@@ -49,11 +49,11 @@ export function AppNav({ view, onChange, items, right, className }: AppNavProps)
             className={cn(
               "relative flex items-center gap-[7px] px-3.5 font-mono text-[11px] lowercase tracking-[0.04em] transition-colors",
               active
-                ? "text-[color:var(--dp-text)]"
+                ? "text-[color:var(--dp-accent)]"
                 : "text-[color:var(--dp-text-dimmer)] hover:text-[color:var(--dp-text-dim)]",
             )}
           >
-            <Icon size={13} strokeWidth={1.7} className="opacity-85" />
+            <Icon size={13} strokeWidth={1.7} className={active ? undefined : "opacity-85"} />
             {item.label}
             {active && (
               <span
