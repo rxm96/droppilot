@@ -4,10 +4,11 @@
 export function formatRemainingFromEta(
   eta: number | null | undefined,
   fallbackMinutes: number | undefined,
+  now: number = Date.now(),
 ): string {
   const hasEta = typeof eta === "number" && Number.isFinite(eta);
   if (hasEta) {
-    const remaining = Math.max(0, Math.ceil((eta - Date.now()) / 1000));
+    const remaining = Math.max(0, Math.ceil((eta - now) / 1000));
     return formatHMS(remaining);
   }
   if (typeof fallbackMinutes === "number" && Number.isFinite(fallbackMinutes)) {

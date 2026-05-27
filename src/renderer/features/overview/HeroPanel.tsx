@@ -30,7 +30,15 @@ export function HeroPanel({
   claimedDrops,
   isLive,
 }: HeroPanelProps) {
-  const etaText = formatRemainingFromEta(activeDropEta, activeDropRemainingMinutes);
+  const [now, setNow] = React.useState<number>(() => Date.now());
+  React.useEffect(() => {
+    const hasEta = typeof activeDropEta === "number" && Number.isFinite(activeDropEta);
+    if (!hasEta) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [activeDropEta]);
+
+  const etaText = formatRemainingFromEta(activeDropEta, activeDropRemainingMinutes, now);
   const progressPct = Math.max(0, Math.min(100, Math.round(targetProgress)));
   const openDrops = Math.max(0, totalDrops - claimedDrops);
   const hasClaimable = claimableDrops > 0;
