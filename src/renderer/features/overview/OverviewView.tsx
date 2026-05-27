@@ -44,6 +44,8 @@ type OverviewProps = {
   watchError?: ErrorInfo | null;
   onPause?: () => void;
   onSwitchTarget?: () => void;
+  refreshMinMs?: number;
+  refreshMaxMs?: number;
 };
 
 export function OverviewView({
@@ -63,6 +65,8 @@ export function OverviewView({
   watchError,
   onPause,
   onSwitchTarget,
+  refreshMinMs,
+  refreshMaxMs,
 }: OverviewProps) {
   const items =
     inventory.status === "ready"
@@ -101,7 +105,15 @@ export function OverviewView({
       </div>
       <div className="flex flex-col gap-4">
         <ActivityPanel items={items} />
-        <EnginePanel lastWatchOk={lastWatchOk} />
+        <EnginePanel
+          lastWatchOk={lastWatchOk}
+          cycleSeconds={
+            typeof refreshMinMs === "number" ? Math.round(refreshMinMs / 1000) : undefined
+          }
+          cadenceSeconds={
+            typeof refreshMaxMs === "number" ? Math.round(refreshMaxMs / 1000) : undefined
+          }
+        />
       </div>
     </div>
   );

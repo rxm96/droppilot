@@ -148,8 +148,10 @@ function AppShell({ model }: { model: Model }) {
       ...overviewProps,
       onPause: controlProps.stopWatching,
       onSwitchTarget: () => navProps.setView("priorities"),
+      refreshMinMs: settingsProps.refreshMinMs,
+      refreshMaxMs: settingsProps.refreshMaxMs,
     }),
-    [overviewProps, controlProps.stopWatching, navProps],
+    [overviewProps, controlProps.stopWatching, navProps, settingsProps.refreshMinMs, settingsProps.refreshMaxMs],
   );
 
   return (
