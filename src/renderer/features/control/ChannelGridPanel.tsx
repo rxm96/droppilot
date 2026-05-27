@@ -134,6 +134,14 @@ export function ChannelGridPanel({
                           className="block w-full h-full object-cover"
                         />
                       )}
+                      <span
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0"
+                        style={{
+                          background:
+                            "linear-gradient(to top, rgba(10,11,13,0.5) 0%, rgba(10,11,13,0.0) 35%)",
+                        }}
+                      />
                       <span className="absolute bottom-1 right-1">
                         <Pill tone="dim">{Math.round(animated).toLocaleString()}</Pill>
                       </span>
