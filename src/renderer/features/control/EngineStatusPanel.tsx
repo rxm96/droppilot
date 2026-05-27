@@ -3,6 +3,7 @@ import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { ChevronDown } from "@renderer/shared/lib/icons";
 import { cn } from "@renderer/shared/lib/utils";
 import { useI18n } from "@renderer/shared/i18n";
+import type { ChannelTrackerStatus } from "@renderer/shared/types";
 import {
   formatDurationMs,
   mapWatchEngineDecisionDetails,
@@ -28,6 +29,7 @@ export type EngineStatusPanelProps = {
   allowlistedLiveChannels: number;
   totalLiveChannels: number;
   noProgressTracker: { recoveryCount: number; sinceProgressMs: number } | null;
+  trackerStatus?: ChannelTrackerStatus | null;
 };
 
 const TONE_DOT: Record<ReturnType<typeof watchEngineTone>, string> = {
@@ -92,6 +94,20 @@ export function EngineStatusPanel(props: EngineStatusPanelProps) {
       })
     : null;
 
+  const trackerTone: "warn" | undefined = props.trackerStatus?.fallbackActive ? "warn" : undefined;
+  const trackerText = (() => {
+    if (!props.trackerStatus) return t("control.tracker.unknown");
+    if (props.trackerStatus.fallbackActive) {
+      const remaining = props.trackerStatus.fallbackUntil
+        ? Math.max(0, props.trackerStatus.fallbackUntil - Date.now())
+        : 0;
+      return remaining > 0
+        ? `${t("control.tracker.fallback")} · ${t("control.tracker.fallbackUntil", { time: formatDurationMs(remaining) })}`
+        : t("control.tracker.fallback");
+    }
+    return t("control.tracker.healthy");
+  })();
+
   return (
     <div className="rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] overflow-hidden">
       <button
@@ -151,6 +167,7 @@ export function EngineStatusPanel(props: EngineStatusPanelProps) {
           <DetailRow label="suppression" value={suppressionText} />
           <DetailRow label="cooldowns" value={cooldownText} />
           <DetailRow label="allowlist" value={allowlistText} sub={channelsText} />
+          <DetailRow label={t("control.tracker.label")} value={trackerText} tone={trackerTone} />
           {noProgressText && <DetailRow label="no-progress" value={noProgressText} tone="warn" />}
         </div>
       )}

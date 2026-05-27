@@ -254,6 +254,7 @@ export function ControlView(props: ControlProps) {
         allowlistedLiveChannels={watchEngineSnapshot.allowlistedLiveChannels}
         totalLiveChannels={watchEngineSnapshot.totalLiveChannels}
         noProgressTracker={watchEngineSnapshot.noProgressTracker}
+        trackerStatus={trackerStatus ?? null}
       />
 
       {/* Active session */}
