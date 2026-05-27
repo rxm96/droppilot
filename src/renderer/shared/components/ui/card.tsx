@@ -51,4 +51,31 @@ const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
 );
 CardFooter.displayName = "CardFooter";
 
-export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter };
+/**
+ * CardAction — right-aligned action link slot for panel headers.
+ * Used in the design-overhaul for "manage →", "view all →" type affordances.
+ */
+const CardAction = React.forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement>>(
+  ({ className, ...props }, ref) => (
+    <button
+      ref={ref}
+      type="button"
+      className={cn(
+        "ml-auto font-mono text-[10px] lowercase tracking-[0.04em] text-[color:var(--dp-text-dimmer)] transition-colors hover:text-[color:var(--dp-accent)]",
+        className,
+      )}
+      {...props}
+    />
+  ),
+);
+CardAction.displayName = "CardAction";
+
+export {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+  CardAction,
+};
