@@ -111,11 +111,14 @@ export function ChannelGridPanel({
                     onClick={() => !isExiting && onStartWatching(channel)}
                     disabled={isExiting || isWatching}
                     className={cn(
-                      "block w-full text-left rounded-[var(--dp-radius-md)] border bg-[color:var(--dp-bg-elevated-2)] overflow-hidden transition-all",
-                      "border-[color:var(--dp-border)]",
+                      "block w-full text-left rounded-[var(--dp-radius-md)] border overflow-hidden transition-all",
+                      "border-[color:var(--dp-border-soft)]",
+                      // Non-watching default: transparent — blends with panel, no false elevation
+                      !isWatching && "bg-transparent",
                       !isWatching &&
                         !isExiting &&
-                        "hover:border-[color:var(--dp-accent-soft)] hover:bg-[color:var(--dp-bg-elevated)]",
+                        "hover:border-[color:var(--dp-accent-soft)] hover:bg-[color:var(--dp-bg-elevated-2)]",
+                      // Watching: soft violet wash
                       isWatching &&
                         "border-[color:var(--dp-accent)] bg-[color:var(--dp-accent-soft)] cursor-default",
                       isExiting && "opacity-30 pointer-events-none",
