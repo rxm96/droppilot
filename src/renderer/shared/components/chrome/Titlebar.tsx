@@ -59,7 +59,7 @@ export function Titlebar({
 
       {/* Center/right status */}
       <div
-        className="ml-auto flex items-center gap-3"
+        className="ml-auto flex items-center gap-2"
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
         {connectionState && (
@@ -78,12 +78,12 @@ export function Titlebar({
         )}
         {typeof apiLatencyMs === "number" && <Pill tone="dim">api {apiLatencyMs}ms</Pill>}
 
-        {/* Icon actions */}
+        {/* Icon actions — same size + tone as window controls */}
         <button
           type="button"
           onClick={onThemeToggle}
           aria-label={`Toggle theme (current: ${theme})`}
-          className="flex h-[22px] w-[22px] items-center justify-center rounded-[var(--dp-radius-xs)] text-[color:var(--dp-text-dimmer)] transition-colors hover:bg-[color:var(--dp-bg-elevated)] hover:text-[color:var(--dp-text)]"
+          className="flex h-[26px] w-[26px] items-center justify-center rounded-[var(--dp-radius-xs)] text-[color:var(--dp-text-dimmer)] transition-colors hover:bg-[color:var(--dp-bg-elevated)] hover:text-[color:var(--dp-text-dim)]"
         >
           {theme === "dark" ? (
             <Moon size={13} strokeWidth={1.7} />
@@ -96,38 +96,38 @@ export function Titlebar({
             type="button"
             onClick={onSettingsClick}
             aria-label="Open settings"
-            className="flex h-[22px] w-[22px] items-center justify-center rounded-[var(--dp-radius-xs)] text-[color:var(--dp-text-dimmer)] transition-colors hover:bg-[color:var(--dp-bg-elevated)] hover:text-[color:var(--dp-text)]"
+            className="flex h-[26px] w-[26px] items-center justify-center rounded-[var(--dp-radius-xs)] text-[color:var(--dp-text-dimmer)] transition-colors hover:bg-[color:var(--dp-bg-elevated)] hover:text-[color:var(--dp-text-dim)]"
           >
             <Settings size={13} strokeWidth={1.7} />
           </button>
         )}
 
-        {/* Native-feeling Windows controls (only render when handler provided) */}
+        {/* Window controls — same visual weight as icon actions, no dedicated "button" look */}
         {onWindowAction && (
-          <div className="ml-1 flex items-center">
+          <div className="ml-1 flex items-center gap-0.5">
             <button
               type="button"
               onClick={() => onWindowAction("minimize")}
               aria-label="Minimize"
-              className="flex h-9 w-11 items-center justify-center text-[color:var(--dp-text-dim)] transition-colors hover:bg-[color:var(--dp-bg-elevated)]"
+              className="flex h-[26px] w-[26px] items-center justify-center rounded-[var(--dp-radius-xs)] text-[color:var(--dp-text-dimmer)] transition-colors hover:bg-[color:var(--dp-bg-elevated)] hover:text-[color:var(--dp-text-dim)]"
             >
-              <Minus size={14} strokeWidth={1.5} />
+              <Minus size={13} strokeWidth={1.7} />
             </button>
             <button
               type="button"
               onClick={() => onWindowAction("maximize")}
               aria-label="Maximize"
-              className="flex h-9 w-11 items-center justify-center text-[color:var(--dp-text-dim)] transition-colors hover:bg-[color:var(--dp-bg-elevated)]"
+              className="flex h-[26px] w-[26px] items-center justify-center rounded-[var(--dp-radius-xs)] text-[color:var(--dp-text-dimmer)] transition-colors hover:bg-[color:var(--dp-bg-elevated)] hover:text-[color:var(--dp-text-dim)]"
             >
-              <Square size={12} strokeWidth={1.5} />
+              <Square size={11} strokeWidth={1.7} />
             </button>
             <button
               type="button"
               onClick={() => onWindowAction("close")}
               aria-label="Close"
-              className="flex h-9 w-11 items-center justify-center text-[color:var(--dp-text-dim)] transition-colors hover:bg-[#dc2626] hover:text-white"
+              className="flex h-[26px] w-[26px] items-center justify-center rounded-[var(--dp-radius-xs)] text-[color:var(--dp-text-dimmer)] transition-colors hover:bg-[rgba(248,113,113,0.18)] hover:text-[color:var(--dp-signal-err)]"
             >
-              <X size={14} strokeWidth={1.5} />
+              <X size={13} strokeWidth={1.7} />
             </button>
           </div>
         )}
