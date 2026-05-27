@@ -37,6 +37,13 @@ const TONE_DOT: Record<ReturnType<typeof watchEngineTone>, string> = {
   neutral: "var(--dp-text-dimmer)",
 };
 
+const TONE_TEXT: Record<ReturnType<typeof watchEngineTone>, string> = {
+  ok: "text-[color:var(--dp-signal-ok)]",
+  warn: "text-[color:var(--dp-signal-warn)]",
+  hold: "text-[color:var(--dp-signal-warn)]",
+  neutral: "text-[color:var(--dp-text-dim)]",
+};
+
 export function EngineStatusPanel(props: EngineStatusPanelProps) {
   const { t } = useI18n();
   const [expanded, setExpanded] = React.useState(false);
@@ -110,7 +117,7 @@ export function EngineStatusPanel(props: EngineStatusPanelProps) {
           />
           <div className="flex flex-col items-start min-w-0">
             <SectionLabel inline>engine status</SectionLabel>
-            <div className="text-[15px] font-medium text-[color:var(--dp-text)] mt-1 truncate">
+            <div className={cn("text-[15px] font-medium mt-1 truncate", TONE_TEXT[tone])}>
               {label}
             </div>
           </div>
