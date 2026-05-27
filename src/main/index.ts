@@ -132,6 +132,13 @@ function createWindow(startHidden = false): BrowserWindow {
     show: !startHidden,
     autoHideMenuBar: !isMac,
     titleBarStyle: isMac ? "default" : "hidden",
+    titleBarOverlay: isMac
+      ? undefined
+      : {
+          color: "#08090b",       // matches --dp-bg-chrome (dark titlebar bg)
+          symbolColor: "#9aa0a8", // matches --dp-text-dim (icon stroke color)
+          height: 36,             // matches the Titlebar component h-9 (36px)
+        },
     frame: isMac,
     backgroundColor: "#040814",
     webPreferences: {
