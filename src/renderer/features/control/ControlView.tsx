@@ -98,6 +98,8 @@ export function ControlView(props: ControlProps) {
     startWatching,
     activeDropInfo,
     claimStatus,
+    showNoDropsHint,
+    autoSwitchInfo,
     lastWatchOk,
     watchError,
     trackerStatus,
@@ -201,6 +203,19 @@ export function ControlView(props: ControlProps) {
           {watchErrorText && (
             <Pill tone="err" dot title={watchErrorText}>
               watch error
+            </Pill>
+          )}
+          {showNoDropsHint && (
+            <Pill tone="warn" dot>
+              no active drops
+            </Pill>
+          )}
+          {autoSwitchInfo && (
+            <Pill
+              tone="info"
+              title={`switched ${autoSwitchInfo.from ? `from ${autoSwitchInfo.from.name} ` : ""}to ${autoSwitchInfo.to.name}`}
+            >
+              auto-switched
             </Pill>
           )}
           {toggleLabel && (
