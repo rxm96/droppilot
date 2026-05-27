@@ -126,13 +126,13 @@ function AppShell({ model }: { model: Model }) {
   // Statusbar
   const engineLabel = React.useMemo(() => {
     const d = overviewProps.watchDecision;
-    if (d === "watching-progress" || d === "watching-recover") return "engine: running";
-    if (d === "watching-no-farmable" || d === "watching-no-watchable") return "engine: standby";
-    if (d === "suppressed" || d === "cooldown") return "engine: paused";
-    if (d === "no-target") return "engine: idle";
-    if (d.startsWith("idle")) return "engine: idle";
-    return "engine: idle";
-  }, [overviewProps.watchDecision]);
+    if (d === "watching-progress" || d === "watching-recover") return t("statusbar.engine.running");
+    if (d === "watching-no-farmable" || d === "watching-no-watchable") return t("statusbar.engine.standby");
+    if (d === "suppressed" || d === "cooldown") return t("statusbar.engine.paused");
+    if (d === "no-target") return t("statusbar.engine.idle");
+    if (d.startsWith("idle")) return t("statusbar.engine.idle");
+    return t("statusbar.engine.idle");
+  }, [overviewProps.watchDecision, t]);
 
   const engineTone =
     overviewProps.watchDecision === "watching-progress" ||

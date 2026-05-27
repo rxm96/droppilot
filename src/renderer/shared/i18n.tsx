@@ -328,6 +328,11 @@ const translations: Translations = {
     "control.previewDrop": "Preview {title}",
     "control.previewOpen": "Preview",
 
+    "statusbar.engine.running": "engine: running",
+    "statusbar.engine.paused": "engine: paused",
+    "statusbar.engine.idle": "engine: idle",
+    "statusbar.engine.standby": "engine: standby",
+
     "debug.title": "Debug",
     "debug.subtitle": "Live event log and current state snapshot.",
     "debug.snapshot": "State snapshot",
@@ -961,6 +966,11 @@ const translations: Translations = {
     "control.previewClose": "Schliessen",
     "control.previewDrop": "Vorschau {title}",
     "control.previewOpen": "Vorschau",
+
+    "statusbar.engine.running": "engine: läuft",
+    "statusbar.engine.paused": "engine: pausiert",
+    "statusbar.engine.idle": "engine: leerlauf",
+    "statusbar.engine.standby": "engine: standby",
 
     "debug.title": "Debug",
     "debug.subtitle": "Live-Log und aktueller Status-Snapshot.",
