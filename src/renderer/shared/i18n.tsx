@@ -323,6 +323,7 @@ const translations: Translations = {
     "control.watchEngineNoProgress": "Drop progress",
     "control.watchEngineNoProgressValue":
       "last confirmed increase {time} ago ({attempts} recovery attempts)",
+    "control.streamLoginMismatch": "Login mismatch: watching @{login}",
     "control.previewTitle": "Drop preview",
     "control.previewClose": "Close",
     "control.previewDrop": "Preview {title}",
@@ -962,6 +963,7 @@ const translations: Translations = {
     "control.watchEngineNoProgress": "Drop-Fortschritt",
     "control.watchEngineNoProgressValue":
       "letzte bestätigte Erhöhung vor {time} ({attempts} Recovery-Versuche)",
+    "control.streamLoginMismatch": "Login-Konflikt: schaut @{login}",
     "control.previewTitle": "Drop-Vorschau",
     "control.previewClose": "Schliessen",
     "control.previewDrop": "Vorschau {title}",
