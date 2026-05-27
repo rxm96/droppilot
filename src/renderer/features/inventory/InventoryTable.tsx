@@ -5,11 +5,7 @@ import { Pill } from "@renderer/shared/components/ui/pill";
 import { ChevronUp, ChevronDown } from "@renderer/shared/lib/icons";
 import { cn } from "@renderer/shared/lib/utils";
 import type { DropSortKey, SortDirection } from "./inventoryFilters";
-import {
-  dropStatusLabel,
-  dropStatusTone,
-  dropTitleFallback,
-} from "./inventoryFormatters";
+import { dropStatusLabel, dropStatusTone, dropTitleFallback } from "./inventoryFormatters";
 import { formatHourMinute, formatPercent } from "@renderer/features/overview/formatters";
 
 export type InventoryTableProps = {
@@ -58,12 +54,7 @@ export function InventoryTable({
       <Table columns={COLUMNS_TEMPLATE}>
         <TableHead>
           {COLUMNS.map((col, idx) => (
-            <SortHeader
-              key={idx}
-              col={col}
-              sort={sort}
-              onToggleSort={onToggleSort}
-            />
+            <SortHeader key={idx} col={col} sort={sort} onToggleSort={onToggleSort} />
           ))}
         </TableHead>
         {items.map((item) => {
@@ -84,7 +75,9 @@ export function InventoryTable({
                 <DropThumb url={thumbUrl} game={item.game} />
               </TableCell>
               <TableCell>
-                <div className="truncate text-[color:var(--dp-text)]">{dropTitleFallback(item)}</div>
+                <div className="truncate text-[color:var(--dp-text)]">
+                  {dropTitleFallback(item)}
+                </div>
                 <div className="font-mono text-[11px] text-[color:var(--dp-text-dimmer)] mt-0.5 truncate">
                   {item.game || "—"}
                 </div>

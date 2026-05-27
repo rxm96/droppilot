@@ -51,7 +51,9 @@ export function InventoryFilterStrip({
               <span
                 className={cn(
                   "font-mono text-[10px]",
-                  isActive ? "text-[color:var(--dp-accent)] opacity-90" : "text-[color:var(--dp-text-dimmer)]",
+                  isActive
+                    ? "text-[color:var(--dp-accent)] opacity-90"
+                    : "text-[color:var(--dp-text-dimmer)]",
                 )}
               >
                 {count}

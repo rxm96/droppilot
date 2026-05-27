@@ -1,8 +1,4 @@
-import type {
-  CampaignSummary,
-  FilterKey,
-  InventoryItem,
-} from "@renderer/shared/types";
+import type { CampaignSummary, FilterKey, InventoryItem } from "@renderer/shared/types";
 
 // ============================================================================
 // SHARED PRIMITIVES (legacy + new)
@@ -135,9 +131,7 @@ export const shouldDisplayDropEntry = (
   const game = typeof item.game === "string" ? item.game.trim() : "";
   const gameLower = game.toLowerCase();
   const campaign = campaignLookup.byId(item.campaignId);
-  const campaignPhase: CampaignPhase | null = campaign
-    ? getCampaignPhase(campaign, now)
-    : null;
+  const campaignPhase: CampaignPhase | null = campaign ? getCampaignPhase(campaign, now) : null;
   const hasAccountNotLinkedHint = (item.blockingReasonHints ?? []).some(
     (reason) => reason === "account_not_linked",
   );

@@ -96,7 +96,7 @@ export function InventoryView({
 
   const campaignLookup: CampaignLookup = React.useMemo(
     () => ({
-      byId: (id) => (id ? campaignsById.get(id) ?? null : null),
+      byId: (id) => (id ? (campaignsById.get(id) ?? null) : null),
       isUnlinked: (campaign) => {
         const id = campaign.id?.trim();
         if (id) {
@@ -172,12 +172,11 @@ export function InventoryView({
 
   // Selected drop + its campaign (for drawer)
   const selectedDrop = React.useMemo(
-    () => (state.selectedDropId ? allItems.find((i) => i.id === state.selectedDropId) ?? null : null),
+    () =>
+      state.selectedDropId ? (allItems.find((i) => i.id === state.selectedDropId) ?? null) : null,
     [allItems, state.selectedDropId],
   );
-  const selectedCampaign = selectedDrop
-    ? campaignLookup.byId(selectedDrop.campaignId)
-    : null;
+  const selectedCampaign = selectedDrop ? campaignLookup.byId(selectedDrop.campaignId) : null;
   const selectedIsPriority = selectedDrop
     ? priorityGameSet.has((selectedDrop.game ?? "").trim().toLowerCase())
     : false;

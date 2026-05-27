@@ -11,7 +11,11 @@ import {
   formatBlockingReason,
   pickDisplayBlockingReason,
 } from "./inventoryFormatters";
-import { formatHourMinute, formatPercent, formatRelative } from "@renderer/features/overview/formatters";
+import {
+  formatHourMinute,
+  formatPercent,
+  formatRelative,
+} from "@renderer/features/overview/formatters";
 
 export type InventoryDrawerProps = {
   drop: InventoryItem | null;
@@ -42,15 +46,15 @@ export function InventoryDrawer({
   if (!drop) return null;
 
   const progressPct =
-    drop.requiredMinutes > 0
-      ? Math.round((drop.earnedMinutes / drop.requiredMinutes) * 100)
-      : 0;
+    drop.requiredMinutes > 0 ? Math.round((drop.earnedMinutes / drop.requiredMinutes) * 100) : 0;
   const thumbUrl = drop.imageUrl?.trim() || drop.campaignImageUrl?.trim() || "";
   const accountUnlinked = drop.linked === false;
   const blockingReason = pickDisplayBlockingReason(drop.blockingReasonHints, accountUnlinked);
-  const blockingLabel = drop.blocked && blockingReason ? formatBlockingReason(blockingReason) : null;
+  const blockingLabel =
+    drop.blocked && blockingReason ? formatBlockingReason(blockingReason) : null;
   const showAddPriority = Boolean(drop.game?.trim()) && !isPriorityGame;
-  const showLinkAction = accountUnlinked || (drop.blockingReasonHints ?? []).includes("account_not_linked");
+  const showLinkAction =
+    accountUnlinked || (drop.blockingReasonHints ?? []).includes("account_not_linked");
 
   return (
     <>
@@ -120,9 +124,7 @@ export function InventoryDrawer({
                   style={{
                     width: `${Math.max(0, Math.min(100, progressPct))}%`,
                     background:
-                      drop.status === "claimed"
-                        ? "var(--dp-signal-ok)"
-                        : "var(--dp-accent)",
+                      drop.status === "claimed" ? "var(--dp-signal-ok)" : "var(--dp-accent)",
                   }}
                 />
               </div>
@@ -131,7 +133,8 @@ export function InventoryDrawer({
               </span>
             </div>
             <div className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
-              {formatHourMinute(drop.earnedMinutes)} watched · {drop.requiredMinutes > 0 ? formatHourMinute(drop.requiredMinutes) : "—"} required
+              {formatHourMinute(drop.earnedMinutes)} watched ·{" "}
+              {drop.requiredMinutes > 0 ? formatHourMinute(drop.requiredMinutes) : "—"} required
             </div>
           </div>
 
