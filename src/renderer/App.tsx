@@ -78,10 +78,6 @@ function AppShell({ model }: { model: Model }) {
 
   const openSettings = React.useCallback(() => navProps.setView("settings"), [navProps]);
 
-  const onWindowAction = React.useCallback((action: "minimize" | "maximize" | "close") => {
-    window.electronAPI.app.windowControl(action);
-  }, []);
-
   // AppNav items
   const navItems: AppNavItem[] = React.useMemo(() => {
     const base: AppNavItem[] = [
@@ -167,7 +163,6 @@ function AppShell({ model }: { model: Model }) {
           theme={resolvedTheme}
           onThemeToggle={toggleTheme}
           onSettingsClick={openSettings}
-          onWindowAction={onWindowAction}
         />
       )}
       <UpdateOverlay {...updateOverlayProps} />

@@ -17,8 +17,6 @@ export type TitlebarProps = {
   connectionState?: "connected" | "disconnected" | "connecting";
   apiLatencyMs?: number;
 
-  /** Window action handler (null = Windows-native chrome handled elsewhere). */
-  onWindowAction?: (action: "minimize" | "maximize" | "close") => void;
   className?: string;
 };
 
@@ -30,7 +28,6 @@ export function Titlebar({
   onSettingsClick,
   connectionState,
   apiLatencyMs,
-  onWindowAction,
   className,
 }: TitlebarProps) {
   return (
