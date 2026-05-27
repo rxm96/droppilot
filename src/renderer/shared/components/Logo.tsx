@@ -19,13 +19,28 @@ export const Logo = React.forwardRef<SVGSVGElement, LogoProps>(
       {...props}
     >
       <defs>
-        <linearGradient id="dp-logo-grad" x1="0" y1="0" x2="16" y2="16" gradientUnits="userSpaceOnUse">
+        <linearGradient
+          id="dp-logo-grad"
+          x1="0"
+          y1="0"
+          x2="16"
+          y2="16"
+          gradientUnits="userSpaceOnUse"
+        >
           <stop offset="0%" stopColor="var(--dp-accent)" />
           <stop offset="100%" stopColor="#7c5fe6" />
         </linearGradient>
       </defs>
       <rect x="0.5" y="0.5" width="15" height="15" rx="3" fill="url(#dp-logo-grad)" />
-      <rect x="0.5" y="0.5" width="15" height="15" rx="3" stroke="rgba(167,139,250,0.35)" strokeWidth="1" />
+      <rect
+        x="0.5"
+        y="0.5"
+        width="15"
+        height="15"
+        rx="3"
+        stroke="rgba(167,139,250,0.35)"
+        strokeWidth="1"
+      />
       <path
         d="M5.5 4.5 L5.5 11 M5.5 11 L11.5 11"
         stroke="#0a0b0d"

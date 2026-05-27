@@ -34,9 +34,7 @@ export const Stat = React.forwardRef<HTMLDivElement, StatProps>(
         {value}
       </div>
       {sub != null && (
-        <div className={cn("mt-1 font-mono text-[10px]", SUB_TONE[subTone])}>
-          {sub}
-        </div>
+        <div className={cn("mt-1 font-mono text-[10px]", SUB_TONE[subTone])}>{sub}</div>
       )}
       {children}
     </div>

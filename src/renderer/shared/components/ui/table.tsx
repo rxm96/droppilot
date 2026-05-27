@@ -27,12 +27,7 @@ export type TableProps = React.HTMLAttributes<HTMLDivElement> & {
 export const Table = React.forwardRef<HTMLDivElement, TableProps>(
   ({ className, columns, density: _density = "dense", children, ...props }, ref) => (
     <TableContext.Provider value={{ columns }}>
-      <div
-        ref={ref}
-        role="table"
-        className={cn("w-full text-[13px]", className)}
-        {...props}
-      >
+      <div ref={ref} role="table" className={cn("w-full text-[13px]", className)} {...props}>
         {children}
       </div>
     </TableContext.Provider>

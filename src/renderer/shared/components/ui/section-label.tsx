@@ -17,12 +17,7 @@ export const SectionLabel = React.forwardRef<HTMLDivElement, SectionLabelProps>(
       {...props}
     >
       <span>{children}</span>
-      {!inline && (
-        <span
-          aria-hidden="true"
-          className="h-px flex-1 bg-[color:var(--dp-border)]"
-        />
-      )}
+      {!inline && <span aria-hidden="true" className="h-px flex-1 bg-[color:var(--dp-border)]" />}
     </div>
   ),
 );

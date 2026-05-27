@@ -27,7 +27,11 @@ function renderItems(items: StatusbarItem[] | undefined) {
   if (!items || items.length === 0) return null;
   return items.map((item, i) => (
     <React.Fragment key={i}>
-      {i > 0 && <span className="text-[color:var(--dp-border)]" aria-hidden="true">│</span>}
+      {i > 0 && (
+        <span className="text-[color:var(--dp-border)]" aria-hidden="true">
+          │
+        </span>
+      )}
       <span className="flex items-center gap-1.5">
         {item.tone && (
           <span
@@ -51,11 +55,7 @@ export function Statusbar({ left, right, className }: StatusbarProps) {
       )}
     >
       {renderItems(left)}
-      {right && (
-        <div className="ml-auto flex items-center gap-3.5">
-          {renderItems(right)}
-        </div>
-      )}
+      {right && <div className="ml-auto flex items-center gap-3.5">{renderItems(right)}</div>}
     </div>
   );
 }

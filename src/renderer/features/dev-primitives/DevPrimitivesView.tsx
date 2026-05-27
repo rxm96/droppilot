@@ -18,12 +18,7 @@ import { Titlebar } from "@renderer/shared/components/chrome/Titlebar";
 import { AppNav, type AppNavView } from "@renderer/shared/components/chrome/AppNav";
 import { Statusbar } from "@renderer/shared/components/chrome/Statusbar";
 import { Logo } from "@renderer/shared/components/Logo";
-import {
-  Check,
-  RotateCw,
-  AlertTriangle,
-  Pause,
-} from "@renderer/shared/lib/icons";
+import { Check, RotateCw, AlertTriangle, Pause } from "@renderer/shared/lib/icons";
 
 export function DevPrimitivesView() {
   const [theme, setTheme] = React.useState<"light" | "dark">(
@@ -91,12 +86,24 @@ export function DevPrimitivesView() {
         <section>
           <SectionLabel>buttons</SectionLabel>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button variant="dp-primary" size="dp-md">claim now</Button>
-            <Button variant="dp-secondary" size="dp-md"><Pause size={11} strokeWidth={1.8} /> pause</Button>
-            <Button variant="dp-outline" size="dp-md"><RotateCw size={11} strokeWidth={1.8} /> switch target</Button>
-            <Button variant="dp-ghost" size="dp-md">cancel</Button>
-            <Button variant="dp-primary" size="dp-sm">sm</Button>
-            <Button variant="dp-primary" size="dp-lg">lg</Button>
+            <Button variant="dp-primary" size="dp-md">
+              claim now
+            </Button>
+            <Button variant="dp-secondary" size="dp-md">
+              <Pause size={11} strokeWidth={1.8} /> pause
+            </Button>
+            <Button variant="dp-outline" size="dp-md">
+              <RotateCw size={11} strokeWidth={1.8} /> switch target
+            </Button>
+            <Button variant="dp-ghost" size="dp-md">
+              cancel
+            </Button>
+            <Button variant="dp-primary" size="dp-sm">
+              sm
+            </Button>
+            <Button variant="dp-primary" size="dp-lg">
+              lg
+            </Button>
           </div>
         </section>
 
@@ -104,10 +111,18 @@ export function DevPrimitivesView() {
         <section>
           <SectionLabel>pills · badges</SectionLabel>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Pill tone="accent" dot>live</Pill>
-            <Pill tone="ok" dot>connected</Pill>
-            <Pill tone="warn" dot>retrying</Pill>
-            <Pill tone="err" dot>failed</Pill>
+            <Pill tone="accent" dot>
+              live
+            </Pill>
+            <Pill tone="ok" dot>
+              connected
+            </Pill>
+            <Pill tone="warn" dot>
+              retrying
+            </Pill>
+            <Pill tone="err" dot>
+              failed
+            </Pill>
             <Pill tone="info">api ok · 124ms</Pill>
             <Pill tone="dim">queued</Pill>
             <Badge variant="dp-accent">accent</Badge>
@@ -163,26 +178,46 @@ export function DevPrimitivesView() {
                   <span>status</span>
                 </TableHead>
                 <TableRow interactive>
-                  <TableCell mono dim>02</TableCell>
+                  <TableCell mono dim>
+                    02
+                  </TableCell>
                   <TableCell>
                     Counter-Strike 2
-                    <div className="font-mono text-[11px] text-[color:var(--dp-text-dimmer)] mt-0.5">s1mple</div>
+                    <div className="font-mono text-[11px] text-[color:var(--dp-text-dimmer)] mt-0.5">
+                      s1mple
+                    </div>
                   </TableCell>
                   <TableCell>Major Sticker</TableCell>
-                  <TableCell mono dim>04:00h</TableCell>
-                  <TableCell mono dim>8.4K</TableCell>
-                  <TableCell><Pill tone="dim">queued</Pill></TableCell>
+                  <TableCell mono dim>
+                    04:00h
+                  </TableCell>
+                  <TableCell mono dim>
+                    8.4K
+                  </TableCell>
+                  <TableCell>
+                    <Pill tone="dim">queued</Pill>
+                  </TableCell>
                 </TableRow>
                 <TableRow interactive>
-                  <TableCell mono dim>03</TableCell>
+                  <TableCell mono dim>
+                    03
+                  </TableCell>
                   <TableCell>
                     Apex Legends
-                    <div className="font-mono text-[11px] text-[color:var(--dp-text-dimmer)] mt-0.5">timthetatman</div>
+                    <div className="font-mono text-[11px] text-[color:var(--dp-text-dimmer)] mt-0.5">
+                      timthetatman
+                    </div>
                   </TableCell>
                   <TableCell>Charge Rifle Skin</TableCell>
-                  <TableCell mono dim>06:30h</TableCell>
-                  <TableCell mono dim>12.1K</TableCell>
-                  <TableCell><Pill tone="dim">queued</Pill></TableCell>
+                  <TableCell mono dim>
+                    06:30h
+                  </TableCell>
+                  <TableCell mono dim>
+                    12.1K
+                  </TableCell>
+                  <TableCell>
+                    <Pill tone="dim">queued</Pill>
+                  </TableCell>
                 </TableRow>
               </Table>
             </CardContent>
@@ -196,13 +231,21 @@ export function DevPrimitivesView() {
             <FeedItem
               tone="ok"
               icon={<Check />}
-              msg={<>Claimed <strong>Rivals Banner</strong></>}
+              msg={
+                <>
+                  Claimed <strong>Rivals Banner</strong>
+                </>
+              }
               meta={<>rust · 12 min ago</>}
             />
             <FeedItem
               tone="info"
               icon={<RotateCw />}
-              msg={<>Switched to <strong>shroud</strong></>}
+              msg={
+                <>
+                  Switched to <strong>shroud</strong>
+                </>
+              }
               meta={<>rust · 38 min ago</>}
             />
             <FeedItem

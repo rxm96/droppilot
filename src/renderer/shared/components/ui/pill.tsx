@@ -7,7 +7,8 @@ const pillVariants = cva(
   {
     variants: {
       tone: {
-        accent: "bg-[color:var(--dp-accent-soft)] text-[color:var(--dp-accent)] border-[color:var(--dp-accent-soft)]",
+        accent:
+          "bg-[color:var(--dp-accent-soft)] text-[color:var(--dp-accent)] border-[color:var(--dp-accent-soft)]",
         ok: "bg-[rgba(74,222,128,0.08)] text-[color:var(--dp-signal-ok)] border-[rgba(74,222,128,0.18)]",
         warn: "bg-[rgba(251,191,36,0.08)] text-[color:var(--dp-signal-warn)] border-[rgba(251,191,36,0.18)]",
         err: "bg-[rgba(248,113,113,0.08)] text-[color:var(--dp-signal-err)] border-[rgba(248,113,113,0.18)]",

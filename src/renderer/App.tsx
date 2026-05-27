@@ -23,7 +23,11 @@ function App() {
   // Dev-only primitives showcase. Open with #dev-primitives in the URL.
   // Lives outside the normal View enum so it never appears in the nav
   // or i18n tables — it is purely for engineering preview.
-  if (import.meta.env.DEV && typeof window !== "undefined" && window.location.hash === "#dev-primitives") {
+  if (
+    import.meta.env.DEV &&
+    typeof window !== "undefined" &&
+    window.location.hash === "#dev-primitives"
+  ) {
     return (
       <I18nProvider language={language}>
         <DevPrimitivesView />

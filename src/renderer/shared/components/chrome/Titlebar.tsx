@@ -58,15 +58,25 @@ export function Titlebar({
       </div>
 
       {/* Center/right status */}
-      <div className="ml-auto flex items-center gap-3" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+      <div
+        className="ml-auto flex items-center gap-3"
+        style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+      >
         {connectionState && (
-          <Pill tone={connectionState === "connected" ? "ok" : connectionState === "connecting" ? "warn" : "err"} dot>
+          <Pill
+            tone={
+              connectionState === "connected"
+                ? "ok"
+                : connectionState === "connecting"
+                  ? "warn"
+                  : "err"
+            }
+            dot
+          >
             {connectionState}
           </Pill>
         )}
-        {typeof apiLatencyMs === "number" && (
-          <Pill tone="dim">api {apiLatencyMs}ms</Pill>
-        )}
+        {typeof apiLatencyMs === "number" && <Pill tone="dim">api {apiLatencyMs}ms</Pill>}
 
         {/* Icon actions */}
         <button
@@ -75,7 +85,11 @@ export function Titlebar({
           aria-label={`Toggle theme (current: ${theme})`}
           className="flex h-[22px] w-[22px] items-center justify-center rounded-[var(--dp-radius-xs)] text-[color:var(--dp-text-dimmer)] transition-colors hover:bg-[color:var(--dp-bg-elevated)] hover:text-[color:var(--dp-text)]"
         >
-          {theme === "dark" ? <Moon size={13} strokeWidth={1.7} /> : <Sun size={13} strokeWidth={1.7} />}
+          {theme === "dark" ? (
+            <Moon size={13} strokeWidth={1.7} />
+          ) : (
+            <Sun size={13} strokeWidth={1.7} />
+          )}
         </button>
         {onSettingsClick && (
           <button

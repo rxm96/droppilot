@@ -304,7 +304,7 @@
   --dp-text-dim: #555a62;
   --dp-text-dimmer: #8a8f96;
   --dp-accent: #7c5fe6;
-  --dp-accent-soft: rgba(124, 95, 230, 0.10);
+  --dp-accent-soft: rgba(124, 95, 230, 0.1);
   --dp-accent-glow: rgba(124, 95, 230, 0.25);
   --dp-signal-ok: #16a34a;
   --dp-signal-warn: #ca8a04;

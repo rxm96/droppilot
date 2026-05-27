@@ -1,17 +1,13 @@
 import * as React from "react";
-import {
-  LayoutGrid,
-  Package,
-  Play,
-  ListOrdered,
-  Settings,
-  Bug,
-} from "@renderer/shared/lib/icons";
+import { LayoutGrid, Package, Play, ListOrdered, Settings, Bug } from "@renderer/shared/lib/icons";
 import { cn } from "@renderer/shared/lib/utils";
 
 export type AppNavView = "overview" | "inventory" | "control" | "priorities" | "settings" | "debug";
 
-const ICON_MAP: Record<AppNavView, React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>> = {
+const ICON_MAP: Record<
+  AppNavView,
+  React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>
+> = {
   overview: LayoutGrid,
   inventory: Package,
   control: Play,
