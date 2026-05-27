@@ -98,9 +98,7 @@ export const TableCell = React.forwardRef<HTMLDivElement, TableCellProps>(
       className={cn(
         "min-w-0 truncate",
         mono && "font-mono text-[12px]",
-        dim && "text-[color:var(--dp-text-dim)]",
-        !dim && !mono && "text-[color:var(--dp-text)]",
-        mono && !dim && "text-[color:var(--dp-text)]",
+        dim ? "text-[color:var(--dp-text-dim)]" : "text-[color:var(--dp-text)]",
         className,
       )}
       style={mono ? { fontFeatureSettings: '"tnum"' } : undefined}
