@@ -253,7 +253,11 @@ export function ControlView(props: ControlProps) {
         activeThumb={state.activeThumb}
         activeLoginMismatch={state.activeLoginMismatch}
         activeDropTitle={activeDropInfo?.title ?? null}
-        activeDropEarnedMinutes={activeDropInfo?.earnedMinutes ?? 0}
+        activeDropEarnedMinutes={
+          activeDropInfo
+            ? activeDropInfo.virtualEarned + state.liveProgress.activeElapsedMinutesRaw
+            : 0
+        }
         activeDropRequiredMinutes={activeDropInfo?.requiredMinutes ?? 0}
         activeEtaText={state.activeEtaText}
         lastWatchOk={lastWatchOk}
