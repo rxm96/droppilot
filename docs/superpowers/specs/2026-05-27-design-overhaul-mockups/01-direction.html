@@ -1,0 +1,96 @@
+<style>
+  .vibe-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 24px; }
+  .vibe-card { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; cursor: pointer; transition: transform .15s, border-color .15s; background: var(--bg); }
+  .vibe-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+  .vibe-card.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+  .vibe-card .preview { aspect-ratio: 16/10; padding: 16px; border-bottom: 1px solid var(--border); position: relative; overflow: hidden; }
+  .vibe-card .meta { padding: 14px 16px; }
+  .vibe-card h3 { margin: 0 0 4px 0; font-size: 15px; }
+  .vibe-card .desc { font-size: 12px; opacity: 0.7; line-height: 1.4; margin: 0; }
+  .vibe-card .tag { display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding: 2px 6px; border-radius: 3px; margin-top: 8px; font-family: monospace; }
+
+  /* A: Editorial Minimal */
+  .vibe-a .preview { background: #fafaf9; color: #1a1a1a; font-family: 'IBM Plex Sans', system-ui; }
+  .vibe-a .preview .label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; opacity: 0.5; margin-bottom: 8px; }
+  .vibe-a .preview .big { font-size: 36px; font-weight: 500; letter-spacing: -0.02em; line-height: 1; }
+  .vibe-a .preview .sub { font-size: 10px; opacity: 0.6; margin-top: 6px; }
+  .vibe-a .preview .div { height: 1px; background: #e5e5e3; margin: 14px 0 10px; }
+  .vibe-a .preview .row { display: flex; justify-content: space-between; font-size: 10px; opacity: 0.7; }
+  .vibe-a .tag { background: #1a1a1a; color: #fff; }
+
+  /* B: Warm Workshop */
+  .vibe-b .preview { background: linear-gradient(135deg, #fdf6ec 0%, #f5ebd9 100%); color: #2a1f14; font-family: 'IBM Plex Sans', system-ui; }
+  .vibe-b .preview .panel { background: rgba(255,255,255,0.55); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.8); border-radius: 12px; padding: 10px 12px; box-shadow: 0 2px 12px rgba(120,80,30,0.08); }
+  .vibe-b .preview .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #d97757; margin-right: 6px; vertical-align: middle; }
+  .vibe-b .preview .ttl { font-size: 11px; font-weight: 600; }
+  .vibe-b .preview .num { font-size: 22px; font-weight: 600; margin-top: 4px; font-feature-settings: 'tnum'; }
+  .vibe-b .preview .glow { position: absolute; right: -30px; top: -30px; width: 80px; height: 80px; background: radial-gradient(circle, rgba(217,119,87,0.4), transparent 70%); border-radius: 50%; }
+  .vibe-b .tag { background: #d97757; color: #fff; }
+
+  /* C: Pro Console */
+  .vibe-c .preview { background: #0c0e12; color: #d4d8de; font-family: 'IBM Plex Mono', monospace; padding: 12px 14px; }
+  .vibe-c .preview .row { display: grid; grid-template-columns: 1fr auto; font-size: 10px; padding: 3px 0; border-bottom: 1px dotted #1f242c; }
+  .vibe-c .preview .row:last-child { border-bottom: none; }
+  .vibe-c .preview .key { color: #6b7380; }
+  .vibe-c .preview .val { color: #e6e9ee; }
+  .vibe-c .preview .val.ok { color: #7ec97e; }
+  .vibe-c .preview .val.warn { color: #e0b56a; }
+  .vibe-c .preview .head { font-size: 9px; color: #4a5260; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+  .vibe-c .preview .blink { display: inline-block; width: 6px; height: 10px; background: #7ec97e; vertical-align: middle; margin-right: 4px; }
+  .vibe-c .tag { background: #1a1f28; color: #7ec97e; border: 1px solid #2a3340; }
+</style>
+
+<h2>Welche Design-Richtung trifft Droppilot am besten?</h2>
+<p class="subtitle">Drei Pole. Jeder mit eigenem Charakter — kein generic shadcn-Look. Die finale Lösung kann auch ein Hybrid sein, aber die Mehrheit der Stimmung sollte einer dieser Richtungen folgen.</p>
+
+<div class="cards vibe-cards">
+  <div class="card vibe-card vibe-a" data-choice="editorial" onclick="toggleSelect(this)">
+    <div class="preview">
+      <div class="label">Live Drop</div>
+      <div class="big">02:14:38</div>
+      <div class="sub">Rust — Twitch Rivals Cape</div>
+      <div class="div"></div>
+      <div class="row"><span>Watching</span><span>87%</span></div>
+      <div class="row" style="margin-top:4px"><span>Next claim</span><span>2:14h</span></div>
+    </div>
+    <div class="meta">
+      <h3>A — Editorial Minimal</h3>
+      <p class="desc">Massive Typografie, viel Whitespace, monochromatisch. Linear / Vercel Geist Energie. Wirkt teuer und intentional.</p>
+      <span class="tag">Refined · Calm</span>
+    </div>
+  </div>
+
+  <div class="card vibe-card vibe-b" data-choice="workshop" onclick="toggleSelect(this)">
+    <div class="preview">
+      <div class="glow"></div>
+      <div class="panel">
+        <div class="ttl"><span class="dot"></span>Live Drop</div>
+        <div class="num">02:14:38</div>
+      </div>
+      <div style="margin-top:10px; font-size:10px; opacity:0.7;">Rust · Twitch Rivals Cape · 87% progress</div>
+    </div>
+    <div class="meta">
+      <h3>B — Warm Workshop</h3>
+      <p class="desc">Weiche Gradients, warme Neutrals, glassy Panels, organische Radii. Raycast / Arc Vibes. Wirkt handcrafted und menschlich.</p>
+      <span class="tag">Warm · Crafted</span>
+    </div>
+  </div>
+
+  <div class="card vibe-card vibe-c" data-choice="console" onclick="toggleSelect(this)">
+    <div class="preview">
+      <div class="head"># watch.status</div>
+      <div class="row"><span class="key">target</span><span class="val">rust/rivals_cape</span></div>
+      <div class="row"><span class="key">eta</span><span class="val ok"><span class="blink"></span>02:14:38</span></div>
+      <div class="row"><span class="key">progress</span><span class="val">87%</span></div>
+      <div class="row"><span class="key">channel</span><span class="val">shroud</span></div>
+      <div class="row"><span class="key">viewers</span><span class="val warn">14.2K</span></div>
+    </div>
+    <div class="meta">
+      <h3>C — Pro Console</h3>
+      <p class="desc">Info-dense, monospace, dark-first, Listen statt Cards. Linear/Cursor/Cron Engineering-Vibe. Wirkt powerful und seriös.</p>
+      <span class="tag">Dense · Technical</span>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:24px; font-size:12px; opacity:0.6;">Klick eine Karte zum auswählen — oder beantworte einfach im Terminal mit A / B / C oder einer Mischung.</p>

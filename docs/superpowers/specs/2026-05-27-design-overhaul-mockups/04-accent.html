@@ -1,0 +1,129 @@
+<style>
+  .acc-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 24px; }
+  .acc-card { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; cursor: pointer; transition: transform .15s, border-color .15s; background: var(--bg); }
+  .acc-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+  .acc-card .preview { aspect-ratio: 16/9; padding: 16px; border-bottom: 1px solid var(--border); background: #0a0b0d; color: #e5e7eb; font-family: 'IBM Plex Sans', system-ui; position: relative; }
+  .acc-card .meta { padding: 14px 16px; }
+  .acc-card h3 { margin: 0 0 4px 0; font-size: 15px; }
+  .acc-card .desc { font-size: 12px; opacity: 0.7; line-height: 1.45; margin: 0; }
+  .acc-card .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+  .acc-card .ref { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; font-family: 'IBM Plex Mono', monospace; opacity: 0.6; margin-top: 6px; display: block; }
+
+  .acc-card .preview .head { font-family: 'IBM Plex Mono', monospace; font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: #6b7280; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .acc-card .preview .title { font-size: 15px; font-weight: 500; letter-spacing: -0.01em; margin-bottom: 2px; }
+  .acc-card .preview .sub { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6b7280; margin-bottom: 12px; }
+  .acc-card .preview .div { height: 1px; background: #1c1f24; margin: 10px 0; }
+  .acc-card .preview .row { display: grid; grid-template-columns: 1fr auto; font-family: 'IBM Plex Mono', monospace; font-size: 10px; padding: 2px 0; }
+  .acc-card .preview .key { color: #6b7280; }
+  .acc-card .preview .val { color: #f3f4f6; font-feature-settings: 'tnum'; }
+  .acc-card .preview .btn { display: inline-block; font-size: 11px; padding: 4px 10px; border-radius: 4px; font-family: 'IBM Plex Mono', monospace; margin-top: 10px; font-weight: 500; }
+
+  /* Blue (Linear) */
+  .acc-blue .preview .dot, .acc-blue .preview .val.accent { color: #60a5fa; }
+  .acc-blue .preview .dot { color: transparent; background: #60a5fa; width: 6px; height: 6px; border-radius: 50%; box-shadow: 0 0 8px rgba(96,165,250,0.7); }
+  .acc-blue .preview .btn { background: #60a5fa; color: #0a0b0d; }
+  .acc-blue .preview .underline { background: linear-gradient(90deg, #60a5fa, transparent); height: 2px; width: 40px; margin-bottom: 8px; }
+  .acc-blue .swatch { background: #60a5fa; }
+
+  /* Green (Granola) */
+  .acc-green .preview .dot { background: #22c55e; width: 6px; height: 6px; border-radius: 50%; box-shadow: 0 0 8px rgba(34,197,94,0.7); }
+  .acc-green .preview .val.accent { color: #4ade80; }
+  .acc-green .preview .btn { background: #22c55e; color: #0a0b0d; }
+  .acc-green .preview .underline { background: linear-gradient(90deg, #22c55e, transparent); height: 2px; width: 40px; margin-bottom: 8px; }
+  .acc-green .swatch { background: #22c55e; }
+
+  /* Amber/Copper (Warp/Cron) */
+  .acc-amber .preview { background: #100e0c; }
+  .acc-amber .preview::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at top right, rgba(232,165,132,0.05), transparent 60%); pointer-events: none; }
+  .acc-amber .preview .dot { background: #e8a584; width: 6px; height: 6px; border-radius: 50%; box-shadow: 0 0 8px rgba(232,165,132,0.7); }
+  .acc-amber .preview .val.accent { color: #e8a584; }
+  .acc-amber .preview .btn { background: #e8a584; color: #1a120b; }
+  .acc-amber .preview .underline { background: linear-gradient(90deg, #e8a584, transparent); height: 2px; width: 40px; margin-bottom: 8px; }
+  .acc-amber .swatch { background: #e8a584; }
+
+  /* Purple (Twitch-adjacent, restrained) */
+  .acc-purple .preview .dot { background: #a78bfa; width: 6px; height: 6px; border-radius: 50%; box-shadow: 0 0 8px rgba(167,139,250,0.7); }
+  .acc-purple .preview .val.accent { color: #c4b5fd; }
+  .acc-purple .preview .btn { background: #a78bfa; color: #0a0b0d; }
+  .acc-purple .preview .underline { background: linear-gradient(90deg, #a78bfa, transparent); height: 2px; width: 40px; margin-bottom: 8px; }
+  .acc-purple .swatch { background: #a78bfa; }
+</style>
+
+<h2>Welche Accent-Farbe für Droppilot?</h2>
+<p class="subtitle">Gleicher dark Base, gleiches Layout — nur Accent-Hue ändert sich. Akzente werden sparsam eingesetzt: aktive Nav-Items, primärer CTA, Status-Indikatoren, Hover-States.</p>
+
+<div class="cards acc-cards">
+  <div class="card acc-card acc-blue" data-choice="blue" onclick="toggleSelect(this)">
+    <div class="preview">
+      <div class="underline"></div>
+      <div class="head"><span class="dot"></span> WATCH STATUS</div>
+      <div class="title">Rust — Rivals Cape</div>
+      <div class="sub">shroud · drop_4f2a</div>
+      <div class="div"></div>
+      <div class="row"><span class="key">eta</span><span class="val accent">02:14:38</span></div>
+      <div class="row"><span class="key">progress</span><span class="val">87%</span></div>
+      <button class="btn">claim →</button>
+    </div>
+    <div class="meta">
+      <h3><span class="swatch"></span>Linear Blue</h3>
+      <p class="desc">Klassisch engineering. Vertraut, lesbar, neutral. Sehr "Tool". Geringes Risiko, aber auch geringste Differenzierung.</p>
+      <span class="ref">#60a5fa · linear · github</span>
+    </div>
+  </div>
+
+  <div class="card acc-card acc-green" data-choice="green" onclick="toggleSelect(this)">
+    <div class="preview">
+      <div class="underline"></div>
+      <div class="head"><span class="dot"></span> WATCH STATUS</div>
+      <div class="title">Rust — Rivals Cape</div>
+      <div class="sub">shroud · drop_4f2a</div>
+      <div class="div"></div>
+      <div class="row"><span class="key">eta</span><span class="val accent">02:14:38</span></div>
+      <div class="row"><span class="key">progress</span><span class="val">87%</span></div>
+      <button class="btn">claim →</button>
+    </div>
+    <div class="meta">
+      <h3><span class="swatch"></span>Granola Green</h3>
+      <p class="desc">"Success/Live"-Farbe als Brand-Accent. Passt thematisch zu "watching/active". Risiko: konfligiert mit success-state Bedeutung.</p>
+      <span class="ref">#22c55e · granola · spotify</span>
+    </div>
+  </div>
+
+  <div class="card acc-card acc-amber" data-choice="amber" onclick="toggleSelect(this)">
+    <div class="preview">
+      <div class="underline"></div>
+      <div class="head"><span class="dot"></span> WATCH STATUS</div>
+      <div class="title">Rust — Rivals Cape</div>
+      <div class="sub">shroud · drop_4f2a</div>
+      <div class="div"></div>
+      <div class="row"><span class="key">eta</span><span class="val accent">02:14:38</span></div>
+      <div class="row"><span class="key">progress</span><span class="val">87%</span></div>
+      <button class="btn">claim →</button>
+    </div>
+    <div class="meta">
+      <h3><span class="swatch"></span>Warm Copper</h3>
+      <p class="desc">Maximale Differenzierung. Selten in Dev-Tools, fühlt sich crafted an. Erinnert an Warp/Ghostty/Cron. Risiko: zu unerwartet für manche.</p>
+      <span class="ref">#e8a584 · warp · cron</span>
+    </div>
+  </div>
+
+  <div class="card acc-card acc-purple" data-choice="purple" onclick="toggleSelect(this)">
+    <div class="preview">
+      <div class="underline"></div>
+      <div class="head"><span class="dot"></span> WATCH STATUS</div>
+      <div class="title">Rust — Rivals Cape</div>
+      <div class="sub">shroud · drop_4f2a</div>
+      <div class="div"></div>
+      <div class="row"><span class="key">eta</span><span class="val accent">02:14:38</span></div>
+      <div class="row"><span class="key">progress</span><span class="val">87%</span></div>
+      <button class="btn">claim →</button>
+    </div>
+    <div class="meta">
+      <h3><span class="swatch"></span>Soft Violet</h3>
+      <p class="desc">Subtiler Nod zu Twitch (Twitch ist #9146FF, das hier ist heller/softer). Kontextuell stimmig ohne fan-toolig zu wirken. Linear nutzt ähnliches Violet.</p>
+      <span class="ref">#a78bfa · twitch-adjacent</span>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:24px; font-size:12px; opacity:0.6;">Meine Empfehlung: <strong>Warm Copper</strong> für maximale Differenzierung — oder <strong>Soft Violet</strong> falls subtiler Twitch-Bezug wertvoll ist. Klick oder antworte im Terminal.</p>

@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Droppilot — Inventory</title>
+<style>
+  :root {
+    --bg-app: #0a0b0d;
+    --bg-chrome: #08090b;
+    --bg-elevated: #101216;
+    --bg-elevated-2: #14171c;
+    --border: #1c2026;
+    --border-soft: #16191e;
+    --text: #e8eaed;
+    --text-dim: #9aa0a8;
+    --text-dimmer: #6b7280;
+    --accent: #a78bfa;
+    --accent-soft: rgba(167,139,250,0.12);
+    --accent-glow: rgba(167,139,250,0.4);
+    --signal-ok: #4ade80;
+    --signal-warn: #fbbf24;
+    --signal-err: #f87171;
+    --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #1a1d21; padding: 24px; font-family: var(--font-sans); color: var(--text); }
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 1400px; margin: 0 auto; }
+  .variant {
+    background: var(--bg-app);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px var(--border);
+  }
+  .variant-label {
+    background: var(--bg-chrome);
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .variant-label .name { color: var(--text); font-weight: 600; letter-spacing: 0.04em; }
+  .variant-label .tag { color: var(--accent); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; }
+
+  /* Shared header within variant */
+  .view-head {
+    padding: 18px 22px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .view-title { font-size: 18px; font-weight: 500; letter-spacing: -0.01em; }
+  .view-sub { font-family: var(--font-mono); font-size: 10px; color: var(--text-dimmer); margin-top: 2px; }
+  .filters { display: flex; gap: 6px; font-family: var(--font-mono); font-size: 11px; }
+  .chip {
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-dim);
+    cursor: pointer;
+  }
+  .chip.active { background: var(--accent-soft); color: var(--accent); border-color: rgba(167,139,250,0.3); }
+  .chip.count { color: var(--text-dimmer); }
+
+  /* === VARIANT A: REFINED CARDS === */
+  .card-grid { padding: 16px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .drop-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    gap: 12px;
+    cursor: pointer;
+    transition: border-color .15s, transform .15s;
+  }
+  .drop-card:hover { border-color: rgba(167,139,250,0.3); transform: translateY(-1px); }
+  .drop-img {
+    width: 64px; height: 64px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #2d2438, #1a1825);
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .drop-img::after {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(circle at 30% 30%, rgba(167,139,250,0.3), transparent 60%);
+  }
+  .drop-img.rust { background: linear-gradient(135deg, #4a2820, #2a1810); }
+  .drop-img.rust::after { background: radial-gradient(circle at 30% 30%, rgba(232,124,76,0.4), transparent 60%); }
+  .drop-img.cs { background: linear-gradient(135deg, #2a3e4a, #182830); }
+  .drop-img.apex { background: linear-gradient(135deg, #3a2030, #201020); }
+  .drop-img.val { background: linear-gradient(135deg, #3a1825, #201018); }
+  .drop-img.lol { background: linear-gradient(135deg, #2a2840, #181830); }
+  .drop-img.fn { background: linear-gradient(135deg, #2e3a4a, #1a2230); }
+  .drop-meta { display: flex; flex-direction: column; min-width: 0; }
+  .drop-name { font-size: 13px; font-weight: 500; line-height: 1.3; margin-bottom: 4px; }
+  .drop-game { font-family: var(--font-mono); font-size: 10px; color: var(--text-dimmer); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .drop-progress-text { font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); display: flex; justify-content: space-between; }
+  .drop-progress-text .pct { color: var(--accent); }
+  .drop-bar { height: 2px; background: var(--border); border-radius: 1px; overflow: hidden; margin-top: 4px; }
+  .drop-bar-fill { height: 100%; background: var(--accent); }
+  .drop-status { font-family: var(--font-mono); font-size: 9px; margin-top: 6px; }
+  .drop-status.claimed { color: var(--signal-ok); }
+  .drop-status.progress { color: var(--accent); }
+  .drop-status.locked { color: var(--text-dimmer); }
+  .drop-status.expired { color: var(--signal-err); }
+
+  /* === VARIANT B: TABLE WITH THUMBNAILS === */
+  .table-head {
+    display: grid;
+    grid-template-columns: 36px 1fr 0.7fr 0.6fr 1fr 0.5fr;
+    gap: 12px;
+    padding: 0 20px;
+    height: 32px;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-dimmer);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .table-row {
+    display: grid;
+    grid-template-columns: 36px 1fr 0.7fr 0.6fr 1fr 0.5fr;
+    gap: 12px;
+    padding: 0 20px;
+    height: 52px;
+    align-items: center;
+    border-bottom: 1px solid var(--border-soft);
+    cursor: pointer;
+    transition: background .12s;
+  }
+  .table-row:hover { background: var(--bg-elevated-2); }
+  .thumb {
+    width: 36px; height: 36px;
+    border-radius: 5px;
+    position: relative; overflow: hidden;
+  }
+  .thumb.rust { background: linear-gradient(135deg, #4a2820, #2a1810); }
+  .thumb.cs { background: linear-gradient(135deg, #2a3e4a, #182830); }
+  .thumb.apex { background: linear-gradient(135deg, #3a2030, #201020); }
+  .thumb.val { background: linear-gradient(135deg, #3a1825, #201018); }
+  .thumb.lol { background: linear-gradient(135deg, #2a2840, #181830); }
+  .thumb.fn { background: linear-gradient(135deg, #2e3a4a, #1a2230); }
+  .thumb::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.12), transparent 60%); }
+
+  .table-name { font-size: 13px; }
+  .table-name .game { display: block; font-family: var(--font-mono); font-size: 10px; color: var(--text-dimmer); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
+  .table-data { font-family: var(--font-mono); font-size: 12px; color: var(--text); font-feature-settings: 'tnum'; }
+  .table-data.dim { color: var(--text-dim); }
+  .table-progress { display: flex; flex-direction: column; gap: 4px; }
+  .table-progress-bar { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .table-progress-fill { height: 100%; background: var(--accent); }
+  .table-progress-text { font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); display: flex; justify-content: space-between; }
+  .table-status {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-family: var(--font-mono); font-size: 9px;
+    padding: 2px 6px; border-radius: 3px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .table-status.live { background: var(--accent-soft); color: var(--accent); }
+  .table-status.claimed { background: rgba(74,222,128,0.1); color: var(--signal-ok); }
+  .table-status.queued { background: rgba(154,160,168,0.08); color: var(--text-dim); }
+  .table-status.locked { background: rgba(107,114,128,0.1); color: var(--text-dimmer); }
+
+  .caption { max-width: 1400px; margin: 14px auto 0; font-family: var(--font-mono); font-size: 11px; color: #8a8f96; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="split">
+  <!-- VARIANT A: REFINED CARDS -->
+  <div class="variant">
+    <div class="variant-label"><span class="name">A — Refined Cards</span><span class="tag">2-COL GRID</span></div>
+    <div class="view-head">
+      <div>
+        <div class="view-title">Inventory</div>
+        <div class="view-sub">12 campaigns · 47 drops · 8 claimed</div>
+      </div>
+      <div class="filters">
+        <span class="chip active">all <span class="count">47</span></span>
+        <span class="chip">live <span class="count">3</span></span>
+        <span class="chip">queued <span class="count">36</span></span>
+      </div>
+    </div>
+    <div class="card-grid">
+      <div class="drop-card">
+        <div class="drop-img rust"></div>
+        <div class="drop-meta">
+          <div class="drop-name">Twitch Rivals Cape</div>
+          <div class="drop-game">rust</div>
+          <div class="drop-progress-text"><span>2h watched</span><span class="pct">87%</span></div>
+          <div class="drop-bar"><div class="drop-bar-fill" style="width:87%;"></div></div>
+          <div class="drop-status progress">● earning</div>
+        </div>
+      </div>
+      <div class="drop-card">
+        <div class="drop-img cs"></div>
+        <div class="drop-meta">
+          <div class="drop-name">Major Sticker Pack</div>
+          <div class="drop-game">counter-strike 2</div>
+          <div class="drop-progress-text"><span>queued</span><span class="pct">0%</span></div>
+          <div class="drop-bar"><div class="drop-bar-fill" style="width:0%;"></div></div>
+          <div class="drop-status locked">queued</div>
+        </div>
+      </div>
+      <div class="drop-card">
+        <div class="drop-img apex"></div>
+        <div class="drop-meta">
+          <div class="drop-name">Apex Charm Bundle</div>
+          <div class="drop-game">apex legends</div>
+          <div class="drop-progress-text"><span>4h watched</span><span class="pct" style="color:var(--signal-ok);">100%</span></div>
+          <div class="drop-bar"><div class="drop-bar-fill" style="width:100%;background:var(--signal-ok);"></div></div>
+          <div class="drop-status claimed">✓ claimed</div>
+        </div>
+      </div>
+      <div class="drop-card">
+        <div class="drop-img val"></div>
+        <div class="drop-meta">
+          <div class="drop-name">Champions Card</div>
+          <div class="drop-game">valorant</div>
+          <div class="drop-progress-text"><span>1h watched</span><span class="pct">45%</span></div>
+          <div class="drop-bar"><div class="drop-bar-fill" style="width:45%;"></div></div>
+          <div class="drop-status locked">paused</div>
+        </div>
+      </div>
+      <div class="drop-card">
+        <div class="drop-img lol"></div>
+        <div class="drop-meta">
+          <div class="drop-name">Worlds Emote</div>
+          <div class="drop-game">league of legends</div>
+          <div class="drop-progress-text"><span>queued</span><span class="pct">0%</span></div>
+          <div class="drop-bar"><div class="drop-bar-fill" style="width:0%;"></div></div>
+          <div class="drop-status locked">queued</div>
+        </div>
+      </div>
+      <div class="drop-card">
+        <div class="drop-img fn"></div>
+        <div class="drop-meta">
+          <div class="drop-name">Battle Pass Skin</div>
+          <div class="drop-game">fortnite</div>
+          <div class="drop-progress-text"><span>expired</span><span class="pct" style="color:var(--signal-err);">62%</span></div>
+          <div class="drop-bar"><div class="drop-bar-fill" style="width:62%;background:var(--signal-err);"></div></div>
+          <div class="drop-status expired">⊗ expired</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VARIANT B: TABLE WITH THUMBNAILS -->
+  <div class="variant">
+    <div class="variant-label"><span class="name">B — Dense Table</span><span class="tag">SORTABLE LIST</span></div>
+    <div class="view-head">
+      <div>
+        <div class="view-title">Inventory</div>
+        <div class="view-sub">12 campaigns · 47 drops · 8 claimed</div>
+      </div>
+      <div class="filters">
+        <span class="chip active">all <span class="count">47</span></span>
+        <span class="chip">live <span class="count">3</span></span>
+        <span class="chip">queued <span class="count">36</span></span>
+      </div>
+    </div>
+    <div class="table-head">
+      <span></span>
+      <span>drop · game</span>
+      <span>watched</span>
+      <span>progress</span>
+      <span></span>
+      <span>status</span>
+    </div>
+    <div class="table-row">
+      <div class="thumb rust"></div>
+      <div class="table-name">Twitch Rivals Cape<span class="game">rust</span></div>
+      <div class="table-data">02:14h</div>
+      <div class="table-data">87%</div>
+      <div class="table-progress"><div class="table-progress-bar"><div class="table-progress-fill" style="width:87%;"></div></div></div>
+      <div><span class="table-status live">● live</span></div>
+    </div>
+    <div class="table-row">
+      <div class="thumb cs"></div>
+      <div class="table-name">Major Sticker Pack<span class="game">cs2</span></div>
+      <div class="table-data dim">—</div>
+      <div class="table-data dim">0%</div>
+      <div class="table-progress"><div class="table-progress-bar"></div></div>
+      <div><span class="table-status queued">queued</span></div>
+    </div>
+    <div class="table-row">
+      <div class="thumb apex"></div>
+      <div class="table-name">Apex Charm Bundle<span class="game">apex</span></div>
+      <div class="table-data">04:00h</div>
+      <div class="table-data">100%</div>
+      <div class="table-progress"><div class="table-progress-bar"><div class="table-progress-fill" style="width:100%;background:var(--signal-ok);"></div></div></div>
+      <div><span class="table-status claimed">✓ claimed</span></div>
+    </div>
+    <div class="table-row">
+      <div class="thumb val"></div>
+      <div class="table-name">Champions Card<span class="game">valorant</span></div>
+      <div class="table-data">01:00h</div>
+      <div class="table-data">45%</div>
+      <div class="table-progress"><div class="table-progress-bar"><div class="table-progress-fill" style="width:45%;"></div></div></div>
+      <div><span class="table-status locked">paused</span></div>
+    </div>
+    <div class="table-row">
+      <div class="thumb lol"></div>
+      <div class="table-name">Worlds Emote<span class="game">lol</span></div>
+      <div class="table-data dim">—</div>
+      <div class="table-data dim">0%</div>
+      <div class="table-progress"><div class="table-progress-bar"></div></div>
+      <div><span class="table-status queued">queued</span></div>
+    </div>
+    <div class="table-row">
+      <div class="thumb fn"></div>
+      <div class="table-name">Battle Pass Skin<span class="game">fortnite</span></div>
+      <div class="table-data">—</div>
+      <div class="table-data">62%</div>
+      <div class="table-progress"><div class="table-progress-bar"><div class="table-progress-fill" style="width:62%;background:var(--signal-err);"></div></div></div>
+      <div><span class="table-status locked" style="color:var(--signal-err);background:rgba(248,113,113,0.08);">⊗ expired</span></div>
+    </div>
+    <div class="table-row">
+      <div class="thumb rust"></div>
+      <div class="table-name">Rivals Banner<span class="game">rust</span></div>
+      <div class="table-data">02:00h</div>
+      <div class="table-data">100%</div>
+      <div class="table-progress"><div class="table-progress-bar"><div class="table-progress-fill" style="width:100%;background:var(--signal-ok);"></div></div></div>
+      <div><span class="table-status claimed">✓ claimed</span></div>
+    </div>
+    <div class="table-row">
+      <div class="thumb cs"></div>
+      <div class="table-name">CS2 Tournament Charm<span class="game">cs2</span></div>
+      <div class="table-data dim">—</div>
+      <div class="table-data dim">0%</div>
+      <div class="table-progress"><div class="table-progress-bar"></div></div>
+      <div><span class="table-status queued">queued</span></div>
+    </div>
+  </div>
+</div>
+
+<p class="caption">inventory · 2 layout variants · same tokens · same accent</p>
+
+</body>
+</html>

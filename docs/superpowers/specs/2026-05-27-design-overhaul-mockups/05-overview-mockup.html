@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Droppilot — Overview Mockup</title>
+<style>
+  :root {
+    --bg-app: #0a0b0d;
+    --bg-chrome: #08090b;
+    --bg-elevated: #101216;
+    --bg-elevated-2: #14171c;
+    --border: #1c2026;
+    --border-soft: #16191e;
+    --text: #e8eaed;
+    --text-dim: #9aa0a8;
+    --text-dimmer: #6b7280;
+    --accent: #a78bfa;
+    --accent-soft: rgba(167,139,250,0.12);
+    --accent-glow: rgba(167,139,250,0.4);
+    --signal-ok: #4ade80;
+    --signal-warn: #fbbf24;
+    --signal-err: #f87171;
+    --signal-info: #60a5fa;
+
+    --font-sans: 'IBM Plex Sans', -apple-system, system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', 'Menlo', monospace;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #1a1d21;
+    padding: 24px;
+    font-family: var(--font-sans);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* App window frame */
+  .app-window {
+    max-width: 1180px;
+    margin: 0 auto;
+    background: var(--bg-app);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.5), 0 0 0 1px var(--border);
+  }
+
+  /* Titlebar */
+  .titlebar {
+    height: 36px;
+    background: var(--bg-chrome);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 14px;
+    -webkit-app-region: drag;
+  }
+  .traffic { display: flex; gap: 6px; }
+  .traffic span { width: 11px; height: 11px; border-radius: 50%; display:block; }
+  .traffic .r { background: #ff5f57; }
+  .traffic .y { background: #febc2e; }
+  .traffic .g { background: #28c840; }
+  .brand {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--text);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .brand .logo {
+    width: 14px; height: 14px;
+    border-radius: 3px;
+    background: linear-gradient(135deg, var(--accent), #7c5fe6);
+    box-shadow: 0 0 0 1px rgba(167,139,250,0.3);
+    position: relative;
+  }
+  .brand .logo::after {
+    content: ''; position: absolute; inset: 3px;
+    border-left: 1.5px solid #0a0b0d;
+    border-bottom: 1.5px solid #0a0b0d;
+    transform: rotate(-45deg);
+  }
+  .brand-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--text-dimmer); }
+  .titlebar-status {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    background: rgba(74,222,128,0.08);
+    color: var(--signal-ok);
+    border: 1px solid rgba(74,222,128,0.15);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .pill .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; box-shadow: 0 0 6px currentColor; }
+  .pill.dim { background: rgba(154,160,168,0.06); color: var(--text-dim); border-color: rgba(154,160,168,0.12); }
+  .pill.violet { background: var(--accent-soft); color: var(--accent); border-color: rgba(167,139,250,0.2); }
+  .icon-btn {
+    width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-dimmer);
+    cursor: pointer;
+    border-radius: 4px;
+    -webkit-app-region: no-drag;
+  }
+  .icon-btn:hover { color: var(--text); background: var(--bg-elevated); }
+
+  /* Top nav */
+  .topnav {
+    height: 42px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: stretch;
+    padding: 0 14px;
+    background: var(--bg-app);
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 14px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: lowercase;
+    letter-spacing: 0.04em;
+    color: var(--text-dimmer);
+    cursor: pointer;
+    position: relative;
+    transition: color .15s;
+  }
+  .nav-item:hover { color: var(--text-dim); }
+  .nav-item.active { color: var(--text); }
+  .nav-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; left: 14px; right: 14px;
+    height: 1px;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent-glow);
+  }
+  .nav-item svg { width: 13px; height: 13px; opacity: 0.85; }
+  .nav-spacer { flex: 1; }
+  .nav-right {
+    display: flex; align-items: center; gap: 10px;
+    padding-right: 4px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dimmer);
+  }
+
+  /* Main */
+  .main {
+    padding: 28px 32px 32px;
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 28px;
+  }
+  .col-main { display: flex; flex-direction: column; gap: 24px; }
+  .col-side { display: flex; flex-direction: column; gap: 16px; }
+
+  /* Section label */
+  .section-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-dimmer);
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-label::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* Hero — Currently Watching */
+  .hero {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px 26px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 320px; height: 220px;
+    background: radial-gradient(ellipse at top right, rgba(167,139,250,0.10), transparent 65%);
+    pointer-events: none;
+  }
+  .hero-top {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .hero-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .hero-eyebrow .live {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent-glow);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 50% { opacity: 0.4; } }
+  .hero-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-dimmer);
+  }
+  .hero-title {
+    font-size: 26px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin: 6px 0 2px;
+  }
+  .hero-sub {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 22px;
+  }
+  .hero-sub svg { width: 12px; height: 12px; opacity: 0.7; }
+
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    gap: 0;
+    border-top: 1px solid var(--border-soft);
+    padding-top: 18px;
+  }
+  .stat { position: relative; padding-right: 16px; }
+  .stat + .stat { padding-left: 18px; border-left: 1px solid var(--border-soft); }
+  .stat-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-dimmer);
+    margin-bottom: 6px;
+  }
+  .stat-value {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    font-feature-settings: 'tnum';
+    color: var(--text);
+    line-height: 1;
+  }
+  .stat-value.accent { color: var(--accent); }
+  .stat-sub {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dimmer);
+    margin-top: 4px;
+  }
+  .stat-sub.ok { color: var(--signal-ok); }
+  .stat-sub.warn { color: var(--signal-warn); }
+
+  .progress-bar {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 10px;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 87%;
+    background: linear-gradient(90deg, var(--accent), #c4b5fd);
+    border-radius: 2px;
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+
+  /* Next-up table */
+  .panel {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .panel-header {
+    padding: 14px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .panel-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-dim);
+  }
+  .panel-action {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dimmer);
+    cursor: pointer;
+    text-transform: lowercase;
+    letter-spacing: 0.04em;
+  }
+  .panel-action:hover { color: var(--accent); }
+
+  .row-table { display: grid; }
+  .row-th, .row-tr {
+    display: grid;
+    grid-template-columns: 24px 2fr 1.2fr 0.8fr 0.8fr 0.8fr;
+    align-items: center;
+    padding: 0 20px;
+    gap: 16px;
+  }
+  .row-th {
+    height: 32px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-dimmer);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .row-tr {
+    height: 48px;
+    border-bottom: 1px solid var(--border-soft);
+    font-size: 13px;
+    transition: background .12s;
+    cursor: pointer;
+  }
+  .row-tr:hover { background: var(--bg-elevated-2); }
+  .row-tr:last-child { border-bottom: none; }
+  .row-rank {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-dimmer);
+  }
+  .row-name { color: var(--text); }
+  .row-name .game { display: block; }
+  .row-name .channel { font-family: var(--font-mono); font-size: 11px; color: var(--text-dimmer); margin-top: 2px; }
+  .row-data { font-family: var(--font-mono); font-size: 12px; color: var(--text-dim); font-feature-settings: 'tnum'; }
+  .row-data.val { color: var(--text); }
+  .row-status {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: var(--font-mono); font-size: 10px;
+    padding: 2px 6px; border-radius: 3px;
+  }
+  .row-status.queued { background: rgba(154,160,168,0.08); color: var(--text-dim); }
+  .row-status.live { background: var(--accent-soft); color: var(--accent); }
+
+  /* Right column */
+  .side-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+  }
+  .side-card .panel-title { margin-bottom: 12px; display: block; }
+  .feed-item {
+    display: flex;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-soft);
+    align-items: flex-start;
+  }
+  .feed-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .feed-item:first-child { padding-top: 0; }
+  .feed-icon {
+    width: 20px; height: 20px;
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .feed-icon.ok { background: rgba(74,222,128,0.1); color: var(--signal-ok); }
+  .feed-icon.info { background: rgba(96,165,250,0.1); color: var(--signal-info); }
+  .feed-icon.warn { background: rgba(251,191,36,0.1); color: var(--signal-warn); }
+  .feed-icon svg { width: 11px; height: 11px; }
+  .feed-text { flex: 1; min-width: 0; }
+  .feed-text .msg { font-size: 12px; color: var(--text); line-height: 1.35; }
+  .feed-text .meta { font-family: var(--font-mono); font-size: 10px; color: var(--text-dimmer); margin-top: 3px; }
+  .feed-text .meta .game-tag { color: var(--accent); }
+
+  /* Status footer */
+  .statusbar {
+    height: 26px;
+    background: var(--bg-chrome);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 18px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dimmer);
+  }
+  .statusbar .ok { color: var(--signal-ok); }
+  .statusbar .sep { color: var(--border); }
+  .statusbar .right { margin-left: auto; display: flex; gap: 14px; }
+  .statusbar .right span { display: flex; align-items: center; gap: 5px; }
+
+  /* Quick actions */
+  .quick-actions {
+    display: flex; gap: 8px;
+    margin-top: 16px;
+  }
+  .btn {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 7px 12px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: var(--bg-elevated);
+    color: var(--text);
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: all .12s;
+    letter-spacing: 0.02em;
+  }
+  .btn:hover { border-color: rgba(167,139,250,0.4); color: var(--text); background: var(--bg-elevated-2); }
+  .btn.primary { background: var(--accent); color: #0a0b0d; border-color: var(--accent); font-weight: 600; }
+  .btn.primary:hover { background: #b89bff; color: #0a0b0d; }
+  .btn svg { width: 11px; height: 11px; }
+
+  /* Caption */
+  .caption {
+    max-width: 1180px; margin: 14px auto 0;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: #8a8f96;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="app-window">
+  <!-- Titlebar -->
+  <div class="titlebar">
+    <div class="traffic"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+    <div class="brand">
+      <span class="logo"></span>
+      <span>droppilot</span>
+      <span style="opacity:0.4;">·</span>
+      <span style="color:var(--text-dimmer);">v2.5.7</span>
+    </div>
+    <div class="titlebar-status">
+      <span class="pill"><span class="dot"></span>connected</span>
+      <span class="pill dim">api ok · 124ms</span>
+      <div class="icon-btn" title="Theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></svg>
+      </div>
+      <div class="icon-btn" title="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- TopNav -->
+  <div class="topnav">
+    <div class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      overview
+    </div>
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/></svg>
+      inventory
+    </div>
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      control
+    </div>
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      priorities
+    </div>
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      settings
+    </div>
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      debug
+    </div>
+    <div class="nav-spacer"></div>
+    <div class="nav-right">
+      <span>shroud</span>
+      <span style="color:var(--accent);">●</span>
+      <span>logged in</span>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="main">
+    <div class="col-main">
+      <div>
+        <div class="section-label">currently watching</div>
+        <div class="hero">
+          <div class="hero-top">
+            <div class="hero-eyebrow"><span class="live"></span>LIVE · earning drop</div>
+            <div class="hero-meta">drop_id 4f2a · campaign #7</div>
+          </div>
+          <h1 class="hero-title">Rust — Twitch Rivals Cape</h1>
+          <div class="hero-sub">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="5"/><path d="M3 21v-1a8 8 0 0 1 16 0v1"/></svg>
+            shroud · twitch.tv/shroud
+          </div>
+
+          <div class="hero-grid">
+            <div class="stat">
+              <div class="stat-label">eta</div>
+              <div class="stat-value accent">02:14:38</div>
+              <div class="progress-bar"><div class="progress-fill"></div></div>
+              <div class="stat-sub">87% complete</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">viewers</div>
+              <div class="stat-value">14,247</div>
+              <div class="stat-sub warn">+1.2K · 5m</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">next claim</div>
+              <div class="stat-value">02:14h</div>
+              <div class="stat-sub ok">auto-claim on</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">session</div>
+              <div class="stat-value">04:32:12</div>
+              <div class="stat-sub">3 drops earned</div>
+            </div>
+          </div>
+
+          <div class="quick-actions">
+            <button class="btn primary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+              claim now
+            </button>
+            <button class="btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+              pause
+            </button>
+            <button class="btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
+              switch target
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Next up -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">queue · next up</span>
+          <span class="panel-action">manage →</span>
+        </div>
+        <div class="row-table">
+          <div class="row-th">
+            <span>#</span>
+            <span>game · channel</span>
+            <span>drop</span>
+            <span>eta</span>
+            <span>viewers</span>
+            <span>status</span>
+          </div>
+          <div class="row-tr">
+            <span class="row-rank">02</span>
+            <span class="row-name">
+              <span class="game">Counter-Strike 2</span>
+              <span class="channel">s1mple</span>
+            </span>
+            <span class="row-data val">Major Sticker</span>
+            <span class="row-data">04:00h</span>
+            <span class="row-data">8.4K</span>
+            <span><span class="row-status queued">queued</span></span>
+          </div>
+          <div class="row-tr">
+            <span class="row-rank">03</span>
+            <span class="row-name">
+              <span class="game">Apex Legends</span>
+              <span class="channel">timthetatman</span>
+            </span>
+            <span class="row-data val">Charge Rifle Skin</span>
+            <span class="row-data">06:30h</span>
+            <span class="row-data">12.1K</span>
+            <span><span class="row-status queued">queued</span></span>
+          </div>
+          <div class="row-tr">
+            <span class="row-rank">04</span>
+            <span class="row-name">
+              <span class="game">Valorant</span>
+              <span class="channel">tarik</span>
+            </span>
+            <span class="row-data val">Champions Card</span>
+            <span class="row-data">08:00h</span>
+            <span class="row-data">22.5K</span>
+            <span><span class="row-status queued">queued</span></span>
+          </div>
+          <div class="row-tr">
+            <span class="row-rank">05</span>
+            <span class="row-name">
+              <span class="game">League of Legends</span>
+              <span class="channel">caedrel</span>
+            </span>
+            <span class="row-data val">Worlds Emote</span>
+            <span class="row-data">12:00h</span>
+            <span class="row-data">45.3K</span>
+            <span><span class="row-status queued">queued</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Side -->
+    <div class="col-side">
+      <div class="side-card">
+        <span class="panel-title">recent activity</span>
+        <div class="feed-item">
+          <div class="feed-icon ok">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="feed-text">
+            <div class="msg">Claimed <strong>Rivals Banner</strong></div>
+            <div class="meta"><span class="game-tag">rust</span> · 12 min ago</div>
+          </div>
+        </div>
+        <div class="feed-item">
+          <div class="feed-icon info">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
+          </div>
+          <div class="feed-text">
+            <div class="msg">Switched to <strong>shroud</strong></div>
+            <div class="meta"><span class="game-tag">rust</span> · 38 min ago</div>
+          </div>
+        </div>
+        <div class="feed-item">
+          <div class="feed-icon ok">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="feed-text">
+            <div class="msg">Claimed <strong>Major Sticker Pack</strong></div>
+            <div class="meta"><span class="game-tag">cs2</span> · 1h 14m ago</div>
+          </div>
+        </div>
+        <div class="feed-item">
+          <div class="feed-icon warn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div class="feed-text">
+            <div class="msg">No progress · probe recovery</div>
+            <div class="meta"><span class="game-tag">apex</span> · 2h ago</div>
+          </div>
+        </div>
+        <div class="feed-item">
+          <div class="feed-icon ok">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="feed-text">
+            <div class="msg">Claimed <strong>Apex Charm</strong></div>
+            <div class="meta"><span class="game-tag">apex</span> · 3h 22m ago</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="side-card">
+        <span class="panel-title">engine</span>
+        <div style="display:grid; gap:8px;">
+          <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:11px;">
+            <span style="color:var(--text-dimmer);">watch_cycle</span><span style="color:var(--signal-ok);">running</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:11px;">
+            <span style="color:var(--text-dimmer);">last_refresh</span><span style="color:var(--text);">8s ago</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:11px;">
+            <span style="color:var(--text-dimmer);">cadence</span><span style="color:var(--text);">30s</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:11px;">
+            <span style="color:var(--text-dimmer);">uptime</span><span style="color:var(--text);">14h 32m</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statusbar -->
+  <div class="statusbar">
+    <span><span class="ok">●</span> engine: running</span>
+    <span class="sep">│</span>
+    <span>watch.cycle 30s</span>
+    <span class="sep">│</span>
+    <span>3 drops · today</span>
+    <div class="right">
+      <span>cpu 2.1%</span>
+      <span>mem 142mb</span>
+      <span style="color:var(--accent);">⌘K</span>
+    </div>
+  </div>
+</div>
+
+<p class="caption">overview · pro-console · elevated-engineering · soft-violet · 1180×~880</p>
+
+</body>
+</html>
