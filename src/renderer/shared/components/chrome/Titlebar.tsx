@@ -143,9 +143,12 @@ export function Titlebar({
           </button>
         )}
 
-        {/* Window controls (Windows / Linux only). macOS uses native traffic lights. */}
+        {/* Window controls (Windows / Linux only). macOS uses native traffic lights.
+            self-stretch overrides the parent's items-center so this wrapper
+            spans the full 36px titlebar height; each button below then uses
+            h-full to render a proper 46x36 hit-target like the OS controls. */}
         {showWindowControls && (
-          <div className="flex items-stretch ml-1.5 -mr-1 h-full" style={noDrag}>
+          <div className="flex items-stretch self-stretch ml-1.5 -mr-1" style={noDrag}>
             <WindowButton
               ariaLabel={t("chrome.window.minimize")}
               onClick={() => sendWindowControl("minimize")}
