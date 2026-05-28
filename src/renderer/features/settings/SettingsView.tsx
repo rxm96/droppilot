@@ -18,6 +18,8 @@ type SettingsProps = {
   setLanguage: (val: "de" | "en") => void;
   theme: ThemePreference;
   setTheme: (val: ThemePreference) => void;
+  accent: string | null;
+  setAccent: (val: string | null) => void;
   autoStart: boolean;
   setAutoStart: (val: boolean) => void;
   autoClaim: boolean;
@@ -170,6 +172,8 @@ export function SettingsView(props: SettingsProps) {
               setTheme={props.setTheme}
               enableBadgesEmotes={props.enableBadgesEmotes}
               setEnableBadgesEmotes={props.setEnableBadgesEmotes}
+              accent={props.accent}
+              setAccent={props.setAccent}
             />
           )}
           {active === "updates" && props.showUpdateCheck && (
