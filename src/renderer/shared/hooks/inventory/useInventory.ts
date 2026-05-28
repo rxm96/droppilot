@@ -470,6 +470,16 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
     [inventoryItems, isLinked, allowUnlinkedBadgeEmotes, allowUnlinkedGames],
   );
 
+  const claimNowAll = useCallback(async () => {
+    if (inventory.status !== "ready") return;
+    await claimEngineRef.current.autoClaimFromInventory(inventory.items, {
+      claimDrop: (payload) => window.electronAPI.twitch.claimDrop(payload),
+      onAuthError,
+      onClaimed,
+      setClaimStatus,
+    });
+  }, [inventory, onAuthError, onClaimed, setClaimStatus]);
+
   return {
     inventory,
     inventoryItems,
@@ -486,5 +496,6 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
     withCategories,
     claimStatus,
     setClaimStatus,
+    claimNowAll,
   };
 }
