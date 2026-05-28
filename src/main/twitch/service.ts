@@ -1,3 +1,4 @@
+import { gzipSync } from "node:zlib";
 import type { SessionData } from "../core/storage";
 import { TWITCH_WEB_USER_AGENT } from "../config";
 import { TwitchClient, TwitchAuthError, type RevalidateResult, type TwitchUser } from "./client";
@@ -364,6 +365,8 @@ export class TwitchService {
     broadcastId?: string;
     channelId?: string;
     streamId?: string;
+    gameName?: string;
+    gameId?: string;
   } | null> {
     const body = {
       operationName: "VideoPlayerStreamInfoOverlayChannel",
@@ -382,10 +385,15 @@ export class TwitchService {
     const user = res?.data?.user;
     const stream = user?.stream ?? null;
     if (!stream) return null;
+    const game = stream.game ?? null;
+    const gameName = game?.name ?? game?.displayName ?? undefined;
+    const gameId = game?.id != null ? String(game.id) : undefined;
     return {
       broadcastId: stream.id ?? stream.stream?.id,
       channelId: user?.id,
       streamId: stream.id,
+      gameName,
+      gameId,
     };
   }
 
@@ -400,9 +408,7 @@ export class TwitchService {
       throw new TwitchServiceError(TWITCH_ERROR_CODES.WATCH_OFFLINE, "Watch stream offline");
     }
 
-    const spadeUrl = await this.resolveSpadeUrl(login);
     const validate = await this.client.getValidateInfo();
-    const cookieHeader = await this.client.getCookieHeader().catch(() => "");
     const broadcastId = streamInfo.broadcastId ?? payload.streamId ?? streamInfo.streamId;
     const channelId = streamInfo.channelId ?? payload.channelId;
 
@@ -413,73 +419,76 @@ export class TwitchService {
       );
     }
 
-    const payloadBody = [
+    // Twitch no longer credits minute-watched via a plain POST to the spade
+    // beacon URL — that endpoint still answers 204 but the watch is NOT counted
+    // (which is why progress sat frozen and the engine kept false-stalling). The
+    // web client + TwitchDropsMiner now send it as the `SendEvents` GraphQL
+    // mutation (sendSpadeEvents), which rides our authenticated + integrity-
+    // checked GQL channel. The event array is gzipped, then base64-encoded
+    // ("GZIP_B64") — exactly TDM's Stream._gql_payload.
+    const userIdNum = Number(validate.userId);
+    const eventPayload = [
       {
         event: "minute-watched",
         properties: {
           broadcast_id: String(broadcastId),
           channel_id: String(channelId),
           channel: login,
+          client_time: new Date().toISOString(),
+          game: streamInfo.gameName ?? "",
+          game_id: streamInfo.gameId ?? "",
           hidden: false,
+          is_live: true,
           live: true,
-          location: "channel",
           logged_in: true,
+          minutes_logged: 1,
           muted: false,
-          player: "site",
-          user_id: Number(validate.userId),
+          user_id: Number.isFinite(userIdNum) ? userIdNum : validate.userId,
         },
       },
     ];
-
-    const data = Buffer.from(JSON.stringify(payloadBody)).toString("base64");
-    const formBody = new URLSearchParams({ data }).toString();
-
-    this.debug("Watch ping start", {
-      login,
-      channelId,
-      streamId: payload.streamId ?? streamInfo.streamId,
-      broadcastId,
-      spade: spadeUrl ?? "<none>",
-      hasCookieHeader: cookieHeader.length > 0,
-      payloadEventCount: payloadBody.length,
-    });
-
-    // Keep headers minimal.
-    const headers: Record<string, string> = {
-      "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
-      "User-Agent": TWITCH_WEB_USER_AGENT,
-      // Client-Id is intentionally omitted for Spade.
-      ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+    const g64 = gzipSync(Buffer.from(JSON.stringify(eventPayload), "utf8")).toString("base64");
+    const body = {
+      query:
+        "\n mutation SendEvents($input: SendSpadeEventsInput!) {\n sendSpadeEvents(input: $input) {\n statusCode\n}\n}\n",
+      variables: {
+        input: { data: g64, repository: "twilight", encoding: "GZIP_B64" },
+      },
     };
 
-    this.debug("Watch ping request", {
-      url: spadeUrl,
-      headers: headers.Cookie ? { ...headers, Cookie: "<redacted>" } : headers,
-      bodyLength: formBody.length,
+    this.debug("Watch ping (SendEvents) start", {
+      login,
+      channelId: String(channelId),
+      broadcastId: String(broadcastId),
+      streamId: payload.streamId ?? streamInfo.streamId,
+      game: streamInfo.gameName ?? "",
+      userId: validate.userId,
     });
 
-    const res = await fetch(spadeUrl, {
-      method: "POST",
-      headers,
-      body: formBody,
-    });
-
-    if (res.status === 204) {
-      this.debug("Watch ping ok", { login, channelId, broadcastId });
+    const res = await this.gqlRequest<{
+      data?: { sendSpadeEvents?: { statusCode?: number } };
+    }>(body, "SendEvents");
+    const statusCode = res?.data?.sendSpadeEvents?.statusCode;
+    if (statusCode === 204 || statusCode === 200) {
+      this.debug("Watch ping ok", {
+        login,
+        channelId: String(channelId),
+        broadcastId: String(broadcastId),
+        statusCode,
+      });
       return { ok: true };
     }
 
-    const text = await res.text();
     this.debug("Watch ping failed", {
-      status: res.status,
       login,
-      channelId,
-      broadcastId,
-      body: text,
+      channelId: String(channelId),
+      broadcastId: String(broadcastId),
+      statusCode,
+      response: res,
     });
     throw new TwitchServiceError(
       TWITCH_ERROR_CODES.WATCH_PING_FAILED,
-      text ? `Watch ping failed: ${text}` : `Watch ping failed (${res.status})`,
+      `Watch ping failed (sendSpadeEvents statusCode=${statusCode ?? "unknown"})`,
     );
   }
 

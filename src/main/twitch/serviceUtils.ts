@@ -203,6 +203,7 @@ export type VideoPlayerStreamInfoOverlayChannelResponse = {
       id?: string;
       stream?: {
         id?: string;
+        game?: { id?: string | number; name?: string; displayName?: string } | null;
         stream?: {
           id?: string;
         };
