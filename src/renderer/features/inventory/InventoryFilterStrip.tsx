@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { FilterKey } from "@renderer/shared/types";
 import { cn } from "@renderer/shared/lib/utils";
+import { useI18n } from "@renderer/shared/i18n";
 
 export type FilterChipKey = Exclude<FilterKey, "excluded">;
 
@@ -10,24 +11,29 @@ export type InventoryFilterStripProps = {
   counts?: Partial<Record<FilterChipKey, number>>;
 };
 
-const CHIP_DEFS: Array<{ key: FilterChipKey; label: string }> = [
-  { key: "all", label: "all" },
-  { key: "priority-games", label: "priority" },
-  { key: "in-progress", label: "live" },
-  { key: "upcoming", label: "upcoming" },
-  { key: "finished", label: "claimed" },
-  { key: "not-linked", label: "not linked" },
-  { key: "expired", label: "expired" },
-];
-
 export function InventoryFilterStrip({
   filter,
   onFilterChange,
   counts,
 }: InventoryFilterStripProps) {
+  const { t } = useI18n();
+
+  const CHIP_DEFS = React.useMemo(
+    () => [
+      { key: "all" as FilterChipKey, label: t("inventory.filter.all") },
+      { key: "priority-games" as FilterChipKey, label: t("inventory.filter.priority") },
+      { key: "in-progress" as FilterChipKey, label: t("inventory.filter.live") },
+      { key: "upcoming" as FilterChipKey, label: t("inventory.filter.upcoming") },
+      { key: "finished" as FilterChipKey, label: t("inventory.filter.claimed") },
+      { key: "not-linked" as FilterChipKey, label: t("inventory.filter.notLinked") },
+      { key: "expired" as FilterChipKey, label: t("inventory.filter.expired") },
+    ],
+    [t],
+  );
+
   const active: FilterChipKey = filter === "excluded" ? "all" : (filter as FilterChipKey);
   return (
-    <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Inventory filter">
+    <div className="flex flex-wrap gap-1.5" role="tablist" aria-label={t("inventory.filter.aria")}>
       {CHIP_DEFS.map((def) => {
         const isActive = def.key === active;
         const count = counts?.[def.key];

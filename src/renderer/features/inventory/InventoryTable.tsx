@@ -7,6 +7,7 @@ import { cn } from "@renderer/shared/lib/utils";
 import type { DropSortKey, SortDirection } from "./inventoryFilters";
 import { dropStatusLabel, dropStatusTone, dropTitleFallback } from "./inventoryFormatters";
 import { formatHourMinute, formatPercent } from "@renderer/features/overview/formatters";
+import { useI18n } from "@renderer/shared/i18n";
 
 export type InventoryTableProps = {
   items: InventoryItem[];
@@ -23,14 +24,6 @@ type ColumnDef = {
   sortable: boolean;
 };
 
-const COLUMNS: ColumnDef[] = [
-  { key: null, label: "", sortable: false }, // thumbnail
-  { key: "title", label: "drop · game", sortable: true },
-  { key: "watched", label: "watched", sortable: true },
-  { key: "progress", label: "progress", sortable: true },
-  { key: "status", label: "status", sortable: true },
-];
-
 const COLUMNS_TEMPLATE = "36px 2fr 1fr 1.4fr 100px";
 
 export function InventoryTable({
@@ -41,6 +34,18 @@ export function InventoryTable({
   onSelectDrop,
   emptyMessage,
 }: InventoryTableProps) {
+  const { t } = useI18n();
+
+  const COLUMNS = React.useMemo(
+    (): ColumnDef[] => [
+      { key: null, label: "", sortable: false }, // thumbnail
+      { key: "title", label: t("queue.table.dropGame"), sortable: true },
+      { key: "watched", label: t("queue.table.watched"), sortable: true },
+      { key: "progress", label: t("queue.table.progress"), sortable: true },
+      { key: "status", label: t("queue.table.status"), sortable: true },
+    ],
+    [t],
+  );
   if (items.length === 0) {
     return (
       <div className="rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] px-5 py-12 text-center">

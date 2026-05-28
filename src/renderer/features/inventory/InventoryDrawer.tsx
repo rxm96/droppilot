@@ -16,6 +16,7 @@ import {
   formatPercent,
   formatRelative,
 } from "@renderer/features/overview/formatters";
+import { useI18n } from "@renderer/shared/i18n";
 
 export type InventoryDrawerProps = {
   drop: InventoryItem | null;
@@ -34,6 +35,8 @@ export function InventoryDrawer({
   onOpenAccountLink,
   onAddPriorityGame,
 }: InventoryDrawerProps) {
+  const { t } = useI18n();
+
   React.useEffect(() => {
     if (!drop) return;
     const onKey = (e: KeyboardEvent) => {
@@ -60,7 +63,7 @@ export function InventoryDrawer({
     <>
       <button
         type="button"
-        aria-label="Close drawer"
+        aria-label={t("inventory.drawer.closeAria")}
         onClick={onClose}
         className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] cursor-default"
       />
@@ -68,15 +71,15 @@ export function InventoryDrawer({
       <aside
         role="dialog"
         aria-modal="true"
-        aria-label="Drop details"
+        aria-label={t("inventory.drawer.title")}
         className="fixed right-0 top-0 bottom-0 z-50 w-[400px] max-w-full bg-[color:var(--dp-bg-elevated)] border-l border-[color:var(--dp-border)] shadow-2xl flex flex-col"
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-[color:var(--dp-border-soft)]">
-          <SectionLabel inline>drop details</SectionLabel>
+          <SectionLabel inline>{t("inventory.drawer.title")}</SectionLabel>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t("inventory.drawer.close")}
             className="flex h-7 w-7 items-center justify-center rounded-[var(--dp-radius-xs)] text-[color:var(--dp-text-dimmer)] hover:bg-[color:var(--dp-bg-elevated-2)] hover:text-[color:var(--dp-text)] transition-colors"
           >
             <X size={14} strokeWidth={1.8} />
@@ -115,7 +118,7 @@ export function InventoryDrawer({
 
           <div className="mb-5">
             <div className="font-mono text-[9px] uppercase tracking-[0.12em] text-[color:var(--dp-text-dimmer)] mb-1.5">
-              progress
+              {t("inventory.drawer.progress")}
             </div>
             <div className="flex items-center gap-2 mb-1">
               <div className="flex-1 h-[4px] rounded-[2px] bg-[color:var(--dp-border)] overflow-hidden">
@@ -133,15 +136,18 @@ export function InventoryDrawer({
               </span>
             </div>
             <div className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
-              {formatHourMinute(drop.earnedMinutes)} watched ·{" "}
-              {drop.requiredMinutes > 0 ? formatHourMinute(drop.requiredMinutes) : "—"} required
+              {t("inventory.drawer.watchedRequired", {
+                watched: formatHourMinute(drop.earnedMinutes),
+                required:
+                  drop.requiredMinutes > 0 ? formatHourMinute(drop.requiredMinutes) : "—",
+              })}
             </div>
           </div>
 
           {blockingLabel && (
             <div className="mb-5 rounded-[var(--dp-radius-md)] border border-[rgba(248,113,113,0.20)] bg-[rgba(248,113,113,0.08)] px-3 py-2">
               <div className="font-mono text-[9px] uppercase tracking-[0.12em] text-[color:var(--dp-signal-err)] mb-1">
-                blocked
+                {t("inventory.drawer.blocked")}
               </div>
               <div className="text-[12px] text-[color:var(--dp-text)]">{blockingLabel}</div>
             </div>
@@ -150,17 +156,17 @@ export function InventoryDrawer({
           {campaign && (
             <div className="mb-5">
               <div className="font-mono text-[9px] uppercase tracking-[0.12em] text-[color:var(--dp-text-dimmer)] mb-1.5">
-                campaign
+                {t("inventory.drawer.campaign")}
               </div>
               <div className="text-[13px] text-[color:var(--dp-text)] mb-0.5">{campaign.name}</div>
               {campaign.startsAt && (
                 <div className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
-                  starts {formatRelative(Date.parse(campaign.startsAt))}
+                  {t("inventory.drawer.starts")} {formatRelative(Date.parse(campaign.startsAt))}
                 </div>
               )}
               {campaign.endsAt && (
                 <div className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
-                  ends {formatRelative(Date.parse(campaign.endsAt))}
+                  {t("inventory.drawer.ends")} {formatRelative(Date.parse(campaign.endsAt))}
                 </div>
               )}
             </div>
@@ -174,7 +180,7 @@ export function InventoryDrawer({
                 onClick={() => onOpenAccountLink(campaign?.accountLinkUrl)}
                 title={campaign?.accountLinkUrl}
               >
-                <ExternalLink size={11} strokeWidth={1.8} /> link account
+                <ExternalLink size={11} strokeWidth={1.8} /> {t("inventory.header.linkAccount")}
               </Button>
             )}
             {showAddPriority && drop.game && (
@@ -183,12 +189,12 @@ export function InventoryDrawer({
                 size="dp-md"
                 onClick={() => onAddPriorityGame(drop.game.trim())}
               >
-                add {drop.game} to priorities
+                {t("inventory.drawer.addToPriorities", { game: drop.game })}
               </Button>
             )}
             {!showLinkAction && !showAddPriority && (
               <div className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)] text-center py-2">
-                no actions available
+                {t("inventory.drawer.noActions")}
               </div>
             )}
           </div>
