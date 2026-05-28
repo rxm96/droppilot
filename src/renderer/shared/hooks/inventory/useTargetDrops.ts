@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { InventoryDrop, InventoryDropCollection } from "@renderer/shared/domain/dropDomain";
 import { canEarnDrop, hasHardWatchingBlockers } from "@renderer/shared/domain/inventory";
 import type { InventoryItem, WatchingState } from "@renderer/shared/types";
+import { useInterval } from "@renderer/shared/hooks/useInterval";
 
 type WithCategory = { item: InventoryItem; category: string };
 
@@ -261,8 +262,13 @@ export function computeTargetDrops({
     activeDrop && canPredictActiveDropProgress
       ? Math.min(liveDeltaMinutes, Math.max(0, activeDropRequired - activeDropEarned))
       : 0;
+  // Include the live-ticking delta from the active drop so the percentage
+  // advances between inventory polls (which can be ~1h apart).
   const targetProgress = totalRequiredMinutes
-    ? Math.min(100, Math.round((totalEarnedMinutes / totalRequiredMinutes) * 100))
+    ? Math.min(
+        100,
+        Math.round(((totalEarnedMinutes + liveDeltaApplied) / totalRequiredMinutes) * 100),
+      )
     : 0;
   const activeDropVirtualEarned = activeDrop
     ? Math.min(activeDropRequired, activeDropEarned + liveDeltaApplied)
@@ -316,6 +322,14 @@ export function useTargetDrops({
   inventoryFetchedAt,
   progressAnchorByDropId,
 }: Params): TargetDropsResult {
+  // Tick `now` every second while the user is watching the target game so
+  // targetProgress, liveDeltaApplied, virtualEarned, and activeDropEta stay
+  // live between inventory polls. When not watching the target, no interval
+  // runs and `now` stays static (cheap).
+  const isLiveActive = Boolean(watching && watching.game === targetGame);
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+  useInterval(() => setNowMs(Date.now()), 1000, isLiveActive);
+
   return useMemo(
     () =>
       computeTargetDrops({
@@ -327,6 +341,7 @@ export function useTargetDrops({
         watching,
         inventoryFetchedAt,
         progressAnchorByDropId,
+        now: isLiveActive ? nowMs : undefined,
       }),
     [
       allowWatching,
@@ -337,6 +352,8 @@ export function useTargetDrops({
       targetGame,
       watching,
       withCategories,
+      isLiveActive,
+      nowMs,
     ],
   );
 }
