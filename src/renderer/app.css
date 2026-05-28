@@ -51,6 +51,7 @@
   --color-dp-accent: var(--dp-accent);
   --color-dp-accent-soft: var(--dp-accent-soft);
   --color-dp-accent-glow: var(--dp-accent-glow);
+  --color-dp-accent-hover: var(--dp-accent-hover);
   --color-dp-signal-ok: var(--dp-signal-ok);
   --color-dp-signal-warn: var(--dp-signal-warn);
   --color-dp-signal-err: var(--dp-signal-err);
@@ -277,6 +278,7 @@
   --dp-accent: #a78bfa;
   --dp-accent-soft: rgba(167, 139, 250, 0.12);
   --dp-accent-glow: rgba(167, 139, 250, 0.4);
+  --dp-accent-hover: #b89bff;
 
   /* Signal colors */
   --dp-signal-ok: #4ade80;
@@ -306,6 +308,7 @@
   --dp-accent: #7c5fe6;
   --dp-accent-soft: rgba(124, 95, 230, 0.1);
   --dp-accent-glow: rgba(124, 95, 230, 0.25);
+  --dp-accent-hover: #9170db;
   --dp-signal-ok: #16a34a;
   --dp-signal-warn: #ca8a04;
   --dp-signal-err: #dc2626;

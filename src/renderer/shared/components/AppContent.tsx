@@ -8,10 +8,11 @@ import {
   PriorityView,
   SettingsView,
 } from "@renderer/features";
-import { TopNav } from "./TopNav";
+import type { TopNav } from "./TopNav";
 import { isPerfEnabled, recordRender } from "@renderer/shared/utils/perfStore";
 
 type AppContentProps = {
+  /** Retained for compatibility with the existing useAppModel shape. */
   navProps: ComponentProps<typeof TopNav>;
   overviewProps: ComponentProps<typeof OverviewView>;
   inventoryProps: ComponentProps<typeof InventoryView>;
@@ -44,25 +45,16 @@ export function AppContent({
     },
     [debugEnabled],
   );
+
   return (
-    <main className="layout">
-      <TopNav {...navProps} />
-
-      <section className="panel inventory-panel">
-        {view === "overview" && renderWithPerf("OverviewView", <OverviewView {...overviewProps} />)}
-
-        {view === "inventory" &&
-          renderWithPerf("InventoryView", <InventoryView {...inventoryProps} />)}
-
-        {view === "priorities" &&
-          renderWithPerf("PriorityView", <PriorityView {...priorityProps} />)}
-
-        {view === "settings" && renderWithPerf("SettingsView", <SettingsView {...settingsProps} />)}
-
-        {view === "control" && renderWithPerf("ControlView", <ControlView {...controlProps} />)}
-
-        {view === "debug" && renderWithPerf("DebugView", <DebugView snapshot={debugSnapshot} />)}
-      </section>
+    <main className="px-8 py-7 max-w-[1640px] mx-auto">
+      {view === "overview" && renderWithPerf("OverviewView", <OverviewView {...overviewProps} />)}
+      {view === "inventory" &&
+        renderWithPerf("InventoryView", <InventoryView {...inventoryProps} />)}
+      {view === "priorities" && renderWithPerf("PriorityView", <PriorityView {...priorityProps} />)}
+      {view === "settings" && renderWithPerf("SettingsView", <SettingsView {...settingsProps} />)}
+      {view === "control" && renderWithPerf("ControlView", <ControlView {...controlProps} />)}
+      {view === "debug" && renderWithPerf("DebugView", <DebugView snapshot={debugSnapshot} />)}
     </main>
   );
 }
