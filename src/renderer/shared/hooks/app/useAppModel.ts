@@ -35,7 +35,7 @@ import { isGameActionable, usePriorityOrchestration } from "@renderer/shared/hoo
 import { useSettingsStore } from "./useSettingsStore";
 import { useSmartAlerts } from "./useSmartAlerts";
 import { useStats } from "./useStats";
-import { useAccent, useTheme } from "@renderer/shared/theme";
+import { useAccent, useFontPair, useTheme } from "@renderer/shared/theme";
 import { DropChannelRestriction } from "@renderer/shared/domain/dropDomain";
 import { canEarnDrop } from "@renderer/shared/domain/inventory";
 import type { FilterKey, View } from "@renderer/shared/types";
@@ -65,6 +65,7 @@ export function useAppModel() {
   const { auth, startLogin, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const { accent, setAccent } = useAccent();
+  const { fontPair, setFontPair } = useFontPair();
   const [filter, setFilter] = useState<FilterKey>("all");
   const [view, setView] = useState<View>("inventory");
   const {
@@ -1334,6 +1335,8 @@ export function useAppModel() {
     setTheme,
     accent,
     setAccent,
+    fontPair,
+    setFontPair,
     autoStart,
     setAutoStart: actions.handleSetAutoStart,
     autoClaim,

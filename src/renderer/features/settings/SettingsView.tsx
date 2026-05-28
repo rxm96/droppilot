@@ -20,6 +20,8 @@ type SettingsProps = {
   setTheme: (val: ThemePreference) => void;
   accent: string | null;
   setAccent: (val: string | null) => void;
+  fontPair: import("@renderer/shared/fontPairs").FontPairId;
+  setFontPair: (val: import("@renderer/shared/fontPairs").FontPairId) => void;
   autoStart: boolean;
   setAutoStart: (val: boolean) => void;
   autoClaim: boolean;
@@ -174,6 +176,8 @@ export function SettingsView(props: SettingsProps) {
               setEnableBadgesEmotes={props.setEnableBadgesEmotes}
               accent={props.accent}
               setAccent={props.setAccent}
+              fontPair={props.fontPair}
+              setFontPair={props.setFontPair}
             />
           )}
           {active === "updates" && props.showUpdateCheck && (
