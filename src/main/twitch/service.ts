@@ -1,11 +1,9 @@
 import { gzipSync } from "node:zlib";
 import type { SessionData } from "../core/storage";
-import { TWITCH_WEB_USER_AGENT } from "../config";
 import { TwitchClient, TwitchAuthError, type RevalidateResult, type TwitchUser } from "./client";
 import { buildPriorityPlan, type PriorityPlan } from "./channels";
 import { TwitchServiceError } from "./errors";
 import { TWITCH_ERROR_CODES } from "../../shared/errorCodes";
-import { extractSpadeUrl, SETTINGS_PATTERN } from "./spade";
 import {
   buildCampaignSummaries,
   collectBlockingReasonHints,
@@ -300,65 +298,11 @@ export class TwitchService {
     return { ok: true, status, claimId };
   }
 
-  private spadeCache = new Map<string, string>();
-
   private async buildClaimId(dropId?: string, campaignId?: string): Promise<string | null> {
     if (!dropId || !campaignId) return null;
     const validate = await this.client.getValidateInfo();
     if (!validate?.userId) return null;
     return `${validate.userId}#${campaignId}#${dropId}`;
-  }
-
-  private async resolveSpadeUrl(login: string): Promise<string> {
-    if (this.spadeCache.has(login)) {
-      return this.spadeCache.get(login)!;
-    }
-
-    const fetchText = async (url: string) => {
-      const res = await fetch(url, {
-        redirect: "follow",
-        headers: {
-          "User-Agent": TWITCH_WEB_USER_AGENT,
-        },
-      });
-      if (!res.ok) {
-        throw new TwitchServiceError(
-          TWITCH_ERROR_CODES.SPADE_FETCH_FAILED,
-          `Spade fetch failed (${res.status})`,
-        );
-      }
-      return await res.text();
-    };
-
-    let html: string;
-    try {
-      html = await fetchText(`https://www.twitch.tv/${login}`);
-    } catch (err) {
-      if (err instanceof TwitchServiceError) {
-        throw err;
-      }
-      throw new TwitchServiceError(
-        TWITCH_ERROR_CODES.SPADE_FETCH_FAILED,
-        "Spade fetch failed",
-        err,
-      );
-    }
-
-    let spade = extractSpadeUrl(html);
-    if (!spade) {
-      const settingsMatch = html.match(SETTINGS_PATTERN);
-      if (!settingsMatch) {
-        throw new TwitchServiceError(TWITCH_ERROR_CODES.SPADE_URL_MISSING, "Spade URL missing");
-      }
-      const settingsJs = await fetchText(settingsMatch[1]);
-      spade = extractSpadeUrl(settingsJs);
-      if (!spade) {
-        throw new TwitchServiceError(TWITCH_ERROR_CODES.SPADE_URL_MISSING, "Spade URL missing");
-      }
-    }
-
-    this.spadeCache.set(login, spade);
-    return spade;
   }
 
   private async fetchStreamInfo(login: string): Promise<{
