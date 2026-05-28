@@ -385,7 +385,9 @@ export class TwitchService {
     const user = res?.data?.user;
     const stream = user?.stream ?? null;
     if (!stream) return null;
-    const game = stream.game ?? null;
+    // The current game is under broadcastSettings (this is the exact path TDM
+    // reads from the same query/hash); stream.game is a fallback just in case.
+    const game = user?.broadcastSettings?.game ?? stream.game ?? null;
     const gameName = game?.name ?? game?.displayName ?? undefined;
     const gameId = game?.id != null ? String(game.id) : undefined;
     return {
