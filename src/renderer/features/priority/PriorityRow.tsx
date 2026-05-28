@@ -4,6 +4,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, X } from "@renderer/shared/lib/icons";
 import { Pill } from "@renderer/shared/components/ui/pill";
 import { cn } from "@renderer/shared/lib/utils";
+import { useI18n } from "@renderer/shared/i18n";
 import { padPriorityRank, type PriorityRowState } from "./priorityHelpers";
 
 export type PriorityRowProps = {
@@ -11,13 +12,6 @@ export type PriorityRowProps = {
   game: string;
   state: PriorityRowState;
   onRemove: (game: string) => void;
-};
-
-const STATE_LABEL: Record<PriorityRowState, string> = {
-  watching: "watching",
-  target: "target",
-  live: "live",
-  idle: "idle",
 };
 
 const STATE_TONE: Record<PriorityRowState, "accent" | "ok" | "info" | "dim"> = {
@@ -28,6 +22,18 @@ const STATE_TONE: Record<PriorityRowState, "accent" | "ok" | "info" | "dim"> = {
 };
 
 export function PriorityRow({ rank, game, state, onRemove }: PriorityRowProps) {
+  const { t } = useI18n();
+
+  const STATE_LABEL = React.useMemo<Record<PriorityRowState, string>>(
+    () => ({
+      watching: t("priorities.state.watching"),
+      target: t("priorities.state.target"),
+      live: t("priorities.state.live"),
+      idle: t("priorities.state.idle"),
+    }),
+    [t],
+  );
+
   const {
     attributes,
     listeners,
@@ -60,8 +66,8 @@ export function PriorityRow({ rank, game, state, onRemove }: PriorityRowProps) {
         ref={setActivatorNodeRef}
         {...attributes}
         {...listeners}
-        aria-label={`Drag ${game}`}
-        title={`Drag ${game}`}
+        aria-label={t("priorities.row.dragAria", { game })}
+        title={t("priorities.row.dragAria", { game })}
         className={cn(
           "flex h-6 w-6 items-center justify-center rounded-[var(--dp-radius-xs)] cursor-grab active:cursor-grabbing",
           "text-[color:var(--dp-text-dimmer)] opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[color:var(--dp-accent)]",
@@ -96,8 +102,8 @@ export function PriorityRow({ rank, game, state, onRemove }: PriorityRowProps) {
       <button
         type="button"
         onClick={() => onRemove(game)}
-        aria-label={`Remove ${game}`}
-        title={`Remove ${game}`}
+        aria-label={t("priorities.row.removeAria", { game })}
+        title={t("priorities.row.removeAria", { game })}
         className={cn(
           "flex h-6 w-6 items-center justify-center rounded-[var(--dp-radius-xs)]",
           "text-[color:var(--dp-text-dimmer)] opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[color:var(--dp-signal-err)]",
