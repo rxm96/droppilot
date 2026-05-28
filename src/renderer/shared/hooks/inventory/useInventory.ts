@@ -44,6 +44,18 @@ const NOOP = () => {};
 const NOOP_CLAIM = () => {};
 const NOOP_AUTH = (_message?: string) => {};
 type FetchInventoryOpts = { forceLoading?: boolean };
+
+// Synthetic drop-claim event so a successful auto-claim flows through the same
+// reconciler path the PubSub handler uses — flips the drop to status "claimed"
+// in local state immediately (no waiting for the next inventory reload).
+const buildLocalClaimEvent = (drop: InventoryItem): UserPubSubEvent => ({
+  kind: "drop-claim",
+  at: Date.now(),
+  topic: "auto-claim-local",
+  messageType: "drop-claim",
+  dropId: drop.id,
+  dropInstanceId: drop.dropInstanceId,
+});
 export {
   applyDropClaimToInventoryItems,
   applyDropProgressToInventoryItems,
@@ -287,6 +299,11 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
               onAuthError,
               onClaimed,
               setClaimStatus,
+              markClaimed: (drop) =>
+                setInventory((prev) => {
+                  const result = applyPubSubEventToInventoryState(prev, buildLocalClaimEvent(drop));
+                  return result.patched ? result.nextInventory : prev;
+                }),
             });
           }
         } catch (err) {
@@ -498,6 +515,11 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
       onAuthError,
       onClaimed,
       setClaimStatus,
+      markClaimed: (drop) =>
+        setInventory((prev) => {
+          const result = applyPubSubEventToInventoryState(prev, buildLocalClaimEvent(drop));
+          return result.patched ? result.nextInventory : prev;
+        }),
     });
   }, [inventory, onAuthError, onClaimed, setClaimStatus]);
 

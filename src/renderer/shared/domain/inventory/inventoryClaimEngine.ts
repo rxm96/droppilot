@@ -34,6 +34,12 @@ type ClaimEngineBaseDeps = {
 
 type AutoClaimDeps = ClaimEngineBaseDeps & {
   onClaimed: (payload: { title: string; game: string }) => void;
+  /**
+   * Optimistically mark the drop claimed in local state right after a
+   * successful claim, so the UI (claim button / claims-ready count) updates
+   * immediately instead of staying stuck until the next inventory reload.
+   */
+  markClaimed?: (drop: InventoryItem) => void;
 };
 
 type PubSubClaimDeps = ClaimEngineBaseDeps & {
@@ -129,6 +135,9 @@ export class InventoryClaimEngine {
         throwIfClaimErrorResponse(response);
 
         deps.onClaimed({ title: drop.title, game: drop.game });
+        // Mirror TDM: flip the drop to claimed in local state on success so the
+        // UI reflects it instantly (no waiting for the next inventory fetch).
+        deps.markClaimed?.(drop);
         this.claimRetryByDropId.delete(drop.id);
         this.claimAttemptsById.delete(drop.id);
         logInfo("inventory: auto-claimed", {

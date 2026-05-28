@@ -70,6 +70,40 @@ describe("InventoryClaimEngine.autoClaimFromInventory", () => {
     );
   });
 
+  it("marks the drop claimed locally on success (UI updates without a reload)", async () => {
+    const engine = new InventoryClaimEngine();
+    const markClaimed = vi.fn();
+    const item = makeItem();
+
+    await engine.autoClaimFromInventory([item], {
+      claimDrop: vi.fn(async () => ({ ok: true })),
+      onAuthError: vi.fn(),
+      onClaimed: vi.fn(),
+      setClaimStatus: vi.fn<(status: ClaimStatus) => void>(),
+      markClaimed,
+      now: () => 1_000,
+    });
+
+    expect(markClaimed).toHaveBeenCalledTimes(1);
+    expect(markClaimed).toHaveBeenCalledWith(item);
+  });
+
+  it("does not mark claimed when the claim fails", async () => {
+    const engine = new InventoryClaimEngine();
+    const markClaimed = vi.fn();
+
+    await engine.autoClaimFromInventory([makeItem()], {
+      claimDrop: vi.fn(async () => ({ ok: false, message: "nope" })),
+      onAuthError: vi.fn(),
+      onClaimed: vi.fn(),
+      setClaimStatus: vi.fn<(status: ClaimStatus) => void>(),
+      markClaimed,
+      now: () => 9_000,
+    });
+
+    expect(markClaimed).not.toHaveBeenCalled();
+  });
+
   it("backs off failed claims and skips immediate retries with the same signature", async () => {
     const engine = new InventoryClaimEngine();
     const claimDrop = vi.fn(async () => ({ ok: false, message: "try later" }));
