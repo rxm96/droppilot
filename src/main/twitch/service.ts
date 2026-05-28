@@ -35,6 +35,7 @@ import {
   type DirectoryPageGameResponse,
   type DirectoryStreamNode,
   type DropCampaignDetailsResponse,
+  type DropCurrentSessionResponse,
   type InventoryResponse,
   type VideoPlayerStreamInfoOverlayChannelResponse,
 } from "./serviceUtils";
@@ -480,6 +481,70 @@ export class TwitchService {
       TWITCH_ERROR_CODES.WATCH_PING_FAILED,
       text ? `Watch ping failed: ${text}` : `Watch ping failed (${res.status})`,
     );
+  }
+
+  /**
+   * Reads the CURRENT drop progress for the channel the user is actively
+   * watching, via the DropCurrentSessionContext GraphQL query. This is the
+   * canonical live-progress source used by drop miners — it reflects the
+   * server-side minutes accrued from the spade `minute-watched` pings.
+   *
+   * Replaces the dead `user-drop-events` PubSub topic (which still accepts a
+   * LISTEN but never delivers drop-progress messages). Twitch returns
+   * `dropCurrentSession: null` when there's no active eligible drop on the
+   * watched channel.
+   *
+   * Returns null when there's no active session, the query shape is
+   * unexpected, or the call fails (logged but non-fatal — caller just keeps
+   * the last known progress).
+   */
+  async fetchDropProgress(): Promise<{
+    dropId: string;
+    currentMinutesWatched: number;
+    requiredMinutesWatched: number;
+    channelId?: string;
+    gameName?: string;
+  } | null> {
+    const body = createPersistedQuery(
+      "DropCurrentSessionContext",
+      // Known persisted-query hash used by the Twitch web client + drop miners.
+      // If Twitch rotates it, this call returns a PersistedQueryNotFound error
+      // (logged below) and we fall back to keeping the last known progress.
+      "4d06b702d25d652afb9ef835d2a550031f1cf762b193523a92166f40ea3d142b",
+      {},
+    );
+    let res: DropCurrentSessionResponse;
+    try {
+      res = await this.gqlRequest<DropCurrentSessionResponse>(body, "DropCurrentSessionContext");
+    } catch (err) {
+      this.debug("dropProgress: gql failed", err);
+      return null;
+    }
+    // Log the raw response so the exact shape can be confirmed at runtime —
+    // critical because this is a newly-wired query and Twitch's contract here
+    // is only known empirically.
+    this.debug("dropProgress: raw response", res);
+    const session = res?.data?.currentUser?.dropCurrentSession ?? null;
+    if (!session) {
+      this.debug("dropProgress: no active session (dropCurrentSession null)");
+      return null;
+    }
+    const dropId = session.dropID?.trim();
+    if (!dropId) {
+      this.debug("dropProgress: session missing dropID", session);
+      return null;
+    }
+    const current = Number(session.currentMinutesWatched);
+    const required = Number(session.requiredMinutesWatched);
+    const result = {
+      dropId,
+      currentMinutesWatched: Number.isFinite(current) ? Math.max(0, current) : 0,
+      requiredMinutesWatched: Number.isFinite(required) ? Math.max(0, required) : 0,
+      channelId: session.channel?.id ? String(session.channel.id) : undefined,
+      gameName: session.game?.name ?? session.game?.displayName ?? undefined,
+    };
+    this.debug("dropProgress: parsed", result);
+    return result;
   }
 
   private async fetchCampaignEdges(opts?: {

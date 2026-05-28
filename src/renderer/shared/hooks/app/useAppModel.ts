@@ -380,6 +380,7 @@ export function useAppModel() {
     setClaimStatus,
     withCategories,
     claimNowAll,
+    pollDropProgressOnce,
   } = useInventory(
     isLinkedOrDemo,
     {
@@ -403,6 +404,25 @@ export function useAppModel() {
   });
   const watchStats = useWatchPing({ watching, bumpStats, forwardAuthError, demoMode });
   const stallCheckHeartbeat = watchStats.nextAt;
+
+  // Live drop-progress polling. The `user-drop-events` PubSub topic is dead
+  // (accepts LISTEN but never delivers drop-progress), so we poll the
+  // DropCurrentSessionContext GQL query while watching to read the server-side
+  // minutes accrued by the spade watch pings. ~45s cadence — frequent enough
+  // to feel live, light enough to stay under the radar. Fires an immediate
+  // poll on watch start, then on the interval. No-ops when not watching.
+  const DROP_PROGRESS_POLL_MS = 45_000;
+  const isWatchingForPoll = Boolean(watching) && !demoMode;
+  useEffect(() => {
+    if (!isWatchingForPoll) return;
+    // Immediate poll so the user sees progress shortly after starting, not
+    // only after the first full interval.
+    void pollDropProgressOnce();
+    const id = window.setInterval(() => {
+      void pollDropProgressOnce();
+    }, DROP_PROGRESS_POLL_MS);
+    return () => window.clearInterval(id);
+  }, [isWatchingForPoll, pollDropProgressOnce]);
   const warmupState = useCampaignWarmup({
     allowWatching: allowWarmup,
     demoMode,

@@ -150,6 +150,21 @@ export type CampaignsResponse = {
   };
 };
 
+export type DropCurrentSessionResponse = {
+  data?: {
+    currentUser?: {
+      id?: string;
+      dropCurrentSession?: {
+        dropID?: string;
+        currentMinutesWatched?: number;
+        requiredMinutesWatched?: number;
+        channel?: { id?: string | number; name?: string };
+        game?: { id?: string | number; name?: string; displayName?: string };
+      } | null;
+    } | null;
+  };
+};
+
 export type InventoryResponse = {
   data?: {
     currentUser?: {

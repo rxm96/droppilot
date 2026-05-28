@@ -311,6 +311,21 @@ export function registerIpcHandlers(deps: {
     },
   );
 
+  ipcMain.handle("twitch/dropProgress", async () => {
+    try {
+      const progress = await twitch.fetchDropProgress();
+      return { ok: true, progress };
+    } catch (err) {
+      if (twitch.isAuthError(err)) {
+        return { error: "auth", message: (err as Error).message, status: (err as any).status };
+      }
+      if (err instanceof TwitchServiceError) {
+        return { error: "twitch", code: err.code, message: err.message };
+      }
+      return { error: "unknown", message: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
   ipcMain.handle(
     "twitch/claimDrop",
     async (_e, payload: { dropInstanceId?: string; dropId?: string; campaignId?: string }) => {

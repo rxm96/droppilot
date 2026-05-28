@@ -492,6 +492,73 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
     });
   }, [inventory, onAuthError, onClaimed, setClaimStatus]);
 
+  /**
+   * Polls the live drop progress (DropCurrentSessionContext GQL) and patches
+   * it into inventory state — the replacement for the dead `user-drop-events`
+   * PubSub topic. Synthesizes a drop-progress event so it flows through the
+   * exact same applyPubSubEventToInventoryState path the PubSub handler used.
+   *
+   * Called on an interval while watching (see useDropProgressPoll). Safe to
+   * call when idle — it no-ops if not linked or inventory isn't ready.
+   */
+  const pollDropProgressOnce = useCallback(async () => {
+    if (demoMode || !isLinked) return;
+    let res: Awaited<ReturnType<typeof window.electronAPI.twitch.dropProgress>>;
+    try {
+      res = await window.electronAPI.twitch.dropProgress();
+    } catch {
+      return;
+    }
+    if (isIpcAuthErrorResponse(res)) {
+      onAuthError(res.message);
+      return;
+    }
+    if (!res || typeof res !== "object" || !("ok" in res) || !res.ok) return;
+    const progress = res.progress;
+    if (!progress) return; // no active session on the watched channel
+    const dropId = progress.dropId?.trim();
+    if (!dropId) return;
+    const currentMin = Math.max(0, Number(progress.currentMinutesWatched) || 0);
+    const reconciler = pubSubReconcilerRef.current;
+    // Dedupe: skip if the reconciler says this exact progress was already applied.
+    if (reconciler && !reconciler.shouldApplyProgress(dropId, currentMin)) return;
+
+    const synthetic: UserPubSubEvent = {
+      kind: "drop-progress",
+      at: Date.now(),
+      topic: "drop-progress-poll",
+      messageType: "drop-progress",
+      dropId,
+      currentProgressMin: currentMin,
+      requiredProgressMin: Math.max(0, Number(progress.requiredMinutesWatched) || 0),
+    };
+
+    let patchResult: ReturnType<typeof applyPubSubEventToInventoryState> | null = null;
+    setInventory((prev) => {
+      const result = applyPubSubEventToInventoryState(prev, synthetic);
+      if (!result.patched) return prev;
+      patchResult = result;
+      return result.nextInventory;
+    });
+    const applied = patchResult as ReturnType<typeof applyPubSubEventToInventoryState> | null;
+    if (!applied?.patched) return;
+    totalMinutesRef.current = applied.nextTotalMinutes ?? totalMinutesRef.current ?? 0;
+    if (applied.deltaMinutes > 0) onMinutesEarned(applied.deltaMinutes);
+    const anchorIds = getPatchedAnchorIds(applied);
+    if (anchorIds.length > 0) {
+      setProgressAnchorByDropId((prev) => mergeProgressAnchors(prev, anchorIds, synthetic.at));
+    }
+    const updatedId = applied.updatedId;
+    if (updatedId) {
+      setInventoryChanges((prev) => markUpdatedInventoryChange(prev, updatedId));
+    }
+    logDebug("inventory: dropProgress poll applied", {
+      dropId,
+      currentMin,
+      delta: applied.deltaMinutes,
+    });
+  }, [demoMode, isLinked, onAuthError, onMinutesEarned]);
+
   return {
     inventory,
     inventoryItems,
@@ -509,5 +576,6 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
     claimStatus,
     setClaimStatus,
     claimNowAll,
+    pollDropProgressOnce,
   };
 }
