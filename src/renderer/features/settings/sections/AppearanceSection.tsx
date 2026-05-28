@@ -46,6 +46,7 @@ export function AppearanceSection(props: AppearanceSectionProps) {
       <div className="mt-6">
         <SectionLabel>{t("settings.subsection.accent")}</SectionLabel>
         <SettingRow
+          stacked
           label={t("settings.row.accent.label")}
           description={t("settings.row.accent.description")}
           control={<AccentPicker accent={props.accent} setAccent={props.setAccent} />}

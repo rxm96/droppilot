@@ -39,91 +39,94 @@ export function AccentPicker({ accent, setAccent }: AccentPickerProps) {
   const customColorValue = accent && /^#[0-9a-fA-F]{6}$/.test(accent) ? accent : "#a78bfa";
 
   return (
-    <div className="flex flex-col gap-3">
-      {/* Preset swatches */}
-      <div className="flex flex-wrap items-center gap-2">
-        {PRESETS.map((preset) => {
-          const isActive = preset.id === activePresetId;
-          const name = t(preset.nameKey);
-          return (
-            <button
-              key={preset.id}
-              type="button"
-              onClick={() => setAccent(preset.color)}
-              aria-label={t("settings.row.accent.swatchAria", { name })}
-              aria-pressed={isActive}
-              title={name}
-              className={cn(
-                "relative inline-flex h-8 w-8 items-center justify-center rounded-full",
-                "transition-transform hover:scale-110",
-                isActive
-                  ? "ring-2 ring-offset-2 ring-offset-[color:var(--dp-bg-elevated)]"
-                  : "ring-1 ring-[color:var(--dp-border)]",
-              )}
-              style={{
-                background: preset.color,
-                // The active ring uses the swatch color so the indicator matches what got picked.
-                ...(isActive ? ({ "--tw-ring-color": preset.color } as React.CSSProperties) : {}),
-              }}
-            >
-              {isActive && (
-                <Check
-                  size={14}
-                  strokeWidth={2.4}
-                  className="text-[color:var(--dp-bg-app)]"
-                  aria-hidden="true"
-                />
-              )}
-            </button>
-          );
-        })}
+    // Single-row layout: 8 preset swatches + custom-color swatch + optional reset
+    // button. With SettingRow's `stacked` variant the picker spans the full
+    // panel width so it doesn't wrap unless the window is very narrow.
+    <div className="flex flex-wrap items-center gap-2">
+      {PRESETS.map((preset) => {
+        const isActive = preset.id === activePresetId;
+        const name = t(preset.nameKey);
+        return (
+          <button
+            key={preset.id}
+            type="button"
+            onClick={() => setAccent(preset.color)}
+            aria-label={t("settings.row.accent.swatchAria", { name })}
+            aria-pressed={isActive}
+            title={name}
+            className={cn(
+              "relative inline-flex h-7 w-7 items-center justify-center rounded-full",
+              "transition-transform hover:scale-110",
+              isActive
+                ? "ring-2 ring-offset-2 ring-offset-[color:var(--dp-bg-elevated)]"
+                : "ring-1 ring-[color:var(--dp-border)]",
+            )}
+            style={{
+              background: preset.color,
+              // The active ring uses the swatch color so the indicator matches what got picked.
+              ...(isActive ? ({ "--tw-ring-color": preset.color } as React.CSSProperties) : {}),
+            }}
+          >
+            {isActive && (
+              <Check
+                size={12}
+                strokeWidth={2.4}
+                className="text-[color:var(--dp-bg-app)]"
+                aria-hidden="true"
+              />
+            )}
+          </button>
+        );
+      })}
 
-        {/* Custom color input — native browser color picker. */}
-        <label
-          className={cn(
-            "relative inline-flex h-8 w-8 items-center justify-center rounded-full cursor-pointer overflow-hidden",
-            "transition-transform hover:scale-110",
-            isCustom
-              ? "ring-2 ring-offset-2 ring-offset-[color:var(--dp-bg-elevated)]"
-              : "ring-1 ring-[color:var(--dp-border)]",
-          )}
-          style={{
-            // Conic gradient hints at "any color" while still showing the current pick when isCustom.
-            background: isCustom
-              ? customColorValue
-              : "conic-gradient(from 0deg, #fb7185, #fbbf24, #34d399, #38bdf8, #818cf8, #a78bfa, #fb7185)",
-            ...(isCustom
-              ? ({ "--tw-ring-color": customColorValue } as React.CSSProperties)
-              : {}),
-          }}
-          title={t("settings.row.accent.customAria")}
+      {/* Custom color input — native browser color picker. */}
+      <label
+        className={cn(
+          "relative inline-flex h-7 w-7 items-center justify-center rounded-full cursor-pointer overflow-hidden",
+          "transition-transform hover:scale-110",
+          isCustom
+            ? "ring-2 ring-offset-2 ring-offset-[color:var(--dp-bg-elevated)]"
+            : "ring-1 ring-[color:var(--dp-border)]",
+        )}
+        style={{
+          // Conic gradient hints at "any color" while still showing the current pick when isCustom.
+          background: isCustom
+            ? customColorValue
+            : "conic-gradient(from 0deg, #fb7185, #fbbf24, #34d399, #38bdf8, #818cf8, #a78bfa, #fb7185)",
+          ...(isCustom ? ({ "--tw-ring-color": customColorValue } as React.CSSProperties) : {}),
+        }}
+        title={t("settings.row.accent.customAria")}
+        aria-label={t("settings.row.accent.customAria")}
+      >
+        <input
+          type="color"
+          value={customColorValue}
+          onChange={(e) => setAccent(e.target.value)}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           aria-label={t("settings.row.accent.customAria")}
-        >
-          <input
-            type="color"
-            value={customColorValue}
-            onChange={(e) => setAccent(e.target.value)}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            aria-label={t("settings.row.accent.customAria")}
+        />
+        {isCustom && (
+          <Check
+            size={12}
+            strokeWidth={2.4}
+            className="text-[color:var(--dp-bg-app)] relative z-10"
+            aria-hidden="true"
           />
-          {isCustom && (
-            <Check
-              size={14}
-              strokeWidth={2.4}
-              className="text-[color:var(--dp-bg-app)] relative z-10"
-              aria-hidden="true"
-            />
-          )}
-        </label>
-      </div>
+        )}
+      </label>
 
-      {/* Reset button (only shown when an override is active) */}
+      {/* Inline reset button (only shown when an override is active) */}
       {accent !== null && (
-        <div>
-          <Button variant="dp-outline" size="dp-sm" onClick={() => setAccent(null)}>
+        <>
+          {/* Tiny vertical divider so the reset button reads as a separate action */}
+          <span
+            aria-hidden="true"
+            className="mx-1 inline-block h-5 w-px bg-[color:var(--dp-border)]"
+          />
+          <Button variant="dp-ghost" size="dp-sm" onClick={() => setAccent(null)}>
             {t("settings.row.accent.reset")}
           </Button>
-        </div>
+        </>
       )}
     </div>
   );
