@@ -141,6 +141,12 @@ const api = {
   app: {
     windowControl: (action: "minimize" | "maximize" | "restore" | "close" | "hide-to-tray") =>
       ipcRenderer.invoke("app/windowControl", { action }),
+    isMaximized: () => ipcRenderer.invoke("app/isMaximized"),
+    onMaximizedChange: (handler: (payload: { isMaximized: boolean }) => void) => {
+      const listener = (_event: unknown, payload: { isMaximized: boolean }) => handler(payload);
+      ipcRenderer.on("app/maximizedChange", listener);
+      return () => ipcRenderer.removeListener("app/maximizedChange", listener);
+    },
     checkUpdates: () => ipcRenderer.invoke("app/checkUpdates"),
     downloadUpdate: () => ipcRenderer.invoke("app/downloadUpdate"),
     installUpdate: () => ipcRenderer.invoke("app/installUpdate"),
