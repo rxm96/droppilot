@@ -498,20 +498,32 @@ export class TwitchService {
    * unexpected, or the call fails (logged but non-fatal — caller just keeps
    * the last known progress).
    */
-  async fetchDropProgress(): Promise<{
+  async fetchDropProgress(channelId: string): Promise<{
     dropId: string;
     currentMinutesWatched: number;
     requiredMinutesWatched: number;
     channelId?: string;
     gameName?: string;
   } | null> {
+    const watchedChannelId = String(channelId ?? "").trim();
+    if (!watchedChannelId) {
+      // The DropCurrentSessionContext resolver keys off the watched channel.
+      // Without channelID it ALWAYS returns dropCurrentSession: null, so don't
+      // even spend the request — just keep the last known progress.
+      this.debug("dropProgress: no channelId provided, skipping");
+      return null;
+    }
     const body = createPersistedQuery(
       "DropCurrentSessionContext",
       // Known persisted-query hash used by the Twitch web client + drop miners.
       // If Twitch rotates it, this call returns a PersistedQueryNotFound error
       // (logged below) and we fall back to keeping the last known progress.
       "4d06b702d25d652afb9ef835d2a550031f1cf762b193523a92166f40ea3d142b",
-      {},
+      // channelID (the watched channel id, as a string) is REQUIRED — the
+      // resolver returns dropCurrentSession: null without it. channelLogin is
+      // always "" (mirrors the Twitch web client + TwitchDropsMiner). This was
+      // the bug: we previously sent {} and so always got a null session.
+      { channelID: watchedChannelId, channelLogin: "" },
     );
     let res: DropCurrentSessionResponse;
     try {

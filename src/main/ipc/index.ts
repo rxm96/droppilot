@@ -311,9 +311,9 @@ export function registerIpcHandlers(deps: {
     },
   );
 
-  ipcMain.handle("twitch/dropProgress", async () => {
+  ipcMain.handle("twitch/dropProgress", async (_e, payload: { channelId?: string }) => {
     try {
-      const progress = await twitch.fetchDropProgress();
+      const progress = await twitch.fetchDropProgress(payload?.channelId ?? "");
       return { ok: true, progress };
     } catch (err) {
       if (twitch.isAuthError(err)) {

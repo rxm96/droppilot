@@ -413,13 +413,18 @@ export function useAppModel() {
   // poll on watch start, then on the interval. No-ops when not watching.
   const DROP_PROGRESS_POLL_MS = 45_000;
   const isWatchingForPoll = Boolean(watching) && !demoMode;
+  // The DropCurrentSessionContext query needs the watched channel id. Track it
+  // in a ref so the poll always uses the current channel without restarting the
+  // interval (and resetting its timer) every time the user switches channels.
+  const watchingChannelIdRef = useRef<string>("");
+  watchingChannelIdRef.current = String(watching?.channelId ?? watching?.id ?? "");
   useEffect(() => {
     if (!isWatchingForPoll) return;
     // Immediate poll so the user sees progress shortly after starting, not
     // only after the first full interval.
-    void pollDropProgressOnce();
+    void pollDropProgressOnce(watchingChannelIdRef.current);
     const id = window.setInterval(() => {
-      void pollDropProgressOnce();
+      void pollDropProgressOnce(watchingChannelIdRef.current);
     }, DROP_PROGRESS_POLL_MS);
     return () => window.clearInterval(id);
   }, [isWatchingForPoll, pollDropProgressOnce]);
@@ -527,22 +532,18 @@ export function useAppModel() {
     });
   }, [isGameInStallCooldown, stallSuppressedGame, stalledGameCooldownUntil, withCategories]);
 
-  const {
-    activeTargetGame,
-    setActiveTargetGame,
-    priorityOrder,
-    priorityListPreemptionActive,
-  } = usePriorityOrchestration({
-    demoMode,
-    inventoryStatus: inventory.status,
-    inventoryItems,
-    withCategories: orchestrationCategories,
-    priorityGames,
-    obeyPriority,
-    allowUnlinkedGames,
-    watching,
-    stopWatching: stopWatchingForAutomation,
-  });
+  const { activeTargetGame, setActiveTargetGame, priorityOrder, priorityListPreemptionActive } =
+    usePriorityOrchestration({
+      demoMode,
+      inventoryStatus: inventory.status,
+      inventoryItems,
+      withCategories: orchestrationCategories,
+      priorityGames,
+      obeyPriority,
+      allowUnlinkedGames,
+      watching,
+      stopWatching: stopWatchingForAutomation,
+    });
 
   const targetGame = selectVisibleTargetGame(watchEngineState, activeTargetGame);
   const displayTargetGame = useMemo(() => {
@@ -820,9 +821,7 @@ export function useAppModel() {
     prevAddedRef.current = inventoryChanges?.added;
     if (currSize > prevSize && currSize > 0) {
       const firstAddedId = inventoryChanges.added.values().next().value;
-      const sample = firstAddedId
-        ? inventoryItems.find((it) => it.id === firstAddedId)
-        : undefined;
+      const sample = firstAddedId ? inventoryItems.find((it) => it.id === firstAddedId) : undefined;
       recordActivity({
         kind: "new-drops",
         at: Date.now(),

@@ -103,7 +103,8 @@ const api = {
       ipcRenderer.invoke("twitch/debugEmitUserPubSubEvent", payload),
     watch: (payload: { channelId: string; login: string; streamId?: string }) =>
       ipcRenderer.invoke("twitch/watch", payload),
-    dropProgress: () => ipcRenderer.invoke("twitch/dropProgress"),
+    dropProgress: (payload: { channelId: string }) =>
+      ipcRenderer.invoke("twitch/dropProgress", payload),
     claimDrop: (payload: { dropInstanceId?: string; dropId?: string; campaignId?: string }) =>
       ipcRenderer.invoke("twitch/claimDrop", payload),
     onChannelsDiff: (handler: (payload: ChannelsDiffPayload) => void) => {
