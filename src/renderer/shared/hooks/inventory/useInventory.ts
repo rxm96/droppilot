@@ -86,6 +86,11 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
   const [progressAnchorByDropId, setProgressAnchorByDropId] = useState<Record<string, number>>({});
   const [claimStatus, setClaimStatus] = useState<ClaimStatus | null>(null);
   const totalMinutesRef = useRef<number | null>(null);
+  // Timestamp of the last time the watched drop's progress was confirmed by the
+  // server — either via a PubSub drop-progress event or a successful GQL poll.
+  // Drives TDM-style reactive poll gating: while this stays fresh (events are
+  // flowing, or a poll just ran), we skip polling entirely. 0 = never confirmed.
+  const lastProgressUpdateAtRef = useRef<number>(0);
   const claimEngineRef = useRef<InventoryClaimEngine>(new InventoryClaimEngine());
   const pubSubReconcilerRef = useRef<InventoryPubSubReconciler | null>(null);
   const fetchInFlightRef = useRef(false);
@@ -392,6 +397,10 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
       });
 
       if (payload.kind === "drop-progress") {
+        // A push arrived — the live event channel is alive right now, so reset
+        // the stall clock. This keeps the reactive poll gate quiet while events
+        // flow (mirrors TDM: GQL is only a fallback for when push stalls).
+        lastProgressUpdateAtRef.current = Date.now();
         const dropId = payload.dropId?.trim();
         const progress =
           typeof payload.currentProgressMin === "number" &&
@@ -519,6 +528,11 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
         return;
       }
       if (!res || typeof res !== "object" || !("ok" in res) || !res.ok) return;
+      // We got a definitive server answer — either live progress or a clean
+      // "no active session". Both reset the stall clock so the reactive gate
+      // waits a full window before polling again (a null session shouldn't make
+      // us re-poll every tick).
+      lastProgressUpdateAtRef.current = Date.now();
       const progress = res.progress;
       if (!progress) return; // no active session on the watched channel
       const dropId = progress.dropId?.trim();
@@ -566,6 +580,20 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
     [demoMode, isLinked, onAuthError, onMinutesEarned],
   );
 
+  // TDM-style reactive gate: only spend a GQL poll when the live data has gone
+  // stale — i.e. neither a PubSub drop-progress event nor a previous poll has
+  // confirmed the watched drop within `stallMs`. While push events flow (or
+  // right after a poll), this no-ops and makes zero extra requests; when the
+  // event channel is silent it degrades to ~one poll per stall window.
+  const pollDropProgressIfStale = useCallback(
+    async (channelId: string, stallMs: number) => {
+      const lastAt = lastProgressUpdateAtRef.current;
+      if (lastAt > 0 && Date.now() - lastAt < stallMs) return;
+      await pollDropProgressOnce(channelId);
+    },
+    [pollDropProgressOnce],
+  );
+
   return {
     inventory,
     inventoryItems,
@@ -584,5 +612,6 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
     setClaimStatus,
     claimNowAll,
     pollDropProgressOnce,
+    pollDropProgressIfStale,
   };
 }
