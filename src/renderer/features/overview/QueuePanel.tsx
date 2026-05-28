@@ -13,6 +13,7 @@ import { formatHourMinute, formatPercent, padRank } from "./formatters";
 import { useI18n } from "@renderer/shared/i18n";
 import { cn } from "@renderer/shared/lib/utils";
 import { sameGameName } from "@renderer/shared/domain/gameName";
+import { InventoryDrop } from "@renderer/shared/domain/dropDomain";
 
 export type QueuePanelProps = {
   items: InventoryItem[];
@@ -43,8 +44,15 @@ export function QueuePanel({
   const { t } = useI18n();
   const hasTarget = !!targetGame && targetGame.length > 0;
   const queued = React.useMemo(() => {
+    const now = Date.now();
     const filtered = items.filter((it) => {
       if (it.status === "claimed") return false;
+      // Exclude drops whose campaign has already ended. The queue answers "what
+      // can I still farm" — expired campaigns can't earn. They're also the cause
+      // of the duplicate-looking list: an old + current campaign for the same
+      // game often reuse generic drop names ("Drop 1..4"), so without this the
+      // expired set shows alongside the active one.
+      if (new InventoryDrop(it).isExpired(now)) return false;
       if (hasTarget && !sameGameName(it.game, targetGame)) return false;
       return true;
     });
@@ -73,7 +81,13 @@ export function QueuePanel({
   // most things out.
   const otherGamesCount = React.useMemo(() => {
     if (!hasTarget) return 0;
-    return items.filter((it) => it.status !== "claimed" && !sameGameName(it.game, targetGame)).length;
+    const now = Date.now();
+    return items.filter(
+      (it) =>
+        it.status !== "claimed" &&
+        !new InventoryDrop(it).isExpired(now) &&
+        !sameGameName(it.game, targetGame),
+    ).length;
   }, [items, hasTarget, targetGame]);
 
   return (
