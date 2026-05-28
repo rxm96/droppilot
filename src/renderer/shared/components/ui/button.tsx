@@ -15,6 +15,9 @@ export const buttonVariants = cva(
         destructive: "bg-destructive text-destructive-foreground hover:opacity-90",
 
         // === Design-overhaul variants (Pro Console palette) ===
+        // dp-primary text color is intentionally hardcoded #0a0b0d (near-black):
+        // both dark- and light-mode accent are violet shades, so dark text reads
+        // well on either. Using a token would require a new --dp-on-accent.
         "dp-primary":
           "bg-[var(--dp-accent)] text-[#0a0b0d] font-semibold hover:bg-[var(--dp-accent-hover)] rounded-[var(--dp-radius-sm)] font-mono tracking-[0.02em]",
         "dp-secondary":
