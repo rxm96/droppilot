@@ -22,6 +22,8 @@ type Params = {
   saveAlertsNewDrops: (val: boolean) => Promise<void>;
   saveEnableBadgesEmotes: (val: boolean) => Promise<void>;
   saveAllowUnlinkedGames: (val: boolean) => Promise<void>;
+  saveCloseToTray: (val: boolean) => Promise<void>;
+  saveMinimizeToTray: (val: boolean) => Promise<void>;
   saveRefreshIntervals: (minMs: number, maxMs: number) => Promise<void>;
   resetAutomation: () => Promise<void>;
 };
@@ -46,6 +48,8 @@ export function useSettingsActions({
   saveAlertsNewDrops,
   saveEnableBadgesEmotes,
   saveAllowUnlinkedGames,
+  saveCloseToTray,
+  saveMinimizeToTray,
   saveRefreshIntervals,
   resetAutomation,
 }: Params) {
@@ -176,6 +180,21 @@ export function useSettingsActions({
     },
     [saveAllowUnlinkedGames],
   );
+
+  const handleSetCloseToTray = useCallback(
+    (val: boolean) => {
+      void saveCloseToTray(val);
+    },
+    [saveCloseToTray],
+  );
+
+  const handleSetMinimizeToTray = useCallback(
+    (val: boolean) => {
+      void saveMinimizeToTray(val);
+    },
+    [saveMinimizeToTray],
+  );
+
   const handleSetRefreshIntervals = useCallback(
     (minMs: number, maxMs: number) => {
       void saveRefreshIntervals(minMs, maxMs);
@@ -207,6 +226,8 @@ export function useSettingsActions({
     handleSetAlertsNewDrops,
     handleSetEnableBadgesEmotes,
     handleSetAllowUnlinkedGames,
+    handleSetCloseToTray,
+    handleSetMinimizeToTray,
     handleSetRefreshIntervals,
     handleResetAutomation,
   };

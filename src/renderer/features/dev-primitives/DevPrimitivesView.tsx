@@ -52,7 +52,6 @@ export function DevPrimitivesView() {
         onSettingsClick={() => {}}
         connectionState="connected"
         apiLatencyMs={124}
-        onWindowAction={(a) => console.log("window:", a)}
       />
       <AppNav
         view={view}

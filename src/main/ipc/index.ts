@@ -311,6 +311,21 @@ export function registerIpcHandlers(deps: {
     },
   );
 
+  ipcMain.handle("twitch/dropProgress", async (_e, payload: { channelId?: string }) => {
+    try {
+      const progress = await twitch.fetchDropProgress(payload?.channelId ?? "");
+      return { ok: true, progress };
+    } catch (err) {
+      if (twitch.isAuthError(err)) {
+        return { error: "auth", message: (err as Error).message, status: (err as any).status };
+      }
+      if (err instanceof TwitchServiceError) {
+        return { error: "twitch", code: err.code, message: err.message };
+      }
+      return { error: "unknown", message: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
   ipcMain.handle(
     "twitch/claimDrop",
     async (_e, payload: { dropInstanceId?: string; dropId?: string; campaignId?: string }) => {
@@ -374,6 +389,11 @@ export function registerIpcHandlers(deps: {
 
   ipcMain.handle("stats/reset", async () => {
     return resetStats();
+  });
+
+  ipcMain.handle("app/isMaximized", async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    return { ok: true, isMaximized: !!win?.isMaximized() };
   });
 
   ipcMain.handle(

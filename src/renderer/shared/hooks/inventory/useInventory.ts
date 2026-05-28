@@ -86,6 +86,11 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
   const [progressAnchorByDropId, setProgressAnchorByDropId] = useState<Record<string, number>>({});
   const [claimStatus, setClaimStatus] = useState<ClaimStatus | null>(null);
   const totalMinutesRef = useRef<number | null>(null);
+  // Timestamp of the last time the watched drop's progress was confirmed by the
+  // server — either via a PubSub drop-progress event or a successful GQL poll.
+  // Drives TDM-style reactive poll gating: while this stays fresh (events are
+  // flowing, or a poll just ran), we skip polling entirely. 0 = never confirmed.
+  const lastProgressUpdateAtRef = useRef<number>(0);
   const claimEngineRef = useRef<InventoryClaimEngine>(new InventoryClaimEngine());
   const pubSubReconcilerRef = useRef<InventoryPubSubReconciler | null>(null);
   const fetchInFlightRef = useRef(false);
@@ -328,9 +333,21 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
   }, [demoMode]);
 
   useEffect(() => {
-    if (demoMode || !isLinked) return;
+    if (demoMode || !isLinked) {
+      // Silent kill #1: if the account isn't linked yet, the renderer never
+      // subscribes to drop-progress events, and earnedMinutes never advances
+      // mid-session. Log it so DevView shows why we're not seeing live data.
+      logDebug("inventory: pubsub subscription skipped", { demoMode, isLinked });
+      return;
+    }
     const pubSubReconciler = pubSubReconcilerRef.current;
-    if (!pubSubReconciler) return;
+    if (!pubSubReconciler) {
+      // Silent kill #2: reconciler ref not yet initialized. This is normally
+      // a brief startup window, but if it persists, no events are applied.
+      logDebug("inventory: pubsub reconciler not ready");
+      return;
+    }
+    logDebug("inventory: pubsub subscription attached");
 
     const applyPatch = (
       event: UserPubSubEvent,
@@ -380,6 +397,10 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
       });
 
       if (payload.kind === "drop-progress") {
+        // A push arrived — the live event channel is alive right now, so reset
+        // the stall clock. This keeps the reactive poll gate quiet while events
+        // flow (mirrors TDM: GQL is only a fallback for when push stalls).
+        lastProgressUpdateAtRef.current = Date.now();
         const dropId = payload.dropId?.trim();
         const progress =
           typeof payload.currentProgressMin === "number" &&
@@ -470,6 +491,126 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
     [inventoryItems, isLinked, allowUnlinkedBadgeEmotes, allowUnlinkedGames],
   );
 
+  const claimNowAll = useCallback(async () => {
+    if (inventory.status !== "ready") return;
+    await claimEngineRef.current.autoClaimFromInventory(inventory.items, {
+      claimDrop: (payload) => window.electronAPI.twitch.claimDrop(payload),
+      onAuthError,
+      onClaimed,
+      setClaimStatus,
+    });
+  }, [inventory, onAuthError, onClaimed, setClaimStatus]);
+
+  /**
+   * Polls the live drop progress (DropCurrentSessionContext GQL) and patches
+   * it into inventory state — the replacement for the dead `user-drop-events`
+   * PubSub topic. Synthesizes a drop-progress event so it flows through the
+   * exact same applyPubSubEventToInventoryState path the PubSub handler used.
+   *
+   * Called on an interval while watching (see useDropProgressPoll). Safe to
+   * call when idle — it no-ops if not linked or inventory isn't ready.
+   */
+  const pollDropProgressOnce = useCallback(
+    async (channelId: string) => {
+      if (demoMode || !isLinked) return;
+      const watchedChannelId = String(channelId ?? "").trim();
+      // DropCurrentSessionContext keys off the watched channel id — without it the
+      // server always returns a null session, so there's nothing to poll for.
+      if (!watchedChannelId) return;
+      let res: Awaited<ReturnType<typeof window.electronAPI.twitch.dropProgress>>;
+      try {
+        res = await window.electronAPI.twitch.dropProgress({ channelId: watchedChannelId });
+      } catch {
+        return;
+      }
+      if (isIpcAuthErrorResponse(res)) {
+        onAuthError(res.message);
+        return;
+      }
+      if (!res || typeof res !== "object" || !("ok" in res) || !res.ok) return;
+      // We got a definitive server answer — either live progress or a clean
+      // "no active session". Both reset the stall clock so the reactive gate
+      // waits a full window before polling again (a null session shouldn't make
+      // us re-poll every tick).
+      lastProgressUpdateAtRef.current = Date.now();
+      const progress = res.progress;
+      if (!progress) return; // no active session on the watched channel
+      // Twitch's dropCurrentSession returns the user's GLOBALLY-active drop
+      // session, which can still point at a previously-watched channel (frozen
+      // at its last value) right after a channel switch or app restart — it does
+      // NOT scope to the channelID we pass. If the session is for a different
+      // channel than the one we're watching, it's stale for us: applying it would
+      // freeze the active drop on another channel's old minutes (the "stuck at 8,
+      // ETA always ~51" symptom). Ignore it and let the watch-start-anchored
+      // virtualEarned estimate drive the UI until Twitch credits this channel.
+      if (progress.channelId && progress.channelId !== watchedChannelId) {
+        logDebug("inventory: dropProgress ignored — session is for another channel", {
+          watching: watchedChannelId,
+          session: progress.channelId,
+          dropId: progress.dropId,
+          currentMin: progress.currentMinutesWatched,
+        });
+        return;
+      }
+      const dropId = progress.dropId?.trim();
+      if (!dropId) return;
+      const currentMin = Math.max(0, Number(progress.currentMinutesWatched) || 0);
+      const reconciler = pubSubReconcilerRef.current;
+      // Dedupe: skip if the reconciler says this exact progress was already applied.
+      if (reconciler && !reconciler.shouldApplyProgress(dropId, currentMin)) return;
+
+      const synthetic: UserPubSubEvent = {
+        kind: "drop-progress",
+        at: Date.now(),
+        topic: "drop-progress-poll",
+        messageType: "drop-progress",
+        dropId,
+        currentProgressMin: currentMin,
+        requiredProgressMin: Math.max(0, Number(progress.requiredMinutesWatched) || 0),
+      };
+
+      let patchResult: ReturnType<typeof applyPubSubEventToInventoryState> | null = null;
+      setInventory((prev) => {
+        const result = applyPubSubEventToInventoryState(prev, synthetic);
+        if (!result.patched) return prev;
+        patchResult = result;
+        return result.nextInventory;
+      });
+      const applied = patchResult as ReturnType<typeof applyPubSubEventToInventoryState> | null;
+      if (!applied?.patched) return;
+      totalMinutesRef.current = applied.nextTotalMinutes ?? totalMinutesRef.current ?? 0;
+      if (applied.deltaMinutes > 0) onMinutesEarned(applied.deltaMinutes);
+      const anchorIds = getPatchedAnchorIds(applied);
+      if (anchorIds.length > 0) {
+        setProgressAnchorByDropId((prev) => mergeProgressAnchors(prev, anchorIds, synthetic.at));
+      }
+      const updatedId = applied.updatedId;
+      if (updatedId) {
+        setInventoryChanges((prev) => markUpdatedInventoryChange(prev, updatedId));
+      }
+      logDebug("inventory: dropProgress poll applied", {
+        dropId,
+        currentMin,
+        delta: applied.deltaMinutes,
+      });
+    },
+    [demoMode, isLinked, onAuthError, onMinutesEarned],
+  );
+
+  // TDM-style reactive gate: only spend a GQL poll when the live data has gone
+  // stale — i.e. neither a PubSub drop-progress event nor a previous poll has
+  // confirmed the watched drop within `stallMs`. While push events flow (or
+  // right after a poll), this no-ops and makes zero extra requests; when the
+  // event channel is silent it degrades to ~one poll per stall window.
+  const pollDropProgressIfStale = useCallback(
+    async (channelId: string, stallMs: number) => {
+      const lastAt = lastProgressUpdateAtRef.current;
+      if (lastAt > 0 && Date.now() - lastAt < stallMs) return;
+      await pollDropProgressOnce(channelId);
+    },
+    [pollDropProgressOnce],
+  );
+
   return {
     inventory,
     inventoryItems,
@@ -486,5 +627,8 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
     withCategories,
     claimStatus,
     setClaimStatus,
+    claimNowAll,
+    pollDropProgressOnce,
+    pollDropProgressIfStale,
   };
 }

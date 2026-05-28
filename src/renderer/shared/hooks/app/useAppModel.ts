@@ -35,11 +35,14 @@ import { isGameActionable, usePriorityOrchestration } from "@renderer/shared/hoo
 import { useSettingsStore } from "./useSettingsStore";
 import { useSmartAlerts } from "./useSmartAlerts";
 import { useStats } from "./useStats";
-import { useTheme } from "@renderer/shared/theme";
+import { useAccent, useFontPair, useTheme } from "@renderer/shared/theme";
 import { DropChannelRestriction } from "@renderer/shared/domain/dropDomain";
 import { canEarnDrop } from "@renderer/shared/domain/inventory";
+import { sameGameName } from "@renderer/shared/domain/gameName";
 import type { FilterKey, View } from "@renderer/shared/types";
 import { isVerboseLoggingEnabled, logDebug, logInfo } from "@renderer/shared/utils/logger";
+import { recordActivity } from "@renderer/shared/utils/activityFeed";
+import type { ActivityEvent } from "@renderer/shared/utils/activityFeed";
 
 const CLAIM_PROBE_NEAR_END_MINUTES = 1;
 const CLAIM_PROBE_INTERVAL_MS = 25_000;
@@ -64,6 +67,8 @@ const toConsoleSnapshot = <T>(value: T): T => {
 export function useAppModel() {
   const { auth, startLogin, logout } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { accent, setAccent } = useAccent();
+  const { fontPair, setFontPair } = useFontPair();
   const [filter, setFilter] = useState<FilterKey>("all");
   const [view, setView] = useState<View>("inventory");
   const {
@@ -90,6 +95,8 @@ export function useAppModel() {
     alertsNewDrops,
     enableBadgesEmotes,
     allowUnlinkedGames,
+    closeToTray,
+    minimizeToTray,
     savePriorityGames,
     saveObeyPriority,
     saveLanguage,
@@ -112,6 +119,8 @@ export function useAppModel() {
     saveAlertsNewDrops,
     saveEnableBadgesEmotes,
     saveAllowUnlinkedGames,
+    saveCloseToTray,
+    saveMinimizeToTray,
     resetAutomation,
     selectedGame,
     setSelectedGame,
@@ -344,6 +353,24 @@ export function useAppModel() {
     });
   }, [watching]);
 
+  // Stamp when the current watch session (channel+stream) began so useTargetDrops
+  // can clamp its live-progress anchor to it — we must not credit elapsed time
+  // from before the user started watching (e.g. a stale inventory snapshot).
+  // Same session-key semantics ControlView uses, so both views agree.
+  const watchSessionKeyRef = useRef<string | null>(null);
+  const [watchStartedAt, setWatchStartedAt] = useState<number | null>(null);
+  useEffect(() => {
+    if (!watching) {
+      watchSessionKeyRef.current = null;
+      setWatchStartedAt(null);
+      return;
+    }
+    const sessionKey = `${watching.id}:${watching.streamId ?? ""}`;
+    if (watchSessionKeyRef.current === sessionKey) return;
+    watchSessionKeyRef.current = sessionKey;
+    setWatchStartedAt(Date.now());
+  }, [watching]);
+
   const { stats, bumpStats, resetStats } = useStats({ demoMode });
   const { notify } = useSmartAlerts({
     enabled: alertsEnabled,
@@ -370,6 +397,9 @@ export function useAppModel() {
     claimStatus,
     setClaimStatus,
     withCategories,
+    claimNowAll,
+    pollDropProgressOnce,
+    pollDropProgressIfStale,
   } = useInventory(
     isLinkedOrDemo,
     {
@@ -393,6 +423,35 @@ export function useAppModel() {
   });
   const watchStats = useWatchPing({ watching, bumpStats, forwardAuthError, demoMode });
   const stallCheckHeartbeat = watchStats.nextAt;
+
+  // Live drop-progress reconciliation while watching. The `user-drop-events`
+  // PubSub topic delivers drop-progress only intermittently (goes silent for
+  // long stretches), so we back it with the DropCurrentSessionContext GQL query
+  // — the same query the Twitch web player + TwitchDropsMiner use. Mirroring
+  // TDM, the poll is REACTIVE, not a blind timer: a cheap tick checks whether
+  // the watched drop has been confirmed (by a push event OR a previous poll)
+  // within STALL_MS; only if it's gone stale do we spend a request. So while
+  // events flow we make zero extra calls, and when they're silent we degrade to
+  // ~one poll per stall window. Stays under the radar by construction.
+  const DROP_PROGRESS_TICK_MS = 15_000; // how often we *check* (no request)
+  const DROP_PROGRESS_STALL_MS = 60_000; // poll only after this much silence
+  const isWatchingForPoll = Boolean(watching) && !demoMode;
+  // The DropCurrentSessionContext query needs the watched channel id. Track it
+  // in a ref so the poll always uses the current channel without restarting the
+  // interval (and resetting its timer) every time the user switches channels.
+  const watchingChannelIdRef = useRef<string>("");
+  watchingChannelIdRef.current = String(watching?.channelId ?? watching?.id ?? "");
+  useEffect(() => {
+    if (!isWatchingForPoll) return;
+    // One unconditional baseline poll on watch start so the user sees progress
+    // shortly after starting (also seeds the stall clock). After that the gate
+    // takes over and only polls when the live data has actually gone stale.
+    void pollDropProgressOnce(watchingChannelIdRef.current);
+    const id = window.setInterval(() => {
+      void pollDropProgressIfStale(watchingChannelIdRef.current, DROP_PROGRESS_STALL_MS);
+    }, DROP_PROGRESS_TICK_MS);
+    return () => window.clearInterval(id);
+  }, [isWatchingForPoll, pollDropProgressOnce, pollDropProgressIfStale]);
   const warmupState = useCampaignWarmup({
     allowWatching: allowWarmup,
     demoMode,
@@ -443,6 +502,8 @@ export function useAppModel() {
     saveAlertsNewDrops,
     saveEnableBadgesEmotes,
     saveAllowUnlinkedGames,
+    saveCloseToTray,
+    saveMinimizeToTray,
     saveRefreshIntervals,
     resetAutomation,
     setWatchingFromChannel,
@@ -495,23 +556,18 @@ export function useAppModel() {
     });
   }, [isGameInStallCooldown, stallSuppressedGame, stalledGameCooldownUntil, withCategories]);
 
-  const {
-    activeTargetGame,
-    setActiveTargetGame,
-    priorityOrder,
-    priorityListPreemptionActive,
-    refreshPriorityPlan,
-  } = usePriorityOrchestration({
-    demoMode,
-    inventoryStatus: inventory.status,
-    inventoryItems,
-    withCategories: orchestrationCategories,
-    priorityGames,
-    obeyPriority,
-    allowUnlinkedGames,
-    watching,
-    stopWatching: stopWatchingForAutomation,
-  });
+  const { activeTargetGame, setActiveTargetGame, priorityOrder, priorityListPreemptionActive } =
+    usePriorityOrchestration({
+      demoMode,
+      inventoryStatus: inventory.status,
+      inventoryItems,
+      withCategories: orchestrationCategories,
+      priorityGames,
+      obeyPriority,
+      allowUnlinkedGames,
+      watching,
+      stopWatching: stopWatchingForAutomation,
+    });
 
   const targetGame = selectVisibleTargetGame(watchEngineState, activeTargetGame);
   const displayTargetGame = useMemo(() => {
@@ -665,6 +721,7 @@ export function useAppModel() {
     watching,
     inventoryFetchedAt,
     progressAnchorByDropId,
+    watchStartedAt,
   });
 
   useEffect(() => {
@@ -762,6 +819,75 @@ export function useAppModel() {
     activeDropInfo,
     watching,
   });
+
+  // --- Activity feed wiring (Sources 2-5) ---
+
+  // Source 2: Auto-switch — rising-edge detect (null → truthy with new `at`)
+  const prevAutoSwitchRef = useRef<typeof autoSwitchInfo>(null);
+  useEffect(() => {
+    const prev = prevAutoSwitchRef.current;
+    prevAutoSwitchRef.current = autoSwitchInfo;
+    if (!autoSwitchInfo) return;
+    if (prev && prev.at === autoSwitchInfo.at) return;
+    recordActivity({
+      kind: "auto-switch",
+      at: autoSwitchInfo.at ?? Date.now(),
+      fromName: autoSwitchInfo.from?.name ?? "",
+      toName: autoSwitchInfo.to?.name ?? "",
+      reason: autoSwitchInfo.reason ?? "",
+    } as Omit<Extract<ActivityEvent, { kind: "auto-switch" }>, "id">);
+  }, [autoSwitchInfo]);
+
+  // Source 3: New drops added — rising-edge detect on added set size
+  const prevAddedRef = useRef<Set<string> | undefined>(undefined);
+  useEffect(() => {
+    const prevSize = prevAddedRef.current?.size ?? 0;
+    const currSize = inventoryChanges?.added?.size ?? 0;
+    prevAddedRef.current = inventoryChanges?.added;
+    if (currSize > prevSize && currSize > 0) {
+      const firstAddedId = inventoryChanges.added.values().next().value;
+      const sample = firstAddedId ? inventoryItems.find((it) => it.id === firstAddedId) : undefined;
+      recordActivity({
+        kind: "new-drops",
+        at: Date.now(),
+        count: currSize,
+        sampleTitle: sample?.title,
+      } as Omit<Extract<ActivityEvent, { kind: "new-drops" }>, "id">);
+    }
+  }, [inventoryChanges, inventoryItems]);
+
+  // Source 4: Watch error — rising-edge detect (new or changed error)
+  const prevWatchErrorRef = useRef<typeof watchStats.lastError>(null);
+  useEffect(() => {
+    const prev = prevWatchErrorRef.current;
+    const curr = watchStats.lastError;
+    prevWatchErrorRef.current = curr;
+    if (!curr) return;
+    if (prev && prev.code === curr.code && prev.message === curr.message) return;
+    recordActivity({
+      kind: "watch-error",
+      at: Date.now(),
+      message: curr.message,
+      code: curr.code,
+    } as Omit<Extract<ActivityEvent, { kind: "watch-error" }>, "id">);
+  }, [watchStats.lastError]);
+
+  // Source 5: Watch started — null → truthy transition
+  const prevWatchingRef = useRef<typeof watching>(null);
+  useEffect(() => {
+    const prev = prevWatchingRef.current;
+    prevWatchingRef.current = watching;
+    if (!prev && watching) {
+      recordActivity({
+        kind: "watch-started",
+        at: Date.now(),
+        channelName: watching.name ?? watching.login ?? "",
+        game: watching.game,
+      } as Omit<Extract<ActivityEvent, { kind: "watch-started" }>, "id">);
+    }
+  }, [watching]);
+
+  // --- End activity feed wiring ---
 
   useEffect(() => {
     if (!watching || !activeDropInfo) return;
@@ -897,7 +1023,7 @@ export function useAppModel() {
       const fallbackChannel = allowlistRestriction.hasConstraints
         ? channels.find((channel) => allowlistRestriction.allowsChannel(channel))
         : channels[0];
-      if (watching.game !== targetGame && fallbackChannel) {
+      if (!sameGameName(watching.game, targetGame) && fallbackChannel) {
         setWatchingFromChannel(fallbackChannel);
         noFarmableDropRef.current = null;
         return;
@@ -1274,6 +1400,12 @@ export function useAppModel() {
     activeDropTitle: activeDropInfo?.title,
     activeDropRemainingMinutes: activeDropInfo?.remainingMinutes,
     activeDropEta: activeDropInfo?.eta,
+    // QueuePanel uses this to render the live-ticking progress on the
+    // actively-watched row. virtualEarned is updated every 1s by useTargetDrops
+    // while watching the target game (Phase 12 fix).
+    activeDrop: activeDropInfo
+      ? { id: activeDropInfo.id, earnedMinutes: activeDropInfo.virtualEarned }
+      : null,
     targetProgress,
     totalDrops,
     claimedDrops,
@@ -1323,8 +1455,14 @@ export function useAppModel() {
   };
   const settingsProps = {
     isLinked,
+    onLogout: logout,
+    onLogin: startLogin,
     theme,
     setTheme,
+    accent,
+    setAccent,
+    fontPair,
+    setFontPair,
     autoStart,
     setAutoStart: actions.handleSetAutoStart,
     autoClaim,
@@ -1361,6 +1499,10 @@ export function useAppModel() {
     setEnableBadgesEmotes: actions.handleSetEnableBadgesEmotes,
     allowUnlinkedGames,
     setAllowUnlinkedGames: actions.handleSetAllowUnlinkedGames,
+    closeToTray,
+    setCloseToTray: actions.handleSetCloseToTray,
+    minimizeToTray,
+    setMinimizeToTray: actions.handleSetMinimizeToTray,
     sendTestAlert: handleTestAlert,
     refreshMinMs,
     refreshMaxMs,
@@ -1384,15 +1526,11 @@ export function useAppModel() {
   const controlProps = {
     targetGame: displayTargetGame,
     targetDrops,
-    targetProgress,
-    totalDrops,
-    claimedDrops,
     totalEarnedMinutes,
     totalRequiredMinutes,
     inventoryRefreshing,
     inventoryFetchedAt,
     fetchInventory: actions.handleFetchInventory,
-    refreshPriorityPlan,
     watching,
     lastWatchedChannelIdentity,
     stopWatching: handleStopWatchingWithSuppressedTarget,
@@ -1404,7 +1542,6 @@ export function useAppModel() {
     startWatching: handleStartWatching,
     activeDropInfo,
     claimStatus,
-    canWatchTarget,
     showNoDropsHint,
     lastWatchOk: watchStats.lastOk,
     watchError: watchStats.lastError,
@@ -1413,6 +1550,19 @@ export function useAppModel() {
     watchEngineSnapshot,
   };
 
+  // The active drop's own live completion %, so the Hero card's "% complete"
+  // matches its title + ETA (which are both about the active drop). Falls back
+  // to the aggregate targetProgress when nothing is actively being watched.
+  const activeDropProgress =
+    activeDropInfo && activeDropInfo.requiredMinutes > 0
+      ? Math.max(
+          0,
+          Math.min(
+            100,
+            Math.round((activeDropInfo.virtualEarned / activeDropInfo.requiredMinutes) * 100),
+          ),
+        )
+      : null;
   const heroProps = {
     demoMode,
     nextWatchAt: watchStats.nextAt || undefined,
@@ -1428,8 +1578,11 @@ export function useAppModel() {
     inventoryFetchedAt,
     lastWatchOk: watchStats.lastOk || undefined,
     targetProgress,
+    activeDropProgress,
     warmupActive: warmupState.active,
     warmupGame: warmupState.game,
+    onClaimNow: claimNowAll,
+    claimStatus,
   };
 
   const titleBarProps = {

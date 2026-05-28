@@ -17,6 +17,7 @@ export {
   Monitor,
   Minus,
   Square,
+  Copy,
   X,
   ChevronDown,
   ChevronUp,
@@ -38,6 +39,7 @@ export {
   ExternalLink,
   Search,
   Filter,
+  Plus,
 
   // Domain
   User,

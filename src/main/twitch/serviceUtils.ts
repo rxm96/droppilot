@@ -150,6 +150,21 @@ export type CampaignsResponse = {
   };
 };
 
+export type DropCurrentSessionResponse = {
+  data?: {
+    currentUser?: {
+      id?: string;
+      dropCurrentSession?: {
+        dropID?: string;
+        currentMinutesWatched?: number;
+        requiredMinutesWatched?: number;
+        channel?: { id?: string | number; name?: string };
+        game?: { id?: string | number; name?: string; displayName?: string };
+      } | null;
+    } | null;
+  };
+};
+
 export type InventoryResponse = {
   data?: {
     currentUser?: {
@@ -186,8 +201,14 @@ export type VideoPlayerStreamInfoOverlayChannelResponse = {
   data?: {
     user?: {
       id?: string;
+      // The game lives under broadcastSettings (what TDM reads), not stream.
+      broadcastSettings?: {
+        title?: string;
+        game?: { id?: string | number; name?: string; displayName?: string } | null;
+      } | null;
       stream?: {
         id?: string;
+        game?: { id?: string | number; name?: string; displayName?: string } | null;
         stream?: {
           id?: string;
         };

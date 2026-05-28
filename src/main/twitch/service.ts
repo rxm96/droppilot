@@ -1,10 +1,9 @@
+import { gzipSync } from "node:zlib";
 import type { SessionData } from "../core/storage";
-import { TWITCH_WEB_USER_AGENT } from "../config";
 import { TwitchClient, TwitchAuthError, type RevalidateResult, type TwitchUser } from "./client";
 import { buildPriorityPlan, type PriorityPlan } from "./channels";
 import { TwitchServiceError } from "./errors";
 import { TWITCH_ERROR_CODES } from "../../shared/errorCodes";
-import { extractSpadeUrl, SETTINGS_PATTERN } from "./spade";
 import {
   buildCampaignSummaries,
   collectBlockingReasonHints,
@@ -35,6 +34,7 @@ import {
   type DirectoryPageGameResponse,
   type DirectoryStreamNode,
   type DropCampaignDetailsResponse,
+  type DropCurrentSessionResponse,
   type InventoryResponse,
   type VideoPlayerStreamInfoOverlayChannelResponse,
 } from "./serviceUtils";
@@ -298,8 +298,6 @@ export class TwitchService {
     return { ok: true, status, claimId };
   }
 
-  private spadeCache = new Map<string, string>();
-
   private async buildClaimId(dropId?: string, campaignId?: string): Promise<string | null> {
     if (!dropId || !campaignId) return null;
     const validate = await this.client.getValidateInfo();
@@ -307,62 +305,12 @@ export class TwitchService {
     return `${validate.userId}#${campaignId}#${dropId}`;
   }
 
-  private async resolveSpadeUrl(login: string): Promise<string> {
-    if (this.spadeCache.has(login)) {
-      return this.spadeCache.get(login)!;
-    }
-
-    const fetchText = async (url: string) => {
-      const res = await fetch(url, {
-        redirect: "follow",
-        headers: {
-          "User-Agent": TWITCH_WEB_USER_AGENT,
-        },
-      });
-      if (!res.ok) {
-        throw new TwitchServiceError(
-          TWITCH_ERROR_CODES.SPADE_FETCH_FAILED,
-          `Spade fetch failed (${res.status})`,
-        );
-      }
-      return await res.text();
-    };
-
-    let html: string;
-    try {
-      html = await fetchText(`https://www.twitch.tv/${login}`);
-    } catch (err) {
-      if (err instanceof TwitchServiceError) {
-        throw err;
-      }
-      throw new TwitchServiceError(
-        TWITCH_ERROR_CODES.SPADE_FETCH_FAILED,
-        "Spade fetch failed",
-        err,
-      );
-    }
-
-    let spade = extractSpadeUrl(html);
-    if (!spade) {
-      const settingsMatch = html.match(SETTINGS_PATTERN);
-      if (!settingsMatch) {
-        throw new TwitchServiceError(TWITCH_ERROR_CODES.SPADE_URL_MISSING, "Spade URL missing");
-      }
-      const settingsJs = await fetchText(settingsMatch[1]);
-      spade = extractSpadeUrl(settingsJs);
-      if (!spade) {
-        throw new TwitchServiceError(TWITCH_ERROR_CODES.SPADE_URL_MISSING, "Spade URL missing");
-      }
-    }
-
-    this.spadeCache.set(login, spade);
-    return spade;
-  }
-
   private async fetchStreamInfo(login: string): Promise<{
     broadcastId?: string;
     channelId?: string;
     streamId?: string;
+    gameName?: string;
+    gameId?: string;
   } | null> {
     const body = {
       operationName: "VideoPlayerStreamInfoOverlayChannel",
@@ -381,10 +329,17 @@ export class TwitchService {
     const user = res?.data?.user;
     const stream = user?.stream ?? null;
     if (!stream) return null;
+    // The current game is under broadcastSettings (this is the exact path TDM
+    // reads from the same query/hash); stream.game is a fallback just in case.
+    const game = user?.broadcastSettings?.game ?? stream.game ?? null;
+    const gameName = game?.name ?? game?.displayName ?? undefined;
+    const gameId = game?.id != null ? String(game.id) : undefined;
     return {
       broadcastId: stream.id ?? stream.stream?.id,
       channelId: user?.id,
       streamId: stream.id,
+      gameName,
+      gameId,
     };
   }
 
@@ -399,9 +354,7 @@ export class TwitchService {
       throw new TwitchServiceError(TWITCH_ERROR_CODES.WATCH_OFFLINE, "Watch stream offline");
     }
 
-    const spadeUrl = await this.resolveSpadeUrl(login);
     const validate = await this.client.getValidateInfo();
-    const cookieHeader = await this.client.getCookieHeader().catch(() => "");
     const broadcastId = streamInfo.broadcastId ?? payload.streamId ?? streamInfo.streamId;
     const channelId = streamInfo.channelId ?? payload.channelId;
 
@@ -412,74 +365,164 @@ export class TwitchService {
       );
     }
 
-    const payloadBody = [
+    // Twitch no longer credits minute-watched via a plain POST to the spade
+    // beacon URL — that endpoint still answers 204 but the watch is NOT counted
+    // (which is why progress sat frozen and the engine kept false-stalling). The
+    // web client + TwitchDropsMiner now send it as the `SendEvents` GraphQL
+    // mutation (sendSpadeEvents), which rides our authenticated + integrity-
+    // checked GQL channel. The event array is gzipped, then base64-encoded
+    // ("GZIP_B64") — exactly TDM's Stream._gql_payload.
+    const userIdNum = Number(validate.userId);
+    const eventPayload = [
       {
         event: "minute-watched",
         properties: {
           broadcast_id: String(broadcastId),
           channel_id: String(channelId),
           channel: login,
+          client_time: new Date().toISOString(),
+          game: streamInfo.gameName ?? "",
+          game_id: streamInfo.gameId ?? "",
           hidden: false,
+          is_live: true,
           live: true,
-          location: "channel",
           logged_in: true,
+          minutes_logged: 1,
           muted: false,
-          player: "site",
-          user_id: Number(validate.userId),
+          user_id: Number.isFinite(userIdNum) ? userIdNum : validate.userId,
         },
       },
     ];
-
-    const data = Buffer.from(JSON.stringify(payloadBody)).toString("base64");
-    const formBody = new URLSearchParams({ data }).toString();
-
-    this.debug("Watch ping start", {
-      login,
-      channelId,
-      streamId: payload.streamId ?? streamInfo.streamId,
-      broadcastId,
-      spade: spadeUrl ?? "<none>",
-      hasCookieHeader: cookieHeader.length > 0,
-      payloadEventCount: payloadBody.length,
-    });
-
-    // Keep headers minimal.
-    const headers: Record<string, string> = {
-      "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
-      "User-Agent": TWITCH_WEB_USER_AGENT,
-      // Client-Id is intentionally omitted for Spade.
-      ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+    const g64 = gzipSync(Buffer.from(JSON.stringify(eventPayload), "utf8")).toString("base64");
+    const body = {
+      query:
+        "\n mutation SendEvents($input: SendSpadeEventsInput!) {\n sendSpadeEvents(input: $input) {\n statusCode\n}\n}\n",
+      variables: {
+        input: { data: g64, repository: "twilight", encoding: "GZIP_B64" },
+      },
     };
 
-    this.debug("Watch ping request", {
-      url: spadeUrl,
-      headers: headers.Cookie ? { ...headers, Cookie: "<redacted>" } : headers,
-      bodyLength: formBody.length,
+    this.debug("Watch ping (SendEvents) start", {
+      login,
+      channelId: String(channelId),
+      broadcastId: String(broadcastId),
+      streamId: payload.streamId ?? streamInfo.streamId,
+      game: streamInfo.gameName ?? "",
+      userId: validate.userId,
     });
 
-    const res = await fetch(spadeUrl, {
-      method: "POST",
-      headers,
-      body: formBody,
-    });
-
-    if (res.status === 204) {
-      this.debug("Watch ping ok", { login, channelId, broadcastId });
+    const res = await this.gqlRequest<{
+      data?: { sendSpadeEvents?: { statusCode?: number } };
+    }>(body, "SendEvents");
+    const statusCode = res?.data?.sendSpadeEvents?.statusCode;
+    if (statusCode === 204 || statusCode === 200) {
+      this.debug("Watch ping ok", {
+        login,
+        channelId: String(channelId),
+        broadcastId: String(broadcastId),
+        statusCode,
+      });
       return { ok: true };
     }
 
-    const text = await res.text();
     this.debug("Watch ping failed", {
-      status: res.status,
       login,
-      channelId,
-      broadcastId,
-      body: text,
+      channelId: String(channelId),
+      broadcastId: String(broadcastId),
+      statusCode,
+      response: res,
     });
     throw new TwitchServiceError(
       TWITCH_ERROR_CODES.WATCH_PING_FAILED,
-      text ? `Watch ping failed: ${text}` : `Watch ping failed (${res.status})`,
+      `Watch ping failed (sendSpadeEvents statusCode=${statusCode ?? "unknown"})`,
     );
+  }
+
+  /**
+   * Reads the CURRENT drop progress for the channel the user is actively
+   * watching, via the DropCurrentSessionContext GraphQL query. This is the
+   * canonical live-progress source used by drop miners — it reflects the
+   * server-side minutes accrued from the spade `minute-watched` pings.
+   *
+   * Replaces the dead `user-drop-events` PubSub topic (which still accepts a
+   * LISTEN but never delivers drop-progress messages). Twitch returns
+   * `dropCurrentSession: null` when there's no active eligible drop on the
+   * watched channel.
+   *
+   * Returns null when there's no active session, the query shape is
+   * unexpected, or the call fails (logged but non-fatal — caller just keeps
+   * the last known progress).
+   */
+  async fetchDropProgress(channelId: string): Promise<{
+    dropId: string;
+    currentMinutesWatched: number;
+    requiredMinutesWatched: number;
+    channelId?: string;
+    gameName?: string;
+  } | null> {
+    const watchedChannelId = String(channelId ?? "").trim();
+    if (!watchedChannelId) {
+      // The DropCurrentSessionContext resolver keys off the watched channel.
+      // Without channelID it ALWAYS returns dropCurrentSession: null, so don't
+      // even spend the request — just keep the last known progress.
+      this.debug("dropProgress: no channelId provided, skipping");
+      return null;
+    }
+    const body = createPersistedQuery(
+      "DropCurrentSessionContext",
+      // Known persisted-query hash used by the Twitch web client + drop miners.
+      // If Twitch rotates it, this call returns a PersistedQueryNotFound error
+      // (logged below) and we fall back to keeping the last known progress.
+      "4d06b702d25d652afb9ef835d2a550031f1cf762b193523a92166f40ea3d142b",
+      // channelID (the watched channel id, as a string) is REQUIRED — the
+      // resolver returns dropCurrentSession: null without it. channelLogin is
+      // always "" (mirrors the Twitch web client + TwitchDropsMiner). This was
+      // the bug: we previously sent {} and so always got a null session.
+      { channelID: watchedChannelId, channelLogin: "" },
+    );
+    let res: DropCurrentSessionResponse;
+    try {
+      res = await this.gqlRequest<DropCurrentSessionResponse>(body, "DropCurrentSessionContext");
+    } catch (err) {
+      this.debug("dropProgress: gql failed", err);
+      return null;
+    }
+    // Log the raw response so the exact shape can be confirmed at runtime —
+    // critical because this is a newly-wired query and Twitch's contract here
+    // is only known empirically.
+    this.debug("dropProgress: raw response", res);
+    const session = res?.data?.currentUser?.dropCurrentSession ?? null;
+    const dropId = session?.dropID?.trim();
+    if (!session || !dropId) {
+      // BENIGN: Twitch frequently hands a headless client an empty/absent
+      // dropCurrentSession (dropID: "", channel: null) even while a watch is
+      // active — it does not reliably reflect our spade pings. This is NOT an
+      // error and does NOT mean farming stopped: we return null and the live
+      // estimate + periodic inventory refresh remain the source of truth.
+      this.debug("dropProgress: no live session from Twitch (keeping estimate)", {
+        hasSession: !!session,
+        dropId: dropId ?? "",
+      });
+      return null;
+    }
+    const current = Number(session.currentMinutesWatched);
+    const required = Number(session.requiredMinutesWatched);
+    const result = {
+      dropId,
+      currentMinutesWatched: Number.isFinite(current) ? Math.max(0, current) : 0,
+      requiredMinutesWatched: Number.isFinite(required) ? Math.max(0, required) : 0,
+      channelId: session.channel?.id ? String(session.channel.id) : undefined,
+      gameName: session.game?.name ?? session.game?.displayName ?? undefined,
+    };
+    // Surface the queried vs. returned channel: dropCurrentSession returns the
+    // globally-active session, so when these differ the session is for another
+    // channel (stale for us) and the renderer ignores it.
+    this.debug("dropProgress: parsed", {
+      ...result,
+      queriedChannelId: watchedChannelId,
+      channelMatches: !result.channelId || result.channelId === watchedChannelId,
+    });
+    return result;
   }
 
   private async fetchCampaignEdges(opts?: {

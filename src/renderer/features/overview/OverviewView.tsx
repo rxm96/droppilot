@@ -18,6 +18,8 @@ type OverviewProps = {
   activeDropTitle?: string;
   activeDropRemainingMinutes?: number;
   activeDropEta?: number | null;
+  /** Currently-watched drop snapshot (id + live-ticking earnedMinutes). Passed through to QueuePanel so its active row reflects live progress. */
+  activeDrop?: { id: string; earnedMinutes: number } | null;
   targetProgress: number;
   totalDrops: number;
   claimedDrops: number;
@@ -42,6 +44,12 @@ type OverviewProps = {
   inventoryFetchedAt?: number | null;
   trackerStatus?: ChannelTrackerStatus | null;
   watchError?: ErrorInfo | null;
+  onPause?: () => void;
+  onSwitchTarget?: () => void;
+  onClaimNow?: () => void | Promise<void>;
+  claimStatus?: { kind: "success" | "error"; message?: string; code?: string } | null;
+  refreshMinMs?: number;
+  refreshMaxMs?: number;
 };
 
 export function OverviewView({
@@ -50,6 +58,7 @@ export function OverviewView({
   activeDropTitle,
   activeDropRemainingMinutes,
   activeDropEta,
+  activeDrop,
   targetProgress,
   totalDrops,
   claimedDrops,
@@ -59,6 +68,12 @@ export function OverviewView({
   lastWatchOk,
   trackerStatus,
   watchError,
+  onPause,
+  onSwitchTarget,
+  onClaimNow,
+  claimStatus,
+  refreshMinMs,
+  refreshMaxMs,
 }: OverviewProps) {
   const items =
     inventory.status === "ready"
@@ -90,12 +105,28 @@ export function OverviewView({
           totalDrops={totalDrops}
           claimedDrops={claimedDrops}
           isLive={isLive}
+          onPause={onPause}
+          onSwitchTarget={onSwitchTarget}
+          onClaimNow={onClaimNow}
+          claimStatus={claimStatus}
         />
-        <QueuePanel items={items} />
+        <QueuePanel
+          items={items}
+          activeDrop={activeDrop ?? null}
+          targetGame={activeGame}
+        />
       </div>
       <div className="flex flex-col gap-4">
-        <ActivityPanel items={items} />
-        <EnginePanel lastWatchOk={lastWatchOk} />
+        <ActivityPanel />
+        <EnginePanel
+          lastWatchOk={lastWatchOk}
+          cycleSeconds={
+            typeof refreshMinMs === "number" ? Math.round(refreshMinMs / 1000) : undefined
+          }
+          cadenceSeconds={
+            typeof refreshMaxMs === "number" ? Math.round(refreshMaxMs / 1000) : undefined
+          }
+        />
       </div>
     </div>
   );

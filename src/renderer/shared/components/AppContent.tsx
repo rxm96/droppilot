@@ -8,12 +8,16 @@ import {
   PriorityView,
   SettingsView,
 } from "@renderer/features";
-import type { TopNav } from "./TopNav";
+import type { View } from "@renderer/shared/types";
 import { isPerfEnabled, recordRender } from "@renderer/shared/utils/perfStore";
 
+type NavProps = {
+  view: View;
+  setView: (next: View) => void;
+};
+
 type AppContentProps = {
-  /** Retained for compatibility with the existing useAppModel shape. */
-  navProps: ComponentProps<typeof TopNav>;
+  navProps: NavProps;
   overviewProps: ComponentProps<typeof OverviewView>;
   inventoryProps: ComponentProps<typeof InventoryView>;
   priorityProps: ComponentProps<typeof PriorityView>;

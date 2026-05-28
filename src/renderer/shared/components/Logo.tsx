@@ -28,7 +28,12 @@ export const Logo = React.forwardRef<SVGSVGElement, LogoProps>(
           gradientUnits="userSpaceOnUse"
         >
           <stop offset="0%" stopColor="var(--dp-accent)" />
-          <stop offset="100%" stopColor="#7c5fe6" />
+          {/* End-stop derived from the live accent (slightly darker mix) so
+              the logo gradient follows user-picked accent colors. */}
+          <stop
+            offset="100%"
+            stopColor="color-mix(in srgb, var(--dp-accent) 80%, black)"
+          />
         </linearGradient>
       </defs>
       <rect x="0.5" y="0.5" width="15" height="15" rx="3" fill="url(#dp-logo-grad)" />
@@ -38,7 +43,7 @@ export const Logo = React.forwardRef<SVGSVGElement, LogoProps>(
         width="15"
         height="15"
         rx="3"
-        stroke="rgba(167,139,250,0.35)"
+        stroke="color-mix(in srgb, var(--dp-accent) 35%, transparent)"
         strokeWidth="1"
       />
       <path

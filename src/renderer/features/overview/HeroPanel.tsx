@@ -4,6 +4,8 @@ import { Button } from "@renderer/shared/components/ui/button";
 import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { Check, Pause, RotateCw } from "@renderer/shared/lib/icons";
 import { formatRemainingFromEta } from "./formatters";
+import { useI18n } from "@renderer/shared/i18n";
+import { cn } from "@renderer/shared/lib/utils";
 
 export type HeroPanelProps = {
   activeGame?: string;
@@ -11,11 +13,23 @@ export type HeroPanelProps = {
   activeDropEta?: number | null;
   activeDropRemainingMinutes?: number;
   targetProgress: number;
+  /**
+   * The active drop's own completion %. When present it drives the "% complete"
+   * + bar so they match the card's title + ETA (all about the active drop).
+   * Falls back to the aggregate targetProgress when nothing is being watched.
+   */
+  activeDropProgress?: number | null;
   claimableDrops: number;
   channelsCount: number;
   totalDrops: number;
   claimedDrops: number;
   isLive: boolean;
+  /** Pause the watch engine (Phase 5 wiring). When null/undefined, pause button stays disabled. */
+  onPause?: () => void;
+  /** Navigate to Priorities (Phase 5 wiring). When null/undefined, switch button stays disabled. */
+  onSwitchTarget?: () => void;
+  onClaimNow?: () => void | Promise<void>;
+  claimStatus?: { kind: "success" | "error"; message?: string; code?: string } | null;
 };
 
 export function HeroPanel({
@@ -24,13 +38,30 @@ export function HeroPanel({
   activeDropEta,
   activeDropRemainingMinutes,
   targetProgress,
+  activeDropProgress,
   claimableDrops,
   channelsCount,
   totalDrops,
   claimedDrops,
   isLive,
+  onPause,
+  onSwitchTarget,
+  onClaimNow,
+  claimStatus,
 }: HeroPanelProps) {
+  const { t } = useI18n();
   const [now, setNow] = React.useState<number>(() => Date.now());
+  const [claiming, setClaiming] = React.useState(false);
+
+  const handleClaim = React.useCallback(async () => {
+    if (!onClaimNow || claiming) return;
+    setClaiming(true);
+    try {
+      await onClaimNow();
+    } finally {
+      setClaiming(false);
+    }
+  }, [onClaimNow, claiming]);
   React.useEffect(() => {
     const hasEta = typeof activeDropEta === "number" && Number.isFinite(activeDropEta);
     if (!hasEta) return;
@@ -39,15 +70,15 @@ export function HeroPanel({
   }, [activeDropEta]);
 
   const etaText = formatRemainingFromEta(activeDropEta, activeDropRemainingMinutes, now);
-  const progressPct = Math.max(0, Math.min(100, Math.round(targetProgress)));
+  const progressPct = Math.max(0, Math.min(100, Math.round(activeDropProgress ?? targetProgress)));
   const openDrops = Math.max(0, totalDrops - claimedDrops);
   const hasClaimable = claimableDrops > 0;
-  const title = activeDropTitle?.trim() || activeGame || "No active target";
+  const title = activeDropTitle?.trim() || activeGame || t("hero.noActiveTarget");
   const channel = activeGame || "—";
 
   return (
     <div>
-      <SectionLabel>currently watching</SectionLabel>
+      <SectionLabel>{t("hero.nowWatching")}</SectionLabel>
       <div className="mt-3 relative overflow-hidden rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] p-6">
         {/* Top-right radial glow */}
         <div
@@ -55,7 +86,7 @@ export function HeroPanel({
           className="pointer-events-none absolute right-0 top-0 h-[220px] w-[320px]"
           style={{
             background:
-              "radial-gradient(ellipse at top right, rgba(167,139,250,0.10), transparent 65%)",
+              "radial-gradient(ellipse at top right, var(--dp-accent-soft), transparent 65%)",
           }}
         />
 
@@ -67,7 +98,7 @@ export function HeroPanel({
               className={`inline-block h-[6px] w-[6px] rounded-full bg-[color:var(--dp-accent)] ${isLive ? "animate-pulse" : "opacity-40"}`}
               style={{ boxShadow: "0 0 10px var(--dp-accent-glow)" }}
             />
-            {isLive ? "LIVE · earning drop" : "IDLE"}
+            {isLive ? t("hero.statusLive") : t("hero.statusIdle")}
           </div>
         </div>
 
@@ -85,31 +116,37 @@ export function HeroPanel({
           style={{ gridTemplateColumns: "1.4fr 1fr 1fr 1fr" }}
         >
           <div className="pr-4">
-            <Stat label="eta" value={etaText} sub={`${progressPct}% complete`} accent />
+            <Stat
+              label={t("hero.stat.eta")}
+              value={etaText}
+              sub={t("hero.stat.percentComplete", { pct: progressPct })}
+              accent
+            />
             <div className="mt-2.5 h-[3px] rounded-[2px] bg-[color:var(--dp-border)] overflow-hidden">
               <div
                 className="h-full rounded-[2px]"
                 style={{
                   width: `${progressPct}%`,
-                  background: "linear-gradient(90deg, var(--dp-accent), #c4b5fd)",
+                  background:
+                    "linear-gradient(90deg, var(--dp-accent), color-mix(in srgb, var(--dp-accent) 60%, white))",
                   boxShadow: "0 0 12px var(--dp-accent-glow)",
                 }}
               />
             </div>
           </div>
           <div className="px-[18px] border-l border-[color:var(--dp-border-soft)]">
-            <Stat label="channels" value={String(channelsCount)} />
+            <Stat label={t("hero.stat.channels")} value={String(channelsCount)} />
           </div>
           <div className="px-[18px] border-l border-[color:var(--dp-border-soft)]">
             <Stat
-              label="claims ready"
+              label={t("hero.stat.claimsReady")}
               value={String(claimableDrops)}
-              sub={hasClaimable ? "use inventory" : undefined}
+              sub={hasClaimable ? t("hero.stat.useInventory") : undefined}
               subTone={hasClaimable ? "ok" : "default"}
             />
           </div>
           <div className="px-[18px] border-l border-[color:var(--dp-border-soft)]">
-            <Stat label="open drops" value={String(openDrops)} />
+            <Stat label={t("hero.stat.openDrops")} value={String(openDrops)} />
           </div>
         </div>
 
@@ -118,18 +155,64 @@ export function HeroPanel({
           <Button
             variant="dp-primary"
             size="dp-md"
-            disabled={!hasClaimable}
-            title="Use Inventory view to claim"
+            onClick={handleClaim}
+            disabled={!hasClaimable || !onClaimNow || claiming}
+            title={
+              !onClaimNow
+                ? t("hero.title.useInventoryToClaim")
+                : !hasClaimable
+                  ? t("hero.title.noClaimableDrops")
+                  : claiming
+                    ? t("hero.title.claiming")
+                    : t("hero.title.claimNowReady")
+            }
           >
-            <Check size={11} strokeWidth={2.2} /> claim now
+            <Check size={11} strokeWidth={2.2} />{" "}
+            {claiming ? t("hero.button.claiming") : t("hero.button.claimNow")}
           </Button>
-          <Button variant="dp-secondary" size="dp-md" disabled title="Phase 4 will wire this">
-            <Pause size={11} strokeWidth={1.8} /> pause
+          <Button
+            variant="dp-secondary"
+            size="dp-md"
+            onClick={onPause}
+            disabled={!onPause || !isLive}
+            title={
+              !onPause
+                ? t("hero.title.wireLater")
+                : !isLive
+                  ? t("hero.title.engineNotRunning")
+                  : t("hero.title.pauseEngine")
+            }
+          >
+            <Pause size={11} strokeWidth={1.8} /> {t("hero.button.pause")}
           </Button>
-          <Button variant="dp-outline" size="dp-md" disabled title="Phase 4 will wire this">
-            <RotateCw size={11} strokeWidth={1.8} /> switch target
+          <Button
+            variant="dp-outline"
+            size="dp-md"
+            onClick={onSwitchTarget}
+            disabled={!onSwitchTarget}
+            title={
+              onSwitchTarget ? t("hero.title.openPrioritiesToSwitch") : t("hero.title.wireLater")
+            }
+          >
+            <RotateCw size={11} strokeWidth={1.8} /> {t("hero.button.switchTarget")}
           </Button>
         </div>
+        {claimStatus && (
+          <div
+            className={cn(
+              "mt-2 font-mono text-[10px]",
+              claimStatus.kind === "success"
+                ? "text-[color:var(--dp-signal-ok)]"
+                : "text-[color:var(--dp-signal-err)]",
+            )}
+          >
+            {claimStatus.kind === "success" && claimStatus.message
+              ? claimStatus.message
+              : claimStatus.kind === "error"
+                ? (claimStatus.message ?? t("hero.claimFeedback.errorFallback"))
+                : null}
+          </div>
+        )}
       </div>
     </div>
   );

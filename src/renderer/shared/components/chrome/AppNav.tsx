@@ -1,13 +1,11 @@
 import * as React from "react";
+import type { LucideIcon } from "lucide-react";
 import { LayoutGrid, Package, Play, ListOrdered, Settings, Bug } from "@renderer/shared/lib/icons";
 import { cn } from "@renderer/shared/lib/utils";
 
 export type AppNavView = "overview" | "inventory" | "control" | "priorities" | "settings" | "debug";
 
-const ICON_MAP: Record<
-  AppNavView,
-  React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>
-> = {
+const ICON_MAP: Record<AppNavView, LucideIcon> = {
   overview: LayoutGrid,
   inventory: Package,
   control: Play,
@@ -51,11 +49,11 @@ export function AppNav({ view, onChange, items, right, className }: AppNavProps)
             className={cn(
               "relative flex items-center gap-[7px] px-3.5 font-mono text-[11px] lowercase tracking-[0.04em] transition-colors",
               active
-                ? "text-[color:var(--dp-text)]"
-                : "text-[color:var(--dp-text-dimmer)] hover:text-[color:var(--dp-text-dim)]",
+                ? "text-[color:var(--dp-accent)] bg-[color:var(--dp-accent-soft)]"
+                : "text-[color:var(--dp-text-dimmer)] hover:text-[color:var(--dp-text-dim)] hover:bg-[color:var(--dp-bg-elevated)]",
             )}
           >
-            <Icon size={13} strokeWidth={1.7} className="opacity-85" />
+            <Icon size={13} strokeWidth={1.7} className={active ? undefined : "opacity-85"} />
             {item.label}
             {active && (
               <span

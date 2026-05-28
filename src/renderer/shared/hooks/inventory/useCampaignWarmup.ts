@@ -13,6 +13,7 @@ import {
   normalizePriorityGames,
   type WithCategory,
 } from "@renderer/shared/hooks/priority";
+import { sameGameName } from "@renderer/shared/domain/gameName";
 
 type Params = {
   allowWatching: boolean;
@@ -318,7 +319,7 @@ export function useCampaignWarmup({
     return games;
   }, [withCategories]);
   const watchingPriority = Boolean(
-    watching && normalizedPriority.some((game) => game === watching.game),
+    watching && normalizedPriority.some((game) => sameGameName(game, watching.game)),
   );
 
   useEffect(() => {

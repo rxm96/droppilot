@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Pill } from "@renderer/shared/components/ui/pill";
 import type { ChannelTrackerStatus, ErrorInfo } from "@renderer/shared/types";
+import { useI18n } from "@renderer/shared/i18n";
 
 export type AttentionStripProps = {
   claimableDrops: number;
@@ -17,27 +18,31 @@ export function AttentionStrip({
   channelsCount,
   trackerStatus,
 }: AttentionStripProps) {
+  const { t } = useI18n();
   const pills: React.ReactNode[] = [];
 
   if (claimableDrops > 0) {
+    const claimText = claimableDrops === 1
+      ? t("attention.claimReady", { count: claimableDrops })
+      : t("attention.claimsReady", { count: claimableDrops });
     pills.push(
       <Pill key="claim-ready" tone="warn" dot>
-        {claimableDrops} claim ready
+        {claimText}
       </Pill>,
     );
   }
   if (watchError) {
-    const tooltip = watchError.message ?? watchError.code ?? "watch error";
+    const tooltip = watchError.message ?? watchError.code ?? t("attention.watchError");
     pills.push(
       <Pill key="watch-err" tone="err" dot title={tooltip}>
-        watch error
+        {t("attention.watchError")}
       </Pill>,
     );
   }
   if (activeGame && channelsCount === 0) {
     pills.push(
       <Pill key="no-channels" tone="warn">
-        no channels
+        {t("attention.noChannels")}
       </Pill>,
     );
   }
@@ -48,7 +53,7 @@ export function AttentionStrip({
   ) {
     pills.push(
       <Pill key="tracker" tone="err" dot>
-        tracker {trackerStatus.connectionState}
+        {t("attention.trackerLabel", { state: trackerStatus.connectionState })}
       </Pill>,
     );
   }

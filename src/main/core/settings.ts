@@ -33,6 +33,18 @@ export type SettingsData = {
   alertsNewDrops: boolean;
   enableBadgesEmotes: boolean;
   allowUnlinkedGames: boolean;
+  /** When true, clicking the close button hides the window to the tray instead of quitting. */
+  closeToTray: boolean;
+  /** When true, minimizing the window hides it to the tray instead of leaving it in the taskbar. */
+  minimizeToTray: boolean;
+  /** Persisted window bounds. Undefined on first launch — main process falls back to defaults. */
+  windowBounds?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    isMaximized: boolean;
+  };
 };
 
 const MIN_REFRESH_MS = 3_600_000;
@@ -64,6 +76,23 @@ const defaultSettings: SettingsData = {
   alertsNewDrops: true,
   enableBadgesEmotes: false,
   allowUnlinkedGames: false,
+  closeToTray: true,
+  minimizeToTray: false,
+};
+
+const normalizeWindowBounds = (raw: unknown): SettingsData["windowBounds"] => {
+  if (!raw || typeof raw !== "object") return undefined;
+  const candidate = raw as Record<string, unknown>;
+  const num = (val: unknown) => (typeof val === "number" && Number.isFinite(val) ? val : null);
+  const x = num(candidate.x);
+  const y = num(candidate.y);
+  const width = num(candidate.width);
+  const height = num(candidate.height);
+  const isMaximized = typeof candidate.isMaximized === "boolean" ? candidate.isMaximized : false;
+  if (x === null || y === null || width === null || height === null) return undefined;
+  // Guard against degenerate bounds (e.g. 0x0 from a destroyed window snapshot)
+  if (width < 200 || height < 200) return undefined;
+  return { x, y, width, height, isMaximized };
 };
 
 const normalizeRefreshIntervals = (
@@ -155,6 +184,15 @@ export async function loadSettings(): Promise<SettingsData> {
         typeof parsed?.allowUnlinkedGames === "boolean"
           ? parsed.allowUnlinkedGames
           : defaultSettings.allowUnlinkedGames,
+      closeToTray:
+        typeof parsed?.closeToTray === "boolean"
+          ? parsed.closeToTray
+          : defaultSettings.closeToTray,
+      minimizeToTray:
+        typeof parsed?.minimizeToTray === "boolean"
+          ? parsed.minimizeToTray
+          : defaultSettings.minimizeToTray,
+      windowBounds: normalizeWindowBounds(parsed?.windowBounds),
     };
   } catch {
     return defaultSettings;
@@ -237,6 +275,16 @@ export async function saveSettings(data: SettingsSaveData): Promise<SettingsData
       typeof restData.allowUnlinkedGames === "boolean"
         ? restData.allowUnlinkedGames
         : current.allowUnlinkedGames,
+    closeToTray:
+      typeof restData.closeToTray === "boolean" ? restData.closeToTray : current.closeToTray,
+    minimizeToTray:
+      typeof restData.minimizeToTray === "boolean"
+        ? restData.minimizeToTray
+        : current.minimizeToTray,
+    windowBounds:
+      restData.windowBounds !== undefined
+        ? normalizeWindowBounds(restData.windowBounds)
+        : current.windowBounds,
   };
   await fs.mkdir(app.getPath("userData"), { recursive: true });
   await fs.writeFile(settingsFile, JSON.stringify(next, null, 2), "utf-8");

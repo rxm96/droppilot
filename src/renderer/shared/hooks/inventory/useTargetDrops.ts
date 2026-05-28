@@ -1,7 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { InventoryDrop, InventoryDropCollection } from "@renderer/shared/domain/dropDomain";
 import { canEarnDrop, hasHardWatchingBlockers } from "@renderer/shared/domain/inventory";
 import type { InventoryItem, WatchingState } from "@renderer/shared/types";
+import { useInterval } from "@renderer/shared/hooks/useInterval";
+import { sameGameName } from "@renderer/shared/domain/gameName";
 
 type WithCategory = { item: InventoryItem; category: string };
 
@@ -43,6 +45,14 @@ type Params = {
   watching: WatchingState;
   inventoryFetchedAt: number | null;
   progressAnchorByDropId?: Record<string, number>;
+  /**
+   * Timestamp when the current watch session (this channel+stream) began. The
+   * live-progress anchor is clamped to never predate this, so we don't credit
+   * elapsed time from before the user actually started watching (e.g. a stale
+   * inventory snapshot). ControlView uses the same clamp — passing it here keeps
+   * both views' live progress identical.
+   */
+  watchStartedAt?: number | null;
 };
 
 type ComputeParams = Params & { now?: number };
@@ -56,6 +66,7 @@ export function computeTargetDrops({
   watching,
   inventoryFetchedAt,
   progressAnchorByDropId,
+  watchStartedAt,
   now: providedNow,
 }: ComputeParams): TargetDropsResult {
   if (!targetGame) {
@@ -93,7 +104,7 @@ export function computeTargetDrops({
       allowUpcoming: false,
     });
   const isActionableForTarget = ({ drop, category }: { drop: InventoryDrop; category: string }) =>
-    drop.game === targetGame &&
+    sameGameName(drop.game, targetGame) &&
     canEarnDrop(drop.raw, {
       category,
       allowUpcoming: allowUnlinkedGames,
@@ -103,7 +114,9 @@ export function computeTargetDrops({
   );
   const inProgressRelevant = withCategoryDrops.filter(
     ({ drop, category }) =>
-      drop.game === targetGame && category === "in-progress" && isWatchableInProgress(drop),
+      sameGameName(drop.game, targetGame) &&
+      category === "in-progress" &&
+      isWatchableInProgress(drop),
   );
   const sortCandidates = (
     candidates: Array<{ drop: InventoryDrop; category: string }>,
@@ -126,7 +139,9 @@ export function computeTargetDrops({
   const sortedInProgress = sortCandidates(inProgressRelevant);
   const upcomingRelevant = withCategoryDrops.filter(
     ({ drop, category }) =>
-      drop.game === targetGame && category === "upcoming" && isWatchableUpcomingDrop(drop),
+      sameGameName(drop.game, targetGame) &&
+      category === "upcoming" &&
+      isWatchableUpcomingDrop(drop),
   );
   const sortedUpcoming = sortCandidates(upcomingRelevant);
   const sortedActiveItems = sortedActive.map((s) => s.drop);
@@ -161,7 +176,7 @@ export function computeTargetDrops({
   const totalDrops = targetDrops.length;
   const claimedDrops = targetDropEntries.filter((drop) => drop.raw.status === "claimed").length;
   const hasUnclaimedTarget = withCategoryDrops.some(({ drop, category }) => {
-    if (drop.game !== targetGame) return false;
+    if (!sameGameName(drop.game, targetGame)) return false;
     if (drop.isExpired(now)) return false;
     if (drop.raw.status === "claimed") return false;
     if (drop.requiredMinutes <= 0) return false;
@@ -224,7 +239,7 @@ export function computeTargetDrops({
     0,
   );
   const isWatchingAnyChannel = Boolean(watching);
-  const isWatchingTargetGame = Boolean(watching && watching.game === targetGame);
+  const isWatchingTargetGame = Boolean(watching && sameGameName(watching.game, targetGame));
   const farmableInProgress = isWatchingTargetGame
     ? (sortedInProgress.find(({ drop }) =>
         drop.canProgressOnWatchingChannel(watching, targetGame),
@@ -244,8 +259,16 @@ export function computeTargetDrops({
   const activeDropAnchorAt = (() => {
     if (!activeDrop || !canPredictActiveDropProgress) return null;
     const byDrop = progressAnchorByDropId?.[activeDrop.id];
-    if (typeof byDrop === "number" && Number.isFinite(byDrop)) return byDrop;
-    return inventoryFetchedAt;
+    const base =
+      typeof byDrop === "number" && Number.isFinite(byDrop) ? byDrop : inventoryFetchedAt;
+    if (base == null) return null;
+    // Clamp to the current watch-session start so we never credit elapsed time
+    // from before the user actually started watching this channel (e.g. a stale
+    // inventory snapshot). Mirrors ControlView so both views show identical live
+    // progress for the active drop.
+    return typeof watchStartedAt === "number" && Number.isFinite(watchStartedAt)
+      ? Math.max(base, watchStartedAt)
+      : base;
   })();
   const liveDeltaMinutesRaw =
     canPredictActiveDropProgress && activeDropAnchorAt
@@ -261,8 +284,13 @@ export function computeTargetDrops({
     activeDrop && canPredictActiveDropProgress
       ? Math.min(liveDeltaMinutes, Math.max(0, activeDropRequired - activeDropEarned))
       : 0;
+  // Include the live-ticking delta from the active drop so the percentage
+  // advances between inventory polls (which can be ~1h apart).
   const targetProgress = totalRequiredMinutes
-    ? Math.min(100, Math.round((totalEarnedMinutes / totalRequiredMinutes) * 100))
+    ? Math.min(
+        100,
+        Math.round(((totalEarnedMinutes + liveDeltaApplied) / totalRequiredMinutes) * 100),
+      )
     : 0;
   const activeDropVirtualEarned = activeDrop
     ? Math.min(activeDropRequired, activeDropEarned + liveDeltaApplied)
@@ -315,7 +343,16 @@ export function useTargetDrops({
   watching,
   inventoryFetchedAt,
   progressAnchorByDropId,
+  watchStartedAt,
 }: Params): TargetDropsResult {
+  // Tick `now` every second while the user is watching the target game so
+  // targetProgress, liveDeltaApplied, virtualEarned, and activeDropEta stay
+  // live between inventory polls. When not watching the target, no interval
+  // runs and `now` stays static (cheap).
+  const isLiveActive = Boolean(watching && sameGameName(watching.game, targetGame));
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+  useInterval(() => setNowMs(Date.now()), 1000, isLiveActive);
+
   return useMemo(
     () =>
       computeTargetDrops({
@@ -327,6 +364,8 @@ export function useTargetDrops({
         watching,
         inventoryFetchedAt,
         progressAnchorByDropId,
+        watchStartedAt,
+        now: isLiveActive ? nowMs : undefined,
       }),
     [
       allowWatching,
@@ -334,9 +373,12 @@ export function useTargetDrops({
       inventoryFetchedAt,
       inventoryItems,
       progressAnchorByDropId,
+      watchStartedAt,
       targetGame,
       watching,
       withCategories,
+      isLiveActive,
+      nowMs,
     ],
   );
 }

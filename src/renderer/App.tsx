@@ -78,10 +78,6 @@ function AppShell({ model }: { model: Model }) {
 
   const openSettings = React.useCallback(() => navProps.setView("settings"), [navProps]);
 
-  const onWindowAction = React.useCallback((action: "minimize" | "maximize" | "close") => {
-    window.electronAPI.app.windowControl(action);
-  }, []);
-
   // AppNav items
   const navItems: AppNavItem[] = React.useMemo(() => {
     const base: AppNavItem[] = [
@@ -126,13 +122,14 @@ function AppShell({ model }: { model: Model }) {
   // Statusbar
   const engineLabel = React.useMemo(() => {
     const d = overviewProps.watchDecision;
-    if (d === "watching-progress" || d === "watching-recover") return "engine: running";
-    if (d === "watching-no-farmable" || d === "watching-no-watchable") return "engine: standby";
-    if (d === "suppressed" || d === "cooldown") return "engine: paused";
-    if (d === "no-target") return "engine: idle";
-    if (d.startsWith("idle")) return "engine: idle";
-    return "engine: idle";
-  }, [overviewProps.watchDecision]);
+    if (d === "watching-progress" || d === "watching-recover") return t("statusbar.engine.running");
+    if (d === "watching-no-farmable" || d === "watching-no-watchable")
+      return t("statusbar.engine.standby");
+    if (d === "suppressed" || d === "cooldown") return t("statusbar.engine.paused");
+    if (d === "no-target") return t("statusbar.engine.idle");
+    if (d.startsWith("idle")) return t("statusbar.engine.idle");
+    return t("statusbar.engine.idle");
+  }, [overviewProps.watchDecision, t]);
 
   const engineTone =
     overviewProps.watchDecision === "watching-progress" ||
@@ -142,9 +139,34 @@ function AppShell({ model }: { model: Model }) {
         ? "warn"
         : "dim";
 
+  const setView = navProps.setView;
+  const overviewPropsExtended = React.useMemo(
+    () => ({
+      ...overviewProps,
+      onPause: controlProps.stopWatching,
+      onSwitchTarget: () => setView("priorities"),
+      onClaimNow: model.heroProps.onClaimNow,
+      claimStatus: model.heroProps.claimStatus,
+      refreshMinMs: settingsProps.refreshMinMs,
+      refreshMaxMs: settingsProps.refreshMaxMs,
+    }),
+    [
+      overviewProps,
+      controlProps.stopWatching,
+      setView,
+      model.heroProps.onClaimNow,
+      model.heroProps.claimStatus,
+      settingsProps.refreshMinMs,
+      settingsProps.refreshMaxMs,
+    ],
+  );
+
   return (
+    // h-screen + overflow-hidden locks the outer shell to the viewport so the
+    // chrome strips (Titlebar / AppNav / Statusbar) stay fixed in place.
+    // The middle content area is the actual scroll container (see below).
     <div
-      className="min-h-screen flex flex-col"
+      className="h-screen overflow-hidden flex flex-col"
       style={{ background: "var(--dp-bg-app)", color: "var(--dp-text)" }}
     >
       {!isMac && (
@@ -154,7 +176,6 @@ function AppShell({ model }: { model: Model }) {
           theme={resolvedTheme}
           onThemeToggle={toggleTheme}
           onSettingsClick={openSettings}
-          onWindowAction={onWindowAction}
         />
       )}
       <UpdateOverlay {...updateOverlayProps} />
@@ -164,10 +185,13 @@ function AppShell({ model }: { model: Model }) {
         items={navItems}
         right={sessionRight}
       />
-      <div className="flex-1">
+      {/* min-h-0 is critical: flex children default to min-height:auto which
+          would prevent the inner content from shrinking below its intrinsic
+          height, so overflow-y-auto would never engage. */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
         <AppContent
           navProps={navProps}
-          overviewProps={overviewProps}
+          overviewProps={overviewPropsExtended}
           inventoryProps={inventoryProps}
           priorityProps={priorityProps}
           settingsProps={settingsProps}

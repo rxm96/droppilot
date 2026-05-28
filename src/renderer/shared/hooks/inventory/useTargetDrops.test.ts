@@ -140,7 +140,9 @@ describe("computeTargetDrops", () => {
       now,
     });
     expect(result.liveDeltaApplied).toBe(10);
-    expect(result.targetProgress).toBe(0);
+    // targetProgress now includes liveDeltaApplied so the % bar advances
+    // between inventory polls. 10 live minutes / 60 required = 16.67% → 17.
+    expect(result.targetProgress).toBe(17);
     expect(result.canWatchTarget).toBe(true);
   });
 
