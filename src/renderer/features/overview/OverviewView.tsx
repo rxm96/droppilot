@@ -110,7 +110,7 @@ export function OverviewView({
         <QueuePanel items={items} />
       </div>
       <div className="flex flex-col gap-4">
-        <ActivityPanel items={items} />
+        <ActivityPanel />
         <EnginePanel
           lastWatchOk={lastWatchOk}
           cycleSeconds={
