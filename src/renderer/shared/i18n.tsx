@@ -764,6 +764,136 @@ const translations: Translations = {
     "error.update.unknown": "Unknown update error",
     "error.update.download_failed": "Update download failed",
     "error.update.install_failed": "Update install failed",
+
+    // hero.* additions — HeroPanel labels/buttons/titles
+    "hero.nowWatching": "currently watching",
+    "hero.statusLive": "LIVE · earning drop",
+    "hero.statusIdle": "IDLE",
+    "hero.noActiveTarget": "No active target",
+    "hero.stat.eta": "eta",
+    "hero.stat.channels": "channels",
+    "hero.stat.claimsReady": "claims ready",
+    "hero.stat.openDrops": "open drops",
+    "hero.stat.useInventory": "use inventory",
+    "hero.stat.percentComplete": "{pct}% complete",
+    "hero.button.claimNow": "claim now",
+    "hero.button.pause": "pause",
+    "hero.button.switchTarget": "switch target",
+    "hero.title.useInventoryToClaim": "Use Inventory view to claim",
+    "hero.title.engineNotRunning": "Engine is not running",
+    "hero.title.pauseEngine": "Pause the watch engine",
+    "hero.title.openPrioritiesToSwitch": "Open Priorities view to switch target",
+    "hero.title.wireLater": "Wiring coming in a follow-up phase",
+
+    // queue.* — new namespace, QueuePanel
+    "queue.header": "queue · next up",
+    "queue.manage": "manage →",
+    "queue.empty": "no drops in queue",
+    "queue.table.dropGame": "drop · game",
+    "queue.table.watched": "watched",
+    "queue.table.progress": "progress",
+    "queue.table.status": "status",
+    "queue.pill.live": "live",
+    "queue.pill.queued": "queued",
+
+    // activity.* — new namespace, ActivityPanel
+    "activity.header": "recent activity",
+    "activity.empty": "no claims yet",
+    "activity.claimedPrefix": "Claimed",
+    "activity.recently": "recently",
+
+    // engine.* — new namespace, EnginePanel (Overview)
+    "engine.header": "engine",
+    "engine.row.watchCycle": "watch_cycle",
+    "engine.row.lastRefresh": "last_refresh",
+    "engine.row.cadence": "cadence",
+    "engine.row.uptime": "uptime",
+
+    // attention.* — new namespace, AttentionStrip
+    "attention.claimReady": "{count} claim ready",
+    "attention.claimsReady": "{count} claims ready",
+    "attention.watchError": "watch error",
+    "attention.noChannels": "no channels",
+    "attention.trackerLabel": "tracker {state}",
+
+    // inventory.filter.* — InventoryFilterStrip chips (new keys only; all/upcoming/notLinked/expired already defined above)
+    "inventory.filter.aria": "Inventory filter",
+    "inventory.filter.priority": "priority",
+    "inventory.filter.live": "live",
+    "inventory.filter.claimed": "claimed",
+
+    // inventory.header.* — InventoryHeader
+    "inventory.header.title": "Inventory",
+    "inventory.header.searchPlaceholder": "search drops…",
+    "inventory.header.allGames": "All games",
+    "inventory.header.refreshTitle": "Refresh inventory",
+    "inventory.header.refreshing": "refreshing",
+    "inventory.header.refresh": "refresh",
+    "inventory.header.linkAccount": "link account",
+    "inventory.header.dropsNeedLink.one": "{count} drop needs account-link",
+    "inventory.header.dropsNeedLink.other": "{count} drops need account-link",
+    "inventory.header.countOf.one": "{shown} of {total} drop",
+    "inventory.header.countOf.other": "{shown} of {total} drops",
+
+    // inventory.drawer.* — InventoryDrawer
+    "inventory.drawer.title": "drop details",
+    "inventory.drawer.close": "Close",
+    "inventory.drawer.closeAria": "Close drawer",
+    "inventory.drawer.progress": "progress",
+    "inventory.drawer.blocked": "blocked",
+    "inventory.drawer.campaign": "campaign",
+    "inventory.drawer.starts": "starts",
+    "inventory.drawer.ends": "ends",
+    "inventory.drawer.watchedRequired": "watched · required",
+    "inventory.drawer.addToPriorities": "add {game} to priorities",
+    "inventory.drawer.noActions": "no actions available",
+
+    // control.engineStatus.* — EngineStatusPanel hardcoded remnants
+    "control.engineStatus.header": "engine status",
+    "control.engineStatus.why": "why",
+    "control.engineStatus.next": "next",
+    "control.engineStatus.detail.target": "target",
+    "control.engineStatus.detail.suppression": "suppression",
+    "control.engineStatus.detail.cooldowns": "cooldowns",
+    "control.engineStatus.detail.allowlist": "allowlist",
+    "control.engineStatus.detail.noProgress": "no-progress",
+
+    // control.activeSession.* — ActiveSessionPanel
+    "control.activeSession.nowWatching": "now watching",
+    "control.activeSession.noActiveSession": "no active session",
+    "control.activeSession.lastPing": "last ping",
+    "control.activeSession.loading": "loading…",
+    "control.activeSession.noStream": "no stream",
+    "control.activeSession.live": "live",
+    "control.activeSession.paused": "paused",
+    "control.activeSession.activeDrop": "active drop",
+    "control.activeSession.watchedRequiredEta": "{watched} watched · {required} required · eta {eta}",
+    "control.activeSession.watchedRequired": "{watched} watched · {required} required",
+    "control.activeSession.noFarmable": "no farmable drop on this channel",
+    "control.activeSession.engineIdle": "engine idle",
+    "control.activeSession.viewers": "viewers",
+
+    // control.channelGrid.* — ChannelGridPanel
+    "control.channelGrid.header": "live channels",
+    "control.channelGrid.refreshTitle": "Refresh channel list",
+    "control.channelGrid.refresh": "refresh",
+    "control.channelGrid.noTarget": "select a target game in Priorities to see live channels",
+    "control.channelGrid.watchingPill": "watching",
+
+    // control.campaignsPanel.* — CampaignsPanel
+    "control.campaignsPanel.empty": "no active campaigns",
+    "control.campaignsPanel.header": "campaigns",
+    "control.campaignsPanel.status.claimed": "claimed",
+    "control.campaignsPanel.status.blocked": "blocked",
+    "control.campaignsPanel.status.live": "live",
+    "control.campaignsPanel.status.queued": "queued",
+    "control.campaignsPanel.footerTotal": "total",
+    "control.campaignsPanel.footerDrops.one": "{count} drop",
+    "control.campaignsPanel.footerDrops.other": "{count} drops",
+
+    // priorities.row.*Aria — PriorityRow drag/remove aria
+    "priorities.row.dragAria": "Drag {game}",
+    "priorities.row.removeAria": "Remove {game}",
   },
   de: {
     "app.name": "DropPilot",
@@ -1518,6 +1648,136 @@ const translations: Translations = {
     "error.update.unknown": "Unbekannter Update-Fehler",
     "error.update.download_failed": "Update-Download fehlgeschlagen",
     "error.update.install_failed": "Update-Installation fehlgeschlagen",
+
+    // hero.* additions — HeroPanel labels/buttons/titles
+    "hero.nowWatching": "läuft gerade",
+    "hero.statusLive": "LIVE · sammelt Drop",
+    "hero.statusIdle": "PAUSE",
+    "hero.noActiveTarget": "Kein aktives Ziel",
+    "hero.stat.eta": "eta",
+    "hero.stat.channels": "channels",
+    "hero.stat.claimsReady": "claims bereit",
+    "hero.stat.openDrops": "offene drops",
+    "hero.stat.useInventory": "inventar nutzen",
+    "hero.stat.percentComplete": "{pct}% fertig",
+    "hero.button.claimNow": "jetzt claimen",
+    "hero.button.pause": "pause",
+    "hero.button.switchTarget": "ziel wechseln",
+    "hero.title.useInventoryToClaim": "Im Inventar claimen",
+    "hero.title.engineNotRunning": "Engine läuft nicht",
+    "hero.title.pauseEngine": "Watch-Engine pausieren",
+    "hero.title.openPrioritiesToSwitch": "Prioritäten-Ansicht öffnen, um Ziel zu wechseln",
+    "hero.title.wireLater": "Wird in einer späteren Phase verkabelt",
+
+    // queue.* — new namespace, QueuePanel
+    "queue.header": "queue · als nächstes",
+    "queue.manage": "verwalten →",
+    "queue.empty": "keine drops in der queue",
+    "queue.table.dropGame": "drop · spiel",
+    "queue.table.watched": "geschaut",
+    "queue.table.progress": "fortschritt",
+    "queue.table.status": "status",
+    "queue.pill.live": "live",
+    "queue.pill.queued": "queue",
+
+    // activity.* — new namespace, ActivityPanel
+    "activity.header": "letzte aktivität",
+    "activity.empty": "noch keine claims",
+    "activity.claimedPrefix": "Eingesammelt:",
+    "activity.recently": "vor kurzem",
+
+    // engine.* — new namespace, EnginePanel (Overview)
+    "engine.header": "engine",
+    "engine.row.watchCycle": "watch_cycle",
+    "engine.row.lastRefresh": "last_refresh",
+    "engine.row.cadence": "cadence",
+    "engine.row.uptime": "uptime",
+
+    // attention.* — new namespace, AttentionStrip
+    "attention.claimReady": "{count} claim bereit",
+    "attention.claimsReady": "{count} claims bereit",
+    "attention.watchError": "watch-fehler",
+    "attention.noChannels": "keine channels",
+    "attention.trackerLabel": "tracker {state}",
+
+    // inventory.filter.* — InventoryFilterStrip chips (new keys only; all/upcoming/notLinked/expired already defined above)
+    "inventory.filter.aria": "Inventar-Filter",
+    "inventory.filter.priority": "priorität",
+    "inventory.filter.live": "live",
+    "inventory.filter.claimed": "geclaimt",
+
+    // inventory.header.* — InventoryHeader
+    "inventory.header.title": "Inventar",
+    "inventory.header.searchPlaceholder": "drops suchen…",
+    "inventory.header.allGames": "Alle Spiele",
+    "inventory.header.refreshTitle": "Inventar aktualisieren",
+    "inventory.header.refreshing": "lade",
+    "inventory.header.refresh": "aktualisieren",
+    "inventory.header.linkAccount": "account verknüpfen",
+    "inventory.header.dropsNeedLink.one": "{count} drop braucht Account-Link",
+    "inventory.header.dropsNeedLink.other": "{count} drops brauchen Account-Link",
+    "inventory.header.countOf.one": "{shown} von {total} drop",
+    "inventory.header.countOf.other": "{shown} von {total} drops",
+
+    // inventory.drawer.* — InventoryDrawer
+    "inventory.drawer.title": "drop-details",
+    "inventory.drawer.close": "Schließen",
+    "inventory.drawer.closeAria": "Drawer schließen",
+    "inventory.drawer.progress": "fortschritt",
+    "inventory.drawer.blocked": "blockiert",
+    "inventory.drawer.campaign": "kampagne",
+    "inventory.drawer.starts": "start",
+    "inventory.drawer.ends": "ende",
+    "inventory.drawer.watchedRequired": "geschaut · benötigt",
+    "inventory.drawer.addToPriorities": "{game} zu Prioritäten",
+    "inventory.drawer.noActions": "keine Aktionen verfügbar",
+
+    // control.engineStatus.* — EngineStatusPanel hardcoded remnants
+    "control.engineStatus.header": "engine-status",
+    "control.engineStatus.why": "warum",
+    "control.engineStatus.next": "nächstes",
+    "control.engineStatus.detail.target": "ziel",
+    "control.engineStatus.detail.suppression": "unterdrückt",
+    "control.engineStatus.detail.cooldowns": "cooldowns",
+    "control.engineStatus.detail.allowlist": "allowlist",
+    "control.engineStatus.detail.noProgress": "kein fortschritt",
+
+    // control.activeSession.* — ActiveSessionPanel
+    "control.activeSession.nowWatching": "läuft gerade",
+    "control.activeSession.noActiveSession": "keine aktive session",
+    "control.activeSession.lastPing": "letzter ping",
+    "control.activeSession.loading": "lade…",
+    "control.activeSession.noStream": "kein stream",
+    "control.activeSession.live": "live",
+    "control.activeSession.paused": "pausiert",
+    "control.activeSession.activeDrop": "aktiver drop",
+    "control.activeSession.watchedRequiredEta": "{watched} geschaut · {required} benötigt · eta {eta}",
+    "control.activeSession.watchedRequired": "{watched} geschaut · {required} benötigt",
+    "control.activeSession.noFarmable": "kein farmbarer drop auf diesem channel",
+    "control.activeSession.engineIdle": "engine im leerlauf",
+    "control.activeSession.viewers": "viewer",
+
+    // control.channelGrid.* — ChannelGridPanel
+    "control.channelGrid.header": "live channels",
+    "control.channelGrid.refreshTitle": "Channel-Liste aktualisieren",
+    "control.channelGrid.refresh": "aktualisieren",
+    "control.channelGrid.noTarget": "wähle ein Ziel-Spiel in Prioritäten, um live channels zu sehen",
+    "control.channelGrid.watchingPill": "watching",
+
+    // control.campaignsPanel.* — CampaignsPanel
+    "control.campaignsPanel.empty": "keine aktiven Kampagnen",
+    "control.campaignsPanel.header": "kampagnen",
+    "control.campaignsPanel.status.claimed": "geclaimt",
+    "control.campaignsPanel.status.blocked": "blockiert",
+    "control.campaignsPanel.status.live": "live",
+    "control.campaignsPanel.status.queued": "queue",
+    "control.campaignsPanel.footerTotal": "gesamt",
+    "control.campaignsPanel.footerDrops.one": "{count} drop",
+    "control.campaignsPanel.footerDrops.other": "{count} drops",
+
+    // priorities.row.*Aria — PriorityRow drag/remove aria
+    "priorities.row.dragAria": "{game} ziehen",
+    "priorities.row.removeAria": "{game} entfernen",
   },
 };
 
