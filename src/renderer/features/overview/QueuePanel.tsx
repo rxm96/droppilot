@@ -24,20 +24,56 @@ export type QueuePanelProps = {
    * accent border-l so the user can see live progress in the queue list.
    */
   activeDrop?: { id: string; earnedMinutes: number } | null;
+  /**
+   * The current target game. When set, the queue filters to only this game's
+   * drops so the list answers "what's next for what I'm farming" instead of
+   * showing an arbitrary cross-game mix sorted by remaining time.
+   */
+  targetGame?: string;
 };
 
-export function QueuePanel({ items, onManageClick, maxRows = 8, activeDrop }: QueuePanelProps) {
+export function QueuePanel({
+  items,
+  onManageClick,
+  maxRows = 8,
+  activeDrop,
+  targetGame,
+}: QueuePanelProps) {
   const { t } = useI18n();
+  const hasTarget = !!targetGame && targetGame.length > 0;
   const queued = React.useMemo(() => {
-    return items
-      .filter((it) => it.status !== "claimed")
+    const filtered = items.filter((it) => {
+      if (it.status === "claimed") return false;
+      if (hasTarget && it.game !== targetGame) return false;
+      return true;
+    });
+    return filtered
       .sort((a, b) => {
+        // Active drop pinned to the top — it's what the user is actually watching
+        if (activeDrop) {
+          if (a.id === activeDrop.id) return -1;
+          if (b.id === activeDrop.id) return 1;
+        }
+        // Then in-progress (any earnedMinutes > 0) before truly fresh ones —
+        // these are the next-most-likely things to finish.
+        const aProgress = a.earnedMinutes > 0 ? 1 : 0;
+        const bProgress = b.earnedMinutes > 0 ? 1 : 0;
+        if (aProgress !== bProgress) return bProgress - aProgress;
+        // Finally sort by remaining minutes ascending — quickest finish first.
         const remA = Math.max(0, a.requiredMinutes - a.earnedMinutes);
         const remB = Math.max(0, b.requiredMinutes - b.earnedMinutes);
         return remA - remB;
       })
       .slice(0, maxRows);
-  }, [items, maxRows]);
+  }, [items, maxRows, activeDrop, targetGame, hasTarget]);
+
+  // Count what's available outside the target so the user can see "X more in
+  // other games" — explains why the queue looks short when targetGame filters
+  // most things out.
+  const otherGamesCount = React.useMemo(() => {
+    if (!hasTarget) return 0;
+    return items.filter((it) => it.status !== "claimed" && it.game !== targetGame).length;
+  }, [items, hasTarget, targetGame]);
 
   return (
     <Card className="bg-[color:var(--dp-bg-elevated)] border-[color:var(--dp-border)] rounded-[var(--dp-radius-lg)]">
@@ -50,7 +86,14 @@ export function QueuePanel({ items, onManageClick, maxRows = 8, activeDrop }: Qu
       <CardContent className="p-0">
         {queued.length === 0 ? (
           <div className="px-5 py-8 text-center font-mono text-[11px] text-[color:var(--dp-text-dimmer)]">
-            {t("queue.empty")}
+            {hasTarget
+              ? t("queue.emptyForTarget", { game: targetGame! })
+              : t("queue.emptyNoTarget")}
+            {hasTarget && otherGamesCount > 0 && (
+              <div className="mt-1 text-[color:var(--dp-text-dimmer)]">
+                {t("queue.otherGamesHint", { count: otherGamesCount })}
+              </div>
+            )}
           </div>
         ) : (
           <Table columns="40px 2fr 1fr 1fr 110px">
@@ -115,6 +158,14 @@ export function QueuePanel({ items, onManageClick, maxRows = 8, activeDrop }: Qu
               );
             })}
           </Table>
+        )}
+        {/* Footer hint when filtered AND we hid drops from other games.
+            Helps the user understand they're seeing a focused slice, not
+            an exhaustive list. */}
+        {queued.length > 0 && hasTarget && otherGamesCount > 0 && (
+          <div className="border-t border-[color:var(--dp-border-soft)] px-5 py-2 font-mono text-[10px] text-[color:var(--dp-text-dimmer)] text-center">
+            {t("queue.otherGamesHint", { count: otherGamesCount })}
+          </div>
         )}
       </CardContent>
     </Card>

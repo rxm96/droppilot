@@ -833,6 +833,9 @@ const translations: Translations = {
     "queue.pill.live": "live",
     "queue.pill.queued": "queued",
     "queue.pill.watching": "watching",
+    "queue.emptyForTarget": "No queued drops for {game} — pick the next target in Priorities",
+    "queue.emptyNoTarget": "No target game set — pick one in Priorities to see its queue",
+    "queue.otherGamesHint": "+{count} more in other games (see Inventory)",
 
     // activity.* — Overview activity feed (Phase 18)
     "activity.header": "recent activity",
@@ -1788,6 +1791,9 @@ const translations: Translations = {
     "queue.pill.live": "live",
     "queue.pill.queued": "queue",
     "queue.pill.watching": "läuft",
+    "queue.emptyForTarget": "Keine Drops in der Queue für {game} — wähle das nächste Ziel in Prioritäten",
+    "queue.emptyNoTarget": "Kein Ziel-Spiel gesetzt — wähle eins in Prioritäten um seine Queue zu sehen",
+    "queue.otherGamesHint": "+{count} weitere in anderen Spielen (siehe Inventar)",
 
     // activity.* — Overview activity feed (Phase 18)
     "activity.header": "letzte aktivität",
