@@ -894,6 +894,28 @@ const translations: Translations = {
     // priorities.row.*Aria — PriorityRow drag/remove aria
     "priorities.row.dragAria": "Drag {game}",
     "priorities.row.removeAria": "Remove {game}",
+
+    // priorities.header.* — PriorityHeader strings
+    "priorities.header.rankedCount.one": "{count} game ranked",
+    "priorities.header.rankedCount.other": "{count} games ranked",
+    "priorities.header.watchingNow": "watching {game}",
+    "priorities.header.modeStrict": "strict mode",
+    "priorities.header.modeFlexible": "flexible mode",
+    "priorities.header.liveTotalSub": "live / total",
+    "priorities.header.position": "position {rank}",
+
+    // priorities.list.* — PriorityList empty state strings
+    "priorities.list.empty": "no games prioritized yet",
+    "priorities.list.emptyHint": "add a game from the panel on the left",
+
+    // priorities.add.* — PriorityAddPanel strings
+    "priorities.add.fromDropsTitle": "add from your drops",
+    "priorities.add.fromDropsHint": "pick a game that currently has live drops",
+    "priorities.add.selectPlaceholder": "select a game…",
+    "priorities.add.addButton": "add",
+    "priorities.add.manualHint": "type any game name, even ones with no live drops yet",
+    "priorities.add.manualPlaceholder": "game name…",
+    "priorities.add.strictLabel": "strict priority order",
   },
   de: {
     "app.name": "DropPilot",
@@ -1778,6 +1800,28 @@ const translations: Translations = {
     // priorities.row.*Aria — PriorityRow drag/remove aria
     "priorities.row.dragAria": "{game} ziehen",
     "priorities.row.removeAria": "{game} entfernen",
+
+    // priorities.header.* — PriorityHeader strings
+    "priorities.header.rankedCount.one": "{count} Game eingereiht",
+    "priorities.header.rankedCount.other": "{count} Games eingereiht",
+    "priorities.header.watchingNow": "schaut {game}",
+    "priorities.header.modeStrict": "strikter Modus",
+    "priorities.header.modeFlexible": "flexibler Modus",
+    "priorities.header.liveTotalSub": "live / gesamt",
+    "priorities.header.position": "position {rank}",
+
+    // priorities.list.* — PriorityList empty state strings
+    "priorities.list.empty": "noch keine Games priorisiert",
+    "priorities.list.emptyHint": "füge ein Game über das Panel links hinzu",
+
+    // priorities.add.* — PriorityAddPanel strings
+    "priorities.add.fromDropsTitle": "aus Drops hinzufügen",
+    "priorities.add.fromDropsHint": "wähle ein Game, das gerade aktive Drops hat",
+    "priorities.add.selectPlaceholder": "Game auswählen…",
+    "priorities.add.addButton": "hinzufügen",
+    "priorities.add.manualHint": "beliebigen Game-Namen eingeben, auch ohne aktive Drops",
+    "priorities.add.manualPlaceholder": "Game-Name…",
+    "priorities.add.strictLabel": "strikte Prioritätsreihenfolge",
   },
 };
 

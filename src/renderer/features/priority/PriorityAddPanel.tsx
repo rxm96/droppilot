@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@renderer/shared/components/ui/select";
 import { Plus } from "@renderer/shared/lib/icons";
+import { useI18n } from "@renderer/shared/i18n";
 
 const NO_GAME_SELECT_VALUE = "__dp_none__";
 
@@ -37,14 +38,15 @@ export function PriorityAddPanel({
   obeyPriority,
   setObeyPriority,
 }: PriorityAddPanelProps) {
+  const { t } = useI18n();
   const hasSelectableSelectedGame = selectableDropGames.includes(selectedGame);
 
   return (
     <div className="rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] p-5 flex flex-col gap-5">
       <div>
-        <SectionLabel inline>add from your drops</SectionLabel>
+        <SectionLabel inline>{t("priorities.add.fromDropsTitle")}</SectionLabel>
         <p className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)] mt-1">
-          pick a game that currently has live drops
+          {t("priorities.add.fromDropsHint")}
         </p>
         {selectableDropGames.length > 0 ? (
           <div className="flex gap-2 mt-3">
@@ -55,11 +57,13 @@ export function PriorityAddPanel({
               }
             >
               <SelectTrigger tone="dp" className="flex-1" aria-label="Add from drops">
-                <SelectValue placeholder="select a game…" />
+                <SelectValue placeholder={t("priorities.add.selectPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  <SelectItem value={NO_GAME_SELECT_VALUE}>select a game…</SelectItem>
+                  <SelectItem value={NO_GAME_SELECT_VALUE}>
+                    {t("priorities.add.selectPlaceholder")}
+                  </SelectItem>
                   {selectableDropGames.map((g) => (
                     <SelectItem key={g} value={g}>
                       {g}
@@ -74,20 +78,20 @@ export function PriorityAddPanel({
               onClick={addGameFromSelect}
               disabled={!hasSelectableSelectedGame}
             >
-              <Plus size={11} strokeWidth={2} /> add
+              <Plus size={11} strokeWidth={2} /> {t("priorities.add.addButton")}
             </Button>
           </div>
         ) : (
           <div className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)] mt-3 py-2">
-            no extra games with live drops
+            {t("priorities.addEmpty")}
           </div>
         )}
       </div>
 
       <div>
-        <SectionLabel inline>add manually</SectionLabel>
+        <SectionLabel inline>{t("priorities.manualTitle")}</SectionLabel>
         <p className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)] mt-1">
-          type any game name, even ones with no live drops yet
+          {t("priorities.add.manualHint")}
         </p>
         <div className="flex gap-2 mt-3">
           <Input
@@ -100,12 +104,12 @@ export function PriorityAddPanel({
                 addGame();
               }
             }}
-            placeholder="game name…"
+            placeholder={t("priorities.add.manualPlaceholder")}
             className="flex-1"
             aria-label="Add game manually"
           />
           <Button variant="dp-primary" size="dp-md" onClick={addGame} disabled={!newGame.trim()}>
-            <Plus size={11} strokeWidth={2} /> add
+            <Plus size={11} strokeWidth={2} /> {t("priorities.add.addButton")}
           </Button>
         </div>
       </div>
@@ -120,12 +124,12 @@ export function PriorityAddPanel({
         />
         <label htmlFor="dp-obey-priority" className="flex-1 cursor-pointer">
           <div className="text-[12px] text-[color:var(--dp-text)] font-medium">
-            strict priority order
+            {t("priorities.add.strictLabel")}
           </div>
           <div className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)] mt-0.5">
             {obeyPriority
-              ? "watch engine sticks to the highest-priority live game"
-              : "watch engine may pick any live game when the top is blocked"}
+              ? t("priorities.ruleStrictHint")
+              : t("priorities.ruleFlexibleHint")}
           </div>
         </label>
       </div>

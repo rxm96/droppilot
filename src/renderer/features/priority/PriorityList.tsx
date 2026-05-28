@@ -15,6 +15,7 @@ import {
 } from "@dnd-kit/sortable";
 import { PriorityRow } from "./PriorityRow";
 import { derivePriorityRowState } from "./priorityHelpers";
+import { useI18n } from "@renderer/shared/i18n";
 
 export type PriorityListProps = {
   priorityGames: string[];
@@ -33,6 +34,7 @@ export function PriorityList({
   movePriorityGame,
   removeGame,
 }: PriorityListProps) {
+  const { t } = useI18n();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -53,10 +55,10 @@ export function PriorityList({
     return (
       <div className="rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] px-5 py-12 text-center">
         <p className="font-mono text-[11px] text-[color:var(--dp-text-dimmer)]">
-          no games prioritized yet
+          {t("priorities.list.empty")}
         </p>
         <p className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)] mt-1 opacity-70">
-          add a game from the panel on the left
+          {t("priorities.list.emptyHint")}
         </p>
       </div>
     );

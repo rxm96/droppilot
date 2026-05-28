@@ -22,12 +22,18 @@ export function PriorityHeader({
   const { t } = useI18n();
   const currentTargetValue = activeTargetGame || "—";
   const currentTargetSub = watchingGame
-    ? `watching ${watchingGame}`
+    ? t("priorities.header.watchingNow", { game: watchingGame })
     : obeyPriority
-      ? "strict mode"
-      : "flexible mode";
+      ? t("priorities.header.modeStrict")
+      : t("priorities.header.modeFlexible");
   const queueHealthValue = totalCount > 0 ? `${livePriorityCount}/${totalCount}` : "—";
   const topGameValue = topGame || "—";
+  const rankedCountLabel = t(
+    totalCount === 1
+      ? "priorities.header.rankedCount.one"
+      : "priorities.header.rankedCount.other",
+    { count: totalCount },
+  );
 
   return (
     <div className="flex flex-col gap-3">
@@ -37,7 +43,7 @@ export function PriorityHeader({
             {t("priorities.title")}
           </h2>
           <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[color:var(--dp-text-dimmer)] mt-1">
-            {totalCount} game{totalCount === 1 ? "" : "s"} ranked
+            {rankedCountLabel}
           </div>
         </div>
       </div>
@@ -55,10 +61,18 @@ export function PriorityHeader({
           />
         </div>
         <div className="px-4 border-l border-[color:var(--dp-border-soft)]">
-          <Stat label="queue live" value={queueHealthValue} sub="live / total" />
+          <Stat
+            label={t("priorities.queueHealth")}
+            value={queueHealthValue}
+            sub={t("priorities.header.liveTotalSub")}
+          />
         </div>
         <div className="pl-4 border-l border-[color:var(--dp-border-soft)]">
-          <Stat label={t("priorities.topSlot")} value={topGameValue} sub="position 01" />
+          <Stat
+            label={t("priorities.topSlot")}
+            value={topGameValue}
+            sub={t("priorities.header.position", { rank: "01" })}
+          />
         </div>
       </div>
     </div>
