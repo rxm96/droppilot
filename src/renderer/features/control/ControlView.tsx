@@ -265,8 +265,13 @@ export function ControlView(props: ControlProps) {
         activeLoginMismatch={state.activeLoginMismatch}
         activeDropTitle={activeDropInfo?.title ?? null}
         activeDropEarnedMinutes={
+          // Use raw earnedMinutes (last inventory snapshot) + the live-ticking
+          // activeElapsedMinutesRaw (seconds since progressAnchorAt, updated 1s).
+          // Do NOT use virtualEarned here — it already bakes in elapsed time
+          // since the anchor, which would double-count when added to
+          // activeElapsedMinutesRaw (both measure from the same base).
           activeDropInfo
-            ? activeDropInfo.virtualEarned + state.liveProgress.activeElapsedMinutesRaw
+            ? activeDropInfo.earnedMinutes + state.liveProgress.activeElapsedMinutesRaw
             : 0
         }
         activeDropRequiredMinutes={activeDropInfo?.requiredMinutes ?? 0}
