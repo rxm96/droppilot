@@ -265,14 +265,12 @@ export function ControlView(props: ControlProps) {
         activeLoginMismatch={state.activeLoginMismatch}
         activeDropTitle={activeDropInfo?.title ?? null}
         activeDropEarnedMinutes={
-          // Use raw earnedMinutes (last inventory snapshot) + the live-ticking
-          // activeElapsedMinutesRaw (seconds since progressAnchorAt, updated 1s).
-          // Do NOT use virtualEarned here — it already bakes in elapsed time
-          // since the anchor, which would double-count when added to
-          // activeElapsedMinutesRaw (both measure from the same base).
-          activeDropInfo
-            ? activeDropInfo.earnedMinutes + state.liveProgress.activeElapsedMinutesRaw
-            : 0
+          // Single source of truth: virtualEarned already = earnedMinutes + the
+          // watch-session-clamped live delta (computed once in useTargetDrops).
+          // Using it directly keeps ControlView identical to the Overview Hero +
+          // Queue, instead of re-deriving progress from a second anchor that
+          // diverged after watch start / stale-inventory windows.
+          activeDropInfo ? activeDropInfo.virtualEarned : 0
         }
         activeDropRequiredMinutes={activeDropInfo?.requiredMinutes ?? 0}
         activeEtaText={state.activeEtaText}

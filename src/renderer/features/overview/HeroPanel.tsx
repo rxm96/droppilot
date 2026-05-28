@@ -13,6 +13,12 @@ export type HeroPanelProps = {
   activeDropEta?: number | null;
   activeDropRemainingMinutes?: number;
   targetProgress: number;
+  /**
+   * The active drop's own completion %. When present it drives the "% complete"
+   * + bar so they match the card's title + ETA (all about the active drop).
+   * Falls back to the aggregate targetProgress when nothing is being watched.
+   */
+  activeDropProgress?: number | null;
   claimableDrops: number;
   channelsCount: number;
   totalDrops: number;
@@ -32,6 +38,7 @@ export function HeroPanel({
   activeDropEta,
   activeDropRemainingMinutes,
   targetProgress,
+  activeDropProgress,
   claimableDrops,
   channelsCount,
   totalDrops,
@@ -63,7 +70,7 @@ export function HeroPanel({
   }, [activeDropEta]);
 
   const etaText = formatRemainingFromEta(activeDropEta, activeDropRemainingMinutes, now);
-  const progressPct = Math.max(0, Math.min(100, Math.round(targetProgress)));
+  const progressPct = Math.max(0, Math.min(100, Math.round(activeDropProgress ?? targetProgress)));
   const openDrops = Math.max(0, totalDrops - claimedDrops);
   const hasClaimable = claimableDrops > 0;
   const title = activeDropTitle?.trim() || activeGame || t("hero.noActiveTarget");
@@ -109,13 +116,19 @@ export function HeroPanel({
           style={{ gridTemplateColumns: "1.4fr 1fr 1fr 1fr" }}
         >
           <div className="pr-4">
-            <Stat label={t("hero.stat.eta")} value={etaText} sub={t("hero.stat.percentComplete", { pct: progressPct })} accent />
+            <Stat
+              label={t("hero.stat.eta")}
+              value={etaText}
+              sub={t("hero.stat.percentComplete", { pct: progressPct })}
+              accent
+            />
             <div className="mt-2.5 h-[3px] rounded-[2px] bg-[color:var(--dp-border)] overflow-hidden">
               <div
                 className="h-full rounded-[2px]"
                 style={{
                   width: `${progressPct}%`,
-                  background: "linear-gradient(90deg, var(--dp-accent), color-mix(in srgb, var(--dp-accent) 60%, white))",
+                  background:
+                    "linear-gradient(90deg, var(--dp-accent), color-mix(in srgb, var(--dp-accent) 60%, white))",
                   boxShadow: "0 0 12px var(--dp-accent-glow)",
                 }}
               />
@@ -154,7 +167,8 @@ export function HeroPanel({
                     : t("hero.title.claimNowReady")
             }
           >
-            <Check size={11} strokeWidth={2.2} /> {claiming ? t("hero.button.claiming") : t("hero.button.claimNow")}
+            <Check size={11} strokeWidth={2.2} />{" "}
+            {claiming ? t("hero.button.claiming") : t("hero.button.claimNow")}
           </Button>
           <Button
             variant="dp-secondary"
@@ -195,7 +209,7 @@ export function HeroPanel({
             {claimStatus.kind === "success" && claimStatus.message
               ? claimStatus.message
               : claimStatus.kind === "error"
-                ? claimStatus.message ?? t("hero.claimFeedback.errorFallback")
+                ? (claimStatus.message ?? t("hero.claimFeedback.errorFallback"))
                 : null}
           </div>
         )}

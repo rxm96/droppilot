@@ -45,6 +45,14 @@ type Params = {
   watching: WatchingState;
   inventoryFetchedAt: number | null;
   progressAnchorByDropId?: Record<string, number>;
+  /**
+   * Timestamp when the current watch session (this channel+stream) began. The
+   * live-progress anchor is clamped to never predate this, so we don't credit
+   * elapsed time from before the user actually started watching (e.g. a stale
+   * inventory snapshot). ControlView uses the same clamp — passing it here keeps
+   * both views' live progress identical.
+   */
+  watchStartedAt?: number | null;
 };
 
 type ComputeParams = Params & { now?: number };
@@ -58,6 +66,7 @@ export function computeTargetDrops({
   watching,
   inventoryFetchedAt,
   progressAnchorByDropId,
+  watchStartedAt,
   now: providedNow,
 }: ComputeParams): TargetDropsResult {
   if (!targetGame) {
@@ -105,7 +114,9 @@ export function computeTargetDrops({
   );
   const inProgressRelevant = withCategoryDrops.filter(
     ({ drop, category }) =>
-      sameGameName(drop.game, targetGame) && category === "in-progress" && isWatchableInProgress(drop),
+      sameGameName(drop.game, targetGame) &&
+      category === "in-progress" &&
+      isWatchableInProgress(drop),
   );
   const sortCandidates = (
     candidates: Array<{ drop: InventoryDrop; category: string }>,
@@ -128,7 +139,9 @@ export function computeTargetDrops({
   const sortedInProgress = sortCandidates(inProgressRelevant);
   const upcomingRelevant = withCategoryDrops.filter(
     ({ drop, category }) =>
-      sameGameName(drop.game, targetGame) && category === "upcoming" && isWatchableUpcomingDrop(drop),
+      sameGameName(drop.game, targetGame) &&
+      category === "upcoming" &&
+      isWatchableUpcomingDrop(drop),
   );
   const sortedUpcoming = sortCandidates(upcomingRelevant);
   const sortedActiveItems = sortedActive.map((s) => s.drop);
@@ -246,8 +259,16 @@ export function computeTargetDrops({
   const activeDropAnchorAt = (() => {
     if (!activeDrop || !canPredictActiveDropProgress) return null;
     const byDrop = progressAnchorByDropId?.[activeDrop.id];
-    if (typeof byDrop === "number" && Number.isFinite(byDrop)) return byDrop;
-    return inventoryFetchedAt;
+    const base =
+      typeof byDrop === "number" && Number.isFinite(byDrop) ? byDrop : inventoryFetchedAt;
+    if (base == null) return null;
+    // Clamp to the current watch-session start so we never credit elapsed time
+    // from before the user actually started watching this channel (e.g. a stale
+    // inventory snapshot). Mirrors ControlView so both views show identical live
+    // progress for the active drop.
+    return typeof watchStartedAt === "number" && Number.isFinite(watchStartedAt)
+      ? Math.max(base, watchStartedAt)
+      : base;
   })();
   const liveDeltaMinutesRaw =
     canPredictActiveDropProgress && activeDropAnchorAt
@@ -322,6 +343,7 @@ export function useTargetDrops({
   watching,
   inventoryFetchedAt,
   progressAnchorByDropId,
+  watchStartedAt,
 }: Params): TargetDropsResult {
   // Tick `now` every second while the user is watching the target game so
   // targetProgress, liveDeltaApplied, virtualEarned, and activeDropEta stay
@@ -342,6 +364,7 @@ export function useTargetDrops({
         watching,
         inventoryFetchedAt,
         progressAnchorByDropId,
+        watchStartedAt,
         now: isLiveActive ? nowMs : undefined,
       }),
     [
@@ -350,6 +373,7 @@ export function useTargetDrops({
       inventoryFetchedAt,
       inventoryItems,
       progressAnchorByDropId,
+      watchStartedAt,
       targetGame,
       watching,
       withCategories,

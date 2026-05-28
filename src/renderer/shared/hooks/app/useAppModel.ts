@@ -353,6 +353,24 @@ export function useAppModel() {
     });
   }, [watching]);
 
+  // Stamp when the current watch session (channel+stream) began so useTargetDrops
+  // can clamp its live-progress anchor to it — we must not credit elapsed time
+  // from before the user started watching (e.g. a stale inventory snapshot).
+  // Same session-key semantics ControlView uses, so both views agree.
+  const watchSessionKeyRef = useRef<string | null>(null);
+  const [watchStartedAt, setWatchStartedAt] = useState<number | null>(null);
+  useEffect(() => {
+    if (!watching) {
+      watchSessionKeyRef.current = null;
+      setWatchStartedAt(null);
+      return;
+    }
+    const sessionKey = `${watching.id}:${watching.streamId ?? ""}`;
+    if (watchSessionKeyRef.current === sessionKey) return;
+    watchSessionKeyRef.current = sessionKey;
+    setWatchStartedAt(Date.now());
+  }, [watching]);
+
   const { stats, bumpStats, resetStats } = useStats({ demoMode });
   const { notify } = useSmartAlerts({
     enabled: alertsEnabled,
@@ -703,6 +721,7 @@ export function useAppModel() {
     watching,
     inventoryFetchedAt,
     progressAnchorByDropId,
+    watchStartedAt,
   });
 
   useEffect(() => {
@@ -1529,6 +1548,19 @@ export function useAppModel() {
     watchEngineSnapshot,
   };
 
+  // The active drop's own live completion %, so the Hero card's "% complete"
+  // matches its title + ETA (which are both about the active drop). Falls back
+  // to the aggregate targetProgress when nothing is actively being watched.
+  const activeDropProgress =
+    activeDropInfo && activeDropInfo.requiredMinutes > 0
+      ? Math.max(
+          0,
+          Math.min(
+            100,
+            Math.round((activeDropInfo.virtualEarned / activeDropInfo.requiredMinutes) * 100),
+          ),
+        )
+      : null;
   const heroProps = {
     demoMode,
     nextWatchAt: watchStats.nextAt || undefined,
@@ -1544,6 +1576,7 @@ export function useAppModel() {
     inventoryFetchedAt,
     lastWatchOk: watchStats.lastOk || undefined,
     targetProgress,
+    activeDropProgress,
     warmupActive: warmupState.active,
     warmupGame: warmupState.game,
     onClaimNow: claimNowAll,
