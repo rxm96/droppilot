@@ -784,6 +784,11 @@ const translations: Translations = {
     "hero.title.pauseEngine": "Pause the watch engine",
     "hero.title.openPrioritiesToSwitch": "Open Priorities view to switch target",
     "hero.title.wireLater": "Wiring coming in a follow-up phase",
+    "hero.title.noClaimableDrops": "No claimable drops right now",
+    "hero.title.claiming": "Claiming…",
+    "hero.title.claimNowReady": "Claim all available drops",
+    "hero.button.claiming": "claiming…",
+    "hero.claimFeedback.errorFallback": "Claim failed",
 
     // queue.* — new namespace, QueuePanel
     "queue.header": "queue · next up",
@@ -1690,6 +1695,11 @@ const translations: Translations = {
     "hero.title.pauseEngine": "Watch-Engine pausieren",
     "hero.title.openPrioritiesToSwitch": "Prioritäten-Ansicht öffnen, um Ziel zu wechseln",
     "hero.title.wireLater": "Wird in einer späteren Phase verkabelt",
+    "hero.title.noClaimableDrops": "Keine claimbaren Drops gerade",
+    "hero.title.claiming": "Claime…",
+    "hero.title.claimNowReady": "Alle verfügbaren Drops claimen",
+    "hero.button.claiming": "claime…",
+    "hero.claimFeedback.errorFallback": "Claim fehlgeschlagen",
 
     // queue.* — new namespace, QueuePanel
     "queue.header": "queue · als nächstes",

@@ -44,6 +44,8 @@ type OverviewProps = {
   watchError?: ErrorInfo | null;
   onPause?: () => void;
   onSwitchTarget?: () => void;
+  onClaimNow?: () => void | Promise<void>;
+  claimStatus?: { kind: "success" | "error"; message?: string; code?: string } | null;
   refreshMinMs?: number;
   refreshMaxMs?: number;
 };
@@ -65,6 +67,8 @@ export function OverviewView({
   watchError,
   onPause,
   onSwitchTarget,
+  onClaimNow,
+  claimStatus,
   refreshMinMs,
   refreshMaxMs,
 }: OverviewProps) {
@@ -100,6 +104,8 @@ export function OverviewView({
           isLive={isLive}
           onPause={onPause}
           onSwitchTarget={onSwitchTarget}
+          onClaimNow={onClaimNow}
+          claimStatus={claimStatus}
         />
         <QueuePanel items={items} />
       </div>

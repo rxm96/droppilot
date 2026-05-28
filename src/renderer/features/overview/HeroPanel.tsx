@@ -5,6 +5,7 @@ import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { Check, Pause, RotateCw } from "@renderer/shared/lib/icons";
 import { formatRemainingFromEta } from "./formatters";
 import { useI18n } from "@renderer/shared/i18n";
+import { cn } from "@renderer/shared/lib/utils";
 
 export type HeroPanelProps = {
   activeGame?: string;
@@ -21,6 +22,8 @@ export type HeroPanelProps = {
   onPause?: () => void;
   /** Navigate to Priorities (Phase 5 wiring). When null/undefined, switch button stays disabled. */
   onSwitchTarget?: () => void;
+  onClaimNow?: () => void | Promise<void>;
+  claimStatus?: { kind: "success" | "error"; message?: string; code?: string } | null;
 };
 
 export function HeroPanel({
@@ -36,9 +39,22 @@ export function HeroPanel({
   isLive,
   onPause,
   onSwitchTarget,
+  onClaimNow,
+  claimStatus,
 }: HeroPanelProps) {
   const { t } = useI18n();
   const [now, setNow] = React.useState<number>(() => Date.now());
+  const [claiming, setClaiming] = React.useState(false);
+
+  const handleClaim = React.useCallback(async () => {
+    if (!onClaimNow || claiming) return;
+    setClaiming(true);
+    try {
+      await onClaimNow();
+    } finally {
+      setClaiming(false);
+    }
+  }, [onClaimNow, claiming]);
   React.useEffect(() => {
     const hasEta = typeof activeDropEta === "number" && Number.isFinite(activeDropEta);
     if (!hasEta) return;
@@ -126,10 +142,19 @@ export function HeroPanel({
           <Button
             variant="dp-primary"
             size="dp-md"
-            disabled={!hasClaimable}
-            title={t("hero.title.useInventoryToClaim")}
+            onClick={handleClaim}
+            disabled={!hasClaimable || !onClaimNow || claiming}
+            title={
+              !onClaimNow
+                ? t("hero.title.useInventoryToClaim")
+                : !hasClaimable
+                  ? t("hero.title.noClaimableDrops")
+                  : claiming
+                    ? t("hero.title.claiming")
+                    : t("hero.title.claimNowReady")
+            }
           >
-            <Check size={11} strokeWidth={2.2} /> {t("hero.button.claimNow")}
+            <Check size={11} strokeWidth={2.2} /> {claiming ? t("hero.button.claiming") : t("hero.button.claimNow")}
           </Button>
           <Button
             variant="dp-secondary"
@@ -158,6 +183,22 @@ export function HeroPanel({
             <RotateCw size={11} strokeWidth={1.8} /> {t("hero.button.switchTarget")}
           </Button>
         </div>
+        {claimStatus && (
+          <div
+            className={cn(
+              "mt-2 font-mono text-[10px]",
+              claimStatus.kind === "success"
+                ? "text-[color:var(--dp-signal-ok)]"
+                : "text-[color:var(--dp-signal-err)]",
+            )}
+          >
+            {claimStatus.kind === "success" && claimStatus.message
+              ? claimStatus.message
+              : claimStatus.kind === "error"
+                ? claimStatus.message ?? t("hero.claimFeedback.errorFallback")
+                : null}
+          </div>
+        )}
       </div>
     </div>
   );

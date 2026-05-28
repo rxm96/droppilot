@@ -145,10 +145,20 @@ function AppShell({ model }: { model: Model }) {
       ...overviewProps,
       onPause: controlProps.stopWatching,
       onSwitchTarget: () => setView("priorities"),
+      onClaimNow: model.heroProps.onClaimNow,
+      claimStatus: model.heroProps.claimStatus,
       refreshMinMs: settingsProps.refreshMinMs,
       refreshMaxMs: settingsProps.refreshMaxMs,
     }),
-    [overviewProps, controlProps.stopWatching, setView, settingsProps.refreshMinMs, settingsProps.refreshMaxMs],
+    [
+      overviewProps,
+      controlProps.stopWatching,
+      setView,
+      model.heroProps.onClaimNow,
+      model.heroProps.claimStatus,
+      settingsProps.refreshMinMs,
+      settingsProps.refreshMaxMs,
+    ],
   );
 
   return (
