@@ -482,7 +482,12 @@ app.whenReady().then(async () => {
   }
   createTray(win);
   setupAutoUpdater();
-  userPubSub.start();
+  // NOTE: deliberately NOT calling userPubSub.start() here. It used to run
+  // BEFORE registerIpcHandlers() below, which meant the IPC bridge listener
+  // (registered inside registerIpcHandlers via userPubSub.onEvent) wasn't
+  // attached when the first connection's RESPONSE / early MESSAGE frames
+  // arrived — events silently dropped. start() now runs at the end of this
+  // block, after the IPC handlers are registered.
   if (initialSettings) {
     applyAutoStartSetting(initialSettings.autoStart);
   }
@@ -526,6 +531,14 @@ app.whenReady().then(async () => {
     resetStats,
     applyAutoStartSetting,
   });
+
+  // Start the user PubSub connection AFTER the IPC handlers register the
+  // userPubSub.onEvent listener that forwards events to renderer windows.
+  // Otherwise early RESPONSE / MESSAGE frames are received before any
+  // listener exists in the Set and get silently dropped — which manifested
+  // as 'no drop progress ever arrives' even on a successful connection.
+  console.log("[main] starting userPubSub (IPC handlers now registered)");
+  userPubSub.start();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {

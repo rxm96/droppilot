@@ -328,9 +328,21 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
   }, [demoMode]);
 
   useEffect(() => {
-    if (demoMode || !isLinked) return;
+    if (demoMode || !isLinked) {
+      // Silent kill #1: if the account isn't linked yet, the renderer never
+      // subscribes to drop-progress events, and earnedMinutes never advances
+      // mid-session. Log it so DevView shows why we're not seeing live data.
+      logDebug("inventory: pubsub subscription skipped", { demoMode, isLinked });
+      return;
+    }
     const pubSubReconciler = pubSubReconcilerRef.current;
-    if (!pubSubReconciler) return;
+    if (!pubSubReconciler) {
+      // Silent kill #2: reconciler ref not yet initialized. This is normally
+      // a brief startup window, but if it persists, no events are applied.
+      logDebug("inventory: pubsub reconciler not ready");
+      return;
+    }
+    logDebug("inventory: pubsub subscription attached");
 
     const applyPatch = (
       event: UserPubSubEvent,
