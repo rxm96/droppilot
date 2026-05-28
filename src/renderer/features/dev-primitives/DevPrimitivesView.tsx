@@ -46,7 +46,6 @@ export function DevPrimitivesView() {
     >
       {/* Chrome stack at the top */}
       <Titlebar
-        version="2.5.7"
         theme={theme}
         onThemeToggle={toggleTheme}
         onSettingsClick={() => {}}
@@ -264,11 +263,7 @@ export function DevPrimitivesView() {
           { label: "watch.cycle 30s" },
           { label: "3 drops · today" },
         ]}
-        right={[
-          { label: "cpu 2.1%" },
-          { label: "mem 142mb" },
-          { label: <span style={{ color: "var(--dp-accent)" }}>⌘K</span> },
-        ]}
+        right={[{ label: "cpu 2.1%" }, { label: "mem 142mb" }]}
       />
     </div>
   );

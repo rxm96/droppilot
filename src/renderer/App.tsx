@@ -172,7 +172,6 @@ function AppShell({ model }: { model: Model }) {
       {!isMac && (
         <Titlebar
           title="droppilot"
-          version={titleBarVersion}
           theme={resolvedTheme}
           onThemeToggle={toggleTheme}
           onSettingsClick={openSettings}
@@ -208,10 +207,7 @@ function AppShell({ model }: { model: Model }) {
           },
           { label: `last sync · ${formatRelative(overviewProps.lastWatchOk, now)}` },
         ]}
-        right={[
-          { label: `v${titleBarVersion ?? "—"}` },
-          { label: <span style={{ color: "var(--dp-accent)" }}>⌘K</span> },
-        ]}
+        right={[{ label: `v${titleBarVersion ?? "—"}` }]}
       />
     </div>
   );

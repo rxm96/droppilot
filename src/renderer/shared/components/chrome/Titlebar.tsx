@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Logo } from "@renderer/shared/components/Logo";
 import { Pill } from "@renderer/shared/components/ui/pill";
-import { Sun, Moon, Settings, Minus, Square, Copy, X } from "@renderer/shared/lib/icons";
+import { Sun, Moon, Settings, Minus, Square, X } from "@renderer/shared/lib/icons";
 import { cn } from "@renderer/shared/lib/utils";
 import { useI18n } from "@renderer/shared/i18n";
 
@@ -9,7 +9,6 @@ export type TitlebarTheme = "light" | "dark";
 
 export type TitlebarProps = {
   title?: string;
-  version?: string;
   theme: TitlebarTheme;
   onThemeToggle: () => void;
   onSettingsClick?: () => void;
@@ -28,7 +27,6 @@ const noDrag = { WebkitAppRegion: "no-drag" } as React.CSSProperties;
 
 export function Titlebar({
   title = "droppilot",
-  version,
   theme,
   onThemeToggle,
   onSettingsClick,
@@ -89,14 +87,6 @@ export function Titlebar({
         <span className="font-mono text-[11px] font-medium tracking-[0.04em] text-[color:var(--dp-text-dim)]">
           {title}
         </span>
-        {version && (
-          <>
-            <span className="text-[color:var(--dp-text-dimmer)] opacity-40">·</span>
-            <span className="font-mono text-[11px] text-[color:var(--dp-text-dimmer)]">
-              v{version}
-            </span>
-          </>
-        )}
       </div>
 
       {/* Center/right status */}
@@ -159,12 +149,9 @@ export function Titlebar({
               ariaLabel={isMaximized ? t("chrome.window.restore") : t("chrome.window.maximize")}
               onClick={handleMaxRestore}
             >
-              {isMaximized ? (
-                // Copy = two offset squares (Windows restore-down convention)
-                <Copy size={12} strokeWidth={1.7} />
-              ) : (
-                <Square size={11} strokeWidth={1.8} />
-              )}
+              {/* Always the single-square (windowed) glyph for visual consistency —
+                  the button still toggles maximize/restore; only the label changes. */}
+              <Square size={11} strokeWidth={1.8} />
             </WindowButton>
             <WindowButton
               ariaLabel={t("chrome.window.close")}
