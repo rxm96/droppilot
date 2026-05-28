@@ -370,6 +370,7 @@ export function useAppModel() {
     claimStatus,
     setClaimStatus,
     withCategories,
+    claimNowAll,
   } = useInventory(
     isLinkedOrDemo,
     {
@@ -1424,6 +1425,8 @@ export function useAppModel() {
     targetProgress,
     warmupActive: warmupState.active,
     warmupGame: warmupState.game,
+    onClaimNow: claimNowAll,
+    claimStatus,
   };
 
   const titleBarProps = {
