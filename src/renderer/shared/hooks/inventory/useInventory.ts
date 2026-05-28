@@ -535,6 +535,23 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
       lastProgressUpdateAtRef.current = Date.now();
       const progress = res.progress;
       if (!progress) return; // no active session on the watched channel
+      // Twitch's dropCurrentSession returns the user's GLOBALLY-active drop
+      // session, which can still point at a previously-watched channel (frozen
+      // at its last value) right after a channel switch or app restart — it does
+      // NOT scope to the channelID we pass. If the session is for a different
+      // channel than the one we're watching, it's stale for us: applying it would
+      // freeze the active drop on another channel's old minutes (the "stuck at 8,
+      // ETA always ~51" symptom). Ignore it and let the watch-start-anchored
+      // virtualEarned estimate drive the UI until Twitch credits this channel.
+      if (progress.channelId && progress.channelId !== watchedChannelId) {
+        logDebug("inventory: dropProgress ignored — session is for another channel", {
+          watching: watchedChannelId,
+          session: progress.channelId,
+          dropId: progress.dropId,
+          currentMin: progress.currentMinutesWatched,
+        });
+        return;
+      }
       const dropId = progress.dropId?.trim();
       if (!dropId) return;
       const currentMin = Math.max(0, Number(progress.currentMinutesWatched) || 0);

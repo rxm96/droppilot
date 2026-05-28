@@ -555,7 +555,14 @@ export class TwitchService {
       channelId: session.channel?.id ? String(session.channel.id) : undefined,
       gameName: session.game?.name ?? session.game?.displayName ?? undefined,
     };
-    this.debug("dropProgress: parsed", result);
+    // Surface the queried vs. returned channel: dropCurrentSession returns the
+    // globally-active session, so when these differ the session is for another
+    // channel (stale for us) and the renderer ignores it.
+    this.debug("dropProgress: parsed", {
+      ...result,
+      queriedChannelId: watchedChannelId,
+      channelMatches: !result.channelId || result.channelId === watchedChannelId,
+    });
     return result;
   }
 
