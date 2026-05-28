@@ -4,6 +4,7 @@ import { Button } from "@renderer/shared/components/ui/button";
 import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { Check, Pause, RotateCw } from "@renderer/shared/lib/icons";
 import { formatRemainingFromEta } from "./formatters";
+import { useI18n } from "@renderer/shared/i18n";
 
 export type HeroPanelProps = {
   activeGame?: string;
@@ -36,6 +37,7 @@ export function HeroPanel({
   onPause,
   onSwitchTarget,
 }: HeroPanelProps) {
+  const { t } = useI18n();
   const [now, setNow] = React.useState<number>(() => Date.now());
   React.useEffect(() => {
     const hasEta = typeof activeDropEta === "number" && Number.isFinite(activeDropEta);
@@ -48,12 +50,12 @@ export function HeroPanel({
   const progressPct = Math.max(0, Math.min(100, Math.round(targetProgress)));
   const openDrops = Math.max(0, totalDrops - claimedDrops);
   const hasClaimable = claimableDrops > 0;
-  const title = activeDropTitle?.trim() || activeGame || "No active target";
+  const title = activeDropTitle?.trim() || activeGame || t("hero.noActiveTarget");
   const channel = activeGame || "—";
 
   return (
     <div>
-      <SectionLabel>currently watching</SectionLabel>
+      <SectionLabel>{t("hero.nowWatching")}</SectionLabel>
       <div className="mt-3 relative overflow-hidden rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] p-6">
         {/* Top-right radial glow */}
         <div
@@ -73,7 +75,7 @@ export function HeroPanel({
               className={`inline-block h-[6px] w-[6px] rounded-full bg-[color:var(--dp-accent)] ${isLive ? "animate-pulse" : "opacity-40"}`}
               style={{ boxShadow: "0 0 10px var(--dp-accent-glow)" }}
             />
-            {isLive ? "LIVE · earning drop" : "IDLE"}
+            {isLive ? t("hero.statusLive") : t("hero.statusIdle")}
           </div>
         </div>
 
@@ -91,7 +93,7 @@ export function HeroPanel({
           style={{ gridTemplateColumns: "1.4fr 1fr 1fr 1fr" }}
         >
           <div className="pr-4">
-            <Stat label="eta" value={etaText} sub={`${progressPct}% complete`} accent />
+            <Stat label={t("hero.stat.eta")} value={etaText} sub={t("hero.stat.percentComplete", { pct: progressPct })} accent />
             <div className="mt-2.5 h-[3px] rounded-[2px] bg-[color:var(--dp-border)] overflow-hidden">
               <div
                 className="h-full rounded-[2px]"
@@ -104,18 +106,18 @@ export function HeroPanel({
             </div>
           </div>
           <div className="px-[18px] border-l border-[color:var(--dp-border-soft)]">
-            <Stat label="channels" value={String(channelsCount)} />
+            <Stat label={t("hero.stat.channels")} value={String(channelsCount)} />
           </div>
           <div className="px-[18px] border-l border-[color:var(--dp-border-soft)]">
             <Stat
-              label="claims ready"
+              label={t("hero.stat.claimsReady")}
               value={String(claimableDrops)}
-              sub={hasClaimable ? "use inventory" : undefined}
+              sub={hasClaimable ? t("hero.stat.useInventory") : undefined}
               subTone={hasClaimable ? "ok" : "default"}
             />
           </div>
           <div className="px-[18px] border-l border-[color:var(--dp-border-soft)]">
-            <Stat label="open drops" value={String(openDrops)} />
+            <Stat label={t("hero.stat.openDrops")} value={String(openDrops)} />
           </div>
         </div>
 
@@ -125,9 +127,9 @@ export function HeroPanel({
             variant="dp-primary"
             size="dp-md"
             disabled={!hasClaimable}
-            title="Use Inventory view to claim"
+            title={t("hero.title.useInventoryToClaim")}
           >
-            <Check size={11} strokeWidth={2.2} /> claim now
+            <Check size={11} strokeWidth={2.2} /> {t("hero.button.claimNow")}
           </Button>
           <Button
             variant="dp-secondary"
@@ -136,13 +138,13 @@ export function HeroPanel({
             disabled={!onPause || !isLive}
             title={
               !onPause
-                ? "Phase 5 will wire this"
+                ? t("hero.title.wireLater")
                 : !isLive
-                  ? "Engine is not running"
-                  : "Pause the watch engine"
+                  ? t("hero.title.engineNotRunning")
+                  : t("hero.title.pauseEngine")
             }
           >
-            <Pause size={11} strokeWidth={1.8} /> pause
+            <Pause size={11} strokeWidth={1.8} /> {t("hero.button.pause")}
           </Button>
           <Button
             variant="dp-outline"
@@ -150,10 +152,10 @@ export function HeroPanel({
             onClick={onSwitchTarget}
             disabled={!onSwitchTarget}
             title={
-              onSwitchTarget ? "Open Priorities view to switch target" : "Phase 5 will wire this"
+              onSwitchTarget ? t("hero.title.openPrioritiesToSwitch") : t("hero.title.wireLater")
             }
           >
-            <RotateCw size={11} strokeWidth={1.8} /> switch target
+            <RotateCw size={11} strokeWidth={1.8} /> {t("hero.button.switchTarget")}
           </Button>
         </div>
       </div>

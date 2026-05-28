@@ -10,6 +10,7 @@ import { Table, TableHead, TableRow, TableCell } from "@renderer/shared/componen
 import { Pill } from "@renderer/shared/components/ui/pill";
 import type { InventoryItem } from "@renderer/shared/types";
 import { formatHourMinute, formatPercent, padRank } from "./formatters";
+import { useI18n } from "@renderer/shared/i18n";
 
 export type QueuePanelProps = {
   items: InventoryItem[];
@@ -18,6 +19,7 @@ export type QueuePanelProps = {
 };
 
 export function QueuePanel({ items, onManageClick, maxRows = 8 }: QueuePanelProps) {
+  const { t } = useI18n();
   const queued = React.useMemo(() => {
     return items
       .filter((it) => it.status !== "claimed")
@@ -33,23 +35,23 @@ export function QueuePanel({ items, onManageClick, maxRows = 8 }: QueuePanelProp
     <Card className="bg-[color:var(--dp-bg-elevated)] border-[color:var(--dp-border)] rounded-[var(--dp-radius-lg)]">
       <CardHeader className="flex flex-row items-center border-b border-[color:var(--dp-border-soft)] py-3.5">
         <CardTitle className="font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--dp-text-dim)] font-normal">
-          queue · next up
+          {t("queue.header")}
         </CardTitle>
-        {onManageClick && <CardAction onClick={onManageClick}>manage →</CardAction>}
+        {onManageClick && <CardAction onClick={onManageClick}>{t("queue.manage")}</CardAction>}
       </CardHeader>
       <CardContent className="p-0">
         {queued.length === 0 ? (
           <div className="px-5 py-8 text-center font-mono text-[11px] text-[color:var(--dp-text-dimmer)]">
-            no drops in queue
+            {t("queue.empty")}
           </div>
         ) : (
           <Table columns="40px 2fr 1fr 1fr 100px">
             <TableHead>
               <span>#</span>
-              <span>drop · game</span>
-              <span>watched</span>
-              <span>progress</span>
-              <span>status</span>
+              <span>{t("queue.table.dropGame")}</span>
+              <span>{t("queue.table.watched")}</span>
+              <span>{t("queue.table.progress")}</span>
+              <span>{t("queue.table.status")}</span>
             </TableHead>
             {queued.map((item, idx) => {
               const watched = formatHourMinute(item.earnedMinutes);
@@ -78,7 +80,7 @@ export function QueuePanel({ items, onManageClick, maxRows = 8 }: QueuePanelProp
                   </TableCell>
                   <TableCell>
                     <Pill tone={tone} dot={status === "live"}>
-                      {status}
+                      {status === "live" ? t("queue.pill.live") : t("queue.pill.queued")}
                     </Pill>
                   </TableCell>
                 </TableRow>
