@@ -537,13 +537,17 @@ export class TwitchService {
     // is only known empirically.
     this.debug("dropProgress: raw response", res);
     const session = res?.data?.currentUser?.dropCurrentSession ?? null;
-    if (!session) {
-      this.debug("dropProgress: no active session (dropCurrentSession null)");
-      return null;
-    }
-    const dropId = session.dropID?.trim();
-    if (!dropId) {
-      this.debug("dropProgress: session missing dropID", session);
+    const dropId = session?.dropID?.trim();
+    if (!session || !dropId) {
+      // BENIGN: Twitch frequently hands a headless client an empty/absent
+      // dropCurrentSession (dropID: "", channel: null) even while a watch is
+      // active — it does not reliably reflect our spade pings. This is NOT an
+      // error and does NOT mean farming stopped: we return null and the live
+      // estimate + periodic inventory refresh remain the source of truth.
+      this.debug("dropProgress: no live session from Twitch (keeping estimate)", {
+        hasSession: !!session,
+        dropId: dropId ?? "",
+      });
       return null;
     }
     const current = Number(session.currentMinutesWatched);
