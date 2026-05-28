@@ -12,6 +12,7 @@ import type { InventoryItem } from "@renderer/shared/types";
 import { formatHourMinute, formatPercent, padRank } from "./formatters";
 import { useI18n } from "@renderer/shared/i18n";
 import { cn } from "@renderer/shared/lib/utils";
+import { sameGameName } from "@renderer/shared/domain/gameName";
 
 export type QueuePanelProps = {
   items: InventoryItem[];
@@ -44,7 +45,7 @@ export function QueuePanel({
   const queued = React.useMemo(() => {
     const filtered = items.filter((it) => {
       if (it.status === "claimed") return false;
-      if (hasTarget && it.game !== targetGame) return false;
+      if (hasTarget && !sameGameName(it.game, targetGame)) return false;
       return true;
     });
     return filtered
@@ -72,7 +73,7 @@ export function QueuePanel({
   // most things out.
   const otherGamesCount = React.useMemo(() => {
     if (!hasTarget) return 0;
-    return items.filter((it) => it.status !== "claimed" && it.game !== targetGame).length;
+    return items.filter((it) => it.status !== "claimed" && !sameGameName(it.game, targetGame)).length;
   }, [items, hasTarget, targetGame]);
 
   return (

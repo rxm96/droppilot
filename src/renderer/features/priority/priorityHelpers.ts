@@ -1,6 +1,7 @@
 /**
  * Helpers for the Priorities view. Pure functions, no React.
  */
+import { sameGameName } from "@renderer/shared/domain/gameName";
 
 export const getSelectableDropGames = (uniqueGames: string[], priorityGames: string[]): string[] =>
   uniqueGames.filter((game) => !priorityGames.includes(game));
@@ -13,7 +14,7 @@ export const derivePriorityRowState = (
   watchingGame: string,
   liveGameSet: Set<string>,
 ): PriorityRowState => {
-  if (game === watchingGame) return "watching";
+  if (sameGameName(game, watchingGame)) return "watching";
   if (game === activeTargetGame) return "target";
   if (liveGameSet.has(game)) return "live";
   return "idle";

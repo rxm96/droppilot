@@ -3,6 +3,7 @@ import { InventoryDrop, InventoryDropCollection } from "@renderer/shared/domain/
 import { canEarnDrop, hasHardWatchingBlockers } from "@renderer/shared/domain/inventory";
 import type { InventoryItem, WatchingState } from "@renderer/shared/types";
 import { useInterval } from "@renderer/shared/hooks/useInterval";
+import { sameGameName } from "@renderer/shared/domain/gameName";
 
 type WithCategory = { item: InventoryItem; category: string };
 
@@ -94,7 +95,7 @@ export function computeTargetDrops({
       allowUpcoming: false,
     });
   const isActionableForTarget = ({ drop, category }: { drop: InventoryDrop; category: string }) =>
-    drop.game === targetGame &&
+    sameGameName(drop.game, targetGame) &&
     canEarnDrop(drop.raw, {
       category,
       allowUpcoming: allowUnlinkedGames,
@@ -104,7 +105,7 @@ export function computeTargetDrops({
   );
   const inProgressRelevant = withCategoryDrops.filter(
     ({ drop, category }) =>
-      drop.game === targetGame && category === "in-progress" && isWatchableInProgress(drop),
+      sameGameName(drop.game, targetGame) && category === "in-progress" && isWatchableInProgress(drop),
   );
   const sortCandidates = (
     candidates: Array<{ drop: InventoryDrop; category: string }>,
@@ -127,7 +128,7 @@ export function computeTargetDrops({
   const sortedInProgress = sortCandidates(inProgressRelevant);
   const upcomingRelevant = withCategoryDrops.filter(
     ({ drop, category }) =>
-      drop.game === targetGame && category === "upcoming" && isWatchableUpcomingDrop(drop),
+      sameGameName(drop.game, targetGame) && category === "upcoming" && isWatchableUpcomingDrop(drop),
   );
   const sortedUpcoming = sortCandidates(upcomingRelevant);
   const sortedActiveItems = sortedActive.map((s) => s.drop);
@@ -162,7 +163,7 @@ export function computeTargetDrops({
   const totalDrops = targetDrops.length;
   const claimedDrops = targetDropEntries.filter((drop) => drop.raw.status === "claimed").length;
   const hasUnclaimedTarget = withCategoryDrops.some(({ drop, category }) => {
-    if (drop.game !== targetGame) return false;
+    if (!sameGameName(drop.game, targetGame)) return false;
     if (drop.isExpired(now)) return false;
     if (drop.raw.status === "claimed") return false;
     if (drop.requiredMinutes <= 0) return false;
@@ -225,7 +226,7 @@ export function computeTargetDrops({
     0,
   );
   const isWatchingAnyChannel = Boolean(watching);
-  const isWatchingTargetGame = Boolean(watching && watching.game === targetGame);
+  const isWatchingTargetGame = Boolean(watching && sameGameName(watching.game, targetGame));
   const farmableInProgress = isWatchingTargetGame
     ? (sortedInProgress.find(({ drop }) =>
         drop.canProgressOnWatchingChannel(watching, targetGame),
@@ -326,7 +327,7 @@ export function useTargetDrops({
   // targetProgress, liveDeltaApplied, virtualEarned, and activeDropEta stay
   // live between inventory polls. When not watching the target, no interval
   // runs and `now` stays static (cheap).
-  const isLiveActive = Boolean(watching && watching.game === targetGame);
+  const isLiveActive = Boolean(watching && sameGameName(watching.game, targetGame));
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
   useInterval(() => setNowMs(Date.now()), 1000, isLiveActive);
 

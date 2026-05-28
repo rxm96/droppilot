@@ -38,6 +38,7 @@ import { useStats } from "./useStats";
 import { useAccent, useFontPair, useTheme } from "@renderer/shared/theme";
 import { DropChannelRestriction } from "@renderer/shared/domain/dropDomain";
 import { canEarnDrop } from "@renderer/shared/domain/inventory";
+import { sameGameName } from "@renderer/shared/domain/gameName";
 import type { FilterKey, View } from "@renderer/shared/types";
 import { isVerboseLoggingEnabled, logDebug, logInfo } from "@renderer/shared/utils/logger";
 import { recordActivity } from "@renderer/shared/utils/activityFeed";
@@ -978,7 +979,7 @@ export function useAppModel() {
       const fallbackChannel = allowlistRestriction.hasConstraints
         ? channels.find((channel) => allowlistRestriction.allowsChannel(channel))
         : channels[0];
-      if (watching.game !== targetGame && fallbackChannel) {
+      if (!sameGameName(watching.game, targetGame) && fallbackChannel) {
         setWatchingFromChannel(fallbackChannel);
         noFarmableDropRef.current = null;
         return;

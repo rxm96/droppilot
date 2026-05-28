@@ -1,4 +1,5 @@
 import type { ChannelEntry, InventoryItem, WatchingState } from "@renderer/shared/types";
+import { sameGameName } from "./gameName";
 
 const normalizeId = (value: unknown): string => String(value ?? "").trim();
 
@@ -152,7 +153,7 @@ export class InventoryDrop {
   }
 
   canProgressOnWatchingChannel(watching: WatchingState, targetGame: string): boolean {
-    if (!watching || watching.game !== targetGame) return false;
+    if (!watching || !sameGameName(watching.game, targetGame)) return false;
     return this.restriction.allowsWatching(watching);
   }
 
@@ -172,6 +173,6 @@ export class InventoryDropCollection {
   }
 
   forGame(game: string): InventoryDrop[] {
-    return this.items.filter((item) => item.game === game);
+    return this.items.filter((item) => sameGameName(item.game, game));
   }
 }
