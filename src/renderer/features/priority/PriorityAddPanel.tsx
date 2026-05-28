@@ -56,7 +56,7 @@ export function PriorityAddPanel({
                 setSelectedGame(value === NO_GAME_SELECT_VALUE ? "" : value)
               }
             >
-              <SelectTrigger tone="dp" className="flex-1" aria-label="Add from drops">
+              <SelectTrigger tone="dp" className="flex-1" aria-label={t("priorities.add.fromDropsAria")}>
                 <SelectValue placeholder={t("priorities.add.selectPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
@@ -106,7 +106,7 @@ export function PriorityAddPanel({
             }}
             placeholder={t("priorities.add.manualPlaceholder")}
             className="flex-1"
-            aria-label="Add game manually"
+            aria-label={t("priorities.add.manualAria")}
           />
           <Button variant="dp-primary" size="dp-md" onClick={addGame} disabled={!newGame.trim()}>
             <Plus size={11} strokeWidth={2} /> {t("priorities.add.addButton")}

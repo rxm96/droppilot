@@ -921,6 +921,8 @@ const translations: Translations = {
     "priorities.add.manualHint": "type any game name, even ones with no live drops yet",
     "priorities.add.manualPlaceholder": "game name…",
     "priorities.add.strictLabel": "strict priority order",
+    "priorities.add.fromDropsAria": "Add from drops",
+    "priorities.add.manualAria": "Add game manually",
   },
   de: {
     "app.name": "DropPilot",
@@ -1832,6 +1834,8 @@ const translations: Translations = {
     "priorities.add.manualHint": "beliebigen Game-Namen eingeben, auch ohne aktive Drops",
     "priorities.add.manualPlaceholder": "Game-Name…",
     "priorities.add.strictLabel": "strikte Prioritätsreihenfolge",
+    "priorities.add.fromDropsAria": "Von Drops hinzufügen",
+    "priorities.add.manualAria": "Spiel manuell hinzufügen",
   },
 };
 
