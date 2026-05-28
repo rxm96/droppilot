@@ -22,7 +22,7 @@ export function FontPicker({ fontPair, setFontPair }: FontPickerProps) {
       <SelectTrigger tone="dp" aria-label={t("settings.row.fontPair.label")}>
         <SelectValue />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent tone="dp">
         <SelectGroup>
           {FONT_PAIRS.map((pair) => (
             <SelectItem

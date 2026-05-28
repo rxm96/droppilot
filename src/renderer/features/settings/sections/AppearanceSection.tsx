@@ -40,7 +40,7 @@ export function AppearanceSection(props: AppearanceSectionProps) {
             <SelectTrigger tone="dp" aria-label={t("settings.aria.theme")}>
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent tone="dp">
               <SelectGroup>
                 <SelectItem value="dark">{t("settings.row.theme.dark")}</SelectItem>
                 <SelectItem value="light">{t("settings.row.theme.light")}</SelectItem>

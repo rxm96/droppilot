@@ -34,7 +34,7 @@ export function GeneralSection(props: GeneralSectionProps) {
             <SelectTrigger tone="dp" aria-label={t("settings.aria.language")}>
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent tone="dp">
               <SelectGroup>
                 <SelectItem value="en">English</SelectItem>
                 <SelectItem value="de">Deutsch</SelectItem>

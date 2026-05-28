@@ -63,7 +63,7 @@ export function PriorityAddPanel({
               >
                 <SelectValue placeholder={t("priorities.add.selectPlaceholder")} />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent tone="dp">
                 <SelectGroup>
                   <SelectItem value={NO_GAME_SELECT_VALUE}>
                     {t("priorities.add.selectPlaceholder")}

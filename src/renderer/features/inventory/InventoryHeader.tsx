@@ -75,7 +75,7 @@ export function InventoryHeader({
             <SelectTrigger tone="dp" className="min-w-[160px]" aria-label="Filter by game">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent tone="dp">
               <SelectGroup>
                 <SelectItem value="all">{t("inventory.header.allGames")}</SelectItem>
                 {uniqueGames.map((g) => (

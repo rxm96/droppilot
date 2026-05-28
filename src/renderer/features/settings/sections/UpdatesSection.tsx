@@ -99,7 +99,7 @@ export function UpdatesSection(props: UpdatesSectionProps) {
             <SelectTrigger tone="dp" aria-label={t("settings.aria.updateChannel")}>
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent tone="dp">
               <SelectGroup>
                 <SelectItem value="stable">{t("settings.updateChannel.stable")}</SelectItem>
                 <SelectItem value="preview">{t("settings.updateChannel.preview")}</SelectItem>
