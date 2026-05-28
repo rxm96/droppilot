@@ -121,7 +121,7 @@ export function ActiveSessionPanel({
                   className="h-full"
                   style={{
                     width: `${Math.max(0, Math.min(100, progressPct))}%`,
-                    background: "linear-gradient(90deg, var(--dp-accent), #c4b5fd)",
+                    background: "linear-gradient(90deg, var(--dp-accent), color-mix(in srgb, var(--dp-accent) 60%, white))",
                     boxShadow: "0 0 8px var(--dp-accent-glow)",
                   }}
                 />

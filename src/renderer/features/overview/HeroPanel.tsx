@@ -79,7 +79,7 @@ export function HeroPanel({
           className="pointer-events-none absolute right-0 top-0 h-[220px] w-[320px]"
           style={{
             background:
-              "radial-gradient(ellipse at top right, rgba(167,139,250,0.10), transparent 65%)",
+              "radial-gradient(ellipse at top right, var(--dp-accent-soft), transparent 65%)",
           }}
         />
 
@@ -115,7 +115,7 @@ export function HeroPanel({
                 className="h-full rounded-[2px]"
                 style={{
                   width: `${progressPct}%`,
-                  background: "linear-gradient(90deg, var(--dp-accent), #c4b5fd)",
+                  background: "linear-gradient(90deg, var(--dp-accent), color-mix(in srgb, var(--dp-accent) 60%, white))",
                   boxShadow: "0 0 12px var(--dp-accent-glow)",
                 }}
               />
