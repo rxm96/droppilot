@@ -10,10 +10,71 @@ import { TwitchService } from "./twitch/service";
 import { createChannelTracker, normalizeTrackerMode } from "./twitch/tracker";
 import { UserPubSub } from "./twitch/userPubSub";
 import { registerIpcHandlers } from "./ipc";
-import { loadSettings, saveSettings } from "./core/settings";
+import { loadSettings, saveSettings, type SettingsData } from "./core/settings";
 import { loadStats, saveStats, bumpStats, resetStats } from "./core/stats";
 
 const isDev = !app.isPackaged;
+
+/**
+ * Behavior flags read on every close/minimize event. Seeded from settings
+ * at startup; refreshed whenever the IPC layer saves new settings (see
+ * registerIpcHandlers wiring below).
+ */
+let appBehavior: { closeToTray: boolean; minimizeToTray: boolean } = {
+  closeToTray: true,
+  minimizeToTray: false,
+};
+
+/**
+ * Set to true in app.on("before-quit") so the close intercept knows the
+ * user (or OS) wants to actually exit, not just hide to tray.
+ */
+let isQuitting = false;
+
+/** Latest bounds snapshot used by persistBoundsNow; refreshed on resize/move. */
+let lastBoundsSnapshot: SettingsData["windowBounds"] | undefined;
+let boundsSaveTimer: NodeJS.Timeout | null = null;
+const BOUNDS_SAVE_DEBOUNCE_MS = 500;
+
+function snapshotWindowBounds(win: BrowserWindow): SettingsData["windowBounds"] | undefined {
+  if (win.isDestroyed()) return undefined;
+  // When maximized, save the pre-maximize "normal" bounds so restore on next
+  // launch starts in the right place, then re-maximizes.
+  const isMaximized = win.isMaximized();
+  const bounds = isMaximized ? win.getNormalBounds() : win.getBounds();
+  if (!bounds) return undefined;
+  return {
+    x: Math.round(bounds.x),
+    y: Math.round(bounds.y),
+    width: Math.round(bounds.width),
+    height: Math.round(bounds.height),
+    isMaximized,
+  };
+}
+
+function scheduleBoundsSave(win: BrowserWindow) {
+  if (win.isDestroyed()) return;
+  lastBoundsSnapshot = snapshotWindowBounds(win);
+  if (boundsSaveTimer) clearTimeout(boundsSaveTimer);
+  boundsSaveTimer = setTimeout(() => {
+    boundsSaveTimer = null;
+    if (!lastBoundsSnapshot) return;
+    void saveSettings({ windowBounds: lastBoundsSnapshot }).catch((err) => {
+      console.warn("window-bounds: save failed", err);
+    });
+  }, BOUNDS_SAVE_DEBOUNCE_MS);
+}
+
+function persistBoundsNow() {
+  if (boundsSaveTimer) {
+    clearTimeout(boundsSaveTimer);
+    boundsSaveTimer = null;
+  }
+  if (!lastBoundsSnapshot) return;
+  void saveSettings({ windowBounds: lastBoundsSnapshot }).catch((err) => {
+    console.warn("window-bounds: final save failed", err);
+  });
+}
 const devToolsEnabled = isDev;
 const devServerUrl = process.env.VITE_DEV_SERVER_URL ?? "http://127.0.0.1:5173";
 const debugLogsOptIn =
@@ -121,11 +182,17 @@ function applyAutoStartSetting(enabled: boolean) {
   }
 }
 
-function createWindow(startHidden = false): BrowserWindow {
+function createWindow(
+  startHidden = false,
+  initialBounds?: SettingsData["windowBounds"],
+): BrowserWindow {
   const isMac = process.platform === "darwin";
+  const useStoredBounds = !!initialBounds;
   const win = new BrowserWindow({
-    width: 1400,
-    height: 900,
+    width: useStoredBounds ? initialBounds.width : 1400,
+    height: useStoredBounds ? initialBounds.height : 900,
+    x: useStoredBounds ? initialBounds.x : undefined,
+    y: useStoredBounds ? initialBounds.y : undefined,
     minWidth: 1100,
     minHeight: 760,
     title: "DropPilot",
@@ -172,8 +239,14 @@ function createWindow(startHidden = false): BrowserWindow {
     return { action: "deny" };
   });
 
-  // default to maximized so the UI uses the available screen space
-  win.maximize();
+  // First-launch default is maximized. Stored sessions restore their saved
+  // isMaximized state instead (if previously maximized, re-maximize after the
+  // explicit x/y/w/h has been applied above).
+  if (useStoredBounds) {
+    if (initialBounds.isMaximized) win.maximize();
+  } else {
+    win.maximize();
+  }
 
   if (startHidden) {
     win.once("ready-to-show", () => {
@@ -190,6 +263,42 @@ function createWindow(startHidden = false): BrowserWindow {
   };
   win.on("maximize", sendMaxState);
   win.on("unmaximize", sendMaxState);
+
+  // Persist window bounds (debounced 500ms) on user-driven resize/move so the
+  // next launch restores the same position. Also runs on maximize/unmaximize
+  // so the isMaximized snapshot stays accurate.
+  const scheduleSave = () => scheduleBoundsSave(win);
+  win.on("resize", scheduleSave);
+  win.on("move", scheduleSave);
+  win.on("maximize", scheduleSave);
+  win.on("unmaximize", scheduleSave);
+  // Seed an initial snapshot in case the user closes before any resize event
+  lastBoundsSnapshot = snapshotWindowBounds(win);
+
+  // Close intercept: when closeToTray is on (default) and the app isn't
+  // actually quitting, hide the window to the tray instead of destroying it.
+  // The tray icon's Quit menu item is the explicit exit path.
+  win.on("close", (event) => {
+    if (isQuitting) {
+      // Real quit — save final bounds synchronously-ish (fire-and-forget) and let close proceed.
+      lastBoundsSnapshot = snapshotWindowBounds(win) ?? lastBoundsSnapshot;
+      persistBoundsNow();
+      return;
+    }
+    if (appBehavior.closeToTray) {
+      event.preventDefault();
+      win.hide();
+    }
+  });
+
+  // Minimize-to-tray: when on, hide rather than minimize so the window
+  // drops out of the taskbar entirely. The tray icon brings it back.
+  win.on("minimize", (event: Electron.Event) => {
+    if (appBehavior.minimizeToTray) {
+      event.preventDefault();
+      win.hide();
+    }
+  });
 
   return win;
 }
@@ -345,9 +454,21 @@ function setupAutoUpdater() {
     });
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   const startHidden = process.argv.includes("--start-in-tray");
-  const win = createWindow(startHidden);
+  // Read settings before creating the window so we can restore bounds + seed
+  // behavior flags before any close/minimize event can fire.
+  let initialSettings: SettingsData | undefined;
+  try {
+    initialSettings = await loadSettings();
+    appBehavior = {
+      closeToTray: initialSettings.closeToTray,
+      minimizeToTray: initialSettings.minimizeToTray,
+    };
+  } catch (err) {
+    console.warn("settings: initial load failed", err);
+  }
+  const win = createWindow(startHidden, initialSettings?.windowBounds);
   if (!isDev && debugLogsOptIn) {
     console.log("[DropPilot] Verbose logging enabled (prod opt-in).");
   }
@@ -362,13 +483,9 @@ app.whenReady().then(() => {
   createTray(win);
   setupAutoUpdater();
   userPubSub.start();
-  void loadSettings()
-    .then((settings) => {
-      applyAutoStartSetting(settings.autoStart);
-    })
-    .catch((err) => {
-      console.warn("autostart: settings load failed", err);
-    });
+  if (initialSettings) {
+    applyAutoStartSetting(initialSettings.autoStart);
+  }
 
   // Forward noisy Twitch logs only in development or explicit prod opt-in.
   if (verboseLogsEnabled) {
@@ -383,6 +500,17 @@ app.whenReady().then(() => {
     (twitchService as any).debug = () => {};
   }
 
+  // Wrap saveSettings so the tray-behavior flags stay live with user toggles
+  // without forcing every close/minimize handler to read settings from disk.
+  const saveSettingsWithBehaviorSync: typeof saveSettings = async (data) => {
+    const next = await saveSettings(data);
+    appBehavior = {
+      closeToTray: next.closeToTray,
+      minimizeToTray: next.minimizeToTray,
+    };
+    return next;
+  };
+
   registerIpcHandlers({
     auth,
     twitch: twitchService,
@@ -391,7 +519,7 @@ app.whenReady().then(() => {
     loadSession,
     clearSession,
     loadSettings,
-    saveSettings,
+    saveSettings: saveSettingsWithBehaviorSync,
     loadStats,
     saveStats,
     bumpStats,
@@ -408,12 +536,18 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
+  // When closeToTray is on, the window-hide doesn't fire window-all-closed
+  // (the BrowserWindow is preserved). This handler still fires when the user
+  // explicitly closes all windows via the tray "Quit" or system shutdown.
+  // On macOS the convention is to keep the app alive even after the last
+  // window closes; we keep that.
   if (process.platform !== "darwin") {
     app.quit();
   }
 });
 
 app.on("before-quit", () => {
+  isQuitting = true;
   if (typeof channelTracker.dispose === "function") {
     channelTracker.dispose();
   }
