@@ -376,6 +376,11 @@ export function registerIpcHandlers(deps: {
     return resetStats();
   });
 
+  ipcMain.handle("app/isMaximized", async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    return { ok: true, isMaximized: !!win?.isMaximized() };
+  });
+
   ipcMain.handle(
     "app/windowControl",
     async (

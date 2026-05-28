@@ -131,14 +131,10 @@ function createWindow(startHidden = false): BrowserWindow {
     title: "DropPilot",
     show: !startHidden,
     autoHideMenuBar: !isMac,
+    // Windows: hide the OS title bar entirely; the renderer Titlebar draws
+    // its own min/max/close buttons (with Lucide icons + Pro Console styling).
+    // macOS: keep native chrome (traffic lights).
     titleBarStyle: isMac ? "default" : "hidden",
-    titleBarOverlay: isMac
-      ? undefined
-      : {
-          color: "#08090b",       // matches --dp-bg-chrome (dark titlebar bg)
-          symbolColor: "#9aa0a8", // matches --dp-text-dim (icon stroke color)
-          height: 36,             // matches the Titlebar component h-9 (36px)
-        },
     frame: isMac,
     backgroundColor: "#040814",
     webPreferences: {
@@ -184,6 +180,16 @@ function createWindow(startHidden = false): BrowserWindow {
       win.hide();
     });
   }
+
+  // Push maximize-state changes to the renderer so the custom Titlebar can
+  // swap its maximize/restore icon. Fires on the OS-level maximize/unmaximize
+  // events (which include double-click on titlebar, snap-zones, etc.).
+  const sendMaxState = () => {
+    if (win.isDestroyed()) return;
+    win.webContents.send("app/maximizedChange", { isMaximized: win.isMaximized() });
+  };
+  win.on("maximize", sendMaxState);
+  win.on("unmaximize", sendMaxState);
 
   return win;
 }
