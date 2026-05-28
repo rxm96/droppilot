@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { InventoryDrop, InventoryDropCollection } from "@renderer/shared/domain/dropDomain";
 import { canEarnDrop, hasHardWatchingBlockers } from "@renderer/shared/domain/inventory";
 import type { InventoryItem, WatchingState } from "@renderer/shared/types";
@@ -53,6 +53,13 @@ type Params = {
    * both views' live progress identical.
    */
   watchStartedAt?: number | null;
+  /**
+   * The active drop id from the previous render. The selection prefers it (as
+   * long as it's still a valid candidate) so the active drop doesn't flicker
+   * between equivalent drops — e.g. two same-game campaigns at the same tier
+   * whose earnedMinutes update asynchronously and keep swapping the sort order.
+   */
+  stickyActiveDropId?: string | null;
 };
 
 type ComputeParams = Params & { now?: number };
@@ -67,6 +74,7 @@ export function computeTargetDrops({
   inventoryFetchedAt,
   progressAnchorByDropId,
   watchStartedAt,
+  stickyActiveDropId,
   now: providedNow,
 }: ComputeParams): TargetDropsResult {
   if (!targetGame) {
@@ -240,18 +248,36 @@ export function computeTargetDrops({
   );
   const isWatchingAnyChannel = Boolean(watching);
   const isWatchingTargetGame = Boolean(watching && sameGameName(watching.game, targetGame));
+  // Anti-flicker: prefer the previously-active drop while it's still a valid
+  // candidate, instead of always taking the first sorted one. Without this, two
+  // equivalent drops (same game/tier) whose earnedMinutes update asynchronously
+  // keep swapping the sort order and the active drop jumps back and forth.
+  const preferSticky = (
+    list: Array<{ drop: InventoryDrop; category: string }>,
+  ): { drop: InventoryDrop; category: string } | null => {
+    if (stickyActiveDropId) {
+      const kept = list.find(({ drop }) => drop.id === stickyActiveDropId);
+      if (kept) return kept;
+    }
+    return list[0] ?? null;
+  };
   const farmableInProgress = isWatchingTargetGame
-    ? (sortedInProgress.find(({ drop }) =>
-        drop.canProgressOnWatchingChannel(watching, targetGame),
-      ) ?? null)
+    ? preferSticky(
+        sortedInProgress.filter(({ drop }) =>
+          drop.canProgressOnWatchingChannel(watching, targetGame),
+        ),
+      )
     : null;
   const farmableUpcoming = isWatchingTargetGame
-    ? (sortedUpcoming.find(({ drop }) => drop.canProgressOnWatchingChannel(watching, targetGame)) ??
-      null)
+    ? preferSticky(
+        sortedUpcoming.filter(({ drop }) =>
+          drop.canProgressOnWatchingChannel(watching, targetGame),
+        ),
+      )
     : null;
   const activeDropEntry = isWatchingAnyChannel
     ? (farmableInProgress ?? farmableUpcoming ?? null)
-    : (sortedInProgress[0] ?? null);
+    : preferSticky(sortedInProgress);
   const activeDrop = activeDropEntry?.drop ?? null;
   const activeDropCategory = activeDropEntry?.category ?? null;
   const canPredictActiveDropProgress =
@@ -353,7 +379,10 @@ export function useTargetDrops({
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
   useInterval(() => setNowMs(Date.now()), 1000, isLiveActive);
 
-  return useMemo(
+  // Remember the last active drop so the selection can prefer it across
+  // recomputes (anti-flicker). Read in the memo, refreshed after each commit.
+  const lastActiveDropIdRef = useRef<string | null>(null);
+  const result = useMemo(
     () =>
       computeTargetDrops({
         targetGame,
@@ -365,6 +394,7 @@ export function useTargetDrops({
         inventoryFetchedAt,
         progressAnchorByDropId,
         watchStartedAt,
+        stickyActiveDropId: lastActiveDropIdRef.current,
         now: isLiveActive ? nowMs : undefined,
       }),
     [
@@ -381,4 +411,9 @@ export function useTargetDrops({
       nowMs,
     ],
   );
+  const activeDropId = result.activeDropInfo?.id ?? null;
+  useEffect(() => {
+    lastActiveDropIdRef.current = activeDropId;
+  }, [activeDropId]);
+  return result;
 }

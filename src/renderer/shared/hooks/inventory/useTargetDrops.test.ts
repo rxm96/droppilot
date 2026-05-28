@@ -28,6 +28,44 @@ describe("computeTargetDrops", () => {
     expect(result.showNoDropsHint).toBe(false);
   });
 
+  it("keeps the previously-active drop instead of flicking between equivalents", () => {
+    const a = makeItem({
+      id: "drop-a",
+      campaignId: "camp-a",
+      requiredMinutes: 60,
+      earnedMinutes: 30,
+      status: "progress",
+      isClaimable: false,
+    });
+    const b = makeItem({
+      id: "drop-b",
+      campaignId: "camp-b",
+      requiredMinutes: 60,
+      earnedMinutes: 30,
+      status: "progress",
+      isClaimable: false,
+    });
+    const base = {
+      targetGame: "Game",
+      inventoryItems: [a, b],
+      withCategories: [
+        { item: a, category: "in-progress" },
+        { item: b, category: "in-progress" },
+      ],
+      allowWatching: true,
+      watching: null as WatchingState,
+      inventoryFetchedAt: null,
+      now: 1_000_000,
+    };
+
+    // No sticky id → takes the first sorted equivalent.
+    expect(computeTargetDrops(base).activeDropInfo?.id).toBe("drop-a");
+    // Sticky on the other equivalent → keeps it (no flicker back to drop-a).
+    expect(computeTargetDrops({ ...base, stickyActiveDropId: "drop-b" }).activeDropInfo?.id).toBe(
+      "drop-b",
+    );
+  });
+
   it("computes totals per campaign using max required/earned", () => {
     const first = makeItem({
       id: "drop-1",
