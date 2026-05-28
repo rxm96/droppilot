@@ -17,6 +17,7 @@ export {
   Monitor,
   Minus,
   Square,
+  Copy,
   X,
   ChevronDown,
   ChevronUp,

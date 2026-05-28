@@ -64,6 +64,13 @@ const translations: Translations = {
     "nav.settings": "Settings",
     "nav.settings.caption": "Automatisierung & Backup",
 
+    "chrome.window.minimize": "Minimize",
+    "chrome.window.maximize": "Maximize",
+    "chrome.window.restore": "Restore",
+    "chrome.window.close": "Close",
+    "chrome.window.themeToggle": "Toggle theme",
+    "chrome.window.openSettings": "Open settings",
+
     "session.title": "Session",
     "session.connected": "Logged in",
     "session.disconnected": "Not logged in",
@@ -981,6 +988,13 @@ const translations: Translations = {
     "nav.debug.caption": "Live-Logs & Status",
     "nav.settings": "Einstellungen",
     "nav.settings.caption": "Automation & Backup",
+
+    "chrome.window.minimize": "Minimieren",
+    "chrome.window.maximize": "Maximieren",
+    "chrome.window.restore": "Wiederherstellen",
+    "chrome.window.close": "Schließen",
+    "chrome.window.themeToggle": "Theme umschalten",
+    "chrome.window.openSettings": "Einstellungen öffnen",
 
     "session.title": "Session",
     "session.connected": "Eingeloggt",
