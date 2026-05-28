@@ -13,10 +13,10 @@ export type FeedItemProps = React.HTMLAttributes<HTMLDivElement> & {
 };
 
 const ICON_TONE: Record<FeedItemTone, string> = {
-  ok: "bg-[rgba(74,222,128,0.10)] text-[color:var(--dp-signal-ok)]",
-  warn: "bg-[rgba(251,191,36,0.10)] text-[color:var(--dp-signal-warn)]",
-  err: "bg-[rgba(248,113,113,0.10)] text-[color:var(--dp-signal-err)]",
-  info: "bg-[rgba(96,165,250,0.10)] text-[color:var(--dp-signal-info)]",
+  ok: "bg-[color-mix(in_srgb,var(--dp-signal-ok)_10%,transparent)] text-[color:var(--dp-signal-ok)]",
+  warn: "bg-[color-mix(in_srgb,var(--dp-signal-warn)_10%,transparent)] text-[color:var(--dp-signal-warn)]",
+  err: "bg-[color-mix(in_srgb,var(--dp-signal-err)_10%,transparent)] text-[color:var(--dp-signal-err)]",
+  info: "bg-[color-mix(in_srgb,var(--dp-signal-info)_10%,transparent)] text-[color:var(--dp-signal-info)]",
   accent: "bg-[color:var(--dp-accent-soft)] text-[color:var(--dp-accent)]",
 };
 

@@ -9,11 +9,11 @@ const pillVariants = cva(
       tone: {
         accent:
           "bg-[color:var(--dp-accent-soft)] text-[color:var(--dp-accent)] border-[color:var(--dp-accent-soft)]",
-        ok: "bg-[rgba(74,222,128,0.08)] text-[color:var(--dp-signal-ok)] border-[rgba(74,222,128,0.18)]",
-        warn: "bg-[rgba(251,191,36,0.08)] text-[color:var(--dp-signal-warn)] border-[rgba(251,191,36,0.18)]",
-        err: "bg-[rgba(248,113,113,0.08)] text-[color:var(--dp-signal-err)] border-[rgba(248,113,113,0.18)]",
-        info: "bg-[rgba(96,165,250,0.08)] text-[color:var(--dp-signal-info)] border-[rgba(96,165,250,0.18)]",
-        dim: "bg-[rgba(154,160,168,0.06)] text-[color:var(--dp-text-dim)] border-[rgba(154,160,168,0.12)]",
+        ok: "bg-[color-mix(in_srgb,var(--dp-signal-ok)_8%,transparent)] text-[color:var(--dp-signal-ok)] border-[color-mix(in_srgb,var(--dp-signal-ok)_18%,transparent)]",
+        warn: "bg-[color-mix(in_srgb,var(--dp-signal-warn)_8%,transparent)] text-[color:var(--dp-signal-warn)] border-[color-mix(in_srgb,var(--dp-signal-warn)_18%,transparent)]",
+        err: "bg-[color-mix(in_srgb,var(--dp-signal-err)_8%,transparent)] text-[color:var(--dp-signal-err)] border-[color-mix(in_srgb,var(--dp-signal-err)_18%,transparent)]",
+        info: "bg-[color-mix(in_srgb,var(--dp-signal-info)_8%,transparent)] text-[color:var(--dp-signal-info)] border-[color-mix(in_srgb,var(--dp-signal-info)_18%,transparent)]",
+        dim: "bg-[color-mix(in_srgb,var(--dp-text-dim)_6%,transparent)] text-[color:var(--dp-text-dim)] border-[color-mix(in_srgb,var(--dp-text-dim)_12%,transparent)]",
       },
     },
     defaultVariants: { tone: "dim" },
