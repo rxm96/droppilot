@@ -162,8 +162,11 @@ function AppShell({ model }: { model: Model }) {
   );
 
   return (
+    // h-screen + overflow-hidden locks the outer shell to the viewport so the
+    // chrome strips (Titlebar / AppNav / Statusbar) stay fixed in place.
+    // The middle content area is the actual scroll container (see below).
     <div
-      className="min-h-screen flex flex-col"
+      className="h-screen overflow-hidden flex flex-col"
       style={{ background: "var(--dp-bg-app)", color: "var(--dp-text)" }}
     >
       {!isMac && (
@@ -182,7 +185,10 @@ function AppShell({ model }: { model: Model }) {
         items={navItems}
         right={sessionRight}
       />
-      <div className="flex-1">
+      {/* min-h-0 is critical: flex children default to min-height:auto which
+          would prevent the inner content from shrinking below its intrinsic
+          height, so overflow-y-auto would never engage. */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
         <AppContent
           navProps={navProps}
           overviewProps={overviewPropsExtended}
