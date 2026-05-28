@@ -75,7 +75,7 @@ export function DevPrimitivesView() {
 
       <div className="px-8 py-8 space-y-12 max-w-[1100px] mx-auto">
         <header className="flex items-center gap-3">
-          <Logo size={20} />
+          <Logo size={20} animated />
           <h1 className="font-mono text-[14px] uppercase tracking-[0.14em] text-[color:var(--dp-text-dimmer)]">
             Design Overhaul · Primitives Showcase
           </h1>

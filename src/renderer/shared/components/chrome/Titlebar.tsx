@@ -85,7 +85,7 @@ export function Titlebar({
     >
       {/* Brand */}
       <div className="flex items-center gap-2">
-        <Logo size={14} />
+        <Logo size={18} animated />
         <span className="font-mono text-[11px] font-medium tracking-[0.04em] text-[color:var(--dp-text-dim)]">
           {title}
         </span>
