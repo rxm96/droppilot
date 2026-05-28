@@ -27,7 +27,10 @@ const TONE_VALUE_COLOR: Record<SummaryTone, string> = {
 
 export function DebugSummary({ cards }: { cards: DebugSummaryCard[] }) {
   return (
-    <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
+    <div
+      className="grid gap-3"
+      style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}
+    >
       {cards.map((card) => (
         <div
           key={card.key}
@@ -41,7 +44,12 @@ export function DebugSummary({ cards }: { cards: DebugSummaryCard[] }) {
             />
             <SectionLabel inline>{card.label}</SectionLabel>
           </div>
-          <div className={cn("text-[18px] font-medium leading-tight truncate", TONE_VALUE_COLOR[card.tone])}>
+          <div
+            className={cn(
+              "text-[18px] font-medium leading-tight truncate",
+              TONE_VALUE_COLOR[card.tone],
+            )}
+          >
             {card.value}
           </div>
           <div className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)] mt-1 truncate">

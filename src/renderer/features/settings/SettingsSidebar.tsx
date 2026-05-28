@@ -30,7 +30,10 @@ export type SettingsSidebarProps = {
   onChange: (next: SettingsSectionKey) => void;
 };
 
-const ICON_MAP: Record<SettingsSectionKey, React.ComponentType<{ size?: number; strokeWidth?: number }>> = {
+const ICON_MAP: Record<
+  SettingsSectionKey,
+  React.ComponentType<{ size?: number; strokeWidth?: number }>
+> = {
   general: SettingsIcon,
   engine: Play,
   appearance: Sun,

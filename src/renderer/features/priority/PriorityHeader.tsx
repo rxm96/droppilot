@@ -29,9 +29,7 @@ export function PriorityHeader({
   const queueHealthValue = totalCount > 0 ? `${livePriorityCount}/${totalCount}` : "—";
   const topGameValue = topGame || "—";
   const rankedCountLabel = t(
-    totalCount === 1
-      ? "priorities.header.rankedCount.one"
-      : "priorities.header.rankedCount.other",
+    totalCount === 1 ? "priorities.header.rankedCount.one" : "priorities.header.rankedCount.other",
     { count: totalCount },
   );
 

@@ -51,9 +51,7 @@ export function InventoryHeader({
           </h2>
           <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[color:var(--dp-text-dimmer)] mt-1">
             {t(
-              totalDrops === 1
-                ? "inventory.header.countOf.one"
-                : "inventory.header.countOf.other",
+              totalDrops === 1 ? "inventory.header.countOf.one" : "inventory.header.countOf.other",
               { shown: filteredDrops, total: totalDrops },
             )}
           </div>

@@ -185,9 +185,7 @@ export async function loadSettings(): Promise<SettingsData> {
           ? parsed.allowUnlinkedGames
           : defaultSettings.allowUnlinkedGames,
       closeToTray:
-        typeof parsed?.closeToTray === "boolean"
-          ? parsed.closeToTray
-          : defaultSettings.closeToTray,
+        typeof parsed?.closeToTray === "boolean" ? parsed.closeToTray : defaultSettings.closeToTray,
       minimizeToTray:
         typeof parsed?.minimizeToTray === "boolean"
           ? parsed.minimizeToTray

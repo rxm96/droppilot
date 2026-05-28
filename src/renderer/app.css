@@ -849,21 +849,23 @@ body {
 :root:not(.dark) .update-overlay {
   background: radial-gradient(
     circle at center,
-    rgba(167, 139, 250, 0.10) 0%,
+    rgba(167, 139, 250, 0.1) 0%,
     rgba(124, 95, 230, 0.06) 35%,
     rgba(255, 255, 255, 0.92) 100%
   );
 }
 
 :root:not(.dark) .update-overlay-card {
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(247, 246, 243, 0.99)),
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(247, 246, 243, 0.99)),
     var(--dp-bg-elevated);
   border-color: var(--dp-border);
   color: var(--dp-text);
 }
 
 :root:not(.dark) .update-splash-card {
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(247, 246, 243, 0.99)),
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(247, 246, 243, 0.99)),
     var(--dp-bg-elevated);
 }
 
@@ -988,7 +990,6 @@ body {
   gap: 8px;
   flex-wrap: wrap;
 }
-
 
 .inline-loader {
   display: inline-flex;
@@ -2181,7 +2182,6 @@ code {
 .live-dot + button {
   margin-left: 2px;
 }
-
 
 .active-stream-bar {
   display: grid;

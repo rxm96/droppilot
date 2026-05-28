@@ -90,9 +90,7 @@ export function ChannelGridPanel({
           </div>
         ) : channels.length === 0 && !channelsLoading ? (
           <div className="text-center py-8 font-mono text-[11px] text-[color:var(--dp-text-dimmer)]">
-            {targetGame
-              ? t("control.channelsEmpty")
-              : t("control.channelGrid.noTarget")}
+            {targetGame ? t("control.channelsEmpty") : t("control.channelGrid.noTarget")}
           </div>
         ) : (
           <ul

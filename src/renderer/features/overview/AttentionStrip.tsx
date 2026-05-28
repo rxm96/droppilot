@@ -22,9 +22,10 @@ export function AttentionStrip({
   const pills: React.ReactNode[] = [];
 
   if (claimableDrops > 0) {
-    const claimText = claimableDrops === 1
-      ? t("attention.claimReady", { count: claimableDrops })
-      : t("attention.claimsReady", { count: claimableDrops });
+    const claimText =
+      claimableDrops === 1
+        ? t("attention.claimReady", { count: claimableDrops })
+        : t("attention.claimsReady", { count: claimableDrops });
     pills.push(
       <Pill key="claim-ready" tone="warn" dot>
         {claimText}

@@ -24,9 +24,17 @@ export function EnginePanel({
 
   const rows: Array<{ id: string; label: string; value: string; tone?: "ok" }> = [
     { id: "watchCycle", label: t("engine.row.watchCycle"), value: `${cycleSeconds}s` },
-    { id: "lastRefresh", label: t("engine.row.lastRefresh"), value: formatRelative(lastWatchOk, now) },
+    {
+      id: "lastRefresh",
+      label: t("engine.row.lastRefresh"),
+      value: formatRelative(lastWatchOk, now),
+    },
     { id: "cadence", label: t("engine.row.cadence"), value: `${cadenceSeconds}s` },
-    { id: "uptime", label: t("engine.row.uptime"), value: formatUptime(sessionStartRef.current, now) },
+    {
+      id: "uptime",
+      label: t("engine.row.uptime"),
+      value: formatUptime(sessionStartRef.current, now),
+    },
   ];
 
   return (

@@ -27,13 +27,18 @@ export function DebugRuntimePanel({ facts, trackerShards, formatNumber }: DebugR
         <div className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)] mt-1 mb-3">
           {t("debug.runtime.subtitle")}
         </div>
-        <div className="grid gap-2.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))" }}>
+        <div
+          className="grid gap-2.5"
+          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))" }}
+        >
           {facts.map((fact) => (
             <div key={fact.key} className="min-w-0">
               <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[color:var(--dp-text-dimmer)] mb-0.5">
                 {fact.label}
               </div>
-              <div className="text-[13px] font-medium text-[color:var(--dp-text)] truncate">{fact.value}</div>
+              <div className="text-[13px] font-medium text-[color:var(--dp-text)] truncate">
+                {fact.value}
+              </div>
               {fact.meta && (
                 <div className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)] mt-0.5 truncate">
                   {fact.meta}

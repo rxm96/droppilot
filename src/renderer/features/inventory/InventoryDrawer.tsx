@@ -138,8 +138,7 @@ export function InventoryDrawer({
             <div className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
               {t("inventory.drawer.watchedRequired", {
                 watched: formatHourMinute(drop.earnedMinutes),
-                required:
-                  drop.requiredMinutes > 0 ? formatHourMinute(drop.requiredMinutes) : "—",
+                required: drop.requiredMinutes > 0 ? formatHourMinute(drop.requiredMinutes) : "—",
               })}
             </div>
           </div>

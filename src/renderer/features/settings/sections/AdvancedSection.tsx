@@ -24,9 +24,7 @@ export function AdvancedSection(props: AdvancedSectionProps) {
       <SettingRow
         label={t("settings.row.debugView.label")}
         description={t("settings.row.debugView.description")}
-        control={
-          <SettingsToggle checked={props.debugEnabled} onChange={props.setDebugEnabled} />
-        }
+        control={<SettingsToggle checked={props.debugEnabled} onChange={props.setDebugEnabled} />}
       />
 
       <div className="mt-6">

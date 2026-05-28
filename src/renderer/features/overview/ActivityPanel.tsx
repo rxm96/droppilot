@@ -1,12 +1,6 @@
 import * as React from "react";
 import { FeedItem } from "@renderer/shared/components/ui/feed-item";
-import {
-  Check,
-  RotateCw,
-  Plus,
-  AlertTriangle,
-  Play,
-} from "@renderer/shared/lib/icons";
+import { Check, RotateCw, Plus, AlertTriangle, Play } from "@renderer/shared/lib/icons";
 import { formatRelative } from "./formatters";
 import { useI18n } from "@renderer/shared/i18n";
 import { useActivityFeed, type ActivityEvent } from "@renderer/shared/utils/activityFeed";
@@ -41,10 +35,7 @@ function visualFor(kind: ActivityEvent["kind"]): EventVisual {
  * variable subsitutions through i18n. Returns a ReactNode so we can mix
  * <strong> emphasis into the message (e.g. the drop title).
  */
-function renderMessage(
-  event: ActivityEvent,
-  t: ReturnType<typeof useI18n>["t"],
-): React.ReactNode {
+function renderMessage(event: ActivityEvent, t: ReturnType<typeof useI18n>["t"]): React.ReactNode {
   switch (event.kind) {
     case "drop-claimed":
       return (
@@ -76,10 +67,7 @@ function renderMessage(
 }
 
 /** Renders the meta line under the headline (subtitle + relative time). */
-function renderMeta(
-  event: ActivityEvent,
-  t: ReturnType<typeof useI18n>["t"],
-): React.ReactNode {
+function renderMeta(event: ActivityEvent, t: ReturnType<typeof useI18n>["t"]): React.ReactNode {
   const time = formatRelative(event.at);
   switch (event.kind) {
     case "drop-claimed":

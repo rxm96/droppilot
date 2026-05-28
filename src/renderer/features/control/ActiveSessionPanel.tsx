@@ -48,7 +48,11 @@ export function ActiveSessionPanel({
   return (
     <div className="rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)]">
       <div className="flex items-center justify-between px-5 py-4 border-b border-[color:var(--dp-border-soft)]">
-        <SectionLabel inline>{isWatching ? t("control.activeSession.nowWatching") : t("control.activeSession.noActiveSession")}</SectionLabel>
+        <SectionLabel inline>
+          {isWatching
+            ? t("control.activeSession.nowWatching")
+            : t("control.activeSession.noActiveSession")}
+        </SectionLabel>
         {lastWatchOk && (
           <div className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
             {t("control.activeSession.lastPing")} · {formatRelative(lastWatchOk)}
@@ -69,7 +73,9 @@ export function ActiveSessionPanel({
               />
             ) : (
               <div className="flex items-center justify-center h-full font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
-                {isWatching ? t("control.activeSession.loading") : t("control.activeSession.noStream")}
+                {isWatching
+                  ? t("control.activeSession.loading")
+                  : t("control.activeSession.noStream")}
               </div>
             )}
           </div>
@@ -121,7 +127,8 @@ export function ActiveSessionPanel({
                   className="h-full"
                   style={{
                     width: `${Math.max(0, Math.min(100, progressPct))}%`,
-                    background: "linear-gradient(90deg, var(--dp-accent), color-mix(in srgb, var(--dp-accent) 60%, white))",
+                    background:
+                      "linear-gradient(90deg, var(--dp-accent), color-mix(in srgb, var(--dp-accent) 60%, white))",
                     boxShadow: "0 0 8px var(--dp-accent-glow)",
                   }}
                 />
@@ -134,18 +141,26 @@ export function ActiveSessionPanel({
               {activeEtaText
                 ? t("control.activeSession.watchedRequiredEta", {
                     watched: formatHourMinute(activeDropEarnedMinutes),
-                    required: activeDropRequiredMinutes > 0 ? formatHourMinute(activeDropRequiredMinutes) : "—",
+                    required:
+                      activeDropRequiredMinutes > 0
+                        ? formatHourMinute(activeDropRequiredMinutes)
+                        : "—",
                     eta: activeEtaText,
                   })
                 : t("control.activeSession.watchedRequired", {
                     watched: formatHourMinute(activeDropEarnedMinutes),
-                    required: activeDropRequiredMinutes > 0 ? formatHourMinute(activeDropRequiredMinutes) : "—",
+                    required:
+                      activeDropRequiredMinutes > 0
+                        ? formatHourMinute(activeDropRequiredMinutes)
+                        : "—",
                   })}
             </div>
           </div>
         ) : (
           <div className="border-t border-[color:var(--dp-border-soft)] pt-4 font-mono text-[11px] text-[color:var(--dp-text-dimmer)]">
-            {isWatching ? t("control.activeSession.noFarmable") : t("control.activeSession.engineIdle")}
+            {isWatching
+              ? t("control.activeSession.noFarmable")
+              : t("control.activeSession.engineIdle")}
           </div>
         )}
       </div>

@@ -110,11 +110,7 @@ export function OverviewView({
           onClaimNow={onClaimNow}
           claimStatus={claimStatus}
         />
-        <QueuePanel
-          items={items}
-          activeDrop={activeDrop ?? null}
-          targetGame={activeGame}
-        />
+        <QueuePanel items={items} activeDrop={activeDrop ?? null} targetGame={activeGame} />
       </div>
       <div className="flex flex-col gap-4">
         <ActivityPanel />

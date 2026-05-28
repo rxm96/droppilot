@@ -123,7 +123,9 @@ export function EngineSection(props: EngineSectionProps) {
                 aria-label={t("settings.aria.minIntervalSeconds")}
                 className="w-20"
               />
-              <span className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">{t("settings.unit.to")}</span>
+              <span className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
+                {t("settings.unit.to")}
+              </span>
               <Input
                 tone="dp"
                 type="number"
@@ -136,7 +138,9 @@ export function EngineSection(props: EngineSectionProps) {
                 aria-label={t("settings.aria.maxIntervalSeconds")}
                 className="w-20"
               />
-              <span className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">{t("settings.unit.sec")}</span>
+              <span className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
+                {t("settings.unit.sec")}
+              </span>
             </div>
           }
         />

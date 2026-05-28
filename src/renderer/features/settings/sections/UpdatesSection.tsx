@@ -1,7 +1,14 @@
 import * as React from "react";
 import { Button } from "@renderer/shared/components/ui/button";
 import { Pill } from "@renderer/shared/components/ui/pill";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@renderer/shared/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@renderer/shared/components/ui/select";
 import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { SettingRow } from "../SettingRow";
 import type { UpdateChannel } from "../../../../shared/updateChannels";
@@ -37,15 +44,26 @@ export function UpdatesSection(props: UpdatesSectionProps) {
   const statusPill = (() => {
     switch (state) {
       case "available":
-        return <Pill tone="accent" dot>{t("settings.status.available")}{version ? ` · v${version}` : ""}</Pill>;
+        return (
+          <Pill tone="accent" dot>
+            {t("settings.status.available")}
+            {version ? ` · v${version}` : ""}
+          </Pill>
+        );
       case "downloading":
         return (
           <Pill tone="info" dot>
-            {t("settings.status.downloading")}{typeof progress === "number" ? ` · ${Math.round(progress)}%` : ""}
+            {t("settings.status.downloading")}
+            {typeof progress === "number" ? ` · ${Math.round(progress)}%` : ""}
           </Pill>
         );
       case "downloaded":
-        return <Pill tone="ok" dot>{t("settings.status.downloaded")}{version ? ` · v${version}` : ""}</Pill>;
+        return (
+          <Pill tone="ok" dot>
+            {t("settings.status.downloaded")}
+            {version ? ` · v${version}` : ""}
+          </Pill>
+        );
       case "error":
         return (
           <Pill tone="err" dot title={props.updateStatus?.message}>
@@ -53,7 +71,11 @@ export function UpdatesSection(props: UpdatesSectionProps) {
           </Pill>
         );
       case "checking":
-        return <Pill tone="info" dot>{t("settings.status.checking")}</Pill>;
+        return (
+          <Pill tone="info" dot>
+            {t("settings.status.checking")}
+          </Pill>
+        );
       case "none":
         return <Pill tone="dim">{t("settings.status.upToDate")}</Pill>;
       case "unsupported":
@@ -70,7 +92,10 @@ export function UpdatesSection(props: UpdatesSectionProps) {
         label={t("settings.updateChannel")}
         description={t("settings.row.updateChannel.description")}
         control={
-          <Select value={props.updateChannel} onValueChange={(v) => props.setUpdateChannel(v as UpdateChannel)}>
+          <Select
+            value={props.updateChannel}
+            onValueChange={(v) => props.setUpdateChannel(v as UpdateChannel)}
+          >
             <SelectTrigger tone="dp" aria-label={t("settings.aria.updateChannel")}>
               <SelectValue />
             </SelectTrigger>

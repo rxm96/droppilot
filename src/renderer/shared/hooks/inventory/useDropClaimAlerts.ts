@@ -23,7 +23,10 @@ export function useDropClaimAlerts({ language, alertsDropClaimed, notify, bumpSt
   const handleDropClaimed = useCallback(
     ({ title, game }: { title: string; game: string }) => {
       bumpStats({ claims: 1, lastDropTitle: title, lastGame: game });
-      recordActivity({ kind: "drop-claimed", at: Date.now(), title, game } as Omit<Extract<ActivityEvent, { kind: "drop-claimed" }>, "id">);
+      recordActivity({ kind: "drop-claimed", at: Date.now(), title, game } as Omit<
+        Extract<ActivityEvent, { kind: "drop-claimed" }>,
+        "id"
+      >);
       if (!alertsDropClaimed) return;
       notify({
         key: `drop-claimed:${title}:${game}`,

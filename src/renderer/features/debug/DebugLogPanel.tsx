@@ -51,7 +51,11 @@ export function highlightMatches(text: string, term: string): React.ReactNode {
 }
 
 type LogDetailsProps = { args: unknown[]; label: string; highlightTerm?: string };
-const LogDetails = React.memo(function LogDetails({ args, label, highlightTerm = "" }: LogDetailsProps) {
+const LogDetails = React.memo(function LogDetails({
+  args,
+  label,
+  highlightTerm = "",
+}: LogDetailsProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const detailsText = React.useMemo(() => (isOpen ? formatArgs(args) : ""), [args, isOpen]);
   return (
@@ -83,9 +87,7 @@ const LogRow = React.memo(function LogRow({ row, detailsLabel, highlightTerm = "
       <div className="flex items-center justify-between gap-2 mb-1">
         <div className="flex items-center gap-1.5 min-w-0">
           <Pill tone={LEVEL_TONE[row.level]}>{highlightMatches(row.level, highlightTerm)}</Pill>
-          {row.source && (
-            <Pill tone="dim">{highlightMatches(row.source, highlightTerm)}</Pill>
-          )}
+          {row.source && <Pill tone="dim">{highlightMatches(row.source, highlightTerm)}</Pill>}
           {row.repeatCount > 1 && <Pill tone="dim">x{row.repeatCount}</Pill>}
         </div>
         <span className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)] flex-shrink-0">

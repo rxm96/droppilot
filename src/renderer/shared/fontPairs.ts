@@ -66,9 +66,7 @@ export function getFontPair(id: FontPairId | null | undefined): FontPair {
 }
 
 export function isValidFontPairId(value: unknown): value is FontPairId {
-  return (
-    value === "pro-console" || value === "modern" || value === "geist" || value === "system"
-  );
+  return value === "pro-console" || value === "modern" || value === "geist" || value === "system";
 }
 
 /**

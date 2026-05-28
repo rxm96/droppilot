@@ -162,7 +162,12 @@ export function CampaignsPanel({
           {formatHourMinute(activeGroup.totalRequired)} {t("control.campaignsPanel.footerTotal")}
         </span>
         <span>
-          {t(activeGroup.drops.length === 1 ? "control.campaignsPanel.footerDrops.one" : "control.campaignsPanel.footerDrops.other", { count: activeGroup.drops.length })}
+          {t(
+            activeGroup.drops.length === 1
+              ? "control.campaignsPanel.footerDrops.one"
+              : "control.campaignsPanel.footerDrops.other",
+            { count: activeGroup.drops.length },
+          )}
         </span>
       </div>
     </div>

@@ -56,7 +56,11 @@ export function PriorityAddPanel({
                 setSelectedGame(value === NO_GAME_SELECT_VALUE ? "" : value)
               }
             >
-              <SelectTrigger tone="dp" className="flex-1" aria-label={t("priorities.add.fromDropsAria")}>
+              <SelectTrigger
+                tone="dp"
+                className="flex-1"
+                aria-label={t("priorities.add.fromDropsAria")}
+              >
                 <SelectValue placeholder={t("priorities.add.selectPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
@@ -127,9 +131,7 @@ export function PriorityAddPanel({
             {t("priorities.add.strictLabel")}
           </div>
           <div className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)] mt-0.5">
-            {obeyPriority
-              ? t("priorities.ruleStrictHint")
-              : t("priorities.ruleFlexibleHint")}
+            {obeyPriority ? t("priorities.ruleStrictHint") : t("priorities.ruleFlexibleHint")}
           </div>
         </label>
       </div>

@@ -32,7 +32,9 @@ export function DebugAdvancedPanel(props: DebugAdvancedPanelProps) {
             {t("debug.sim.title")}
           </summary>
           <div className="mt-3 flex flex-col gap-3 px-1">
-            <p className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">{t("debug.sim.help")}</p>
+            <p className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
+              {t("debug.sim.help")}
+            </p>
             <div className="grid gap-2 sm:grid-cols-2">
               <Input
                 tone="dp"

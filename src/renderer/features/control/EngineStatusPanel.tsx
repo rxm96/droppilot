@@ -151,24 +151,41 @@ export function EngineStatusPanel(props: EngineStatusPanelProps) {
       <div className="px-5 pb-4">
         <div className="grid gap-1.5">
           <div className="flex gap-3 font-mono text-[11px]">
-            <span className="text-[color:var(--dp-text-dimmer)] w-12 flex-shrink-0">{t("control.engineStatus.why")}</span>
+            <span className="text-[color:var(--dp-text-dimmer)] w-12 flex-shrink-0">
+              {t("control.engineStatus.why")}
+            </span>
             <span className="text-[color:var(--dp-text-dim)] flex-1">{details.why}</span>
           </div>
           <div className="flex gap-3 font-mono text-[11px]">
-            <span className="text-[color:var(--dp-text-dimmer)] w-12 flex-shrink-0">{t("control.engineStatus.next")}</span>
+            <span className="text-[color:var(--dp-text-dimmer)] w-12 flex-shrink-0">
+              {t("control.engineStatus.next")}
+            </span>
             <span className="text-[color:var(--dp-text-dim)] flex-1">{details.next}</span>
           </div>
         </div>
       </div>
 
       {expanded && (
-        <div id={detailsId} className="border-t border-[color:var(--dp-border-soft)] px-5 py-4 grid gap-2">
+        <div
+          id={detailsId}
+          className="border-t border-[color:var(--dp-border-soft)] px-5 py-4 grid gap-2"
+        >
           <DetailRow label={t("control.engineStatus.detail.target")} value={targetText} />
           <DetailRow label={t("control.engineStatus.detail.suppression")} value={suppressionText} />
           <DetailRow label={t("control.engineStatus.detail.cooldowns")} value={cooldownText} />
-          <DetailRow label={t("control.engineStatus.detail.allowlist")} value={allowlistText} sub={channelsText} />
+          <DetailRow
+            label={t("control.engineStatus.detail.allowlist")}
+            value={allowlistText}
+            sub={channelsText}
+          />
           <DetailRow label={t("control.tracker.label")} value={trackerText} tone={trackerTone} />
-          {noProgressText && <DetailRow label={t("control.engineStatus.detail.noProgress")} value={noProgressText} tone="warn" />}
+          {noProgressText && (
+            <DetailRow
+              label={t("control.engineStatus.detail.noProgress")}
+              value={noProgressText}
+              tone="warn"
+            />
+          )}
         </div>
       )}
     </div>

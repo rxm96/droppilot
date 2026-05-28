@@ -33,9 +33,7 @@ export function AlertsSection(props: AlertsSectionProps) {
       <SettingRow
         label={t("settings.row.alertsEnabled.label")}
         description={t("settings.row.alertsEnabled.description")}
-        control={
-          <SettingsToggle checked={props.alertsEnabled} onChange={props.setAlertsEnabled} />
-        }
+        control={<SettingsToggle checked={props.alertsEnabled} onChange={props.setAlertsEnabled} />}
       />
       <SettingRow
         divided
@@ -97,7 +95,9 @@ export function AlertsSection(props: AlertsSectionProps) {
                 aria-label={t("settings.aria.endingSoonMinutes")}
                 className="w-24"
               />
-              <span className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">{t("settings.unit.min")}</span>
+              <span className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
+                {t("settings.unit.min")}
+              </span>
             </div>
           }
         />
