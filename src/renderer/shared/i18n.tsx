@@ -610,26 +610,35 @@ const translations: Translations = {
     "settings.subsection.backup": "settings export & import",
 
     // Row labels + descriptions
-    "settings.row.language.description": "Interface language for labels, alerts, and onboarding text.",
-    "settings.row.demoMode.description": "Use synthetic data so you can preview the UI without a Twitch login.",
+    "settings.row.language.description":
+      "Interface language for labels, alerts, and onboarding text.",
+    "settings.row.demoMode.description":
+      "Use synthetic data so you can preview the UI without a Twitch login.",
     "settings.row.sendTestAlert.label": "Send test alert",
-    "settings.row.sendTestAlert.description": "Triggers a desktop notification to verify alerts work on this OS.",
+    "settings.row.sendTestAlert.description":
+      "Triggers a desktop notification to verify alerts work on this OS.",
     "settings.row.autoStart.label": "Launch at login",
-    "settings.row.autoStart.description": "Starts Droppilot automatically when you log into your OS.",
+    "settings.row.autoStart.description":
+      "Starts Droppilot automatically when you log into your OS.",
     "settings.row.closeToTray.label": "Close to tray",
-    "settings.row.closeToTray.description": "Clicking the close button hides Droppilot to the system tray instead of quitting. Use the tray icon's Quit menu to exit.",
+    "settings.row.closeToTray.description":
+      "Clicking the close button hides Droppilot to the system tray instead of quitting. Use the tray icon's Quit menu to exit.",
     "settings.row.minimizeToTray.label": "Minimize to tray",
-    "settings.row.minimizeToTray.description": "Minimizing the window hides it from the taskbar (the tray icon stays available).",
+    "settings.row.minimizeToTray.description":
+      "Minimizing the window hides it from the taskbar (the tray icon stays available).",
     "settings.row.refreshInterval.label": "Channels refresh interval",
-    "settings.row.refreshInterval.description": "How often the channel tracker re-queries Twitch (random jitter between min and max).",
+    "settings.row.refreshInterval.description":
+      "How often the channel tracker re-queries Twitch (random jitter between min and max).",
     "settings.row.resetAutomation.label": "Reset automation flags",
-    "settings.row.resetAutomation.description": "Clears auto-claim, auto-switch, warmup, etc. back to defaults. Does not log you out.",
+    "settings.row.resetAutomation.description":
+      "Clears auto-claim, auto-switch, warmup, etc. back to defaults. Does not log you out.",
     "settings.row.theme.label": "Color scheme",
     "settings.row.theme.description": "Light or dark interface.",
     "settings.row.theme.dark": "Dark",
     "settings.row.theme.light": "Light",
     "settings.row.accent.label": "Accent color",
-    "settings.row.accent.description": "Pick a preset or use the color picker to set a custom accent. The choice tints buttons, pills, and highlights across the app.",
+    "settings.row.accent.description":
+      "Pick a preset or use the color picker to set a custom accent. The choice tints buttons, pills, and highlights across the app.",
     "settings.row.accent.reset": "Reset to default",
     "settings.row.accent.customAria": "Pick a custom accent color",
     "settings.row.accent.swatchAria": "Use {name} accent",
@@ -642,40 +651,54 @@ const translations: Translations = {
     "settings.row.accent.preset.rose": "Rose",
     "settings.row.accent.preset.slate": "Slate",
     "settings.row.fontPair.label": "Font pair",
-    "settings.row.fontPair.description": "Switch the sans + monospace font pair used throughout the app. Non-default pairs lazy-load from Google Fonts on first use.",
+    "settings.row.fontPair.description":
+      "Switch the sans + monospace font pair used throughout the app. Non-default pairs lazy-load from Google Fonts on first use.",
     "settings.row.fontPair.preset.proConsole": "Pro Console (default)",
     "settings.row.fontPair.preset.modern": "Modern (Inter + JetBrains Mono)",
     "settings.row.fontPair.preset.geist": "Geist (Geist + Geist Mono)",
     "settings.row.fontPair.preset.system": "System (zero network)",
-    "settings.row.badgesEmotes.description": "Display Twitch badges and emotes in chat-like elements.",
+    "settings.row.badgesEmotes.description":
+      "Display Twitch badges and emotes in chat-like elements.",
     "settings.row.updateChannel.description": "Switch between stable and pre-release releases.",
     "settings.row.updateStatus.label": "Status",
-    "settings.row.updateStatus.description": "Last known update status reported by the auto-updater.",
+    "settings.row.updateStatus.description":
+      "Last known update status reported by the auto-updater.",
     "settings.row.updateActions.label": "Actions",
     "settings.row.updateActions.description": "Manually trigger a check, download, or install.",
     "settings.row.alertsEnabled.label": "Desktop alerts",
-    "settings.row.alertsEnabled.description": "Master toggle. When off, no notifications are sent regardless of the per-event settings below.",
+    "settings.row.alertsEnabled.description":
+      "Master toggle. When off, no notifications are sent regardless of the per-event settings below.",
     "settings.row.alertsNotifyWhileFocused.label": "Notify while the app is focused",
-    "settings.row.alertsNotifyWhileFocused.description": "Show notifications even when Droppilot is the active window.",
+    "settings.row.alertsNotifyWhileFocused.description":
+      "Show notifications even when Droppilot is the active window.",
     "settings.row.alertsDropClaimed.label": "Drop claimed",
     "settings.row.alertsDropClaimed.description": "A drop you were watching for has been claimed.",
     "settings.row.alertsDropEndingSoon.label": "Drop ending soon",
-    "settings.row.alertsDropEndingSoon.description": "A drop is close to expiring. Warn you N minutes before.",
+    "settings.row.alertsDropEndingSoon.description":
+      "A drop is close to expiring. Warn you N minutes before.",
     "settings.row.alertsDropEndingMinutes.label": "Ending-soon threshold",
-    "settings.row.alertsDropEndingMinutes.description": "How many minutes before expiry the warning fires.",
+    "settings.row.alertsDropEndingMinutes.description":
+      "How many minutes before expiry the warning fires.",
     "settings.row.alertsNewDrops.label": "New drops available",
-    "settings.row.alertsNewDrops.description": "A new campaign or drop just dropped (pun intended).",
+    "settings.row.alertsNewDrops.description":
+      "A new campaign or drop just dropped (pun intended).",
     "settings.row.alertsWatchError.label": "Watch errors",
-    "settings.row.alertsWatchError.description": "Watcher failed (auth expired, network issue, etc.).",
+    "settings.row.alertsWatchError.description":
+      "Watcher failed (auth expired, network issue, etc.).",
     "settings.row.alertsAutoSwitch.label": "Auto-switch happened",
-    "settings.row.alertsAutoSwitch.description": "The watch engine moved to a different channel automatically.",
+    "settings.row.alertsAutoSwitch.description":
+      "The watch engine moved to a different channel automatically.",
     "settings.row.connectionStatus.label": "Connection status",
-    "settings.row.connectionStatus.description": "Logout and re-login from the top-right of the title bar.",
-    "settings.row.allowUnlinked.description": "Show drops for games where you haven't linked the Twitch account to the game account yet. They won't progress without linking.",
+    "settings.row.connectionStatus.description":
+      "Log out to switch accounts or refresh your Twitch session.",
+    "settings.row.allowUnlinked.description":
+      "Show drops for games where you haven't linked the Twitch account to the game account yet. They won't progress without linking.",
     "settings.row.debugView.label": "Show Debug view",
-    "settings.row.debugView.description": "Adds a 'debug' tab to the top nav with logs, perf snapshots, and a state dump.",
+    "settings.row.debugView.description":
+      "Adds a 'debug' tab to the top nav with logs, perf snapshots, and a state dump.",
     "settings.row.settingsJson.label": "Settings JSON",
-    "settings.row.settingsJson.description": "Paste a JSON blob and click Import, or click Export to copy your current settings.",
+    "settings.row.settingsJson.description":
+      "Paste a JSON blob and click Import, or click Export to copy your current settings.",
 
     // Buttons
     "settings.button.sendTest": "send test",
@@ -710,6 +733,9 @@ const translations: Translations = {
     // Account pills
     "settings.account.linked": "linked",
     "settings.account.notLinked": "not linked",
+    "settings.account.logout": "Log out",
+    "settings.account.login": "Connect account",
+    "settings.account.loggingIn": "Connecting…",
 
     // Tracker (used in EngineStatusPanel, prep for T03)
     "control.tracker.label": "tracker",
@@ -917,7 +943,8 @@ const translations: Translations = {
     "control.activeSession.live": "live",
     "control.activeSession.paused": "paused",
     "control.activeSession.activeDrop": "active drop",
-    "control.activeSession.watchedRequiredEta": "{watched} watched · {required} required · eta {eta}",
+    "control.activeSession.watchedRequiredEta":
+      "{watched} watched · {required} required · eta {eta}",
     "control.activeSession.watchedRequired": "{watched} watched · {required} required",
     "control.activeSession.noFarmable": "no farmable drop on this channel",
     "control.activeSession.engineIdle": "engine idle",
@@ -1573,26 +1600,34 @@ const translations: Translations = {
     "settings.subsection.gameLinking": "spiel-verknüpfung",
     "settings.subsection.backup": "einstellungen export & import",
 
-    "settings.row.language.description": "Sprache für Labels, Benachrichtigungen und Onboarding-Texte.",
-    "settings.row.demoMode.description": "Verwendet synthetische Daten, damit du die UI ohne Twitch-Login ausprobieren kannst.",
+    "settings.row.language.description":
+      "Sprache für Labels, Benachrichtigungen und Onboarding-Texte.",
+    "settings.row.demoMode.description":
+      "Verwendet synthetische Daten, damit du die UI ohne Twitch-Login ausprobieren kannst.",
     "settings.row.sendTestAlert.label": "Test-Benachrichtigung senden",
-    "settings.row.sendTestAlert.description": "Triggert eine Desktop-Benachrichtigung, um Alerts auf diesem OS zu prüfen.",
+    "settings.row.sendTestAlert.description":
+      "Triggert eine Desktop-Benachrichtigung, um Alerts auf diesem OS zu prüfen.",
     "settings.row.autoStart.label": "Beim Login starten",
     "settings.row.autoStart.description": "Startet Droppilot automatisch beim OS-Login.",
     "settings.row.closeToTray.label": "Beim Schließen ins Tray",
-    "settings.row.closeToTray.description": "Klick auf Schließen blendet Droppilot in den Tray statt zu beenden. Über das Tray-Icon kannst du komplett beenden.",
+    "settings.row.closeToTray.description":
+      "Klick auf Schließen blendet Droppilot in den Tray statt zu beenden. Über das Tray-Icon kannst du komplett beenden.",
     "settings.row.minimizeToTray.label": "Beim Minimieren ins Tray",
-    "settings.row.minimizeToTray.description": "Minimieren blendet das Fenster aus der Taskleiste (Tray-Icon bleibt verfügbar).",
+    "settings.row.minimizeToTray.description":
+      "Minimieren blendet das Fenster aus der Taskleiste (Tray-Icon bleibt verfügbar).",
     "settings.row.refreshInterval.label": "Channel-Refresh-Intervall",
-    "settings.row.refreshInterval.description": "Wie oft der Channel-Tracker Twitch neu abfragt (zufälliger Jitter zwischen Min und Max).",
+    "settings.row.refreshInterval.description":
+      "Wie oft der Channel-Tracker Twitch neu abfragt (zufälliger Jitter zwischen Min und Max).",
     "settings.row.resetAutomation.label": "Automatisierung zurücksetzen",
-    "settings.row.resetAutomation.description": "Setzt auto-claim, auto-switch, warmup etc. auf die Defaults zurück. Loggt dich nicht aus.",
+    "settings.row.resetAutomation.description":
+      "Setzt auto-claim, auto-switch, warmup etc. auf die Defaults zurück. Loggt dich nicht aus.",
     "settings.row.theme.label": "Farbschema",
     "settings.row.theme.description": "Helles oder dunkles Interface.",
     "settings.row.theme.dark": "Dunkel",
     "settings.row.theme.light": "Hell",
     "settings.row.accent.label": "Akzentfarbe",
-    "settings.row.accent.description": "Wähle ein Preset oder nutze den Color-Picker für einen eigenen Akzent. Die Farbe färbt Buttons, Pills und Highlights in der ganzen App ein.",
+    "settings.row.accent.description":
+      "Wähle ein Preset oder nutze den Color-Picker für einen eigenen Akzent. Die Farbe färbt Buttons, Pills und Highlights in der ganzen App ein.",
     "settings.row.accent.reset": "Auf Standard zurücksetzen",
     "settings.row.accent.customAria": "Eigene Akzentfarbe wählen",
     "settings.row.accent.swatchAria": "{name}-Akzent verwenden",
@@ -1605,40 +1640,55 @@ const translations: Translations = {
     "settings.row.accent.preset.rose": "Rosa",
     "settings.row.accent.preset.slate": "Schiefer",
     "settings.row.fontPair.label": "Schriftpaar",
-    "settings.row.fontPair.description": "Wechsle das Sans- + Monospace-Schriftpaar der App. Nicht-Standard-Paare werden bei der ersten Auswahl lazy von Google Fonts geladen.",
+    "settings.row.fontPair.description":
+      "Wechsle das Sans- + Monospace-Schriftpaar der App. Nicht-Standard-Paare werden bei der ersten Auswahl lazy von Google Fonts geladen.",
     "settings.row.fontPair.preset.proConsole": "Pro Console (Standard)",
     "settings.row.fontPair.preset.modern": "Modern (Inter + JetBrains Mono)",
     "settings.row.fontPair.preset.geist": "Geist (Geist + Geist Mono)",
     "settings.row.fontPair.preset.system": "System (kein Netzwerk)",
-    "settings.row.badgesEmotes.description": "Twitch-Badges und Emotes in Chat-ähnlichen Elementen anzeigen.",
-    "settings.row.updateChannel.description": "Zwischen stabilen und Pre-Release-Versionen wechseln.",
+    "settings.row.badgesEmotes.description":
+      "Twitch-Badges und Emotes in Chat-ähnlichen Elementen anzeigen.",
+    "settings.row.updateChannel.description":
+      "Zwischen stabilen und Pre-Release-Versionen wechseln.",
     "settings.row.updateStatus.label": "Status",
     "settings.row.updateStatus.description": "Letzter bekannter Update-Status vom Auto-Updater.",
     "settings.row.updateActions.label": "Aktionen",
     "settings.row.updateActions.description": "Manuell Check, Download oder Installation auslösen.",
     "settings.row.alertsEnabled.label": "Desktop-Benachrichtigungen",
-    "settings.row.alertsEnabled.description": "Hauptschalter. Wenn aus, werden keine Benachrichtigungen gesendet — unabhängig von den Einzeleinstellungen unten.",
+    "settings.row.alertsEnabled.description":
+      "Hauptschalter. Wenn aus, werden keine Benachrichtigungen gesendet — unabhängig von den Einzeleinstellungen unten.",
     "settings.row.alertsNotifyWhileFocused.label": "Auch bei fokussierter App benachrichtigen",
-    "settings.row.alertsNotifyWhileFocused.description": "Zeigt Benachrichtigungen auch, wenn Droppilot das aktive Fenster ist.",
+    "settings.row.alertsNotifyWhileFocused.description":
+      "Zeigt Benachrichtigungen auch, wenn Droppilot das aktive Fenster ist.",
     "settings.row.alertsDropClaimed.label": "Drop eingesammelt",
-    "settings.row.alertsDropClaimed.description": "Ein Drop, auf den du gewartet hast, wurde eingesammelt.",
+    "settings.row.alertsDropClaimed.description":
+      "Ein Drop, auf den du gewartet hast, wurde eingesammelt.",
     "settings.row.alertsDropEndingSoon.label": "Drop endet bald",
-    "settings.row.alertsDropEndingSoon.description": "Ein Drop läuft bald ab. Warnung N Minuten vorher.",
+    "settings.row.alertsDropEndingSoon.description":
+      "Ein Drop läuft bald ab. Warnung N Minuten vorher.",
     "settings.row.alertsDropEndingMinutes.label": "Endet-bald-Schwelle",
-    "settings.row.alertsDropEndingMinutes.description": "Wie viele Minuten vor Ablauf die Warnung kommt.",
+    "settings.row.alertsDropEndingMinutes.description":
+      "Wie viele Minuten vor Ablauf die Warnung kommt.",
     "settings.row.alertsNewDrops.label": "Neue Drops verfügbar",
-    "settings.row.alertsNewDrops.description": "Eine neue Kampagne oder ein neuer Drop ist gerade gedroppt.",
+    "settings.row.alertsNewDrops.description":
+      "Eine neue Kampagne oder ein neuer Drop ist gerade gedroppt.",
     "settings.row.alertsWatchError.label": "Watch-Fehler",
-    "settings.row.alertsWatchError.description": "Der Watcher ist fehlgeschlagen (Auth abgelaufen, Netzwerk, etc.).",
+    "settings.row.alertsWatchError.description":
+      "Der Watcher ist fehlgeschlagen (Auth abgelaufen, Netzwerk, etc.).",
     "settings.row.alertsAutoSwitch.label": "Auto-Switch ausgelöst",
-    "settings.row.alertsAutoSwitch.description": "Die Watch-Engine ist automatisch auf einen anderen Channel gewechselt.",
+    "settings.row.alertsAutoSwitch.description":
+      "Die Watch-Engine ist automatisch auf einen anderen Channel gewechselt.",
     "settings.row.connectionStatus.label": "Verbindungsstatus",
-    "settings.row.connectionStatus.description": "Logout und Re-Login oben rechts in der Titelleiste.",
-    "settings.row.allowUnlinked.description": "Zeigt Drops für Spiele, deren Account du noch nicht mit Twitch verknüpft hast. Diese Drops machen ohne Verknüpfung keinen Fortschritt.",
+    "settings.row.connectionStatus.description":
+      "Abmelden, um das Konto zu wechseln oder die Twitch-Sitzung zu erneuern.",
+    "settings.row.allowUnlinked.description":
+      "Zeigt Drops für Spiele, deren Account du noch nicht mit Twitch verknüpft hast. Diese Drops machen ohne Verknüpfung keinen Fortschritt.",
     "settings.row.debugView.label": "Debug-Ansicht zeigen",
-    "settings.row.debugView.description": "Fügt einen 'debug'-Tab oben hinzu mit Logs, Perf-Snapshots und State-Dump.",
+    "settings.row.debugView.description":
+      "Fügt einen 'debug'-Tab oben hinzu mit Logs, Perf-Snapshots und State-Dump.",
     "settings.row.settingsJson.label": "Settings-JSON",
-    "settings.row.settingsJson.description": "Füge einen JSON-Block ein und klicke Import, oder klicke Export, um deine aktuellen Einstellungen zu kopieren.",
+    "settings.row.settingsJson.description":
+      "Füge einen JSON-Block ein und klicke Import, oder klicke Export, um deine aktuellen Einstellungen zu kopieren.",
 
     "settings.button.sendTest": "test senden",
     "settings.button.reset": "zurücksetzen",
@@ -1669,6 +1719,9 @@ const translations: Translations = {
 
     "settings.account.linked": "verknüpft",
     "settings.account.notLinked": "nicht verknüpft",
+    "settings.account.logout": "Abmelden",
+    "settings.account.login": "Konto verbinden",
+    "settings.account.loggingIn": "Verbinde…",
 
     "control.tracker.label": "tracker",
     "control.tracker.healthy": "Gesund (primär)",
@@ -1791,8 +1844,10 @@ const translations: Translations = {
     "queue.pill.live": "live",
     "queue.pill.queued": "queue",
     "queue.pill.watching": "läuft",
-    "queue.emptyForTarget": "Keine Drops in der Queue für {game} — wähle das nächste Ziel in Prioritäten",
-    "queue.emptyNoTarget": "Kein Ziel-Spiel gesetzt — wähle eins in Prioritäten um seine Queue zu sehen",
+    "queue.emptyForTarget":
+      "Keine Drops in der Queue für {game} — wähle das nächste Ziel in Prioritäten",
+    "queue.emptyNoTarget":
+      "Kein Ziel-Spiel gesetzt — wähle eins in Prioritäten um seine Queue zu sehen",
     "queue.otherGamesHint": "+{count} weitere in anderen Spielen (siehe Inventar)",
 
     // activity.* — Overview activity feed (Phase 18)
@@ -1875,7 +1930,8 @@ const translations: Translations = {
     "control.activeSession.live": "live",
     "control.activeSession.paused": "pausiert",
     "control.activeSession.activeDrop": "aktiver drop",
-    "control.activeSession.watchedRequiredEta": "{watched} geschaut · {required} benötigt · eta {eta}",
+    "control.activeSession.watchedRequiredEta":
+      "{watched} geschaut · {required} benötigt · eta {eta}",
     "control.activeSession.watchedRequired": "{watched} geschaut · {required} benötigt",
     "control.activeSession.noFarmable": "kein farmbarer drop auf diesem channel",
     "control.activeSession.engineIdle": "engine im leerlauf",
@@ -1885,7 +1941,8 @@ const translations: Translations = {
     "control.channelGrid.header": "live channels",
     "control.channelGrid.refreshTitle": "Channel-Liste aktualisieren",
     "control.channelGrid.refresh": "aktualisieren",
-    "control.channelGrid.noTarget": "wähle ein Ziel-Spiel in Prioritäten, um live channels zu sehen",
+    "control.channelGrid.noTarget":
+      "wähle ein Ziel-Spiel in Prioritäten, um live channels zu sehen",
     "control.channelGrid.watchingPill": "watching",
 
     // control.campaignsPanel.* — CampaignsPanel

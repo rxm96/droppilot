@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Pill } from "@renderer/shared/components/ui/pill";
+import { Button } from "@renderer/shared/components/ui/button";
 import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { SettingRow } from "../SettingRow";
 import { SettingsToggle } from "../SettingsToggle";
@@ -7,6 +8,8 @@ import { useI18n } from "@renderer/shared/i18n";
 
 export type AccountSectionProps = {
   isLinked: boolean;
+  onLogout: () => void;
+  onLogin: () => void;
   allowUnlinkedGames: boolean;
   setAllowUnlinkedGames: (val: boolean) => void;
 };
@@ -20,11 +23,24 @@ export function AccountSection(props: AccountSectionProps) {
         label={t("settings.row.connectionStatus.label")}
         description={t("settings.row.connectionStatus.description")}
         control={
-          <div>
+          <div className="flex items-center gap-3">
             {props.isLinked ? (
-              <Pill tone="ok" dot>{t("settings.account.linked")}</Pill>
+              <Pill tone="ok" dot>
+                {t("settings.account.linked")}
+              </Pill>
             ) : (
-              <Pill tone="warn" dot>{t("settings.account.notLinked")}</Pill>
+              <Pill tone="warn" dot>
+                {t("settings.account.notLinked")}
+              </Pill>
+            )}
+            {props.isLinked ? (
+              <Button variant="dp-outline" size="dp-sm" onClick={props.onLogout}>
+                {t("settings.account.logout")}
+              </Button>
+            ) : (
+              <Button variant="dp-primary" size="dp-sm" onClick={props.onLogin}>
+                {t("settings.account.login")}
+              </Button>
             )}
           </div>
         }

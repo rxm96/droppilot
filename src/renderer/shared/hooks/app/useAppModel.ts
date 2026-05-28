@@ -1455,6 +1455,8 @@ export function useAppModel() {
   };
   const settingsProps = {
     isLinked,
+    onLogout: logout,
+    onLogin: startLogin,
     theme,
     setTheme,
     accent,

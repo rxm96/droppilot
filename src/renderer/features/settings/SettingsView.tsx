@@ -14,6 +14,8 @@ import { useI18n } from "@renderer/shared/i18n";
 
 type SettingsProps = {
   isLinked: boolean;
+  onLogout: () => void;
+  onLogin: () => void;
   language: "de" | "en";
   setLanguage: (val: "de" | "en") => void;
   theme: ThemePreference;
@@ -105,7 +107,9 @@ export function SettingsView(props: SettingsProps) {
     { key: "general", label: t("settings.section.general.sidebar") },
     { key: "engine", label: t("settings.section.engine.sidebar") },
     { key: "appearance", label: t("settings.section.appearance.sidebar") },
-    ...(props.showUpdateCheck ? [{ key: "updates" as SettingsSectionKey, label: t("settings.section.updates.sidebar") }] : []),
+    ...(props.showUpdateCheck
+      ? [{ key: "updates" as SettingsSectionKey, label: t("settings.section.updates.sidebar") }]
+      : []),
     { key: "alerts", label: t("settings.section.alerts.sidebar") },
     { key: "account", label: t("settings.section.account.sidebar") },
     { key: "advanced", label: t("settings.section.advanced.sidebar") },
@@ -213,6 +217,8 @@ export function SettingsView(props: SettingsProps) {
           {active === "account" && (
             <AccountSection
               isLinked={props.isLinked}
+              onLogout={props.onLogout}
+              onLogin={props.onLogin}
               allowUnlinkedGames={props.allowUnlinkedGames}
               setAllowUnlinkedGames={props.setAllowUnlinkedGames}
             />
