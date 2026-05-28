@@ -3,6 +3,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { SettingRow } from "../SettingRow";
 import { SettingsToggle } from "../SettingsToggle";
+import { AccentPicker } from "../AccentPicker";
 import type { ThemePreference } from "@renderer/shared/theme";
 import { useI18n } from "@renderer/shared/i18n";
 
@@ -11,6 +12,8 @@ export type AppearanceSectionProps = {
   setTheme: (val: ThemePreference) => void;
   enableBadgesEmotes: boolean;
   setEnableBadgesEmotes: (val: boolean) => void;
+  accent: string | null;
+  setAccent: (val: string | null) => void;
 };
 
 export function AppearanceSection(props: AppearanceSectionProps) {
@@ -35,6 +38,15 @@ export function AppearanceSection(props: AppearanceSectionProps) {
           </Select>
         }
       />
+
+      <div className="mt-6">
+        <SectionLabel>{t("settings.subsection.accent")}</SectionLabel>
+        <SettingRow
+          label={t("settings.row.accent.label")}
+          description={t("settings.row.accent.description")}
+          control={<AccentPicker accent={props.accent} setAccent={props.setAccent} />}
+        />
+      </div>
 
       <div className="mt-6">
         <SectionLabel>{t("settings.subsection.content")}</SectionLabel>
