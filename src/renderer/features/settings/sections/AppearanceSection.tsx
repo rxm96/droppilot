@@ -4,7 +4,9 @@ import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { SettingRow } from "../SettingRow";
 import { SettingsToggle } from "../SettingsToggle";
 import { AccentPicker } from "../AccentPicker";
+import { FontPicker } from "../FontPicker";
 import type { ThemePreference } from "@renderer/shared/theme";
+import type { FontPairId } from "@renderer/shared/fontPairs";
 import { useI18n } from "@renderer/shared/i18n";
 
 export type AppearanceSectionProps = {
@@ -14,6 +16,8 @@ export type AppearanceSectionProps = {
   setEnableBadgesEmotes: (val: boolean) => void;
   accent: string | null;
   setAccent: (val: string | null) => void;
+  fontPair: FontPairId;
+  setFontPair: (val: FontPairId) => void;
 };
 
 export function AppearanceSection(props: AppearanceSectionProps) {
@@ -45,6 +49,15 @@ export function AppearanceSection(props: AppearanceSectionProps) {
           label={t("settings.row.accent.label")}
           description={t("settings.row.accent.description")}
           control={<AccentPicker accent={props.accent} setAccent={props.setAccent} />}
+        />
+      </div>
+
+      <div className="mt-6">
+        <SectionLabel>{t("settings.subsection.typography")}</SectionLabel>
+        <SettingRow
+          label={t("settings.row.fontPair.label")}
+          description={t("settings.row.fontPair.description")}
+          control={<FontPicker fontPair={props.fontPair} setFontPair={props.setFontPair} />}
         />
       </div>
 
