@@ -532,6 +532,21 @@ app.whenReady().then(async () => {
     applyAutoStartSetting,
   });
 
+  // Pipe userPubSub diagnostic logs to ALL renderer windows via the existing
+  // 'main-log' channel — they show up in the DebugView's Log panel. Without
+  // this, [userPubSub] lines only land in the main process stdout, which is
+  // invisible in packaged builds (and only available in the dev terminal).
+  userPubSub.setLogger((level, message, data) => {
+    const scope = level === "warn" ? "userPubSub:warn" : "userPubSub";
+    const args = data !== undefined ? [message, data] : [message];
+    if (level === "warn") console.warn(`[${scope}]`, ...args);
+    else console.log(`[${scope}]`, ...args);
+    for (const w of BrowserWindow.getAllWindows()) {
+      if (w.isDestroyed()) continue;
+      w.webContents.send("main-log", { scope, args });
+    }
+  });
+
   // Start the user PubSub connection AFTER the IPC handlers register the
   // userPubSub.onEvent listener that forwards events to renderer windows.
   // Otherwise early RESPONSE / MESSAGE frames are received before any

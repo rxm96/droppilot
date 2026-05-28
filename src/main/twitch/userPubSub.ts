@@ -1,14 +1,6 @@
 import type { SessionData } from "../core/storage";
 import { WebSocket as NodeWebSocket, type RawData } from "ws";
 
-// Scoped logger so every line is grep-friendly in the console / DebugView.
-// Until this fix landed, UserPubSub had ZERO logging — every failure mode
-// (auth expired, validate 401, ws error, listen rejected, malformed payload)
-// was completely silent, which made debugging "no drop progress arrives"
-// impossible without instrumented builds. Keep this verbose.
-const log = (...args: unknown[]) => console.log("[userPubSub]", ...args);
-const logWarn = (...args: unknown[]) => console.warn("[userPubSub]", ...args);
-
 const PUBSUB_URL = "wss://pubsub-edge.twitch.tv/v1";
 const DROPS_TOPIC_PREFIX = "user-drop-events.";
 const NOTIFICATIONS_TOPIC_PREFIX = "onsite-notifications.";
@@ -68,6 +60,14 @@ type UserPubSubOptions = {
   pingIntervalMs?: number;
   authSyncIntervalMs?: number;
   notificationTypes?: Set<string>;
+  /**
+   * Optional log sink. When set, every diagnostic line goes here in addition
+   * to console. Main process wires this to forward to renderer windows via
+   * 'main-log' IPC so logs appear in the DebugView's log panel (where users
+   * can actually see them — main process stdout is invisible in packaged
+   * builds and only available in the dev terminal otherwise).
+   */
+  onLog?: (level: "log" | "warn", message: string, data?: unknown) => void;
 };
 
 const toMessageText = (raw: unknown): string => {
@@ -211,6 +211,7 @@ export class UserPubSub {
   private readonly pingIntervalMs: number;
   private readonly authSyncIntervalMs: number;
   private readonly notificationTypes: Set<string>;
+  private onLog?: UserPubSubOptions["onLog"];
 
   constructor(
     private readonly sessionProvider: () => Promise<SessionData | null>,
@@ -222,6 +223,25 @@ export class UserPubSub {
     this.pingIntervalMs = Math.max(30_000, opts.pingIntervalMs ?? 4 * 60_000);
     this.authSyncIntervalMs = Math.max(5_000, opts.authSyncIntervalMs ?? 20_000);
     this.notificationTypes = opts.notificationTypes ?? DEFAULT_NOTIFICATION_TYPES;
+    this.onLog = opts.onLog;
+  }
+
+  /**
+   * Internal log helpers — emit to both console (main stdout) AND the optional
+   * onLog sink (typically wired to forward to renderer windows so logs show
+   * up in the DebugView, which is the only place users can see them in
+   * packaged builds).
+   */
+  private log(message: string, data?: unknown) {
+    if (data !== undefined) console.log("[userPubSub]", message, data);
+    else console.log("[userPubSub]", message);
+    this.onLog?.("log", message, data);
+  }
+
+  private logWarn(message: string, data?: unknown) {
+    if (data !== undefined) console.warn("[userPubSub]", message, data);
+    else console.warn("[userPubSub]", message);
+    this.onLog?.("warn", message, data);
   }
 
   start() {
@@ -267,6 +287,15 @@ export class UserPubSub {
       events: this.events,
       currentUserId: this.currentUserId ?? undefined,
     };
+  }
+
+  /**
+   * Late-bind the log sink — useful when the consumer (e.g. main process)
+   * needs to set up the sink AFTER UserPubSub is constructed (because the
+   * sink depends on a BrowserWindow that doesn't exist until app.whenReady).
+   */
+  setLogger(onLog: UserPubSubOptions["onLog"] | undefined) {
+    this.onLog = onLog;
   }
 
   onEvent(listener: UserPubSubListener): () => void {
@@ -372,20 +401,20 @@ export class UserPubSub {
     if (!this.running || this.disposed) return;
     if (this.ws && this.connectionState !== "disconnected") return;
     this.connectionState = "connecting";
-    log("ensureConnection: resolving auth context");
+    this.log("ensureConnection: resolving auth context");
     const auth = await this.resolveAuthContext();
     if (!auth) {
       this.connectionState = "disconnected";
       this.listening = false;
       this.state = this.state === "error" ? "error" : "idle";
-      logWarn(
+      this.logWarn(
         "ensureConnection: auth context unavailable — pubsub stays disconnected (reschedule)",
         { lastErrorMessage: this.lastErrorMessage },
       );
       this.scheduleReconnect(this.authSyncIntervalMs);
       return;
     }
-    log("ensureConnection: auth ok, opening websocket", { userId: auth.userId });
+    this.log("ensureConnection: auth ok, opening websocket", { userId: auth.userId });
 
     this.currentAccessToken = auth.accessToken;
     this.currentUserId = auth.userId;
@@ -393,7 +422,7 @@ export class UserPubSub {
     try {
       ws = new NodeWebSocket(this.wsUrl);
     } catch (err) {
-      logWarn("ensureConnection: ws constructor threw", err);
+      this.logWarn("ensureConnection: ws constructor threw", err);
       this.markError(err);
       this.scheduleReconnect();
       return;
@@ -408,7 +437,7 @@ export class UserPubSub {
       this.reconnectAttempts = 0;
       this.lastErrorMessage = undefined;
       this.startPingLoop();
-      log("ws open — sending LISTEN", {
+      this.log("ws open — sending LISTEN", {
         topics: [
           `${DROPS_TOPIC_PREFIX}${auth.userId}`,
           `${NOTIFICATIONS_TOPIC_PREFIX}${auth.userId}`,
@@ -422,13 +451,13 @@ export class UserPubSub {
     });
     ws.on("error", (err) => {
       if (this.ws !== ws) return;
-      logWarn("ws error", err);
+      this.logWarn("ws error", err);
       this.markError(err);
     });
     ws.on("close", (code, reason) => {
       if (this.ws !== ws) return;
       const reasonText = reason instanceof Buffer ? reason.toString("utf-8") : String(reason);
-      log("ws close — scheduling reconnect", { code, reason: reasonText });
+      this.log("ws close — scheduling reconnect", { code, reason: reasonText });
       this.ws = null;
       this.listening = false;
       this.connectionState = "disconnected";
@@ -542,12 +571,12 @@ export class UserPubSub {
       const error = String(envelope.error ?? "").trim();
       if (error.length > 0) {
         this.listening = false;
-        logWarn("LISTEN rejected by Twitch", { error });
+        this.logWarn("LISTEN rejected by Twitch", { error });
         this.markError(`PubSub listen failed: ${error}`);
         this.disconnect("PubSub listen failed", false);
         this.scheduleReconnect(this.reconnectMinMs);
       } else {
-        log("LISTEN accepted — now receiving drop-progress / drop-claim events");
+        this.log("LISTEN accepted — now receiving drop-progress / drop-claim events");
         this.listening = true;
         this.state = "ok";
         this.lastErrorMessage = undefined;
@@ -566,13 +595,13 @@ export class UserPubSub {
       // Unrecognized inner payload — could be a new event type Twitch added.
       // Log the raw topic + message preview so we can spot it without a debugger.
       const preview = (envelope.data?.message ?? "").slice(0, 200);
-      log("MESSAGE ignored (unrecognized payload kind)", {
+      this.log("MESSAGE ignored (unrecognized payload kind)", {
         topic: envelope.data?.topic,
         preview,
       });
       return;
     }
-    log("event received → forwarding to listeners", {
+    this.log("event received → forwarding to listeners", {
       kind: event.kind,
       dropId: event.dropId,
       messageType: event.messageType,
@@ -586,7 +615,7 @@ export class UserPubSub {
       try {
         listener(event);
       } catch (err) {
-        logWarn("listener threw", err);
+        this.logWarn("listener threw", err);
       }
     }
   }
@@ -600,12 +629,12 @@ export class UserPubSub {
 
   private async resolveAuthContext(): Promise<AuthContext | null> {
     const session = await this.sessionProvider().catch((err) => {
-      logWarn("sessionProvider threw", err);
+      this.logWarn("sessionProvider threw", err);
       return null;
     });
     const accessToken = session?.accessToken?.trim();
     if (!accessToken) {
-      logWarn("no access token in session — user not logged in?");
+      this.logWarn("no access token in session — user not logged in?");
       return null;
     }
     let res: Response;
@@ -616,7 +645,7 @@ export class UserPubSub {
         },
       });
     } catch (err) {
-      logWarn("validate fetch threw — network down?", err);
+      this.logWarn("validate fetch threw — network down?", err);
       this.markError(err);
       return null;
     }
@@ -624,12 +653,12 @@ export class UserPubSub {
       // This is the most common silent-kill cause: stored token has expired
       // or been revoked. The auth controller should refresh it; meanwhile we
       // stay disconnected and retry.
-      logWarn("validate returned 401 — access token expired/revoked, pubsub will retry");
+      this.logWarn("validate returned 401 — access token expired/revoked, pubsub will retry");
       this.markError("Access token expired (401 from validate)");
       return null;
     }
     if (!res.ok) {
-      logWarn("validate returned non-ok", { status: res.status });
+      this.logWarn("validate returned non-ok", { status: res.status });
       this.markError(`Validate failed (${res.status})`);
       return null;
     }
@@ -637,13 +666,13 @@ export class UserPubSub {
     try {
       data = (await res.json()) as { user_id?: string };
     } catch (err) {
-      logWarn("validate response not JSON", err);
+      this.logWarn("validate response not JSON", err);
       this.markError(err);
       return null;
     }
     const userId = data.user_id?.trim();
     if (!userId) {
-      logWarn("validate response missing user_id");
+      this.logWarn("validate response missing user_id");
       return null;
     }
     return { accessToken, userId };
