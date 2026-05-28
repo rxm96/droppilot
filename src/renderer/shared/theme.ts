@@ -1,9 +1,17 @@
 import { useEffect, useState } from "react";
+import {
+  DEFAULT_FONT_PAIR_ID,
+  ensureFontPairLoaded,
+  getFontPair,
+  isValidFontPairId,
+  type FontPairId,
+} from "./fontPairs";
 
 export type ThemePreference = "light" | "dark";
 
 const STORAGE_KEY = "droppilot:theme";
 const ACCENT_STORAGE_KEY = "droppilot:accent";
+const FONT_PAIR_STORAGE_KEY = "droppilot:fontPair";
 const DARK_CLASS = "dark";
 
 /**
@@ -139,5 +147,53 @@ export function useAccent() {
   return {
     accent,
     setAccent,
+  };
+}
+
+// =============================================================================
+// Font pair — overrides --font-sans + --font-mono with one of FONT_PAIRS
+// =============================================================================
+
+export function getStoredFontPair(): FontPairId {
+  if (typeof window === "undefined") return DEFAULT_FONT_PAIR_ID;
+  const stored = window.localStorage.getItem(FONT_PAIR_STORAGE_KEY);
+  if (isValidFontPairId(stored)) return stored;
+  return DEFAULT_FONT_PAIR_ID;
+}
+
+function setStoredFontPair(value: FontPairId) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(FONT_PAIR_STORAGE_KEY, value);
+}
+
+/**
+ * Applies a font pair to `:root` via inline custom properties + lazy-loads
+ * the Google Fonts stylesheet for the pair (no-op for the default + system
+ * pairs which need no network).
+ */
+export function applyFontPair(id: FontPairId) {
+  if (typeof document === "undefined") return;
+  const pair = getFontPair(id);
+  ensureFontPairLoaded(pair);
+  const root = document.documentElement;
+  root.style.setProperty("--font-sans", pair.sans);
+  root.style.setProperty("--font-mono", pair.mono);
+}
+
+export function initFontPair() {
+  applyFontPair(getStoredFontPair());
+}
+
+export function useFontPair() {
+  const [fontPair, setFontPair] = useState<FontPairId>(() => getStoredFontPair());
+
+  useEffect(() => {
+    applyFontPair(fontPair);
+    setStoredFontPair(fontPair);
+  }, [fontPair]);
+
+  return {
+    fontPair,
+    setFontPair,
   };
 }
