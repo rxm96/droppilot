@@ -47,7 +47,7 @@ export function ChannelGridPanel({
     <div className="rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)]">
       <div className="flex items-center justify-between px-5 py-4 border-b border-[color:var(--dp-border-soft)]">
         <div className="flex items-center gap-3">
-          <SectionLabel inline>live channels</SectionLabel>
+          <SectionLabel inline>{t("control.channelGrid.header")}</SectionLabel>
           <span className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
             · {channels.filter((c) => !c.exiting).length}
           </span>
@@ -57,14 +57,14 @@ export function ChannelGridPanel({
           size="dp-sm"
           onClick={onRefresh}
           disabled={refreshDisabled}
-          title="Refresh channel list"
+          title={t("control.channelGrid.refreshTitle")}
         >
           <RotateCw
             size={11}
             strokeWidth={1.8}
             className={channelsRefreshing ? "animate-spin" : undefined}
           />
-          refresh
+          {t("control.channelGrid.refresh")}
         </Button>
       </div>
 
@@ -92,7 +92,7 @@ export function ChannelGridPanel({
           <div className="text-center py-8 font-mono text-[11px] text-[color:var(--dp-text-dimmer)]">
             {targetGame
               ? t("control.channelsEmpty")
-              : "select a target game in Priorities to see live channels"}
+              : t("control.channelGrid.noTarget")}
           </div>
         ) : (
           <ul
@@ -148,7 +148,7 @@ export function ChannelGridPanel({
                       {isWatching && (
                         <span className="absolute top-1 left-1">
                           <Pill tone="accent" dot>
-                            watching
+                            {t("control.channelGrid.watchingPill")}
                           </Pill>
                         </span>
                       )}

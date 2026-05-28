@@ -42,7 +42,7 @@ export function CampaignsPanel({
     return (
       <div className="rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] px-5 py-8 text-center">
         <p className="font-mono text-[11px] text-[color:var(--dp-text-dimmer)]">
-          no active campaigns
+          {t("control.campaignsPanel.empty")}
         </p>
       </div>
     );
@@ -53,7 +53,7 @@ export function CampaignsPanel({
   return (
     <div className="rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)]">
       <div className="flex items-center gap-3 px-5 py-4 border-b border-[color:var(--dp-border-soft)]">
-        <SectionLabel inline>campaigns</SectionLabel>
+        <SectionLabel inline>{t("control.campaignsPanel.header")}</SectionLabel>
         <span className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
           · {groups.length}
         </span>
@@ -109,12 +109,12 @@ export function CampaignsPanel({
                 : "accent"
               : "dim";
           const statusText = isClaimed
-            ? "claimed"
+            ? t("control.campaignsPanel.status.claimed")
             : drop.status === "progress"
               ? drop.blocked
-                ? "blocked"
-                : "live"
-              : "queued";
+                ? t("control.campaignsPanel.status.blocked")
+                : t("control.campaignsPanel.status.live")
+              : t("control.campaignsPanel.status.queued");
 
           return (
             <li
@@ -159,10 +159,10 @@ export function CampaignsPanel({
       <div className="px-5 py-3 border-t border-[color:var(--dp-border-soft)] flex items-center justify-between font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
         <span>
           {formatHourMinute(activeGroup.totalEarned)} /{" "}
-          {formatHourMinute(activeGroup.totalRequired)} total
+          {formatHourMinute(activeGroup.totalRequired)} {t("control.campaignsPanel.footerTotal")}
         </span>
         <span>
-          {activeGroup.drops.length} drop{activeGroup.drops.length === 1 ? "" : "s"}
+          {t(activeGroup.drops.length === 1 ? "control.campaignsPanel.footerDrops.one" : "control.campaignsPanel.footerDrops.other", { count: activeGroup.drops.length })}
         </span>
       </div>
     </div>

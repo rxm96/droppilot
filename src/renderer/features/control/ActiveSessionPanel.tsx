@@ -48,10 +48,10 @@ export function ActiveSessionPanel({
   return (
     <div className="rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)]">
       <div className="flex items-center justify-between px-5 py-4 border-b border-[color:var(--dp-border-soft)]">
-        <SectionLabel inline>{isWatching ? "now watching" : "no active session"}</SectionLabel>
+        <SectionLabel inline>{isWatching ? t("control.activeSession.nowWatching") : t("control.activeSession.noActiveSession")}</SectionLabel>
         {lastWatchOk && (
           <div className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
-            last ping · {formatRelative(lastWatchOk)}
+            {t("control.activeSession.lastPing")} · {formatRelative(lastWatchOk)}
           </div>
         )}
       </div>
@@ -69,7 +69,7 @@ export function ActiveSessionPanel({
               />
             ) : (
               <div className="flex items-center justify-center h-full font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
-                {isWatching ? "loading…" : "no stream"}
+                {isWatching ? t("control.activeSession.loading") : t("control.activeSession.noStream")}
               </div>
             )}
           </div>
@@ -89,16 +89,16 @@ export function ActiveSessionPanel({
             {isWatching ? (
               <div className="flex items-center gap-2">
                 <Pill tone="accent" dot>
-                  live
+                  {t("control.activeSession.live")}
                 </Pill>
                 {viewers > 0 && (
                   <span className="font-mono text-[11px] text-[color:var(--dp-text-dim)] tabular-nums">
-                    {viewers.toLocaleString()} viewers
+                    {viewers.toLocaleString()} {t("control.activeSession.viewers")}
                   </span>
                 )}
               </div>
             ) : (
-              <Pill tone="dim">paused</Pill>
+              <Pill tone="dim">{t("control.activeSession.paused")}</Pill>
             )}
             {activeLoginMismatch && (
               <div className="mt-2 font-mono text-[10px] text-[color:var(--dp-signal-warn)]">
@@ -111,7 +111,7 @@ export function ActiveSessionPanel({
         {/* Active drop */}
         {activeDropTitle ? (
           <div className="border-t border-[color:var(--dp-border-soft)] pt-4">
-            <SectionLabel>active drop</SectionLabel>
+            <SectionLabel>{t("control.activeSession.activeDrop")}</SectionLabel>
             <div className="mt-2 text-[15px] font-medium text-[color:var(--dp-text)] mb-2">
               {activeDropTitle}
             </div>
@@ -131,15 +131,21 @@ export function ActiveSessionPanel({
               </span>
             </div>
             <div className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
-              {formatHourMinute(activeDropEarnedMinutes)} watched ·{" "}
-              {activeDropRequiredMinutes > 0 ? formatHourMinute(activeDropRequiredMinutes) : "—"}{" "}
-              required
-              {activeEtaText && ` · eta ${activeEtaText}`}
+              {activeEtaText
+                ? t("control.activeSession.watchedRequiredEta", {
+                    watched: formatHourMinute(activeDropEarnedMinutes),
+                    required: activeDropRequiredMinutes > 0 ? formatHourMinute(activeDropRequiredMinutes) : "—",
+                    eta: activeEtaText,
+                  })
+                : t("control.activeSession.watchedRequired", {
+                    watched: formatHourMinute(activeDropEarnedMinutes),
+                    required: activeDropRequiredMinutes > 0 ? formatHourMinute(activeDropRequiredMinutes) : "—",
+                  })}
             </div>
           </div>
         ) : (
           <div className="border-t border-[color:var(--dp-border-soft)] pt-4 font-mono text-[11px] text-[color:var(--dp-text-dimmer)]">
-            {isWatching ? "no farmable drop on this channel" : "engine idle"}
+            {isWatching ? t("control.activeSession.noFarmable") : t("control.activeSession.engineIdle")}
           </div>
         )}
       </div>
