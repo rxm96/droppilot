@@ -54,6 +54,10 @@ type SettingsProps = {
   setEnableBadgesEmotes: (val: boolean) => void;
   allowUnlinkedGames: boolean;
   setAllowUnlinkedGames: (val: boolean) => void;
+  closeToTray: boolean;
+  setCloseToTray: (val: boolean) => void;
+  minimizeToTray: boolean;
+  setMinimizeToTray: (val: boolean) => void;
   sendTestAlert: () => void;
   refreshMinMs: number;
   refreshMaxMs: number;
@@ -154,6 +158,10 @@ export function SettingsView(props: SettingsProps) {
               refreshMaxMs={props.refreshMaxMs}
               setRefreshIntervals={props.setRefreshIntervals}
               resetAutomation={props.resetAutomation}
+              closeToTray={props.closeToTray}
+              setCloseToTray={props.setCloseToTray}
+              minimizeToTray={props.minimizeToTray}
+              setMinimizeToTray={props.setMinimizeToTray}
             />
           )}
           {active === "appearance" && (

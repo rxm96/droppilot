@@ -22,6 +22,10 @@ export type EngineSectionProps = {
   refreshMaxMs: number;
   setRefreshIntervals: (minMs: number, maxMs: number) => void;
   resetAutomation: () => void;
+  closeToTray?: boolean;
+  setCloseToTray?: (val: boolean) => void;
+  minimizeToTray?: boolean;
+  setMinimizeToTray?: (val: boolean) => void;
 };
 
 export function EngineSection(props: EngineSectionProps) {
@@ -38,6 +42,28 @@ export function EngineSection(props: EngineSectionProps) {
               <SettingsToggle
                 checked={!!props.autoStart}
                 onChange={(v) => props.setAutoStart?.(v)}
+              />
+            }
+          />
+          <SettingRow
+            divided
+            label={t("settings.row.closeToTray.label")}
+            description={t("settings.row.closeToTray.description")}
+            control={
+              <SettingsToggle
+                checked={!!props.closeToTray}
+                onChange={(v) => props.setCloseToTray?.(v)}
+              />
+            }
+          />
+          <SettingRow
+            divided
+            label={t("settings.row.minimizeToTray.label")}
+            description={t("settings.row.minimizeToTray.description")}
+            control={
+              <SettingsToggle
+                checked={!!props.minimizeToTray}
+                onChange={(v) => props.setMinimizeToTray?.(v)}
               />
             }
           />
