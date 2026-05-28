@@ -11,14 +11,22 @@ import { Pill } from "@renderer/shared/components/ui/pill";
 import type { InventoryItem } from "@renderer/shared/types";
 import { formatHourMinute, formatPercent, padRank } from "./formatters";
 import { useI18n } from "@renderer/shared/i18n";
+import { cn } from "@renderer/shared/lib/utils";
 
 export type QueuePanelProps = {
   items: InventoryItem[];
   onManageClick?: () => void;
   maxRows?: number;
+  /**
+   * The currently-watched drop. When set, the row whose `id` matches uses
+   * `earnedMinutes` (live-ticking, from useTargetDrops virtualEarned) instead
+   * of the static inventory value, and renders a distinct "watching" pill +
+   * accent border-l so the user can see live progress in the queue list.
+   */
+  activeDrop?: { id: string; earnedMinutes: number } | null;
 };
 
-export function QueuePanel({ items, onManageClick, maxRows = 8 }: QueuePanelProps) {
+export function QueuePanel({ items, onManageClick, maxRows = 8, activeDrop }: QueuePanelProps) {
   const { t } = useI18n();
   const queued = React.useMemo(() => {
     return items
@@ -45,7 +53,7 @@ export function QueuePanel({ items, onManageClick, maxRows = 8 }: QueuePanelProp
             {t("queue.empty")}
           </div>
         ) : (
-          <Table columns="40px 2fr 1fr 1fr 100px">
+          <Table columns="40px 2fr 1fr 1fr 110px">
             <TableHead>
               <span>#</span>
               <span>{t("queue.table.dropGame")}</span>
@@ -54,15 +62,31 @@ export function QueuePanel({ items, onManageClick, maxRows = 8 }: QueuePanelProp
               <span>{t("queue.table.status")}</span>
             </TableHead>
             {queued.map((item, idx) => {
-              const watched = formatHourMinute(item.earnedMinutes);
+              const isActive = !!(activeDrop && activeDrop.id === item.id);
+              // Use the live earnedMinutes from activeDrop (ticks every 1s
+              // via useTargetDrops) only for the row the user is actively
+              // watching. Other rows show their last-known inventory value.
+              const earnedDisplay = isActive ? activeDrop.earnedMinutes : item.earnedMinutes;
+              const watched = formatHourMinute(earnedDisplay);
               const progressPct =
                 item.requiredMinutes > 0
-                  ? Math.round((item.earnedMinutes / item.requiredMinutes) * 100)
+                  ? Math.round((earnedDisplay / item.requiredMinutes) * 100)
                   : 0;
-              const status = item.status === "progress" ? "live" : "queued";
-              const tone = status === "live" ? "accent" : "dim";
+              const statusKey = isActive
+                ? "watching"
+                : item.status === "progress"
+                  ? "live"
+                  : "queued";
+              const tone =
+                statusKey === "watching" ? "ok" : statusKey === "live" ? "accent" : "dim";
               return (
-                <TableRow key={item.id}>
+                <TableRow
+                  key={item.id}
+                  className={cn(
+                    isActive &&
+                      "bg-[color:var(--dp-accent-soft)] border-l-2 border-l-[color:var(--dp-accent)]",
+                  )}
+                >
                   <TableCell mono dim>
                     {padRank(idx + 1)}
                   </TableCell>
@@ -79,8 +103,12 @@ export function QueuePanel({ items, onManageClick, maxRows = 8 }: QueuePanelProp
                     {formatPercent(progressPct)}
                   </TableCell>
                   <TableCell>
-                    <Pill tone={tone} dot={status === "live"}>
-                      {status === "live" ? t("queue.pill.live") : t("queue.pill.queued")}
+                    <Pill tone={tone} dot={statusKey === "live" || statusKey === "watching"}>
+                      {statusKey === "watching"
+                        ? t("queue.pill.watching")
+                        : statusKey === "live"
+                          ? t("queue.pill.live")
+                          : t("queue.pill.queued")}
                     </Pill>
                   </TableCell>
                 </TableRow>

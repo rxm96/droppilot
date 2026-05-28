@@ -18,6 +18,8 @@ type OverviewProps = {
   activeDropTitle?: string;
   activeDropRemainingMinutes?: number;
   activeDropEta?: number | null;
+  /** Currently-watched drop snapshot (id + live-ticking earnedMinutes). Passed through to QueuePanel so its active row reflects live progress. */
+  activeDrop?: { id: string; earnedMinutes: number } | null;
   targetProgress: number;
   totalDrops: number;
   claimedDrops: number;
@@ -56,6 +58,7 @@ export function OverviewView({
   activeDropTitle,
   activeDropRemainingMinutes,
   activeDropEta,
+  activeDrop,
   targetProgress,
   totalDrops,
   claimedDrops,
@@ -107,7 +110,7 @@ export function OverviewView({
           onClaimNow={onClaimNow}
           claimStatus={claimStatus}
         />
-        <QueuePanel items={items} />
+        <QueuePanel items={items} activeDrop={activeDrop ?? null} />
       </div>
       <div className="flex flex-col gap-4">
         <ActivityPanel />

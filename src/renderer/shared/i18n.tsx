@@ -832,12 +832,22 @@ const translations: Translations = {
     "queue.table.status": "status",
     "queue.pill.live": "live",
     "queue.pill.queued": "queued",
+    "queue.pill.watching": "watching",
 
-    // activity.* — new namespace, ActivityPanel
+    // activity.* — Overview activity feed (Phase 18)
     "activity.header": "recent activity",
-    "activity.empty": "no claims yet",
+    "activity.empty": "nothing yet — events show up here as they happen",
     "activity.claimedPrefix": "Claimed",
     "activity.recently": "recently",
+    "activity.event.dropClaimed": "Claimed",
+    "activity.event.autoSwitch": "Switched: {from} → {to}",
+    "activity.event.autoSwitch.reason.offline": "previous stream went offline",
+    "activity.event.autoSwitch.reason.priority": "higher-priority game live",
+    "activity.event.newDrops.one": "{count} new drop available",
+    "activity.event.newDrops.other": "{count} new drops available",
+    "activity.event.watchError": "Watch error",
+    "activity.event.watchErrorWithMessage": "Watch error: {message}",
+    "activity.event.watchStarted": "Started watching",
 
     // engine.* — new namespace, EnginePanel (Overview)
     "engine.header": "engine",
@@ -1777,12 +1787,22 @@ const translations: Translations = {
     "queue.table.status": "status",
     "queue.pill.live": "live",
     "queue.pill.queued": "queue",
+    "queue.pill.watching": "läuft",
 
-    // activity.* — new namespace, ActivityPanel
+    // activity.* — Overview activity feed (Phase 18)
     "activity.header": "letzte aktivität",
-    "activity.empty": "noch keine claims",
+    "activity.empty": "noch nichts — ereignisse erscheinen hier wenn sie passieren",
     "activity.claimedPrefix": "Eingesammelt:",
     "activity.recently": "vor kurzem",
+    "activity.event.dropClaimed": "Eingesammelt:",
+    "activity.event.autoSwitch": "Gewechselt: {from} → {to}",
+    "activity.event.autoSwitch.reason.offline": "Vorheriger Stream offline",
+    "activity.event.autoSwitch.reason.priority": "Höher priorisiertes Spiel live",
+    "activity.event.newDrops.one": "{count} neuer Drop verfügbar",
+    "activity.event.newDrops.other": "{count} neue Drops verfügbar",
+    "activity.event.watchError": "Watch-Fehler",
+    "activity.event.watchErrorWithMessage": "Watch-Fehler: {message}",
+    "activity.event.watchStarted": "Schaut jetzt:",
 
     // engine.* — new namespace, EnginePanel (Overview)
     "engine.header": "engine",

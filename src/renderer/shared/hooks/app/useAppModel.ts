@@ -1355,6 +1355,12 @@ export function useAppModel() {
     activeDropTitle: activeDropInfo?.title,
     activeDropRemainingMinutes: activeDropInfo?.remainingMinutes,
     activeDropEta: activeDropInfo?.eta,
+    // QueuePanel uses this to render the live-ticking progress on the
+    // actively-watched row. virtualEarned is updated every 1s by useTargetDrops
+    // while watching the target game (Phase 12 fix).
+    activeDrop: activeDropInfo
+      ? { id: activeDropInfo.id, earnedMinutes: activeDropInfo.virtualEarned }
+      : null,
     targetProgress,
     totalDrops,
     claimedDrops,

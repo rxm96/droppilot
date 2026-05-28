@@ -64,7 +64,6 @@ function notify() {
       cb();
     } catch (err) {
       // Swallow subscriber errors so a misbehaving one can't block others.
-      // eslint-disable-next-line no-console
       console.warn("activityFeed: subscriber error", err);
     }
   }
