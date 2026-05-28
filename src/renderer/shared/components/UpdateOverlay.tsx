@@ -209,6 +209,7 @@ export function UpdateOverlay({ updateStatus, onInstallUpdate }: Props) {
   return (
     <div className="update-overlay" role="status" aria-live="polite">
       <div className={cardClass}>
+        <span className="update-overlay-eyebrow">{t("updateOverlay.eyebrow")}</span>
         <div className={`update-overlay-orb ${orbClass}`} aria-hidden="true" />
         <h2 className="update-overlay-title">{title}</h2>
         <p className="meta">{displaySubtitle}</p>
