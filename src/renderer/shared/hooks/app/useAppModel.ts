@@ -1392,10 +1392,9 @@ export function useAppModel() {
       drop.status !== "claimed" &&
       (drop.status === "locked" || drop.blocked === true || drop.excluded),
   ).length;
+  const statsProps = { stats, resetStats };
   const overviewProps = {
     inventory,
-    stats,
-    resetStats,
     activeGame: displayTargetGame,
     activeDropTitle: activeDropInfo?.title,
     activeDropRemainingMinutes: activeDropInfo?.remainingMinutes,
@@ -1607,6 +1606,7 @@ export function useAppModel() {
     updateOverlayProps,
     navProps,
     overviewProps,
+    statsProps,
     inventoryProps,
     priorityProps,
     settingsProps,

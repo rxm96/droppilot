@@ -1,9 +1,4 @@
-import type {
-  ChannelTrackerStatus,
-  ErrorInfo,
-  InventoryState,
-  StatsState,
-} from "@renderer/shared/types";
+import type { ChannelTrackerStatus, ErrorInfo, InventoryState } from "@renderer/shared/types";
 import { HeroPanel } from "./HeroPanel";
 import { QueuePanel } from "./QueuePanel";
 import { ActivityPanel } from "./ActivityPanel";
@@ -12,8 +7,6 @@ import { AttentionStrip } from "./AttentionStrip";
 
 type OverviewProps = {
   inventory: InventoryState;
-  stats: StatsState;
-  resetStats: () => void;
   activeGame: string;
   activeDropTitle?: string;
   activeDropRemainingMinutes?: number;

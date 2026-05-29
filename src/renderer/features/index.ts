@@ -4,3 +4,4 @@ export { InventoryView } from "./inventory";
 export { OverviewView } from "./overview";
 export { PriorityView } from "./priority";
 export { SettingsView } from "./settings";
+export { StatsView } from "./stats";

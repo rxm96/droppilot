@@ -5,6 +5,7 @@
 export {
   // Navigation
   LayoutGrid,
+  LineChart,
   Package,
   Play,
   ListOrdered,

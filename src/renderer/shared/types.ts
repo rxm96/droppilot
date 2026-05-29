@@ -80,7 +80,14 @@ export type FilterKey =
   | "expired"
   | "excluded";
 
-export type View = "overview" | "inventory" | "control" | "priorities" | "settings" | "debug";
+export type View =
+  | "overview"
+  | "stats"
+  | "inventory"
+  | "control"
+  | "priorities"
+  | "settings"
+  | "debug";
 
 export type ChannelEntry = {
   id: string;

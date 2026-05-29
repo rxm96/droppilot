@@ -41,6 +41,7 @@ function AppShell({ model }: { model: Model }) {
     titleBarProps,
     navProps,
     overviewProps,
+    statsProps,
     inventoryProps,
     priorityProps,
     settingsProps,
@@ -82,6 +83,7 @@ function AppShell({ model }: { model: Model }) {
   const navItems: AppNavItem[] = React.useMemo(() => {
     const base: AppNavItem[] = [
       { key: "overview", label: t("nav.overview") },
+      { key: "stats", label: t("nav.stats") },
       { key: "inventory", label: t("nav.inventory") },
       { key: "control", label: t("nav.control") },
       { key: "priorities", label: t("nav.priorities") },
@@ -194,6 +196,7 @@ function AppShell({ model }: { model: Model }) {
         <AppContent
           navProps={navProps}
           overviewProps={overviewPropsExtended}
+          statsProps={statsProps}
           inventoryProps={inventoryProps}
           priorityProps={priorityProps}
           settingsProps={settingsProps}
