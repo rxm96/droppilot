@@ -12,7 +12,10 @@ export function localDateKey(ts: number): string {
 }
 
 const KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
-const clampInt = (v: unknown): number => Math.max(0, Math.floor(Number(v) || 0));
+const clampInt = (v: unknown): number => {
+  const n = Math.floor(Number(v) || 0);
+  return Number.isFinite(n) ? Math.max(0, n) : 0;
+};
 
 export function normalizeDaily(input: unknown): DailyMap {
   if (!input || typeof input !== "object") return {};

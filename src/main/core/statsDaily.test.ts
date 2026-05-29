@@ -26,6 +26,12 @@ describe("localDateKey", () => {
     const ts = new Date(2024, 0, 1, 0, 0, 0).getTime();
     expect(localDateKey(ts)).toBe(localDateKey(ts));
   });
+
+  it("returns the correct key for a local-midnight Date", () => {
+    const d = new Date(2026, 4, 15, 0, 0, 0); // May 15 2026, midnight local
+    const expected = expectedKey(d);
+    expect(localDateKey(d.getTime())).toBe(expected);
+  });
 });
 
 describe("addToDaily", () => {
@@ -65,6 +71,13 @@ describe("addToDaily", () => {
     const second = addToDaily(first, ts2, { minutes: 10 });
     expect(Object.keys(second)).toHaveLength(2);
     expect(second[localDateKey(ts1)]).toEqual({ minutes: 20, claims: 0 });
+  });
+
+  it("clamps Infinity minutes to 0", () => {
+    const ts = new Date(2026, 4, 29, 10, 0, 0).getTime(); // 2026-05-29 local
+    const result = addToDaily({}, ts, { minutes: Infinity });
+    const key = localDateKey(ts);
+    expect(result[key]).toEqual({ minutes: 0, claims: 0 });
   });
 });
 
@@ -112,6 +125,22 @@ describe("pruneDaily", () => {
     expect(Object.keys(pruneDaily(map, now, 5))).toHaveLength(0);
     // With 15-day retention it should be kept
     expect(Object.keys(pruneDaily(map, now, 15))).toHaveLength(1);
+  });
+
+  it("hard-coded boundary: drops 2026-05-18, keeps 2026-05-19 (cutoff) and 2026-05-29 (now)", () => {
+    // now = 2026-05-29 local noon; retentionDays = 10 → cutoff = 2026-05-19
+    // Computed by hand: 29 - 10 = 19, so "2026-05-19" is kept, "2026-05-18" is dropped.
+    const now = new Date(2026, 4, 29, 12, 0, 0).getTime(); // May 29 2026, noon local
+    const map: DailyMap = {
+      "2026-05-18": { minutes: 10, claims: 1 }, // 11 days before now → dropped
+      "2026-05-19": { minutes: 20, claims: 2 }, // exactly 10 days before now → kept
+      "2026-05-29": { minutes: 30, claims: 3 }, // today → kept
+    };
+    const pruned = pruneDaily(map, now, 10);
+    expect(Object.keys(pruned).sort()).toEqual(["2026-05-19", "2026-05-29"]);
+    expect(pruned["2026-05-18"]).toBeUndefined();
+    expect(pruned["2026-05-19"]).toEqual({ minutes: 20, claims: 2 });
+    expect(pruned["2026-05-29"]).toEqual({ minutes: 30, claims: 3 });
   });
 });
 
@@ -170,5 +199,10 @@ describe("normalizeDaily", () => {
     });
     expect(result["2025-06-15"]).toEqual({ minutes: 45, claims: 2 });
     expect(result["2025-06-16"]).toEqual({ minutes: 0, claims: 1 });
+  });
+
+  it("clamps Infinity minutes to 0 and keeps entry when claims > 0", () => {
+    const result = normalizeDaily({ "2026-05-29": { minutes: Infinity, claims: 1 } });
+    expect(result["2026-05-29"]).toEqual({ minutes: 0, claims: 1 });
   });
 });
