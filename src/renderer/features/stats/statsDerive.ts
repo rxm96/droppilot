@@ -10,6 +10,12 @@ function localDateKey(ts: number): string {
 
 const DAY_MS = 86_400_000;
 
+const minusOneDay = (ts: number): number => {
+  const d = new Date(ts);
+  d.setDate(d.getDate() - 1);
+  return d.getTime();
+};
+
 /**
  * Compute the current streak and the longest streak from a daily activity map.
  *
@@ -31,12 +37,7 @@ export function computeStreaks(
 
   // --- current streak ---
   const todayKey = localDateKey(now);
-  let startTs = isActive(todayKey) ? now : now - DAY_MS;
-
-  // If neither today nor yesterday are active, current = 0
-  if (!isActive(localDateKey(startTs))) {
-    // current streak is 0 (fall through to longest calculation)
-  }
+  let startTs = isActive(todayKey) ? now : minusOneDay(now);
 
   let current = 0;
   let cursor = startTs;
@@ -44,7 +45,7 @@ export function computeStreaks(
     const key = localDateKey(cursor);
     if (isActive(key)) {
       current++;
-      cursor -= DAY_MS;
+      cursor = minusOneDay(cursor);
     } else {
       break;
     }
