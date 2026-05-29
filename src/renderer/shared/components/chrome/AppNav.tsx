@@ -1,12 +1,28 @@
 import * as React from "react";
 import type { LucideIcon } from "lucide-react";
-import { LayoutGrid, Package, Play, ListOrdered, Settings, Bug } from "@renderer/shared/lib/icons";
+import {
+  LayoutGrid,
+  LineChart,
+  Package,
+  Play,
+  ListOrdered,
+  Settings,
+  Bug,
+} from "@renderer/shared/lib/icons";
 import { cn } from "@renderer/shared/lib/utils";
 
-export type AppNavView = "overview" | "inventory" | "control" | "priorities" | "settings" | "debug";
+export type AppNavView =
+  | "overview"
+  | "stats"
+  | "inventory"
+  | "control"
+  | "priorities"
+  | "settings"
+  | "debug";
 
 const ICON_MAP: Record<AppNavView, LucideIcon> = {
   overview: LayoutGrid,
+  stats: LineChart,
   inventory: Package,
   control: Play,
   priorities: ListOrdered,

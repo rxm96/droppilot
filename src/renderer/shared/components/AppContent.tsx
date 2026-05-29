@@ -7,6 +7,7 @@ import {
   OverviewView,
   PriorityView,
   SettingsView,
+  StatsView,
 } from "@renderer/features";
 import type { View } from "@renderer/shared/types";
 import { isPerfEnabled, recordRender } from "@renderer/shared/utils/perfStore";
@@ -19,6 +20,7 @@ type NavProps = {
 type AppContentProps = {
   navProps: NavProps;
   overviewProps: ComponentProps<typeof OverviewView>;
+  statsProps: ComponentProps<typeof StatsView>;
   inventoryProps: ComponentProps<typeof InventoryView>;
   priorityProps: ComponentProps<typeof PriorityView>;
   settingsProps: ComponentProps<typeof SettingsView>;
@@ -30,6 +32,7 @@ type AppContentProps = {
 export function AppContent({
   navProps,
   overviewProps,
+  statsProps,
   inventoryProps,
   priorityProps,
   settingsProps,
@@ -53,6 +56,7 @@ export function AppContent({
   return (
     <main className="px-8 py-7 max-w-[1640px] mx-auto">
       {view === "overview" && renderWithPerf("OverviewView", <OverviewView {...overviewProps} />)}
+      {view === "stats" && renderWithPerf("StatsView", <StatsView {...statsProps} />)}
       {view === "inventory" &&
         renderWithPerf("InventoryView", <InventoryView {...inventoryProps} />)}
       {view === "priorities" && renderWithPerf("PriorityView", <PriorityView {...priorityProps} />)}

@@ -1,6 +1,7 @@
 import { app } from "electron";
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
+import { DailyMap, normalizeDaily, addToDaily, pruneDaily } from "./statsDaily";
 
 export type StatsData = {
   totalMinutes: number;
@@ -11,6 +12,7 @@ export type StatsData = {
   lastDropTitle?: string;
   lastGame?: string;
   claimsByGame: Record<string, number>;
+  daily: DailyMap;
 };
 
 const statsFile = join(app.getPath("userData"), "stats.json");
@@ -20,6 +22,7 @@ const defaultStats: StatsData = {
   totalClaims: 0,
   lastReset: Date.now(),
   claimsByGame: {},
+  daily: {},
 };
 
 function normalizeClaimsByGame(input: unknown): Record<string, number> {
@@ -52,6 +55,7 @@ export async function loadStats(): Promise<StatsData> {
       totalClaims: Math.max(0, Number(parsed?.totalClaims) || 0),
       lastReset: typeof parsed?.lastReset === "number" ? parsed.lastReset : defaultStats.lastReset,
       claimsByGame: normalizeClaimsByGame((parsed as StatsData)?.claimsByGame),
+      daily: normalizeDaily((parsed as StatsData)?.daily),
     };
   } catch {
     return defaultStats;
@@ -70,6 +74,7 @@ export async function saveStats(data: Partial<StatsData>): Promise<StatsData> {
       data.claimsByGame !== undefined
         ? normalizeClaimsByGame(data.claimsByGame)
         : current.claimsByGame,
+    daily: data.daily !== undefined ? normalizeDaily(data.daily) : current.daily,
   };
   return writeStats(next);
 }
@@ -89,21 +94,23 @@ export async function bumpStats(delta: {
       nextClaimsByGame[key] = Math.max(0, (nextClaimsByGame[key] ?? 0) + claims);
     }
   }
+  const now = Date.now();
   const next: StatsData = {
     ...current,
     totalMinutes: Math.max(0, current.totalMinutes + Math.max(0, delta.minutes ?? 0)),
     totalClaims: Math.max(0, current.totalClaims + claims),
-    lastMinuteAt: delta.minutes && delta.minutes > 0 ? Date.now() : current.lastMinuteAt,
-    lastClaimAt: claims > 0 ? Date.now() : current.lastClaimAt,
+    lastMinuteAt: delta.minutes && delta.minutes > 0 ? now : current.lastMinuteAt,
+    lastClaimAt: claims > 0 ? now : current.lastClaimAt,
     lastDropTitle: delta.lastDropTitle ?? current.lastDropTitle,
     lastGame: delta.lastGame ?? current.lastGame,
     lastReset: current.lastReset,
     claimsByGame: nextClaimsByGame,
+    daily: pruneDaily(addToDaily(current.daily, now, { minutes: delta.minutes, claims }), now),
   };
   return writeStats(next);
 }
 
 export async function resetStats(): Promise<StatsData> {
-  const base: StatsData = { ...defaultStats, lastReset: Date.now(), claimsByGame: {} };
+  const base: StatsData = { ...defaultStats, lastReset: Date.now(), claimsByGame: {}, daily: {} };
   return writeStats(base);
 }

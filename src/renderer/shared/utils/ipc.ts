@@ -282,5 +282,13 @@ export const isStatsData = (value: unknown): value is StatsData => {
   if (!isFiniteNumber(value.lastReset)) return false;
   if (!isRecord(value.claimsByGame)) return false;
   const claimsByGame = value.claimsByGame as UnknownRecord;
-  return Object.values(claimsByGame).every((entry) => isFiniteNumber(entry));
+  if (!Object.values(claimsByGame).every((entry) => isFiniteNumber(entry))) return false;
+  if (!isRecord(value.daily)) return false;
+  const daily = value.daily as UnknownRecord;
+  return Object.values(daily).every(
+    (entry) =>
+      isRecord(entry) &&
+      isFiniteNumber(entry.minutes) &&
+      isFiniteNumber(entry.claims),
+  );
 };

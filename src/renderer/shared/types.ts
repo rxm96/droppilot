@@ -80,7 +80,14 @@ export type FilterKey =
   | "expired"
   | "excluded";
 
-export type View = "overview" | "inventory" | "control" | "priorities" | "settings" | "debug";
+export type View =
+  | "overview"
+  | "stats"
+  | "inventory"
+  | "control"
+  | "priorities"
+  | "settings"
+  | "debug";
 
 export type ChannelEntry = {
   id: string;
@@ -202,6 +209,7 @@ export type StatsData = {
   lastDropTitle?: string;
   lastGame?: string;
   claimsByGame: Record<string, number>;
+  daily: Record<string, { minutes: number; claims: number }>;
 };
 
 export type StatsState =
