@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ErrorInfo, WatchingState } from "@renderer/shared/types";
 import { errorInfoFromIpc, errorInfoFromUnknown } from "@renderer/shared/utils/errors";
 import {
@@ -25,6 +25,26 @@ type Params = {
   demoMode?: boolean;
 };
 
+/**
+ * Stable identity of the stream currently being watched, used as the watch-ping
+ * effect's dependency. Keying off this primitive (instead of the `watching`
+ * object) ensures the ping loop only restarts when the channel/stream actually
+ * changes — NOT when an unrelated render produces a fresh-but-equal `watching`
+ * reference. A spurious restart would re-run the immediate ping and credit an
+ * extra watch minute, inflating stats far beyond the real ~1/min cadence.
+ *
+ * Game is intentionally excluded: the ping targets a channel/stream, and the
+ * loop reads the latest game at ping time, so a game switch on the same stream
+ * does not need to restart the loop.
+ */
+export const buildWatchPingKey = (watching: WatchingState): string => {
+  if (!watching) return "";
+  const channelId = String(watching.channelId ?? watching.id ?? "").trim();
+  const login = String(watching.login ?? watching.name ?? "").trim();
+  const streamId = String(watching.streamId ?? "").trim();
+  return `${channelId}|${login}|${streamId}`;
+};
+
 export function useWatchPing({ watching, bumpStats, forwardAuthError, demoMode }: Params) {
   const [watchStats, setWatchStats] = useState<WatchStats>({
     lastOk: 0,
@@ -32,20 +52,35 @@ export function useWatchPing({ watching, bumpStats, forwardAuthError, demoMode }
     nextAt: 0,
   });
 
+  // Keep the latest values in refs so the ping loop can read them without
+  // listing them as effect dependencies. Their identities can churn between
+  // renders; subscribing to them would restart the loop (and immediate-ping)
+  // even though the watched stream is unchanged.
+  const watchingRef = useRef(watching);
+  const bumpStatsRef = useRef(bumpStats);
+  const forwardAuthErrorRef = useRef(forwardAuthError);
+  watchingRef.current = watching;
+  bumpStatsRef.current = bumpStats;
+  forwardAuthErrorRef.current = forwardAuthError;
+
+  const watchKey = buildWatchPingKey(watching);
+
   useEffect(() => {
-    if (!watching) return;
+    if (!watchKey) return;
     let cancelled = false;
     const ping = async () => {
       if (cancelled) return;
+      const current = watchingRef.current;
+      if (!current) return;
       try {
         if (demoMode) {
           logInfo("watch: ping demo", {
-            channelId: watching.channelId ?? watching.id,
-            login: watching.login ?? watching.name,
-            streamId: watching.streamId,
+            channelId: current.channelId ?? current.id,
+            login: current.login ?? current.name,
+            streamId: current.streamId,
           });
-          if (watching.game) {
-            void bumpStats({ minutes: 1, lastGame: watching.game });
+          if (current.game) {
+            void bumpStatsRef.current({ minutes: 1, lastGame: current.game });
           }
           if (!cancelled) {
             setWatchStats(() => ({
@@ -57,19 +92,19 @@ export function useWatchPing({ watching, bumpStats, forwardAuthError, demoMode }
           return;
         }
         logInfo("watch: ping start", {
-          channelId: watching.channelId ?? watching.id,
-          login: watching.login ?? watching.name,
-          streamId: watching.streamId,
+          channelId: current.channelId ?? current.id,
+          login: current.login ?? current.name,
+          streamId: current.streamId,
         });
         const res = await window.electronAPI.twitch.watch({
-          channelId: watching.channelId ?? watching.id,
-          login: watching.login ?? watching.name,
-          streamId: watching.streamId,
+          channelId: current.channelId ?? current.id,
+          login: current.login ?? current.name,
+          streamId: current.streamId,
         });
         if (cancelled) return;
         if (isIpcErrorResponse(res)) {
           if (isIpcAuthErrorResponse(res)) {
-            forwardAuthError(res.message);
+            forwardAuthErrorRef.current(res.message);
             return;
           }
           throw errorInfoFromIpc(res, {
@@ -84,13 +119,13 @@ export function useWatchPing({ watching, bumpStats, forwardAuthError, demoMode }
           });
         }
         logInfo("watch: ping ok", {
-          channelId: watching.channelId ?? watching.id,
-          login: watching.login ?? watching.name,
-          streamId: watching.streamId,
+          channelId: current.channelId ?? current.id,
+          login: current.login ?? current.name,
+          streamId: current.streamId,
         });
         if (cancelled) return;
-        if (watching.game) {
-          void bumpStats({ minutes: 1, lastGame: watching.game });
+        if (current.game) {
+          void bumpStatsRef.current({ minutes: 1, lastGame: current.game });
         }
         if (!cancelled) {
           setWatchStats(() => ({
@@ -126,7 +161,7 @@ export function useWatchPing({ watching, bumpStats, forwardAuthError, demoMode }
       cancelled = true;
       if (timeout) window.clearTimeout(timeout);
     };
-  }, [watching, bumpStats, forwardAuthError, demoMode]);
+  }, [watchKey, demoMode]);
 
   useEffect(() => {
     if (watching) return;
