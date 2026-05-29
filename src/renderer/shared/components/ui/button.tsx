@@ -7,16 +7,34 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
+        // === Legacy variants — DO NOT CHANGE, in use across the app ===
         default: "bg-foreground text-background hover:opacity-90",
         secondary: "bg-secondary text-secondary-foreground hover:bg-muted",
         outline: "border border-border bg-transparent text-foreground hover:bg-muted",
         ghost: "bg-transparent text-foreground hover:bg-muted",
         destructive: "bg-destructive text-destructive-foreground hover:opacity-90",
+
+        // === Design-overhaul variants (Pro Console palette) ===
+        // dp-primary text color is intentionally hardcoded #0a0b0d (near-black):
+        // both dark- and light-mode accent are violet shades, so dark text reads
+        // well on either. Using a token would require a new --dp-on-accent.
+        "dp-primary":
+          "bg-[var(--dp-accent)] text-[#0a0b0d] font-semibold hover:bg-[var(--dp-accent-hover)] rounded-[var(--dp-radius-sm)] font-mono tracking-[0.02em]",
+        "dp-secondary":
+          "bg-[var(--dp-bg-elevated)] text-[var(--dp-text)] border border-[var(--dp-border)] hover:bg-[var(--dp-bg-elevated-2)] hover:border-[var(--dp-accent-soft)] rounded-[var(--dp-radius-sm)] font-mono tracking-[0.02em]",
+        "dp-outline":
+          "bg-transparent text-[var(--dp-text)] border border-[var(--dp-border)] hover:bg-[var(--dp-bg-elevated)] hover:border-[color:var(--dp-accent-soft)] rounded-[var(--dp-radius-sm)] font-mono tracking-[0.02em]",
+        "dp-ghost":
+          "bg-transparent text-[var(--dp-text-dim)] hover:bg-[var(--dp-accent-soft)] hover:text-[var(--dp-accent)] rounded-[var(--dp-radius-sm)] font-mono tracking-[0.02em]",
       },
       size: {
         default: "h-9 px-3",
         sm: "h-8 px-2 text-xs",
         xs: "h-7 px-2 text-xs",
+        // === Design-overhaul sizes ===
+        "dp-sm": "h-7 px-2.5 text-[11px]",
+        "dp-md": "h-8 px-3 text-[11px]",
+        "dp-lg": "h-9 px-4 text-[12px]",
       },
     },
     defaultVariants: {

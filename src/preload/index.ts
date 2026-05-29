@@ -103,6 +103,8 @@ const api = {
       ipcRenderer.invoke("twitch/debugEmitUserPubSubEvent", payload),
     watch: (payload: { channelId: string; login: string; streamId?: string }) =>
       ipcRenderer.invoke("twitch/watch", payload),
+    dropProgress: (payload: { channelId: string }) =>
+      ipcRenderer.invoke("twitch/dropProgress", payload),
     claimDrop: (payload: { dropInstanceId?: string; dropId?: string; campaignId?: string }) =>
       ipcRenderer.invoke("twitch/claimDrop", payload),
     onChannelsDiff: (handler: (payload: ChannelsDiffPayload) => void) => {
@@ -141,6 +143,12 @@ const api = {
   app: {
     windowControl: (action: "minimize" | "maximize" | "restore" | "close" | "hide-to-tray") =>
       ipcRenderer.invoke("app/windowControl", { action }),
+    isMaximized: () => ipcRenderer.invoke("app/isMaximized"),
+    onMaximizedChange: (handler: (payload: { isMaximized: boolean }) => void) => {
+      const listener = (_event: unknown, payload: { isMaximized: boolean }) => handler(payload);
+      ipcRenderer.on("app/maximizedChange", listener);
+      return () => ipcRenderer.removeListener("app/maximizedChange", listener);
+    },
     checkUpdates: () => ipcRenderer.invoke("app/checkUpdates"),
     downloadUpdate: () => ipcRenderer.invoke("app/downloadUpdate"),
     installUpdate: () => ipcRenderer.invoke("app/installUpdate"),

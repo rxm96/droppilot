@@ -1,6 +1,8 @@
 import { useCallback } from "react";
 import type { Language } from "@renderer/shared/i18n";
 import { translate } from "@renderer/shared/i18n";
+import { recordActivity } from "@renderer/shared/utils/activityFeed";
+import type { ActivityEvent } from "@renderer/shared/utils/activityFeed";
 
 type NotifyFn = (payload: {
   key: string;
@@ -21,6 +23,10 @@ export function useDropClaimAlerts({ language, alertsDropClaimed, notify, bumpSt
   const handleDropClaimed = useCallback(
     ({ title, game }: { title: string; game: string }) => {
       bumpStats({ claims: 1, lastDropTitle: title, lastGame: game });
+      recordActivity({ kind: "drop-claimed", at: Date.now(), title, game } as Omit<
+        Extract<ActivityEvent, { kind: "drop-claimed" }>,
+        "id"
+      >);
       if (!alertsDropClaimed) return;
       notify({
         key: `drop-claimed:${title}:${game}`,

@@ -139,8 +139,17 @@ describe("ipc guards", () => {
       totalClaims: 2,
       lastReset: Date.now(),
       claimsByGame: { Game: 2 },
+      daily: { "2026-05-29": { minutes: 12, claims: 1 } },
     };
     expect(isStatsData(ok)).toBe(true);
     expect(isStatsData({ ...ok, claimsByGame: { Game: "2" } })).toBe(false);
+    // daily: empty object is valid
+    expect(isStatsData({ ...ok, daily: {} })).toBe(true);
+    // daily: string minutes is invalid
+    expect(isStatsData({ ...ok, daily: { "2026-05-29": { minutes: "12", claims: 1 } } })).toBe(
+      false,
+    );
+    // daily: missing entirely is invalid
+    expect(isStatsData({ ...ok, daily: undefined })).toBe(false);
   });
 });

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useInterval } from "@renderer/shared/hooks/useInterval";
 import { DropChannelRestriction, type ChannelAllowlist } from "@renderer/shared/domain/dropDomain";
+import { sameGameName } from "@renderer/shared/domain/gameName";
 import type {
   AutoSwitchInfo,
   ChannelDiff,
@@ -307,7 +308,7 @@ export const isManualPriorityOverrideActive = ({
   windowMs?: number;
 }): boolean => {
   if (!manualWatchOverride) return false;
-  if (manualWatchOverride.game !== targetGame) return false;
+  if (!sameGameName(manualWatchOverride.game, targetGame)) return false;
   return now - manualWatchOverride.at < windowMs;
 };
 
@@ -736,7 +737,7 @@ export function useChannels({
       if (!allowWatching) return;
       if (!shouldTrackChannels) return;
       if (!targetGameRef.current) return;
-      if (payload.game !== targetGameRef.current) return;
+      if (!sameGameName(payload.game, targetGameRef.current)) return;
       const prevList = channelsRef.current;
       const nextListRaw = applyLiveDiff(prevList, payload);
       const nextListPrioritized = prioritizeChannelsByAllowlist(nextListRaw, channelAllowlist);

@@ -1,22 +1,29 @@
-import { useI18n } from "@renderer/shared/i18n";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@renderer/shared/components/ui/select";
-import { useEffect, useState } from "react";
+import * as React from "react";
 import type { ThemePreference } from "@renderer/shared/theme";
 import type { UpdateChannel } from "../../../shared/updateChannels";
+import { SettingsSidebar, type SettingsSectionKey } from "./SettingsSidebar";
+import { useSettingsViewState } from "./useSettingsViewState";
+import { GeneralSection } from "./sections/GeneralSection";
+import { EngineSection } from "./sections/EngineSection";
+import { AppearanceSection } from "./sections/AppearanceSection";
+import { UpdatesSection } from "./sections/UpdatesSection";
+import { AlertsSection } from "./sections/AlertsSection";
+import { AccountSection } from "./sections/AccountSection";
+import { AdvancedSection } from "./sections/AdvancedSection";
+import { useI18n } from "@renderer/shared/i18n";
 
 type SettingsProps = {
   isLinked: boolean;
+  onLogout: () => void;
+  onLogin: () => void;
   language: "de" | "en";
   setLanguage: (val: "de" | "en") => void;
   theme: ThemePreference;
   setTheme: (val: ThemePreference) => void;
+  accent: string | null;
+  setAccent: (val: string | null) => void;
+  fontPair: import("@renderer/shared/fontPairs").FontPairId;
+  setFontPair: (val: import("@renderer/shared/fontPairs").FontPairId) => void;
   autoStart: boolean;
   setAutoStart: (val: boolean) => void;
   autoClaim: boolean;
@@ -53,6 +60,10 @@ type SettingsProps = {
   setEnableBadgesEmotes: (val: boolean) => void;
   allowUnlinkedGames: boolean;
   setAllowUnlinkedGames: (val: boolean) => void;
+  closeToTray: boolean;
+  setCloseToTray: (val: boolean) => void;
+  minimizeToTray: boolean;
+  setMinimizeToTray: (val: boolean) => void;
   sendTestAlert: () => void;
   refreshMinMs: number;
   refreshMaxMs: number;
@@ -88,628 +99,144 @@ type SettingsProps = {
   };
 };
 
-export function SettingsView({
-  isLinked,
-  language,
-  setLanguage,
-  theme,
-  setTheme,
-  autoStart,
-  setAutoStart,
-  autoClaim,
-  setAutoClaim,
-  autoSelect,
-  setAutoSelect,
-  autoSwitchEnabled,
-  setAutoSwitchEnabled,
-  warmupEnabled,
-  setWarmupEnabled,
-  updateChannel,
-  setUpdateChannel,
-  demoMode,
-  setDemoMode,
-  debugEnabled,
-  setDebugEnabled,
-  alertsEnabled,
-  setAlertsEnabled,
-  alertsNotifyWhileFocused,
-  setAlertsNotifyWhileFocused,
-  alertsDropClaimed,
-  setAlertsDropClaimed,
-  alertsDropEndingSoon,
-  setAlertsDropEndingSoon,
-  alertsDropEndingMinutes,
-  setAlertsDropEndingMinutes,
-  alertsWatchError,
-  setAlertsWatchError,
-  alertsAutoSwitch,
-  setAlertsAutoSwitch,
-  alertsNewDrops,
-  setAlertsNewDrops,
-  enableBadgesEmotes,
-  setEnableBadgesEmotes,
-  allowUnlinkedGames,
-  setAllowUnlinkedGames,
-  sendTestAlert,
-  refreshMinMs,
-  refreshMaxMs,
-  setRefreshIntervals,
-  resetAutomation,
-  settingsJson,
-  setSettingsJson,
-  exportSettings,
-  importSettings,
-  settingsInfo,
-  settingsError,
-  showUpdateCheck,
-  showAutoStart,
-  checkUpdates,
-  downloadUpdate,
-  installUpdate,
-  updateStatus,
-}: SettingsProps) {
+export function SettingsView(props: SettingsProps) {
   const { t } = useI18n();
-  const resolveUiText = (text?: string | null) => {
-    if (!text) return null;
-    const translated = t(text);
-    return translated !== text ? translated : text;
-  };
-  const formatBytes = (bytes?: number) => {
-    if (!bytes || bytes <= 0) return "0 MB";
-    const mb = bytes / (1024 * 1024);
-    return `${mb.toFixed(1)} MB`;
-  };
-  const progressPct = Math.min(100, Math.max(0, Math.round(updateStatus?.progress ?? 0)));
-  const showProgress = updateStatus?.state === "downloading" && Number.isFinite(progressPct);
-  const canDownload = updateStatus?.state === "available" && typeof downloadUpdate === "function";
-  const canInstall = updateStatus?.state === "downloaded" && typeof installUpdate === "function";
-  const refreshPresets = [
-    { key: "60-70", minMs: 60 * 60_000, maxMs: 70 * 60_000, label: t("settings.refreshPreset.1h") },
-    {
-      key: "120-150",
-      minMs: 120 * 60_000,
-      maxMs: 150 * 60_000,
-      label: t("settings.refreshPreset.2h"),
-    },
-    {
-      key: "240-300",
-      minMs: 240 * 60_000,
-      maxMs: 300 * 60_000,
-      label: t("settings.refreshPreset.4h"),
-    },
-    {
-      key: "360-420",
-      minMs: 360 * 60_000,
-      maxMs: 420 * 60_000,
-      label: t("settings.refreshPreset.6h"),
-    },
-    {
-      key: "720-840",
-      minMs: 720 * 60_000,
-      maxMs: 840 * 60_000,
-      label: t("settings.refreshPreset.12h"),
-    },
+  const { active, setActive } = useSettingsViewState("general");
+
+  const items: { key: SettingsSectionKey; label: string }[] = [
+    { key: "general", label: t("settings.section.general.sidebar") },
+    { key: "engine", label: t("settings.section.engine.sidebar") },
+    { key: "appearance", label: t("settings.section.appearance.sidebar") },
+    ...(props.showUpdateCheck
+      ? [{ key: "updates" as SettingsSectionKey, label: t("settings.section.updates.sidebar") }]
+      : []),
+    { key: "alerts", label: t("settings.section.alerts.sidebar") },
+    { key: "account", label: t("settings.section.account.sidebar") },
+    { key: "advanced", label: t("settings.section.advanced.sidebar") },
   ];
-  const currentPreset =
-    refreshPresets.find((preset) => preset.minMs === refreshMinMs && preset.maxMs === refreshMaxMs)
-      ?.key ?? "custom";
-  const customPresetLabel = t("settings.refreshPreset.custom", {
-    min: String(Math.round(refreshMinMs / 60_000)),
-    max: String(Math.round(refreshMaxMs / 60_000)),
-  });
-  const [showRefreshAdvanced, setShowRefreshAdvanced] = useState(false);
 
-  useEffect(() => {
-    if (currentPreset === "custom") {
-      setShowRefreshAdvanced(true);
-    }
-  }, [currentPreset]);
-  const updateLabel = (() => {
-    if (!updateStatus || updateStatus.state === "idle") return null;
-    switch (updateStatus.state) {
-      case "checking":
-        return t("settings.updateChecking");
-      case "available":
-        return t("settings.updateAvailable", { version: updateStatus.version ?? "?" });
-      case "downloading":
-        return t("settings.updateDownloading", {
-          percent: progressPct,
-          transferred: formatBytes(updateStatus.transferred),
-          total: formatBytes(updateStatus.total),
-        });
-      case "downloaded":
-        return t("settings.updateDownloaded");
-      case "none":
-        return t("settings.updateNone");
-      case "unsupported":
-        return t("settings.updateUnsupported");
-      case "error":
-        return updateStatus.message
-          ? `${t("settings.updateError")}: ${resolveUiText(updateStatus.message)}`
-          : t("settings.updateError");
-      default:
-        return null;
-    }
-  })();
-  const settingsInfoText = resolveUiText(settingsInfo);
-  const settingsErrorText = resolveUiText(settingsError);
+  const sectionTitle: Record<SettingsSectionKey, string> = {
+    general: t("settings.section.general"),
+    engine: t("settings.section.engine"),
+    appearance: t("settings.section.appearance"),
+    updates: t("settings.section.updates"),
+    alerts: t("settings.section.alerts"),
+    account: t("settings.section.account"),
+    advanced: t("settings.section.advanced"),
+  };
+
   return (
-    <>
-      <div className="settings-head">
-        <div>
-          <h2>{t("settings.title")}</h2>
-          <p className="meta">{t("settings.quickActions")}</p>
+    <div className="flex flex-col gap-5">
+      <div>
+        <h2 className="text-[22px] font-medium tracking-[-0.01em] text-[color:var(--dp-text)] leading-tight">
+          {t("settings.pageTitle")}
+        </h2>
+        <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[color:var(--dp-text-dimmer)] mt-1">
+          {sectionTitle[active]}
         </div>
-        {demoMode ? <span className="settings-chip">{t("settings.demoMode")}</span> : null}
       </div>
-      <div className="settings-sections">
-        <div className="settings-column">
-          <section className="settings-section">
-            <div className="settings-row">
-              <div>
-                <div className="label">{t("settings.session")}</div>
-                <p className="meta">{isLinked ? t("session.ready") : t("session.loginNeeded")}</p>
-              </div>
-              <div className="settings-actions">
-                <span className={`status-pill ${isLinked ? "ok" : "warn"}`}>
-                  {isLinked ? t("session.connected") : t("session.disconnected")}
-                </span>
-              </div>
-            </div>
-            <div className="settings-row">
-              <div className="label">{t("settings.languageLabel")}</div>
-              <Select
-                value={language}
-                onValueChange={(value) => setLanguage((value as "de" | "en") || "de")}
-              >
-                <SelectTrigger aria-label={t("settings.languageLabel")}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem value="de">{t("settings.language.de")}</SelectItem>
-                    <SelectItem value="en">{t("settings.language.en")}</SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="settings-row">
-              <div className="label">{t("theme.toggle")}</div>
-              <Select
-                value={theme}
-                onValueChange={(value) => setTheme((value as ThemePreference) || "light")}
-              >
-                <SelectTrigger aria-label={t("theme.toggle")}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem value="light">{t("theme.light")}</SelectItem>
-                    <SelectItem value="dark">{t("theme.dark")}</SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
-            {showAutoStart ? (
-              <div className="toggle-row">
-                <label className="toggle">
-                  <input
-                    type="checkbox"
-                    checked={autoStart}
-                    onChange={(e) => setAutoStart(e.target.checked)}
-                  />
-                  <span>{t("settings.autoStart")}</span>
-                </label>
-              </div>
-            ) : null}
-            {showUpdateCheck ? (
-              <div className="settings-row">
-                <div>
-                  <div className="label">{t("settings.updates")}</div>
-                  {updateLabel ? <p className="meta">{updateLabel}</p> : null}
-                  {showProgress ? (
-                    <div className="progress-bar small" style={{ marginTop: 8 }}>
-                      <span style={{ width: `${progressPct}%` }} />
-                    </div>
-                  ) : null}
-                </div>
-                <div className="settings-actions">
-                  <button
-                    type="button"
-                    className="ghost"
-                    onClick={checkUpdates}
-                    disabled={!checkUpdates || updateStatus?.state === "checking"}
-                  >
-                    {t("settings.checkUpdates")}
-                  </button>
-                  {canDownload ? (
-                    <button type="button" onClick={downloadUpdate}>
-                      {t("settings.updateDownload")}
-                    </button>
-                  ) : null}
-                  {canInstall ? (
-                    <button type="button" onClick={installUpdate}>
-                      {t("settings.updateInstall")}
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-            ) : null}
-            {showUpdateCheck ? (
-              <div className="settings-row">
-                <div>
-                  <div className="label">{t("settings.updateChannel")}</div>
-                  <p className="meta">{t("settings.updateChannelHint")}</p>
-                </div>
-                <Select
-                  value={updateChannel}
-                  onValueChange={(value) => setUpdateChannel((value as UpdateChannel) || "stable")}
-                >
-                  <SelectTrigger aria-label={t("settings.updateChannel")}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="stable">{t("settings.updateChannel.stable")}</SelectItem>
-                      <SelectItem value="preview">{t("settings.updateChannel.preview")}</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : null}
-          </section>
 
-          <section className="settings-section">
-            <div className="settings-row">
-              <div>
-                <div className="label">{t("settings.demoModeTitle")}</div>
-                <p className="meta">{t("settings.demoModeHint")}</p>
-              </div>
-            </div>
-            <div className="toggle-row">
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={demoMode}
-                  onChange={(e) => setDemoMode(e.target.checked)}
-                />
-                <span>{t("settings.demoMode")}</span>
-              </label>
-            </div>
-          </section>
+      <div className="flex gap-6 items-start">
+        <SettingsSidebar items={items} active={active} onChange={setActive} />
 
-          <section className="settings-section">
-            <div className="settings-row">
-              <div>
-                <div className="label">{t("settings.debugTitle")}</div>
-                <p className="meta">{t("settings.debugHint")}</p>
-              </div>
-            </div>
-            <div className="toggle-row">
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={debugEnabled}
-                  onChange={(e) => setDebugEnabled(e.target.checked)}
-                />
-                <span>{t("settings.debugToggle")}</span>
-              </label>
-            </div>
-          </section>
-
-          <section className="settings-section">
-            <div className="settings-row">
-              <div>
-                <div className="label">{t("settings.advanced")}</div>
-                <p className="meta">{t("settings.advancedHint")}</p>
-              </div>
-              <div className="settings-actions">
-                <button type="button" className="ghost subtle-btn" onClick={resetAutomation}>
-                  {t("settings.resetAutomation")}
-                </button>
-              </div>
-            </div>
-            <div className="toggle-row">
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={autoClaim}
-                  onChange={(e) => setAutoClaim(e.target.checked)}
-                />
-                <span className="toggle-label">
-                  <span className="toggle-title">{t("settings.autoClaim")}</span>
-                  <span className="toggle-hint">{t("settings.autoClaimHint")}</span>
-                </span>
-              </label>
-            </div>
-            <div className="toggle-row">
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={autoSelect}
-                  onChange={(e) => setAutoSelect(e.target.checked)}
-                />
-                <span className="toggle-label">
-                  <span className="toggle-title">{t("settings.autoSelect")}</span>
-                  <span className="toggle-hint">{t("settings.autoSelectHint")}</span>
-                </span>
-              </label>
-            </div>
-            <div className="toggle-row">
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={autoSwitchEnabled}
-                  onChange={(e) => setAutoSwitchEnabled(e.target.checked)}
-                />
-                <span className="toggle-label">
-                  <span className="toggle-title">{t("settings.autoSwitch")}</span>
-                  <span className="toggle-hint">{t("settings.autoSwitchHint")}</span>
-                </span>
-              </label>
-            </div>
-            <div className="toggle-row">
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={warmupEnabled}
-                  onChange={(e) => setWarmupEnabled(e.target.checked)}
-                />
-                <span className="toggle-label">
-                  <span className="toggle-title">{t("settings.warmup")}</span>
-                  <span className="toggle-hint">{t("settings.warmupHint")}</span>
-                </span>
-              </label>
-            </div>
-            <div className="toggle-row">
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={enableBadgesEmotes}
-                  onChange={(e) => setEnableBadgesEmotes(e.target.checked)}
-                />
-                <span className="toggle-label">
-                  <span className="toggle-title">{t("settings.badgesEmotes")}</span>
-                  <span className="toggle-hint">{t("settings.badgesEmotesHint")}</span>
-                </span>
-              </label>
-            </div>
-            <div className="toggle-row">
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={allowUnlinkedGames}
-                  onChange={(e) => setAllowUnlinkedGames(e.target.checked)}
-                />
-                <span className="toggle-label">
-                  <span className="toggle-title">{t("settings.allowUnlinked")}</span>
-                  <span className="toggle-hint">{t("settings.allowUnlinkedHint")}</span>
-                </span>
-              </label>
-            </div>
-            <div className="settings-row">
-              <div>
-                <div className="label">{t("settings.refreshInterval")}</div>
-                <p className="meta">{t("settings.refreshHint")}</p>
-              </div>
-              <div className="settings-actions">
-                <label className="meta">
-                  {t("settings.refreshPreset")}
-                  <Select
-                    value={currentPreset}
-                    onValueChange={(value) => {
-                      const preset = refreshPresets.find((entry) => entry.key === value);
-                      if (preset) {
-                        setRefreshIntervals(preset.minMs, preset.maxMs);
-                      }
-                    }}
-                  >
-                    <SelectTrigger aria-label={t("settings.refreshPreset")}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {refreshPresets.map((preset) => (
-                          <SelectItem key={preset.key} value={preset.key}>
-                            {preset.label}
-                          </SelectItem>
-                        ))}
-                        {currentPreset === "custom" ? (
-                          <SelectItem value="custom">{customPresetLabel}</SelectItem>
-                        ) : null}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </label>
-                <button
-                  type="button"
-                  className="ghost subtle-btn"
-                  onClick={() => setShowRefreshAdvanced((prev) => !prev)}
-                >
-                  {showRefreshAdvanced
-                    ? t("settings.refreshAdvancedHide")
-                    : t("settings.refreshAdvancedShow")}
-                </button>
-              </div>
-            </div>
-            {showRefreshAdvanced ? (
-              <div className="settings-row">
-                <div className="settings-actions">
-                  <label className="meta">
-                    {t("settings.refreshMin")}
-                    <input
-                      type="number"
-                      className="input"
-                      min={60}
-                      step={5}
-                      value={Math.round(refreshMinMs / 60_000)}
-                      onChange={(e) => {
-                        const val = Number(e.target.value) * 60_000;
-                        setRefreshIntervals(val, refreshMaxMs);
-                      }}
-                      onBlur={() => setRefreshIntervals(refreshMinMs, refreshMaxMs)}
-                    />
-                  </label>
-                  <label className="meta">
-                    {t("settings.refreshMax")}
-                    <input
-                      type="number"
-                      className="input"
-                      min={60}
-                      step={5}
-                      value={Math.round(refreshMaxMs / 60_000)}
-                      onChange={(e) => {
-                        const val = Number(e.target.value) * 60_000;
-                        setRefreshIntervals(refreshMinMs, val);
-                      }}
-                      onBlur={() => setRefreshIntervals(refreshMinMs, refreshMaxMs)}
-                    />
-                  </label>
-                </div>
-              </div>
-            ) : null}
-          </section>
-        </div>
-
-        <div className="settings-column">
-          <section className="settings-section">
-            <div className="settings-row">
-              <div>
-                <div className="label">{t("settings.alerts")}</div>
-                <p className="meta">{t("settings.alertsHint")}</p>
-              </div>
-            </div>
-            <div className="toggle-row">
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={alertsEnabled}
-                  onChange={(e) => setAlertsEnabled(e.target.checked)}
-                />
-                <span>{t("settings.alerts.enabled")}</span>
-              </label>
-            </div>
-            <div className="toggle-row">
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={alertsNotifyWhileFocused}
-                  disabled={!alertsEnabled}
-                  onChange={(e) => setAlertsNotifyWhileFocused(e.target.checked)}
-                />
-                <span>{t("settings.alerts.foreground")}</span>
-              </label>
-            </div>
-            <div className="toggle-row">
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={alertsDropClaimed}
-                  disabled={!alertsEnabled}
-                  onChange={(e) => setAlertsDropClaimed(e.target.checked)}
-                />
-                <span>{t("settings.alerts.dropClaimed")}</span>
-              </label>
-            </div>
-            <div className="toggle-row">
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={alertsDropEndingSoon}
-                  disabled={!alertsEnabled}
-                  onChange={(e) => setAlertsDropEndingSoon(e.target.checked)}
-                />
-                <span>{t("settings.alerts.dropEnding")}</span>
-              </label>
-            </div>
-            <div className="settings-row">
-              <label className="meta">
-                {t("settings.alerts.dropEndingMinutes")}
-                <input
-                  type="number"
-                  className="input"
-                  min={1}
-                  max={60}
-                  step={1}
-                  value={alertsDropEndingMinutes}
-                  disabled={!alertsEnabled || !alertsDropEndingSoon}
-                  onChange={(e) => {
-                    const val = Number(e.target.value);
-                    setAlertsDropEndingMinutes(val);
-                  }}
-                  onBlur={() => setAlertsDropEndingMinutes(alertsDropEndingMinutes)}
-                />
-              </label>
-            </div>
-            <div className="toggle-row">
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={alertsWatchError}
-                  disabled={!alertsEnabled}
-                  onChange={(e) => setAlertsWatchError(e.target.checked)}
-                />
-                <span>{t("settings.alerts.watchError")}</span>
-              </label>
-            </div>
-            <div className="toggle-row">
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={alertsAutoSwitch}
-                  disabled={!alertsEnabled}
-                  onChange={(e) => setAlertsAutoSwitch(e.target.checked)}
-                />
-                <span>{t("settings.alerts.autoSwitch")}</span>
-              </label>
-            </div>
-            <div className="toggle-row">
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={alertsNewDrops}
-                  disabled={!alertsEnabled}
-                  onChange={(e) => setAlertsNewDrops(e.target.checked)}
-                />
-                <span>{t("settings.alerts.newDrops")}</span>
-              </label>
-            </div>
-            <div className="settings-row">
-              <div className="settings-actions">
-                <button
-                  type="button"
-                  className="ghost"
-                  onClick={sendTestAlert}
-                  disabled={!alertsEnabled}
-                >
-                  {t("settings.alerts.test")}
-                </button>
-              </div>
-            </div>
-          </section>
-
-          <section className="settings-section">
-            <div className="label">{t("settings.backupTitle")}</div>
-            <p className="meta">{t("settings.backupHint")}</p>
-            <textarea
-              className="settings-textarea"
-              value={settingsJson}
-              onChange={(e) => setSettingsJson(e.target.value)}
-              rows={8}
+        <main className="flex-1 min-w-0 rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] px-6 py-5">
+          {active === "general" && (
+            <GeneralSection
+              language={props.language}
+              setLanguage={props.setLanguage}
+              demoMode={props.demoMode}
+              setDemoMode={props.setDemoMode}
+              sendTestAlert={props.sendTestAlert}
             />
-            <div className="cta-row">
-              <button type="button" onClick={exportSettings}>
-                {t("settings.export")}
-              </button>
-              <button type="button" className="ghost" onClick={importSettings}>
-                {t("settings.import")}
-              </button>
-            </div>
-            {settingsInfoText ? <p className="meta">{settingsInfoText}</p> : null}
-            {settingsErrorText ? <p className="error">{settingsErrorText}</p> : null}
-          </section>
-        </div>
+          )}
+          {active === "engine" && (
+            <EngineSection
+              autoStart={props.autoStart}
+              setAutoStart={props.setAutoStart}
+              showAutoStart={props.showAutoStart}
+              autoClaim={props.autoClaim}
+              setAutoClaim={props.setAutoClaim}
+              autoSelect={props.autoSelect}
+              setAutoSelect={props.setAutoSelect}
+              autoSwitchEnabled={props.autoSwitchEnabled}
+              setAutoSwitchEnabled={props.setAutoSwitchEnabled}
+              warmupEnabled={props.warmupEnabled}
+              setWarmupEnabled={props.setWarmupEnabled}
+              refreshMinMs={props.refreshMinMs}
+              refreshMaxMs={props.refreshMaxMs}
+              setRefreshIntervals={props.setRefreshIntervals}
+              resetAutomation={props.resetAutomation}
+              closeToTray={props.closeToTray}
+              setCloseToTray={props.setCloseToTray}
+              minimizeToTray={props.minimizeToTray}
+              setMinimizeToTray={props.setMinimizeToTray}
+            />
+          )}
+          {active === "appearance" && (
+            <AppearanceSection
+              theme={props.theme}
+              setTheme={props.setTheme}
+              enableBadgesEmotes={props.enableBadgesEmotes}
+              setEnableBadgesEmotes={props.setEnableBadgesEmotes}
+              accent={props.accent}
+              setAccent={props.setAccent}
+              fontPair={props.fontPair}
+              setFontPair={props.setFontPair}
+            />
+          )}
+          {active === "updates" && props.showUpdateCheck && (
+            <UpdatesSection
+              updateChannel={props.updateChannel}
+              setUpdateChannel={props.setUpdateChannel}
+              updateStatus={props.updateStatus}
+              checkUpdates={props.checkUpdates}
+              downloadUpdate={props.downloadUpdate}
+              installUpdate={props.installUpdate}
+            />
+          )}
+          {active === "alerts" && (
+            <AlertsSection
+              alertsEnabled={props.alertsEnabled}
+              setAlertsEnabled={props.setAlertsEnabled}
+              alertsNotifyWhileFocused={props.alertsNotifyWhileFocused}
+              setAlertsNotifyWhileFocused={props.setAlertsNotifyWhileFocused}
+              alertsDropClaimed={props.alertsDropClaimed}
+              setAlertsDropClaimed={props.setAlertsDropClaimed}
+              alertsDropEndingSoon={props.alertsDropEndingSoon}
+              setAlertsDropEndingSoon={props.setAlertsDropEndingSoon}
+              alertsDropEndingMinutes={props.alertsDropEndingMinutes}
+              setAlertsDropEndingMinutes={props.setAlertsDropEndingMinutes}
+              alertsWatchError={props.alertsWatchError}
+              setAlertsWatchError={props.setAlertsWatchError}
+              alertsAutoSwitch={props.alertsAutoSwitch}
+              setAlertsAutoSwitch={props.setAlertsAutoSwitch}
+              alertsNewDrops={props.alertsNewDrops}
+              setAlertsNewDrops={props.setAlertsNewDrops}
+            />
+          )}
+          {active === "account" && (
+            <AccountSection
+              isLinked={props.isLinked}
+              onLogout={props.onLogout}
+              onLogin={props.onLogin}
+              allowUnlinkedGames={props.allowUnlinkedGames}
+              setAllowUnlinkedGames={props.setAllowUnlinkedGames}
+            />
+          )}
+          {active === "advanced" && (
+            <AdvancedSection
+              debugEnabled={props.debugEnabled}
+              setDebugEnabled={props.setDebugEnabled}
+              settingsJson={props.settingsJson}
+              setSettingsJson={props.setSettingsJson}
+              exportSettings={props.exportSettings}
+              importSettings={props.importSettings}
+              settingsInfo={props.settingsInfo}
+              settingsError={props.settingsError}
+            />
+          )}
+        </main>
       </div>
-    </>
+    </div>
   );
 }

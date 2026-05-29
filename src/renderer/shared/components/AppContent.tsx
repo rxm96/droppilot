@@ -7,13 +7,20 @@ import {
   OverviewView,
   PriorityView,
   SettingsView,
+  StatsView,
 } from "@renderer/features";
-import { TopNav } from "./TopNav";
+import type { View } from "@renderer/shared/types";
 import { isPerfEnabled, recordRender } from "@renderer/shared/utils/perfStore";
 
+type NavProps = {
+  view: View;
+  setView: (next: View) => void;
+};
+
 type AppContentProps = {
-  navProps: ComponentProps<typeof TopNav>;
+  navProps: NavProps;
   overviewProps: ComponentProps<typeof OverviewView>;
+  statsProps: ComponentProps<typeof StatsView>;
   inventoryProps: ComponentProps<typeof InventoryView>;
   priorityProps: ComponentProps<typeof PriorityView>;
   settingsProps: ComponentProps<typeof SettingsView>;
@@ -25,6 +32,7 @@ type AppContentProps = {
 export function AppContent({
   navProps,
   overviewProps,
+  statsProps,
   inventoryProps,
   priorityProps,
   settingsProps,
@@ -44,25 +52,17 @@ export function AppContent({
     },
     [debugEnabled],
   );
+
   return (
-    <main className="layout">
-      <TopNav {...navProps} />
-
-      <section className="panel inventory-panel">
-        {view === "overview" && renderWithPerf("OverviewView", <OverviewView {...overviewProps} />)}
-
-        {view === "inventory" &&
-          renderWithPerf("InventoryView", <InventoryView {...inventoryProps} />)}
-
-        {view === "priorities" &&
-          renderWithPerf("PriorityView", <PriorityView {...priorityProps} />)}
-
-        {view === "settings" && renderWithPerf("SettingsView", <SettingsView {...settingsProps} />)}
-
-        {view === "control" && renderWithPerf("ControlView", <ControlView {...controlProps} />)}
-
-        {view === "debug" && renderWithPerf("DebugView", <DebugView snapshot={debugSnapshot} />)}
-      </section>
+    <main className="px-8 py-7 max-w-[1640px] mx-auto">
+      {view === "overview" && renderWithPerf("OverviewView", <OverviewView {...overviewProps} />)}
+      {view === "stats" && renderWithPerf("StatsView", <StatsView {...statsProps} />)}
+      {view === "inventory" &&
+        renderWithPerf("InventoryView", <InventoryView {...inventoryProps} />)}
+      {view === "priorities" && renderWithPerf("PriorityView", <PriorityView {...priorityProps} />)}
+      {view === "settings" && renderWithPerf("SettingsView", <SettingsView {...settingsProps} />)}
+      {view === "control" && renderWithPerf("ControlView", <ControlView {...controlProps} />)}
+      {view === "debug" && renderWithPerf("DebugView", <DebugView snapshot={debugSnapshot} />)}
     </main>
   );
 }

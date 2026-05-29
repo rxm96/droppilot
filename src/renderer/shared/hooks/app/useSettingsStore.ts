@@ -32,6 +32,8 @@ type SettingsData = {
   alertsNewDrops?: boolean;
   enableBadgesEmotes?: boolean;
   allowUnlinkedGames?: boolean;
+  closeToTray?: boolean;
+  minimizeToTray?: boolean;
 };
 
 type SettingsHook = {
@@ -58,6 +60,8 @@ type SettingsHook = {
   alertsNewDrops: boolean;
   enableBadgesEmotes: boolean;
   allowUnlinkedGames: boolean;
+  closeToTray: boolean;
+  minimizeToTray: boolean;
   savePriorityGames: (list: string[]) => Promise<void>;
   saveObeyPriority: (val: boolean) => Promise<void>;
   saveLanguage: (val: Language) => Promise<void>;
@@ -80,6 +84,8 @@ type SettingsHook = {
   saveAlertsNewDrops: (val: boolean) => Promise<void>;
   saveEnableBadgesEmotes: (val: boolean) => Promise<void>;
   saveAllowUnlinkedGames: (val: boolean) => Promise<void>;
+  saveCloseToTray: (val: boolean) => Promise<void>;
+  saveMinimizeToTray: (val: boolean) => Promise<void>;
   resetAutomation: () => Promise<void>;
   selectedGame: string;
   setSelectedGame: (val: string) => void;
@@ -139,6 +145,8 @@ export function useSettingsStore(): SettingsHook {
   const [alertsNewDrops, setAlertsNewDrops] = useState<boolean>(true);
   const [enableBadgesEmotes, setEnableBadgesEmotes] = useState<boolean>(false);
   const [allowUnlinkedGames, setAllowUnlinkedGames] = useState<boolean>(false);
+  const [closeToTray, setCloseToTray] = useState<boolean>(true);
+  const [minimizeToTray, setMinimizeToTray] = useState<boolean>(false);
   const [selectedGame, setSelectedGame] = useState<string>("");
   const [newGame, setNewGame] = useState<string>("");
   const [settingsJson, setSettingsJson] = useState<string>("");
@@ -176,6 +184,8 @@ export function useSettingsStore(): SettingsHook {
       setAlertsNewDrops(res.alertsNewDrops !== false);
       setEnableBadgesEmotes(res.enableBadgesEmotes === true);
       setAllowUnlinkedGames(res.allowUnlinkedGames === true);
+      setCloseToTray(typeof res.closeToTray === "boolean" ? res.closeToTray : true);
+      setMinimizeToTray(typeof res.minimizeToTray === "boolean" ? res.minimizeToTray : false);
       setSettingsJson(JSON.stringify(res, null, 2));
     } catch (err) {
       console.error("settings load failed", err);
@@ -218,6 +228,8 @@ export function useSettingsStore(): SettingsHook {
       setAlertsNewDrops(saved.alertsNewDrops !== false);
       setEnableBadgesEmotes(saved.enableBadgesEmotes === true);
       setAllowUnlinkedGames(saved.allowUnlinkedGames === true);
+      setCloseToTray(typeof saved.closeToTray === "boolean" ? saved.closeToTray : true);
+      setMinimizeToTray(typeof saved.minimizeToTray === "boolean" ? saved.minimizeToTray : false);
       setSettingsJson(JSON.stringify(saved, null, 2));
     } catch (err) {
       setSettingsError(toErrorMessage(err, "error.settings.save_failed"));
@@ -337,6 +349,16 @@ export function useSettingsStore(): SettingsHook {
     await persist({ allowUnlinkedGames: val });
   };
 
+  const saveCloseToTray = async (val: boolean) => {
+    setCloseToTray(val);
+    await persist({ closeToTray: val });
+  };
+
+  const saveMinimizeToTray = async (val: boolean) => {
+    setMinimizeToTray(val);
+    await persist({ minimizeToTray: val });
+  };
+
   const resetAutomation = async () => {
     const defaults = {
       autoClaim: true,
@@ -411,6 +433,8 @@ export function useSettingsStore(): SettingsHook {
       setAlertsNewDrops(saved.alertsNewDrops !== false);
       setEnableBadgesEmotes(saved.enableBadgesEmotes === true);
       setAllowUnlinkedGames(saved.allowUnlinkedGames === true);
+      setCloseToTray(typeof saved.closeToTray === "boolean" ? saved.closeToTray : true);
+      setMinimizeToTray(typeof saved.minimizeToTray === "boolean" ? saved.minimizeToTray : false);
       setSettingsJson(JSON.stringify(saved, null, 2));
       setSettingsInfo("settings.info.imported");
       setSettingsError(null);
@@ -452,6 +476,8 @@ export function useSettingsStore(): SettingsHook {
     alertsNewDrops,
     enableBadgesEmotes,
     allowUnlinkedGames,
+    closeToTray,
+    minimizeToTray,
     savePriorityGames,
     saveObeyPriority,
     saveLanguage,
@@ -474,6 +500,8 @@ export function useSettingsStore(): SettingsHook {
     saveAlertsNewDrops,
     saveEnableBadgesEmotes,
     saveAllowUnlinkedGames,
+    saveCloseToTray,
+    saveMinimizeToTray,
     resetAutomation,
     selectedGame,
     setSelectedGame,

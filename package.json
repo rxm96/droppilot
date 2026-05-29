@@ -1,6 +1,6 @@
 {
   "name": "droppilot",
-  "version": "2.5.7",
+  "version": "3.0.0-rc.8",
   "type": "commonjs",
   "description": "DropPilot - Twitch drops automation with Electron + React + TypeScript",
   "main": "dist-electron/main/index.js",
@@ -68,6 +68,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "electron-updater": "^6.8.3",
+    "lucide-react": "^0.460.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "tailwind-merge": "^3.5.0",

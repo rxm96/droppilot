@@ -33,11 +33,60 @@ export type SettingsData = {
   alertsNewDrops: boolean;
   enableBadgesEmotes: boolean;
   allowUnlinkedGames: boolean;
+  /** When true, clicking the close button hides the window to the tray instead of quitting. */
+  closeToTray: boolean;
+  /** When true, minimizing the window hides it to the tray instead of leaving it in the taskbar. */
+  minimizeToTray: boolean;
+  /** Persisted window bounds. Undefined on first launch — main process falls back to defaults. */
+  windowBounds?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    isMaximized: boolean;
+  };
 };
 
 const MIN_REFRESH_MS = 3_600_000;
 
 const settingsFile = join(app.getPath("userData"), "settings.json");
+// Mirror of the last successfully-written settings. If the primary file is ever
+// truncated/corrupted (e.g. a write interrupted by an update restart), load
+// recovers from here instead of falling back to empty defaults — which a later
+// save would otherwise persist over the real data.
+const backupFile = join(app.getPath("userData"), "settings.bak.json");
+
+// All writes flow through one promise chain so concurrent saves (window-bounds
+// autosave + a settings toggle, etc.) can't interleave their read-modify-write.
+let writeQueue: Promise<unknown> = Promise.resolve();
+let tmpCounter = 0;
+
+/**
+ * Write atomically: write to a temp file, then rename over the target. rename
+ * is atomic on the same volume (Windows + POSIX), so an interrupted or crashed
+ * write never leaves a half-written, unparseable file behind.
+ */
+async function atomicWrite(file: string, contents: string): Promise<void> {
+  await fs.mkdir(app.getPath("userData"), { recursive: true });
+  const tmp = `${file}.${process.pid}.${++tmpCounter}.tmp`;
+  await fs.writeFile(tmp, contents, "utf-8");
+  await fs.rename(tmp, file);
+}
+
+type RawRead = { status: "ok"; raw: string } | { status: "missing" } | { status: "corrupt" };
+
+async function readRawJson(file: string): Promise<RawRead> {
+  let raw: string;
+  try {
+    raw = await fs.readFile(file, "utf-8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException)?.code === "ENOENT") return { status: "missing" };
+    return { status: "corrupt" };
+  }
+  // An empty/whitespace file means a previous write was truncated mid-flight.
+  if (!raw.trim()) return { status: "corrupt" };
+  return { status: "ok", raw };
+}
 
 const defaultSettings: SettingsData = {
   priorityGames: [],
@@ -64,6 +113,23 @@ const defaultSettings: SettingsData = {
   alertsNewDrops: true,
   enableBadgesEmotes: false,
   allowUnlinkedGames: false,
+  closeToTray: true,
+  minimizeToTray: false,
+};
+
+const normalizeWindowBounds = (raw: unknown): SettingsData["windowBounds"] => {
+  if (!raw || typeof raw !== "object") return undefined;
+  const candidate = raw as Record<string, unknown>;
+  const num = (val: unknown) => (typeof val === "number" && Number.isFinite(val) ? val : null);
+  const x = num(candidate.x);
+  const y = num(candidate.y);
+  const width = num(candidate.width);
+  const height = num(candidate.height);
+  const isMaximized = typeof candidate.isMaximized === "boolean" ? candidate.isMaximized : false;
+  if (x === null || y === null || width === null || height === null) return undefined;
+  // Guard against degenerate bounds (e.g. 0x0 from a destroyed window snapshot)
+  if (width < 200 || height < 200) return undefined;
+  return { x, y, width, height, isMaximized };
 };
 
 const normalizeRefreshIntervals = (
@@ -82,9 +148,22 @@ export type SettingsSaveData = Partial<SettingsData> & {
 };
 
 export async function loadSettings(): Promise<SettingsData> {
+  let source = await readRawJson(settingsFile);
+  if (source.status === "corrupt") {
+    // Primary file is unreadable/truncated. Preserve it for forensics (best
+    // effort) and recover from the backup rather than returning empty defaults
+    // that a subsequent save would persist over the user's real data.
+    await fs.rename(settingsFile, `${settingsFile}.corrupt`).catch(() => undefined);
+    const backup = await readRawJson(backupFile);
+    if (backup.status === "ok") {
+      source = backup;
+      await atomicWrite(settingsFile, backup.raw).catch(() => undefined);
+    }
+  }
+  if (source.status !== "ok") return { ...defaultSettings };
+
   try {
-    const raw = await fs.readFile(settingsFile, "utf-8");
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(source.raw);
     const refresh = normalizeRefreshIntervals(parsed?.refreshMinMs, parsed?.refreshMaxMs);
     return {
       ...defaultSettings,
@@ -155,13 +234,28 @@ export async function loadSettings(): Promise<SettingsData> {
         typeof parsed?.allowUnlinkedGames === "boolean"
           ? parsed.allowUnlinkedGames
           : defaultSettings.allowUnlinkedGames,
+      closeToTray:
+        typeof parsed?.closeToTray === "boolean" ? parsed.closeToTray : defaultSettings.closeToTray,
+      minimizeToTray:
+        typeof parsed?.minimizeToTray === "boolean"
+          ? parsed.minimizeToTray
+          : defaultSettings.minimizeToTray,
+      windowBounds: normalizeWindowBounds(parsed?.windowBounds),
     };
   } catch {
-    return defaultSettings;
+    return { ...defaultSettings };
   }
 }
 
 export async function saveSettings(data: SettingsSaveData): Promise<SettingsData> {
+  // Serialize through the write queue so overlapping saves (e.g. window-bounds
+  // autosave racing a settings toggle) can't interleave their read-modify-write.
+  const run = writeQueue.then(() => persistSettings(data));
+  writeQueue = run.catch(() => undefined);
+  return run;
+}
+
+async function persistSettings(data: SettingsSaveData): Promise<SettingsData> {
   const current = await loadSettings();
   const { betaUpdates: legacyBetaUpdates, ...restData } = data;
   const refresh = normalizeRefreshIntervals(
@@ -237,9 +331,21 @@ export async function saveSettings(data: SettingsSaveData): Promise<SettingsData
       typeof restData.allowUnlinkedGames === "boolean"
         ? restData.allowUnlinkedGames
         : current.allowUnlinkedGames,
+    closeToTray:
+      typeof restData.closeToTray === "boolean" ? restData.closeToTray : current.closeToTray,
+    minimizeToTray:
+      typeof restData.minimizeToTray === "boolean"
+        ? restData.minimizeToTray
+        : current.minimizeToTray,
+    windowBounds:
+      restData.windowBounds !== undefined
+        ? normalizeWindowBounds(restData.windowBounds)
+        : current.windowBounds,
   };
-  await fs.mkdir(app.getPath("userData"), { recursive: true });
-  await fs.writeFile(settingsFile, JSON.stringify(next, null, 2), "utf-8");
+  const serialized = JSON.stringify(next, null, 2);
+  await atomicWrite(settingsFile, serialized);
+  // Mirror to the backup so a future corrupt primary can be recovered.
+  await atomicWrite(backupFile, serialized).catch(() => undefined);
   return next;
 }
 

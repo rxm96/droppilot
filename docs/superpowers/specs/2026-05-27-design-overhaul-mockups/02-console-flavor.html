@@ -1,0 +1,106 @@
+<style>
+  .flavor-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 24px; }
+  .flavor-card { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; cursor: pointer; transition: transform .15s, border-color .15s; background: var(--bg); }
+  .flavor-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+  .flavor-card .preview { aspect-ratio: 16/11; padding: 14px; border-bottom: 1px solid var(--border); position: relative; overflow: hidden; }
+  .flavor-card .meta { padding: 14px 16px; }
+  .flavor-card h3 { margin: 0 0 4px 0; font-size: 15px; }
+  .flavor-card .desc { font-size: 12px; opacity: 0.7; line-height: 1.45; margin: 0; }
+  .flavor-card .ref { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding: 2px 6px; border-radius: 3px; margin-top: 8px; display: inline-block; font-family: 'IBM Plex Mono', monospace; }
+
+  /* C1: Hard Terminal */
+  .flv-1 .preview { background: #000; color: #4ade80; font-family: 'IBM Plex Mono', monospace; font-size: 10px; line-height: 1.5; }
+  .flv-1 .preview .border-line { color: #1a3a1a; }
+  .flv-1 .preview .dim { color: #2a6a2a; }
+  .flv-1 .preview .warn { color: #fbbf24; }
+  .flv-1 .preview .label { color: #166534; }
+  .flv-1 .preview .pulse { animation: pulse-green 1.4s ease-in-out infinite; }
+  @keyframes pulse-green { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .flv-1 .ref { background: #052e16; color: #4ade80; }
+
+  /* C2: Elevated Engineering */
+  .flv-2 .preview { background: #0a0b0d; color: #e5e7eb; font-family: 'IBM Plex Sans', system-ui; padding: 14px; }
+  .flv-2 .preview .head { font-family: 'IBM Plex Mono', monospace; font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: #6b7280; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+  .flv-2 .preview .head .dot { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 8px rgba(34,197,94,0.6); }
+  .flv-2 .preview .title { font-size: 14px; font-weight: 500; letter-spacing: -0.01em; margin-bottom: 2px; }
+  .flv-2 .preview .sub { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6b7280; }
+  .flv-2 .preview .div { height: 1px; background: #1c1f24; margin: 12px 0; }
+  .flv-2 .preview .row { display: grid; grid-template-columns: 1fr auto; font-family: 'IBM Plex Mono', monospace; font-size: 10px; padding: 3px 0; }
+  .flv-2 .preview .key { color: #6b7280; }
+  .flv-2 .preview .val { color: #f3f4f6; font-feature-settings: 'tnum'; }
+  .flv-2 .preview .val.accent { color: #60a5fa; }
+  .flv-2 .ref { background: #1c1f24; color: #60a5fa; border: 1px solid #2c3038; }
+
+  /* C3: Warm Pro */
+  .flv-3 .preview { background: #12100e; color: #e8e3da; font-family: 'IBM Plex Sans', system-ui; padding: 14px; }
+  .flv-3 .preview::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at top right, rgba(217,119,87,0.08), transparent 60%); pointer-events: none; }
+  .flv-3 .preview .head { font-family: 'IBM Plex Mono', monospace; font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: #8a7f70; margin-bottom: 12px; }
+  .flv-3 .preview .title { font-size: 14px; font-weight: 500; letter-spacing: -0.01em; margin-bottom: 2px; position: relative; }
+  .flv-3 .preview .sub { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #8a7f70; margin-bottom: 10px; }
+  .flv-3 .preview .pill { display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: 9px; padding: 2px 6px; border-radius: 3px; background: rgba(217,119,87,0.15); color: #e8a584; border: 1px solid rgba(217,119,87,0.25); margin-right: 4px; }
+  .flv-3 .preview .row { display: grid; grid-template-columns: 1fr auto; font-family: 'IBM Plex Mono', monospace; font-size: 10px; padding: 2px 0; position: relative; }
+  .flv-3 .preview .key { color: #8a7f70; }
+  .flv-3 .preview .val { color: #e8e3da; font-feature-settings: 'tnum'; }
+  .flv-3 .preview .val.warm { color: #e8a584; }
+  .flv-3 .preview .div { height: 1px; background: linear-gradient(90deg, #2a2520 0%, transparent 100%); margin: 10px 0; }
+  .flv-3 .ref { background: #2a2520; color: #e8a584; border: 1px solid #3d352d; }
+</style>
+
+<h2>Welcher Flavor innerhalb der Pro Console Richtung?</h2>
+<p class="subtitle">Alle drei dark-first und data-dense, aber mit klar unterschiedlicher Persönlichkeit.</p>
+
+<div class="cards flavor-cards">
+  <div class="card flavor-card flv-1" data-choice="hard-terminal" onclick="toggleSelect(this)">
+    <div class="preview">
+<div>┌─ <span class="label">watch.status</span> ─────────────┐</div>
+<div>│ <span class="dim">target  </span> rust/rivals_cape    │</div>
+<div>│ <span class="dim">eta     </span> <span class="pulse">▮</span> 02:14:38             │</div>
+<div>│ <span class="dim">progress</span> ███████░░ 87%       │</div>
+<div>│ <span class="dim">viewers </span> <span class="warn">14.2K ↑</span>             │</div>
+<div>└──────────────────────────────┘</div>
+<div style="margin-top:6px;"><span class="label">$</span> claim --auto enabled</div>
+    </div>
+    <div class="meta">
+      <h3>C1 — Hard Terminal</h3>
+      <p class="desc">Reine Terminal-Ästhetik. Schwarz/Grün/Amber. Alles Monospace, ASCII-Boxen, Phosphor-Glow. Vim/htop/k9s Vibes.</p>
+      <span class="ref">htop · k9s · vim</span>
+    </div>
+  </div>
+
+  <div class="card flavor-card flv-2" data-choice="elevated" onclick="toggleSelect(this)">
+    <div class="preview">
+      <div class="head"><span>WATCH STATUS</span><span class="dot"></span></div>
+      <div class="title">Rust — Twitch Rivals Cape</div>
+      <div class="sub">shroud · drop_id 4f2a</div>
+      <div class="div"></div>
+      <div class="row"><span class="key">eta</span><span class="val accent">02:14:38</span></div>
+      <div class="row"><span class="key">progress</span><span class="val">87%</span></div>
+      <div class="row"><span class="key">viewers</span><span class="val">14,247</span></div>
+    </div>
+    <div class="meta">
+      <h3>C2 — Elevated Engineering</h3>
+      <p class="desc">Mono für Daten, Sans für Titel & Prosa. Subtile Signal-Farben (1 Blau-Akzent). Refined Hairlines. Linear/Cron/Granola Engineering-Polish.</p>
+      <span class="ref">linear · cron · granola</span>
+    </div>
+  </div>
+
+  <div class="card flavor-card flv-3" data-choice="warm-pro" onclick="toggleSelect(this)">
+    <div class="preview">
+      <div class="head">WATCH STATUS</div>
+      <div class="title">Rust — Rivals Cape</div>
+      <div class="sub">shroud · drop_id 4f2a</div>
+      <span class="pill">● LIVE</span><span class="pill">AUTO</span>
+      <div class="div"></div>
+      <div class="row"><span class="key">eta</span><span class="val warm">02:14:38</span></div>
+      <div class="row"><span class="key">progress</span><span class="val">87%</span></div>
+      <div class="row"><span class="key">viewers</span><span class="val">14,247</span></div>
+    </div>
+    <div class="meta">
+      <h3>C3 — Warm Pro</h3>
+      <p class="desc">Dark-first mit warmem Unterton (kein Pure-Black). Single warm Accent (Amber/Copper). Mono für Daten, Sans für UI. Arc Dark / Warp / Ghostty Vibes.</p>
+      <span class="ref">arc · warp · ghostty</span>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:24px; font-size:12px; opacity:0.6;">Klick eine Karte oder antworte im Terminal. Bei Unsicherheit: C2 ist die "sichere" Empfehlung für ein Produkt mit längerer Lebensdauer — C3 wenn du mehr Persönlichkeit willst — C1 wenn die App primär für Power-User ist die Terminal lieben.</p>
