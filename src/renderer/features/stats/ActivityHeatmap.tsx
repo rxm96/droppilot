@@ -115,8 +115,7 @@ export function ActivityHeatmap({ daily, longestStreak }: ActivityHeatmapProps) 
                   ? "0 0 0 1.5px var(--dp-accent), 0 0 16px var(--dp-accent-glow)"
                   : undefined,
                 zIndex: isHovered ? 10 : 0,
-                transition:
-                  "transform 160ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 160ms ease",
+                transition: "transform 160ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 160ms ease",
                 willChange: "transform",
               }}
             />
@@ -129,9 +128,7 @@ export function ActivityHeatmap({ daily, longestStreak }: ActivityHeatmapProps) 
             style={{
               left: hover.x,
               top: hover.flipBelow ? hover.y + 22 : hover.y - 10,
-              transform: hover.flipBelow
-                ? "translateX(-50%)"
-                : "translate(-50%, -100%)",
+              transform: hover.flipBelow ? "translateX(-50%)" : "translate(-50%, -100%)",
             }}
           >
             <span className="text-[color:var(--dp-text-dim)]">{formatDate(hover.date)}</span>
@@ -146,9 +143,7 @@ export function ActivityHeatmap({ daily, longestStreak }: ActivityHeatmapProps) 
                 >
                   {hover.claims}
                 </span>
-                <span className="text-[color:var(--dp-text-dimmer)]">
-                  {t("stats.unit.claims")}
-                </span>
+                <span className="text-[color:var(--dp-text-dimmer)]">{t("stats.unit.claims")}</span>
               </>
             )}
           </div>
