@@ -16,17 +16,14 @@ import { cn } from "@renderer/shared/lib/utils";
 export type StatsHeaderProps = {
   lastReset: number;
   onReset: () => void;
-  /** Override the i18n language for date formatting. Falls back to useI18n(). */
-  language?: string;
 };
 
 const DAY_MS = 86_400_000;
 
-export function StatsHeader({ lastReset, onReset, language }: StatsHeaderProps) {
-  const { t, language: ctxLanguage } = useI18n();
-  const lang = language ?? ctxLanguage;
+export function StatsHeader({ lastReset, onReset }: StatsHeaderProps) {
+  const { t, language } = useI18n();
 
-  const date = new Date(lastReset).toLocaleDateString(lang);
+  const date = new Date(lastReset).toLocaleDateString(language);
   const days = Math.max(0, Math.floor((Date.now() - lastReset) / DAY_MS));
 
   return (

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useI18n } from "@renderer/shared/i18n";
 import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { buildTrendSeries } from "./statsDerive";
@@ -25,8 +26,8 @@ function intensityPct(minutes: number, max: number): number {
 
 export function ActivityHeatmap({ daily, longestStreak }: ActivityHeatmapProps) {
   const { t } = useI18n();
-  const series = buildTrendSeries(daily, RANGE_DAYS);
-  const max = Math.max(...series.map((s) => s.minutes), 1);
+  const series = useMemo(() => buildTrendSeries(daily, RANGE_DAYS), [daily]);
+  const max = useMemo(() => Math.max(...series.map((s) => s.minutes), 1), [series]);
 
   return (
     <div className="rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] px-4 py-4">
