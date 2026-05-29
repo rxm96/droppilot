@@ -286,9 +286,6 @@ export const isStatsData = (value: unknown): value is StatsData => {
   if (!isRecord(value.daily)) return false;
   const daily = value.daily as UnknownRecord;
   return Object.values(daily).every(
-    (entry) =>
-      isRecord(entry) &&
-      isFiniteNumber(entry.minutes) &&
-      isFiniteNumber(entry.claims),
+    (entry) => isRecord(entry) && isFiniteNumber(entry.minutes) && isFiniteNumber(entry.claims),
   );
 };

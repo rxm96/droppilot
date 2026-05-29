@@ -32,8 +32,7 @@ export function computeStreaks(
   daily: DailyMap,
   now = Date.now(),
 ): { current: number; longest: number } {
-  const isActive = (key: string): boolean =>
-    key in daily && daily[key].minutes > 0;
+  const isActive = (key: string): boolean => key in daily && daily[key].minutes > 0;
 
   // --- current streak ---
   const todayKey = localDateKey(now);

@@ -485,7 +485,8 @@ const translations: Translations = {
     "stats.countingSince": "Counting since {date} · {days} days",
     "stats.reset": "Reset",
     "stats.resetConfirmTitle": "Reset stats?",
-    "stats.resetConfirmDesc": "This clears all stats and claimed-by-game history. This can't be undone.",
+    "stats.resetConfirmDesc":
+      "This clears all stats and claimed-by-game history. This can't be undone.",
     "stats.resetCancel": "Cancel",
     "stats.resetConfirmAction": "Reset stats",
     "stats.loading": "Loading stats…",
@@ -1510,7 +1511,8 @@ const translations: Translations = {
     "stats.countingSince": "Zählt seit {date} · {days} Tagen",
     "stats.reset": "Zurücksetzen",
     "stats.resetConfirmTitle": "Statistik zurücksetzen?",
-    "stats.resetConfirmDesc": "Damit werden alle Stats und die Game-Claim-Historie gelöscht. Das kann nicht rückgängig gemacht werden.",
+    "stats.resetConfirmDesc":
+      "Damit werden alle Stats und die Game-Claim-Historie gelöscht. Das kann nicht rückgängig gemacht werden.",
     "stats.resetCancel": "Abbrechen",
     "stats.resetConfirmAction": "Stats zurücksetzen",
     "stats.loading": "Lade Stats…",

@@ -146,9 +146,9 @@ describe("ipc guards", () => {
     // daily: empty object is valid
     expect(isStatsData({ ...ok, daily: {} })).toBe(true);
     // daily: string minutes is invalid
-    expect(
-      isStatsData({ ...ok, daily: { "2026-05-29": { minutes: "12", claims: 1 } } }),
-    ).toBe(false);
+    expect(isStatsData({ ...ok, daily: { "2026-05-29": { minutes: "12", claims: 1 } } })).toBe(
+      false,
+    );
     // daily: missing entirely is invalid
     expect(isStatsData({ ...ok, daily: undefined })).toBe(false);
   });

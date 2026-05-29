@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildTrendSeries,
-  computeStreaks,
-  formatWatchTime,
-  topGames,
-} from "./statsDerive";
+import { buildTrendSeries, computeStreaks, formatWatchTime, topGames } from "./statsDerive";
 
 // Fixed reference point: 2024-03-15T12:00:00.000Z
 // Using a noon UTC timestamp so that local-date arithmetic is unambiguous
