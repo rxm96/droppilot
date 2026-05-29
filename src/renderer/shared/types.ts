@@ -202,6 +202,7 @@ export type StatsData = {
   lastDropTitle?: string;
   lastGame?: string;
   claimsByGame: Record<string, number>;
+  daily: Record<string, { minutes: number; claims: number }>;
 };
 
 export type StatsState =
