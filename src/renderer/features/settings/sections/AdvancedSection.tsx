@@ -18,6 +18,22 @@ export type AdvancedSectionProps = {
 
 export function AdvancedSection(props: AdvancedSectionProps) {
   const { t } = useI18n();
+  const { setSettingsJson } = props;
+
+  // The Settings-JSON preview is a snapshot taken at store load. UI prefs
+  // (theme/accent/font) persist directly via IPC and bypass the settings
+  // store, so re-read the live on-disk settings whenever this section opens —
+  // otherwise the preview looks stale (e.g. accent / uiPrefsMigrated missing).
+  React.useEffect(() => {
+    let cancelled = false;
+    void window.electronAPI?.settings?.get?.().then((s) => {
+      if (!cancelled && s) setSettingsJson(JSON.stringify(s, null, 2));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [setSettingsJson]);
+
   return (
     <div className="flex flex-col">
       <SectionLabel>{t("settings.subsection.diagnostics")}</SectionLabel>
