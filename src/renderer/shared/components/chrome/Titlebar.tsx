@@ -1,17 +1,43 @@
 import * as React from "react";
 import { Logo } from "@renderer/shared/components/Logo";
 import { Pill } from "@renderer/shared/components/ui/pill";
-import { Sun, Moon, Settings, Minus, Square, X } from "@renderer/shared/lib/icons";
+import {
+  Sun,
+  Moon,
+  Settings,
+  Minus,
+  Square,
+  X,
+  Download,
+  Sparkles,
+} from "@renderer/shared/lib/icons";
 import { cn } from "@renderer/shared/lib/utils";
 import { useI18n } from "@renderer/shared/i18n";
 
 export type TitlebarTheme = "light" | "dark";
+
+export type TitlebarUpdateState =
+  | "idle"
+  | "checking"
+  | "available"
+  | "downloading"
+  | "downloaded"
+  | "none"
+  | "error"
+  | "unsupported";
 
 export type TitlebarProps = {
   title?: string;
   theme: TitlebarTheme;
   onThemeToggle: () => void;
   onSettingsClick?: () => void;
+
+  /** Current auto-updater state; drives the "update available / ready" chip. */
+  updateStatus?: { state: TitlebarUpdateState };
+  /** Start downloading the available update. */
+  onDownloadUpdate?: () => void;
+  /** Restart & install a downloaded update. */
+  onInstallUpdate?: () => void;
 
   /** Connection / API status pills shown center-right. */
   connectionState?: "connected" | "disconnected" | "connecting";
@@ -30,12 +56,16 @@ export function Titlebar({
   theme,
   onThemeToggle,
   onSettingsClick,
+  updateStatus,
+  onDownloadUpdate,
+  onInstallUpdate,
   connectionState,
   apiLatencyMs,
   showWindowControls = true,
   className,
 }: TitlebarProps) {
   const { t } = useI18n();
+  const updateState = updateStatus?.state;
   const [isMaximized, setIsMaximized] = React.useState(false);
 
   // Subscribe to OS-level maximize/unmaximize so the maximize/restore icon swaps
@@ -91,6 +121,36 @@ export function Titlebar({
 
       {/* Center/right status */}
       <div className="ml-auto flex items-center gap-2" style={noDrag}>
+        {/* Update chip — only the "available" state is otherwise invisible
+            (the overlay covers downloading/ready), so surface it here. */}
+        {updateState === "available" && (
+          <button
+            type="button"
+            onClick={onDownloadUpdate}
+            title={t("titlebar.updateAvailable")}
+            className="inline-flex items-center gap-1.5 rounded-[var(--dp-radius-sm)] border border-[color:var(--dp-accent-soft)] bg-[color:var(--dp-accent-soft)] px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.06em] text-[color:var(--dp-accent)] transition-colors hover:bg-[color-mix(in_srgb,var(--dp-accent)_22%,transparent)] hover:text-[color:var(--dp-accent-hover)]"
+          >
+            <Download size={11} strokeWidth={2} />
+            {t("titlebar.updateAvailable")}
+          </button>
+        )}
+        {updateState === "downloaded" && (
+          <button
+            type="button"
+            onClick={onInstallUpdate}
+            title={t("titlebar.updateReady")}
+            className="inline-flex items-center gap-1.5 rounded-[var(--dp-radius-sm)] border border-[color:var(--dp-accent-soft)] bg-[color:var(--dp-accent-soft)] px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.06em] text-[color:var(--dp-accent)] transition-colors hover:bg-[color-mix(in_srgb,var(--dp-accent)_22%,transparent)] hover:text-[color:var(--dp-accent-hover)]"
+          >
+            <Sparkles size={11} strokeWidth={2} />
+            {t("titlebar.updateReady")}
+          </button>
+        )}
+        {updateState === "downloading" && (
+          <span className="inline-flex items-center gap-1.5 rounded-[var(--dp-radius-sm)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.06em] text-[color:var(--dp-text-dim)]">
+            <Download size={11} strokeWidth={2} className="animate-pulse" />
+            {t("titlebar.updateDownloading")}
+          </span>
+        )}
         {connectionState && (
           <Pill
             tone={

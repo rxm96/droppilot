@@ -175,6 +175,9 @@ function AppShell({ model }: { model: Model }) {
           theme={resolvedTheme}
           onThemeToggle={toggleTheme}
           onSettingsClick={openSettings}
+          updateStatus={titleBarProps.updateStatus}
+          onDownloadUpdate={titleBarProps.onDownloadUpdate}
+          onInstallUpdate={titleBarProps.onInstallUpdate}
         />
       )}
       <UpdateOverlay {...updateOverlayProps} />
