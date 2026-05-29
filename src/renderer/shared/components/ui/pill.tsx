@@ -3,7 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@renderer/shared/lib/utils";
 
 const pillVariants = cva(
-  "inline-flex items-center gap-1.5 rounded-[var(--dp-radius-xs)] px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.06em] border",
+  "inline-flex items-center gap-1.5 whitespace-nowrap rounded-[var(--dp-radius-xs)] px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.06em] border",
   {
     variants: {
       tone: {

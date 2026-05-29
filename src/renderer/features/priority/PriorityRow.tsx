@@ -47,7 +47,7 @@ export function PriorityRow({ rank, game, state, onRemove }: PriorityRowProps) {
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
-    gridTemplateColumns: "32px 40px 1fr 100px 32px",
+    gridTemplateColumns: "32px 40px 1fr 150px 32px",
     zIndex: isDragging ? 10 : undefined,
   };
 
