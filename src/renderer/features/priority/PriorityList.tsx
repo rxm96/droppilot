@@ -1,19 +1,21 @@
 import * as React from "react";
 import {
   DndContext,
+  DragOverlay,
   KeyboardSensor,
   PointerSensor,
   closestCenter,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { PriorityRow } from "./PriorityRow";
+import { PriorityRow, PriorityRowOverlay } from "./PriorityRow";
 import { derivePriorityRowState } from "./priorityHelpers";
 import { useI18n } from "@renderer/shared/i18n";
 
@@ -35,13 +37,19 @@ export function PriorityList({
   removeGame,
 }: PriorityListProps) {
   const { t } = useI18n();
+  const [activeId, setActiveId] = React.useState<string | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
+  const handleDragStart = React.useCallback(({ active }: DragStartEvent) => {
+    setActiveId(String(active.id));
+  }, []);
+
   const handleDragEnd = React.useCallback(
     ({ active, over }: DragEndEvent) => {
+      setActiveId(null);
       if (!over) return;
       const activeGame = String(active.id);
       const overGame = String(over.id);
@@ -50,6 +58,8 @@ export function PriorityList({
     },
     [movePriorityGame],
   );
+
+  const handleDragCancel = React.useCallback(() => setActiveId(null), []);
 
   if (priorityGames.length === 0) {
     return (
@@ -64,9 +74,17 @@ export function PriorityList({
     );
   }
 
+  const activeRank = activeId ? priorityGames.indexOf(activeId) + 1 : 0;
+
   return (
     <div className="rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)]">
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
         <SortableContext items={priorityGames} strategy={verticalListSortingStrategy}>
           <ul className="list-none p-0 m-0">
             {priorityGames.map((game, index) => (
@@ -80,6 +98,15 @@ export function PriorityList({
             ))}
           </ul>
         </SortableContext>
+        <DragOverlay>
+          {activeId ? (
+            <PriorityRowOverlay
+              rank={activeRank}
+              game={activeId}
+              state={derivePriorityRowState(activeId, activeTargetGame, watchingGame, liveGameSet)}
+            />
+          ) : null}
+        </DragOverlay>
       </DndContext>
     </div>
   );
