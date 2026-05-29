@@ -41,9 +41,13 @@ export function WatchTimeTrend({ daily }: WatchTimeTrendProps) {
 
   const gradientId = React.useId();
 
-  const startDate = series.length > 0 ? new Date(series[0].date).toLocaleDateString(language) : "";
-  const endDate =
-    series.length > 0 ? new Date(series[series.length - 1].date).toLocaleDateString(language) : "";
+  const fmtAxis = (key: string) => {
+    const [y, m, d] = key.split("-").map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString(language);
+  };
+
+  const startDate = series.length > 0 ? fmtAxis(series[0].date) : "";
+  const endDate = series.length > 0 ? fmtAxis(series[series.length - 1].date) : "";
 
   return (
     <div className="rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] px-4 py-4">

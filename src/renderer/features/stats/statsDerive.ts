@@ -89,14 +89,17 @@ export function buildTrendSeries(
   rangeDays: number,
   now = Date.now(),
 ): { date: string; minutes: number }[] {
-  const result: { date: string; minutes: number }[] = [];
-  // today is the last (index rangeDays - 1), oldest is index 0
+  // Step by calendar day from local midnight to avoid DST-transition duplicates/gaps.
+  const base = new Date(now);
+  base.setHours(0, 0, 0, 0);
+  const series: { date: string; minutes: number }[] = [];
   for (let i = rangeDays - 1; i >= 0; i--) {
-    const ts = now - i * DAY_MS;
-    const date = localDateKey(ts);
-    result.push({ date, minutes: daily[date]?.minutes ?? 0 });
+    const d = new Date(base);
+    d.setDate(d.getDate() - i);
+    const date = localDateKey(d.getTime());
+    series.push({ date, minutes: daily[date]?.minutes ?? 0 });
   }
-  return result;
+  return series;
 }
 
 /**
