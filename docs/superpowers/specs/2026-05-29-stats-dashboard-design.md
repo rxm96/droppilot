@@ -84,7 +84,7 @@ New feature folder `src/renderer/features/stats/`:
 | File | Responsibility |
 |------|----------------|
 | `StatsView.tsx` | Layout composition: header → KPI row → (trend + ranking) → heatmap. Owns the range-toggle state. Handles `loading` / `error` / `ready` from `StatsState`. |
-| `StatsHeader.tsx` | Title + "counting since {date} · {n} days" + reset button (reuses the existing Radix `AlertDialog` confirm pattern). |
+| `StatsHeader.tsx` | Title + "counting since {date} · {n} days" + reset button gated behind a confirmation dialog (see Reset confirmation below). |
 | `KpiCards.tsx` | Four stat tiles. |
 | `WatchTimeTrend.tsx` | SVG area chart + 7d/30d/90d toggle. |
 | `TopGamesPanel.tsx` | Ranked horizontal bars from `claimsByGame`. |
@@ -92,6 +92,19 @@ New feature folder `src/renderer/features/stats/`:
 
 All panels use the existing `--dp-*` tokens and primitives (mono for numbers, sans for
 labels, violet accent), consistent with the rest of the overhaul.
+
+### Reset confirmation (required)
+
+Resetting stats is destructive and irreversible, so the reset button **must not** call
+`resetStats()` directly. It opens a confirmation dialog and only invokes `resetStats()`
+when the user confirms the destructive action; cancelling is a no-op.
+
+- Built on the existing `AlertDialog` primitive at
+  `src/renderer/shared/components/ui/alert-dialog.tsx` (currently unused but present —
+  this is the same primitive the pre-overhaul Overview reset relied on).
+- Copy comes from the migrated `stats.resetConfirm*` keys (title, description, cancel,
+  confirm action), so the warning text is bilingual.
+- The destructive confirm action is visually distinct (destructive button variant).
 
 ### Charts
 
@@ -131,6 +144,8 @@ Pure, React-free, unit-tested — `src/renderer/features/stats/statsDerive.ts`:
   pruning drops keys older than `RETENTION_DAYS`; `resetStats` clears `daily`;
   `loadStats` normalizes malformed `daily`.
 - `ipc.test.ts`: `isStatsData` accepts valid `daily`, rejects malformed.
+- `StatsHeader` (component test): clicking reset does **not** call `resetStats` until the
+  dialog's confirm action is activated; cancelling leaves stats untouched.
 
 ## Files touched (summary)
 
