@@ -42,7 +42,6 @@ once the view is complete.
 - `src/renderer/features/stats/ActivityHeatmap.tsx`
 - `src/renderer/features/stats/statsDerive.ts` — pure: `computeStreaks`, `buildTrendSeries`, `topGames`, `formatWatchTime`
 - `src/renderer/features/stats/statsDerive.test.ts`
-- `src/renderer/features/stats/StatsHeader.test.tsx` — confirm-gate test
 - `src/renderer/features/stats/index.ts`
 
 **Modified files:**
@@ -213,11 +212,11 @@ export function pruneDaily(daily: DailyMap, now: number, retentionDays = RETENTI
 
 - [ ] **Step 6: `StatsView.tsx`** — props `{ stats: StatsState; resetStats: () => void }`. Handle `idle`/`loading`/`error`/`ready`. On `ready`, derive `currentStreak`/`longest` via `computeStreaks`, compose: `StatsHeader` → `KpiCards` → grid(`WatchTimeTrend` 1.7fr, `TopGamesPanel` 1fr) → `ActivityHeatmap`. `gamesCount = Object.keys(claimsByGame).length`.
 
-- [ ] **Step 7: `StatsHeader.test.tsx`** — render with a spy `onReset`; assert clicking reset does NOT call it; opening dialog + clicking confirm DOES; clicking cancel does not. (Use the project's existing component-test setup; if none exists for Radix portals, assert on the dialog content node.)
+- [ ] **Step 7: Confirm gate by construction (no rendering test).** The repo's test setup is node-env, `include: src/**/*.test.ts` only, with no `jsdom` / `@testing-library` — so a rendering component test is not runnable. Instead **guarantee the gate structurally**: `onReset` is wired ONLY to the `AlertDialogAction`'s handler; the trigger merely opens the dialog, and cancel / overlay-dismiss do nothing. This is verified manually in Task 7/8. Do NOT add a `.test.tsx` file or pull in a new test dependency.
 
 - [ ] **Step 8: `index.ts`** — `export { StatsView } from "./StatsView";`
 
-- [ ] **Step 9: Verify** — `npx tsc --noEmit` clean; `npm test -- StatsHeader` pass.
+- [ ] **Step 9: Verify** — `npx tsc --noEmit` clean. (No new test file in this task; the pure derivation tests live in Task 4.)
 
 - [ ] **Step 10: Commit** — `feat(stats): add stats dashboard view + panels`
 

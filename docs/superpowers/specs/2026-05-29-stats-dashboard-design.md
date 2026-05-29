@@ -144,8 +144,11 @@ Pure, React-free, unit-tested — `src/renderer/features/stats/statsDerive.ts`:
   pruning drops keys older than `RETENTION_DAYS`; `resetStats` clears `daily`;
   `loadStats` normalizes malformed `daily`.
 - `ipc.test.ts`: `isStatsData` accepts valid `daily`, rejects malformed.
-- `StatsHeader` (component test): clicking reset does **not** call `resetStats` until the
-  dialog's confirm action is activated; cancelling leaves stats untouched.
+
+The reset confirm gate has **no automated test**: the repo's test setup is node-env,
+`*.test.ts`-only, with no `jsdom` / `@testing-library`, so rendering tests aren't runnable
+and adding that toolchain is out of scope. The gate is instead guaranteed structurally
+(`onReset` wired only to the dialog's confirm action) and verified by manual smoke.
 
 ## Files touched (summary)
 
