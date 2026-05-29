@@ -658,6 +658,10 @@ const translations: Translations = {
     "settings.row.fontPair.preset.proConsole": "Pro Console (default)",
     "settings.row.fontPair.preset.modern": "Modern (Inter + JetBrains Mono)",
     "settings.row.fontPair.preset.geist": "Geist (Geist + Geist Mono)",
+    "settings.row.fontPair.preset.space": "Space (Space Grotesk + Space Mono)",
+    "settings.row.fontPair.preset.dm": "DM (DM Sans + DM Mono)",
+    "settings.row.fontPair.preset.figtree": "Figtree (no mono)",
+    "settings.row.fontPair.preset.nunito": "Nunito (rounded, no mono)",
     "settings.row.fontPair.preset.system": "System (zero network)",
     "settings.row.badgesEmotes.description":
       "Display Twitch badges and emotes in chat-like elements.",
@@ -1649,6 +1653,10 @@ const translations: Translations = {
     "settings.row.fontPair.preset.proConsole": "Pro Console (Standard)",
     "settings.row.fontPair.preset.modern": "Modern (Inter + JetBrains Mono)",
     "settings.row.fontPair.preset.geist": "Geist (Geist + Geist Mono)",
+    "settings.row.fontPair.preset.space": "Space (Space Grotesk + Space Mono)",
+    "settings.row.fontPair.preset.dm": "DM (DM Sans + DM Mono)",
+    "settings.row.fontPair.preset.figtree": "Figtree (ohne Mono)",
+    "settings.row.fontPair.preset.nunito": "Nunito (rund, ohne Mono)",
     "settings.row.fontPair.preset.system": "System (kein Netzwerk)",
     "settings.row.badgesEmotes.description":
       "Twitch-Badges und Emotes in Chat-ähnlichen Elementen anzeigen.",

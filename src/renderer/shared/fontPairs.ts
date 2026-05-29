@@ -13,7 +13,15 @@
  * fonts directly.
  */
 
-export type FontPairId = "pro-console" | "modern" | "geist" | "system";
+export type FontPairId =
+  | "pro-console"
+  | "modern"
+  | "geist"
+  | "space"
+  | "dm"
+  | "figtree"
+  | "nunito"
+  | "system";
 
 export type FontPair = {
   id: FontPairId;
@@ -50,6 +58,42 @@ export const FONT_PAIRS: FontPair[] = [
       "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap",
   },
   {
+    id: "space",
+    nameKey: "settings.row.fontPair.preset.space",
+    sans: `"Space Grotesk", "Segoe UI", system-ui, sans-serif`,
+    mono: `"Space Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace`,
+    googleFontsHref:
+      "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap",
+  },
+  {
+    id: "dm",
+    nameKey: "settings.row.fontPair.preset.dm",
+    sans: `"DM Sans", "Segoe UI", system-ui, sans-serif`,
+    mono: `"DM Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace`,
+    googleFontsHref:
+      "https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap",
+  },
+  {
+    // No-mono: a single proportional family fills both slots. Numbers still
+    // align via the `tabular-nums` feature already set in CSS; the chrome just
+    // loses its monospace, terminal character for a softer look.
+    id: "figtree",
+    nameKey: "settings.row.fontPair.preset.figtree",
+    sans: `"Figtree", "Segoe UI", system-ui, sans-serif`,
+    mono: `"Figtree", "Segoe UI", system-ui, sans-serif`,
+    googleFontsHref:
+      "https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap",
+  },
+  {
+    // No-mono, rounded/friendly.
+    id: "nunito",
+    nameKey: "settings.row.fontPair.preset.nunito",
+    sans: `"Nunito", "Segoe UI", system-ui, sans-serif`,
+    mono: `"Nunito", "Segoe UI", system-ui, sans-serif`,
+    googleFontsHref:
+      "https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&display=swap",
+  },
+  {
     id: "system",
     nameKey: "settings.row.fontPair.preset.system",
     sans: `system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`,
@@ -66,7 +110,7 @@ export function getFontPair(id: FontPairId | null | undefined): FontPair {
 }
 
 export function isValidFontPairId(value: unknown): value is FontPairId {
-  return value === "pro-console" || value === "modern" || value === "geist" || value === "system";
+  return typeof value === "string" && FONT_PAIRS.some((p) => p.id === value);
 }
 
 /**
