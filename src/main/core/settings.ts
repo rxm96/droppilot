@@ -37,6 +37,16 @@ export type SettingsData = {
   closeToTray: boolean;
   /** When true, minimizing the window hides it to the tray instead of leaving it in the taskbar. */
   minimizeToTray: boolean;
+  /**
+   * UI preferences. Durable here (the renderer's localStorage is only a fast
+   * first-paint cache — file:// localStorage is not reliably persisted across
+   * updates). `theme` is null until the user pins one (follow-system default).
+   */
+  theme: "light" | "dark" | null;
+  accent: string | null;
+  fontPair: string;
+  /** Set once the renderer has migrated its localStorage UI prefs into here. */
+  uiPrefsMigrated: boolean;
   /** Persisted window bounds. Undefined on first launch — main process falls back to defaults. */
   windowBounds?: {
     x: number;
@@ -115,6 +125,10 @@ const defaultSettings: SettingsData = {
   allowUnlinkedGames: false,
   closeToTray: true,
   minimizeToTray: false,
+  theme: null,
+  accent: null,
+  fontPair: "pro-console",
+  uiPrefsMigrated: false,
 };
 
 const normalizeWindowBounds = (raw: unknown): SettingsData["windowBounds"] => {
@@ -240,6 +254,10 @@ export async function loadSettings(): Promise<SettingsData> {
         typeof parsed?.minimizeToTray === "boolean"
           ? parsed.minimizeToTray
           : defaultSettings.minimizeToTray,
+      theme: parsed?.theme === "light" || parsed?.theme === "dark" ? parsed.theme : null,
+      accent: typeof parsed?.accent === "string" ? parsed.accent : null,
+      fontPair: typeof parsed?.fontPair === "string" ? parsed.fontPair : defaultSettings.fontPair,
+      uiPrefsMigrated: parsed?.uiPrefsMigrated === true,
       windowBounds: normalizeWindowBounds(parsed?.windowBounds),
     };
   } catch {
@@ -337,6 +355,19 @@ async function persistSettings(data: SettingsSaveData): Promise<SettingsData> {
       typeof restData.minimizeToTray === "boolean"
         ? restData.minimizeToTray
         : current.minimizeToTray,
+    theme:
+      restData.theme === "light" || restData.theme === "dark" || restData.theme === null
+        ? restData.theme
+        : current.theme,
+    accent:
+      typeof restData.accent === "string" || restData.accent === null
+        ? restData.accent
+        : current.accent,
+    fontPair: typeof restData.fontPair === "string" ? restData.fontPair : current.fontPair,
+    uiPrefsMigrated:
+      typeof restData.uiPrefsMigrated === "boolean"
+        ? restData.uiPrefsMigrated
+        : current.uiPrefsMigrated,
     windowBounds:
       restData.windowBounds !== undefined
         ? normalizeWindowBounds(restData.windowBounds)

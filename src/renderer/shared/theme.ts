@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DEFAULT_FONT_PAIR_ID,
   ensureFontPairLoaded,
@@ -38,6 +38,55 @@ function isThemePreference(value: string | null): value is ThemePreference {
   return value === "light" || value === "dark";
 }
 
+// =============================================================================
+// Durable UI prefs — persisted in the main-process settings.json (crash-safe).
+// localStorage above is only a synchronous first-paint cache; settings.json is
+// the source of truth that survives updates (file:// localStorage is not
+// reliably persisted by Chromium across relaunches).
+// =============================================================================
+
+type DurableUiPrefs = {
+  theme?: ThemePreference;
+  accent: string | null;
+  fontPair?: FontPairId;
+  migrated: boolean;
+};
+
+let durablePrefsPromise: Promise<DurableUiPrefs> | null = null;
+
+/** Reads the durable UI prefs from settings.json once (cached for the session). */
+function loadDurableUiPrefs(): Promise<DurableUiPrefs> {
+  if (durablePrefsPromise) return durablePrefsPromise;
+  durablePrefsPromise = (async () => {
+    try {
+      const s = await window.electronAPI?.settings?.get?.();
+      return {
+        theme: s?.theme === "light" || s?.theme === "dark" ? s.theme : undefined,
+        accent: typeof s?.accent === "string" && isValidHex(s.accent) ? s.accent : null,
+        fontPair: isValidFontPairId(s?.fontPair) ? s.fontPair : undefined,
+        migrated: s?.uiPrefsMigrated === true,
+      };
+    } catch {
+      return { accent: null, migrated: false };
+    }
+  })();
+  return durablePrefsPromise;
+}
+
+/** Persists UI prefs to the durable store (fire-and-forget; localStorage holds the cache). */
+function persistUiPref(patch: {
+  theme?: ThemePreference;
+  accent?: string | null;
+  fontPair?: FontPairId;
+  uiPrefsMigrated?: boolean;
+}) {
+  try {
+    void window.electronAPI?.settings?.save?.(patch);
+  } catch {
+    /* best effort — the localStorage cache still holds the value */
+  }
+}
+
 export function getSystemTheme(): ThemePreference {
   if (typeof window === "undefined" || !window.matchMedia) return "light";
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
@@ -71,11 +120,35 @@ export function initTheme() {
 
 export function useTheme() {
   const [theme, setTheme] = useState<ThemePreference>(() => getStoredTheme());
+  const mounted = useRef(false);
 
   useEffect(() => {
     applyTheme(theme);
     setStoredTheme(theme);
+    // Skip the mount run — the reconcile effect below owns the initial durable
+    // sync; only persist genuine user changes.
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    persistUiPref({ theme });
   }, [theme]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadDurableUiPrefs().then((d) => {
+      if (cancelled) return;
+      if (d.migrated) {
+        if (d.theme && d.theme !== theme) setTheme(d.theme);
+      } else {
+        persistUiPref({ theme, uiPrefsMigrated: true });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return {
     theme,
@@ -138,11 +211,33 @@ export function initAccent() {
 export function useAccent() {
   // null means "no override" — fall back to the CSS token defaults.
   const [accent, setAccent] = useState<string | null>(() => getStoredAccent());
+  const mounted = useRef(false);
 
   useEffect(() => {
     applyAccent(accent);
     setStoredAccent(accent);
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    persistUiPref({ accent });
   }, [accent]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadDurableUiPrefs().then((d) => {
+      if (cancelled) return;
+      if (d.migrated) {
+        if (d.accent !== accent) setAccent(d.accent);
+      } else {
+        persistUiPref({ accent, uiPrefsMigrated: true });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return {
     accent,
@@ -186,11 +281,33 @@ export function initFontPair() {
 
 export function useFontPair() {
   const [fontPair, setFontPair] = useState<FontPairId>(() => getStoredFontPair());
+  const mounted = useRef(false);
 
   useEffect(() => {
     applyFontPair(fontPair);
     setStoredFontPair(fontPair);
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    persistUiPref({ fontPair });
   }, [fontPair]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadDurableUiPrefs().then((d) => {
+      if (cancelled) return;
+      if (d.migrated) {
+        if (d.fontPair && d.fontPair !== fontPair) setFontPair(d.fontPair);
+      } else {
+        persistUiPref({ fontPair, uiPrefsMigrated: true });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return {
     fontPair,

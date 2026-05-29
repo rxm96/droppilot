@@ -27,6 +27,10 @@ type SettingsPayload = {
   alertsNewDrops?: boolean;
   enableBadgesEmotes?: boolean;
   allowUnlinkedGames?: boolean;
+  theme?: "light" | "dark" | null;
+  accent?: string | null;
+  fontPair?: string;
+  uiPrefsMigrated?: boolean;
 };
 
 type ChannelsDiffPayload = {
