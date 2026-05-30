@@ -109,7 +109,14 @@ export function ReleaseHistory() {
           <span className="font-mono text-[11px] text-[color:var(--dp-signal-err)]">
             {t("settings.releaseHistory.error")}
           </span>
-          <Button variant="dp-secondary" size="dp-sm" onClick={() => void reload()}>
+          <Button
+            variant="dp-secondary"
+            size="dp-sm"
+            onClick={() => {
+              setShowAll(false);
+              void reload();
+            }}
+          >
             {t("settings.releaseHistory.retry")}
           </Button>
         </div>

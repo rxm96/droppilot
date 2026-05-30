@@ -99,7 +99,8 @@ export function filterReleasesByChannel(
 export function isReleaseHistoryResult(value: unknown): value is ReleaseHistoryResult {
   if (!value || typeof value !== "object") return false;
   const v = value as { status?: unknown; releases?: unknown };
-  if (v.status === "ready") return Array.isArray(v.releases);
+  if (v.status === "ready")
+    return Array.isArray(v.releases) && typeof (v as { stale?: unknown }).stale === "boolean";
   if (v.status === "error") return typeof (v as { message?: unknown }).message === "string";
   return false;
 }

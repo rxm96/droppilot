@@ -115,6 +115,10 @@ describe("isReleaseHistoryResult", () => {
   it("rejects error results with a missing message", () => {
     expect(isReleaseHistoryResult({ status: "error" })).toBe(false);
   });
+
+  it("rejects ready results without a boolean stale", () => {
+    expect(isReleaseHistoryResult({ status: "ready", releases: [] })).toBe(false);
+  });
 });
 
 import { loadReleaseHistory, type FetchLike, RELEASE_CACHE_TTL_MS } from "./releaseHistory";

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { isReleaseHistoryResult, type ReleaseEntry } from "../../../../shared/releaseHistory";
 
 type State =
@@ -9,8 +9,11 @@ type State =
 
 export function useReleaseHistory(enabled: boolean) {
   const [state, setState] = useState<State>({ status: "idle" });
+  const inFlightRef = useRef(false);
 
   const load = useCallback(async () => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
     setState((prev) => (prev.status === "ready" ? prev : { status: "loading" }));
     try {
       const res: unknown = await window.electronAPI.app.releaseHistory();
@@ -25,6 +28,8 @@ export function useReleaseHistory(enabled: boolean) {
       setState({ status: "ready", releases: res.releases, stale: res.stale });
     } catch (err) {
       setState({ status: "error", message: err instanceof Error ? err.message : String(err) });
+    } finally {
+      inFlightRef.current = false;
     }
   }, []);
 
