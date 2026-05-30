@@ -103,3 +103,65 @@ export function isReleaseHistoryResult(value: unknown): value is ReleaseHistoryR
   if (v.status === "error") return true;
   return false;
 }
+
+export type FetchLike = (
+  url: string,
+  init?: { headers?: Record<string, string> },
+) => Promise<{ ok: boolean; status: number; json: () => Promise<unknown> }>;
+
+export async function loadReleaseHistory(opts: {
+  allowPrerelease: boolean;
+  cache: ReleaseCache;
+  now: number;
+  fetchImpl: FetchLike;
+}): Promise<{ result: ReleaseHistoryResult; cache: ReleaseCache }> {
+  const { allowPrerelease, cache, now, fetchImpl } = opts;
+
+  if (cache && now - cache.at < RELEASE_CACHE_TTL_MS) {
+    return {
+      result: {
+        status: "ready",
+        releases: filterReleasesByChannel(cache.entries, allowPrerelease),
+        stale: false,
+      },
+      cache,
+    };
+  }
+
+  try {
+    const res = await fetchImpl(GITHUB_RELEASES_URL, {
+      headers: { Accept: "application/vnd.github+json" },
+    });
+    if (!res.ok) throw new Error(`GitHub API ${res.status}`);
+    const json = (await res.json()) as unknown;
+    if (!Array.isArray(json)) throw new Error("Unexpected releases payload");
+
+    const entries = json
+      .map((raw) => normalizeRelease(raw as RawGithubRelease))
+      .filter((e): e is ReleaseEntry => e !== null);
+
+    return {
+      result: {
+        status: "ready",
+        releases: filterReleasesByChannel(entries, allowPrerelease),
+        stale: false,
+      },
+      cache: { at: now, entries },
+    };
+  } catch (err) {
+    if (cache) {
+      return {
+        result: {
+          status: "ready",
+          releases: filterReleasesByChannel(cache.entries, allowPrerelease),
+          stale: true,
+        },
+        cache,
+      };
+    }
+    return {
+      result: { status: "error", message: err instanceof Error ? err.message : String(err) },
+      cache,
+    };
+  }
+}

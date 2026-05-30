@@ -108,3 +108,93 @@ describe("isReleaseHistoryResult", () => {
     expect(isReleaseHistoryResult({ status: "weird" })).toBe(false);
   });
 });
+
+import { loadReleaseHistory, type FetchLike, RELEASE_CACHE_TTL_MS } from "./releaseHistory";
+
+const okFetch = (payload: unknown): FetchLike =>
+  async () => ({ ok: true, status: 200, json: async () => payload });
+
+const rawRelease = (tag: string, prerelease = false) => ({
+  tag_name: tag,
+  published_at: "2026-05-30T00:00:00Z",
+  prerelease,
+  draft: false,
+  body: "## What's new for users\n\n- note",
+  html_url: `https://example.test/${tag}`,
+});
+
+describe("loadReleaseHistory", () => {
+  it("fetches when there is no cache and returns filtered releases", async () => {
+    const { result, cache } = await loadReleaseHistory({
+      allowPrerelease: false,
+      cache: null,
+      now: 10_000,
+      fetchImpl: okFetch([rawRelease("v3.0.5"), rawRelease("v3.1.0-rc.1", true)]),
+    });
+    expect(result.status).toBe("ready");
+    if (result.status === "ready") {
+      expect(result.releases.map((r) => r.tag)).toEqual(["v3.0.5"]);
+      expect(result.stale).toBe(false);
+    }
+    expect(cache?.entries.length).toBe(2); // cache keeps unfiltered entries
+  });
+
+  it("serves a fresh cache without fetching", async () => {
+    let called = false;
+    const fetchImpl: FetchLike = async () => {
+      called = true;
+      return { ok: true, status: 200, json: async () => [] };
+    };
+    const cache = { at: 9_000, entries: [] as never[] };
+    const { result } = await loadReleaseHistory({
+      allowPrerelease: true,
+      cache,
+      now: 9_000 + 1000, // within TTL
+      fetchImpl,
+    });
+    expect(called).toBe(false);
+    expect(result.status).toBe("ready");
+  });
+
+  it("returns the stale cache when the fetch fails", async () => {
+    const cache = {
+      at: 0,
+      entries: [
+        {
+          version: "3.0.0",
+          tag: "v3.0.0",
+          date: 1,
+          prerelease: false,
+          notes: [],
+          fullChangelog: "",
+          url: "",
+        },
+      ],
+    };
+    const failing: FetchLike = async () => {
+      throw new Error("offline");
+    };
+    const { result } = await loadReleaseHistory({
+      allowPrerelease: false,
+      cache,
+      now: RELEASE_CACHE_TTL_MS + 1, // cache expired
+      fetchImpl: failing,
+    });
+    expect(result.status).toBe("ready");
+    if (result.status === "ready") {
+      expect(result.stale).toBe(true);
+      expect(result.releases[0]?.tag).toBe("v3.0.0");
+    }
+  });
+
+  it("returns an error when the fetch fails and there is no cache", async () => {
+    const failing: FetchLike = async () => ({ ok: false, status: 503, json: async () => null });
+    const { result } = await loadReleaseHistory({
+      allowPrerelease: false,
+      cache: null,
+      now: 0,
+      fetchImpl: failing,
+    });
+    expect(result.status).toBe("error");
+  });
+});
