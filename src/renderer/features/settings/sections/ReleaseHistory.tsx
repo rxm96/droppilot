@@ -51,12 +51,17 @@ function ReleaseCard({
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
+            aria-expanded={expanded}
+            aria-controls={`changelog-${release.tag}`}
             className="font-mono text-[10px] uppercase tracking-[0.06em] text-[color:var(--dp-text-dimmer)] hover:text-[color:var(--dp-accent)]"
           >
             {t("settings.releaseHistory.fullChangelog")} {expanded ? "−" : "+"}
           </button>
           {expanded && (
-            <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-[10px] leading-relaxed text-[color:var(--dp-text-dimmer)]">
+            <pre
+              id={`changelog-${release.tag}`}
+              className="mt-2 whitespace-pre-wrap break-words font-mono text-[10px] leading-relaxed text-[color:var(--dp-text-dimmer)]"
+            >
               {release.fullChangelog}
             </pre>
           )}
@@ -74,10 +79,16 @@ export function ReleaseHistory() {
 
   React.useEffect(() => {
     let cancelled = false;
-    void window.electronAPI.app?.getVersion?.().then((res) => {
-      const v = (res as { version?: string } | undefined)?.version;
-      if (!cancelled && typeof v === "string") setCurrentVersion(v);
-    });
+    const loadVersion = async () => {
+      try {
+        const res = await window.electronAPI.app?.getVersion?.();
+        const v = (res as { version?: string } | undefined)?.version;
+        if (!cancelled && typeof v === "string") setCurrentVersion(v);
+      } catch {
+        // version display is best-effort; leave currentVersion null
+      }
+    };
+    void loadVersion();
     return () => {
       cancelled = true;
     };
@@ -113,6 +124,7 @@ export function ReleaseHistory() {
               {t("settings.releaseHistory.stale")}
             </p>
           )}
+          {/* currentVersion is the raw app.getVersion() (no build-SHA suffix), so it matches ReleaseEntry.version */}
           {(showAll ? state.releases : state.releases.slice(0, INITIAL_VISIBLE)).map((r) => (
             <ReleaseCard
               key={r.tag}
