@@ -1,106 +1,94 @@
 # DropPilot
 
-> **Downloads:** Grab the latest Windows installer from **GitHub Releases**:
-> [github.com/rxm96/droppilot/releases](https://github.com/rxm96/droppilot/releases)
+> **Download:** Grab the latest Windows installer from
+> [GitHub Releases](https://github.com/rxm96/droppilot/releases).
 
-## What it does
+DropPilot is a desktop app that automates Twitch Drops — quietly, in the
+background, while staying transparent about what it's doing. It tracks your drop
+inventory, picks and watches an eligible stream, switches when that stream goes
+down, and (optionally) claims drops for you.
 
-DropPilot focuses on keeping Twitch drops simple and hands-off while still transparent.
+## Features
 
-- Tracks drop inventory, claim status, and progress in real time.
-- Surfaces a target game view with per-drop progress, ETA, and remaining time.
-- Builds and respects a priority list so the app can focus on what matters most.
-- Auto-selects a stream and auto-switches when the current stream disappears.
-- Auto-claims drops (optional) and keeps a clear audit of what happened.
-- Optional warmup mode briefly watches a stream to discover drops when no priority game is active.
-- Configurable refresh cadence to balance responsiveness vs. load.
-- Alerting for key events (new drops, auto-claim, drop ending, watch errors).
-- Browser-based login (no credential storage).
-- Demo mode for exploring the UI without a live account.
-- Debug tools for live logs, state snapshot, perf and CPU sampling (off by default).
+- **Live inventory** — drop progress, claim status, and per-drop ETA in real time.
+- **Target + priority** — build a priority list of games; the app focuses on the
+  most important actionable game and rotates through the list.
+- **Auto-watch** — auto-selects a stream, auto-switches when the current one
+  disappears, and recovers from stalls (no watch-time progress) on its own.
+- **Auto-claim** (optional) — claims completed drops and keeps an activity audit.
+- **Warmup mode** (optional) — briefly watches a stream to discover drops when no
+  priority game is currently active.
+- **Alerts** — new drops, auto-claim, drop ending soon, watch errors.
+- **Browser-based login** — no credentials are stored by the app.
+- **Demo mode** — explore the full UI without a live Twitch account.
+- **Debug tools** — live logs, a state snapshot, and perf/CPU sampling (off by default).
 
 ## Tech stack
 
-- Electron 30
-- React 18 + Vite 5
-- TypeScript
-- Tailwind CSS
+Electron 40 · React 19 · Vite 7 · TypeScript · Tailwind CSS v4 · Vitest
 
-## Getting started
-
-Install dependencies and run the dev app:
+## Quick start
 
 ```bash
 npm install
-npm run dev
+npm run dev      # launches the app (Vite + Electron, hot reload)
 ```
 
-Build a production bundle:
+The most common scripts:
 
-```bash
-npm run build
-```
+| Script | Purpose |
+| --- | --- |
+| `npm run dev` | Run the app in development (hot reload) |
+| `npm run build` | Build the renderer (`dist/`) + main & preload (`dist-electron/`) |
+| `npm test` | Run the test suite (Vitest); `npm run test:watch` to watch |
+| `npm run lint` | ESLint |
+| `npm run format` | Prettier (`format:check` to verify) |
 
-Preview the built renderer:
+For local-dev details, testing conventions, commit style, and the release process,
+see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
-```bash
-npm run preview
-```
+## How it works
 
-## Scripts
+DropPilot is a standard three-layer Electron app:
 
-- `npm run dev` - start Vite dev server
-- `npm run build` - build renderer and Electron bundles
-- `npm run preview` - preview the renderer build
+- **`src/main`** — Electron main process: app lifecycle, the IPC handlers, JSON
+  persistence in the user-data directory, and the entire Twitch integration
+  (`src/main/twitch`: GQL client, high-level service, live PubSub events, channel
+  tracking, watch-minute pings). **All network calls happen here**, never in the
+  renderer.
+- **`src/preload`** — the context-bridge that exposes `window.electronAPI`.
+- **`src/renderer`** — the React UI. `shared/hooks/app/useAppModel.ts` is the
+  central hook that composes auth, inventory, channels, watch ping, priority, and
+  stats into the app state the views render.
 
-## Releases
+The trickiest subsystem is the **watch engine** (auto-select / auto-switch / stall
+recovery / target suppression). It's documented in
+[`docs/watch-engine.md`](docs/watch-engine.md), with an end-to-end sequence diagram
+in [`docs/watch-flow.puml`](docs/watch-flow.puml).
 
-Releases are published on GitHub Releases. You can download the Windows `.exe` installer there.
+## Releases & updates
 
-## Contributing
+Releases are published to GitHub Releases (Windows `.exe` + macOS artifacts) and
+built by CI when a `v*` tag is pushed. The app auto-updates on Windows and offers
+two channels — **stable** and **preview** — selectable in Settings → Updates, which
+also shows the in-app release history. See `CONTRIBUTING.md` for how to cut a release.
 
-See `CONTRIBUTING.md` for local dev and release details.
+## Configuration & data
 
-## Project structure
-
-- `src/main` - Electron main process (IPC, settings, app lifecycle)
-- `src/renderer` - React UI
-- `src/preload` - Electron preload bridge
-- `icons` - app icons
-- `dist` / `dist-electron` - build output
-
-## Watch engine
-
-Target suppression and stall recovery behavior is documented here:
-
-- `docs/watch-engine.md`
-- `docs/watch-flow.puml` (PlantUML sequence diagram of end-to-end watch flow)
-- implementation: `src/renderer/shared/hooks/watch/watchEngine.ts`
+Settings and stats are stored as JSON in the Electron user-data directory
+(`settings.json`, `stats.json`) and managed through the in-app Settings view.
 
 ## Debug tools
 
-The Debug tab is disabled by default to keep background work minimal.
-
-Enable it:
-
-1. Go to Settings
-2. Turn on **Debug tools** / **Debug tab**
-
-Notes:
-
-- Debug logs are gated and only collected when Debug tools are enabled.
-- Perf and CPU snapshots are visible in the Debug snapshot.
-
-## Configuration
-
-Settings are stored in the user data directory as `settings.json` and are managed
-through the in-app Settings view.
+The Debug tab is **off by default** to keep background work minimal. Enable it in
+Settings → **Debug tools**. Debug logs are only collected while it's on; perf and
+CPU snapshots appear in the Debug snapshot.
 
 ## Troubleshooting
 
-- If you see "Not logged in", use **Login with browser** in the top bar.
-- If the app feels slow, disable the Debug tab and restart.
-- If you need verbose logs, enable Debug tools in Settings.
+- **"Not logged in"** → use **Login with browser** in the top bar.
+- **App feels slow** → disable the Debug tab and restart.
+- **Need verbose logs** → enable Debug tools in Settings.
 
 ## License
 

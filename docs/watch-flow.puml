@@ -60,7 +60,11 @@ end
 loop on sync + hold-expire timer
   App -> Engine: dispatch(sync(activeTargetGame, watchingGame, now))
   alt suppressionReason == manual-stop
-    Engine --> App: clear when another game is watched
+    alt different game watched
+      Engine --> App: clear immediately
+    else idle or same game
+      Engine --> App: keep during 2-min hold, then clear
+    end
   else suppressionReason == stall-stop
     alt hold window active
       Engine --> App: keep suppressed
