@@ -1,5 +1,5 @@
 import { useI18n } from "@renderer/shared/i18n";
-import { Button, buttonVariants } from "@renderer/shared/components/ui/button";
+import { Button } from "@renderer/shared/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,7 +11,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@renderer/shared/components/ui/alert-dialog";
-import { cn } from "@renderer/shared/lib/utils";
 
 export type StatsHeaderProps = {
   lastReset: number;
@@ -52,7 +51,7 @@ export function StatsHeader({ lastReset, onReset }: StatsHeaderProps) {
             <AlertDialogCancel>{t("stats.resetCancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={onReset}
-              className={cn(buttonVariants({ variant: "destructive" }))}
+              className="bg-[color:var(--dp-signal-err)] text-[#0a0b0d] hover:bg-[color:var(--dp-signal-err)] hover:opacity-90"
             >
               {t("stats.resetConfirmAction")}
             </AlertDialogAction>
