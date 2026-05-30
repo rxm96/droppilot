@@ -23,6 +23,16 @@ down, and (optionally) claims drops for you.
 - **Demo mode** — explore the full UI without a live Twitch account.
 - **Debug tools** — live logs, a state snapshot, and perf/CPU sampling (off by default).
 
+## Screenshots
+
+> Dark theme with demo data.
+
+| Overview | Stats |
+| --- | --- |
+| [![Overview](docs/screenshots/overview.png)](docs/screenshots/overview.png) | [![Stats](docs/screenshots/stats.png)](docs/screenshots/stats.png) |
+| **Inventory** | **Control** |
+| [![Inventory](docs/screenshots/inventory.png)](docs/screenshots/inventory.png) | [![Control](docs/screenshots/control.png)](docs/screenshots/control.png) |
+
 ## Tech stack
 
 Electron 40 · React 19 · Vite 7 · TypeScript · Tailwind CSS v4 · Vitest
