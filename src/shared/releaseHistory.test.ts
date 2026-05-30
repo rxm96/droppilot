@@ -78,6 +78,10 @@ describe("normalizeRelease", () => {
     expect(normalizeRelease({ tag_name: "v1", draft: true })).toBeNull();
     expect(normalizeRelease({ published_at: "2026-05-30T00:00:00Z" })).toBeNull();
   });
+
+  it("uses date 0 for an unparseable date", () => {
+    expect(normalizeRelease({ tag_name: "v1", published_at: "not-a-date" })?.date).toBe(0);
+  });
 });
 
 describe("filterReleasesByChannel", () => {
@@ -106,6 +110,10 @@ describe("isReleaseHistoryResult", () => {
     expect(isReleaseHistoryResult(null)).toBe(false);
     expect(isReleaseHistoryResult({ status: "ready" })).toBe(false);
     expect(isReleaseHistoryResult({ status: "weird" })).toBe(false);
+  });
+
+  it("rejects error results with a missing message", () => {
+    expect(isReleaseHistoryResult({ status: "error" })).toBe(false);
   });
 });
 

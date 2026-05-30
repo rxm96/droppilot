@@ -4,7 +4,7 @@ export const GITHUB_RELEASES_URL =
 export const RELEASE_CACHE_TTL_MS = 30 * 60_000;
 
 const FULL_CHANGELOG_MARKER = /^#{1,6}\s*Full changelog\b/im;
-const WHATS_NEW_HEADING = /^#{1,6}\s*What's new[^\n]*\n/i;
+const WHATS_NEW_HEADING = /^#{1,6}\s*What's new[^\n]*\n/im;
 
 export type ReleaseEntry = {
   version: string; // tag without a leading "v", e.g. "3.0.5"
@@ -100,7 +100,7 @@ export function isReleaseHistoryResult(value: unknown): value is ReleaseHistoryR
   if (!value || typeof value !== "object") return false;
   const v = value as { status?: unknown; releases?: unknown };
   if (v.status === "ready") return Array.isArray(v.releases);
-  if (v.status === "error") return true;
+  if (v.status === "error") return typeof (v as { message?: unknown }).message === "string";
   return false;
 }
 
@@ -161,7 +161,7 @@ export async function loadReleaseHistory(opts: {
     }
     return {
       result: { status: "error", message: err instanceof Error ? err.message : String(err) },
-      cache,
+      cache: null,
     };
   }
 }
