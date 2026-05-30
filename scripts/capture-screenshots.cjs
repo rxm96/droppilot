@@ -70,6 +70,13 @@ async function main() {
     for (const v of VIEWS) {
       const tab = nav.locator("button", { hasText: v.label }).first();
       await tab.click();
+      // Move the pointer to a neutral corner so no hover/focus state or
+      // Playwright action highlight bleeds into the screenshot.
+      await page.mouse.move(2, 2);
+      await page.evaluate(() => {
+        const el = document.activeElement;
+        if (el && el instanceof HTMLElement) el.blur();
+      });
       await settle(page, 1600);
       const path = `${opts.outDir}/${v.key}${opts.suffix}.png`;
       await page.screenshot({ path });
