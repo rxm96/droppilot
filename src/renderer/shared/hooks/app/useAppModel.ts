@@ -1384,6 +1384,7 @@ export function useAppModel() {
     startLogin,
     logout,
     showDebug: debugEnabled,
+    demoMode,
   };
   const heroClaimableDrops = targetDrops.filter(
     (drop) => drop.status !== "claimed" && drop.isClaimable === true,

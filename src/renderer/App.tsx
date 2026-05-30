@@ -98,7 +98,7 @@ function AppShell({ model }: { model: Model }) {
 
   // AppNav right slot — session indicator or sign-in button
   const sessionRight = React.useMemo(() => {
-    const linked = navProps.auth.status === "ok";
+    const linked = navProps.auth.status === "ok" || navProps.demoMode;
     const ready = navProps.profile.status === "ready" ? navProps.profile : null;
     if (linked && ready) {
       return (
@@ -119,7 +119,7 @@ function AppShell({ model }: { model: Model }) {
         {navProps.auth.status === "pending" ? t("session.login") : t("session.loginBrowser")}
       </Button>
     );
-  }, [navProps.auth, navProps.profile, navProps.startLogin, t]);
+  }, [navProps.auth, navProps.profile, navProps.startLogin, navProps.demoMode, t]);
 
   // Statusbar
   const engineLabel = React.useMemo(() => {
