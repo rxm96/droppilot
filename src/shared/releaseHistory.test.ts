@@ -119,7 +119,8 @@ describe("isReleaseHistoryResult", () => {
 
 import { loadReleaseHistory, type FetchLike, RELEASE_CACHE_TTL_MS } from "./releaseHistory";
 
-const okFetch = (payload: unknown): FetchLike =>
+const okFetch =
+  (payload: unknown): FetchLike =>
   async () => ({ ok: true, status: 200, json: async () => payload });
 
 const rawRelease = (tag: string, prerelease = false) => ({
