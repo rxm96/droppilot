@@ -193,7 +193,10 @@ export function DebugView({ snapshot }: DebugViewProps) {
     () => new Intl.NumberFormat(language === "de" ? "de-DE" : "en-US"),
     [language],
   );
-  const formatNumber = (val: number) => numberFormatter.format(Math.max(0, val ?? 0));
+  const formatNumber = useCallback(
+    (val: number) => numberFormatter.format(Math.max(0, val ?? 0)),
+    [numberFormatter],
+  );
 
   const relativeTimeFormatter = useMemo(
     () =>
@@ -365,8 +368,7 @@ export function DebugView({ snapshot }: DebugViewProps) {
       snapshotData.watch?.error,
       snapshotData.watch?.lastOk,
       snapshotData.watch?.nextAt,
-      snapshotData.watching?.game,
-      snapshotData.watching?.name,
+      snapshotData.watching,
       t,
       topPerfEntry,
       trackerConnectionLabel,

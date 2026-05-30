@@ -1211,6 +1211,7 @@ export function useAppModel() {
     targetDrops,
     targetGame,
     watching,
+    watchStats.lastOk,
   ]);
 
   const debugCpu = useDebugCpu({
