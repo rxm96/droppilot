@@ -24,7 +24,7 @@ Releases: `npm run release:patch` (also `:minor`, `:major`, and prerelease `:rc`
 ## CI / verification gotchas (important)
 
 - **CI (`.github/workflows/build.yml`) runs only on push to `main` and on `v*` tags — NOT on pull requests.** A PR gets no automated CI; verify locally before merging.
-- CI steps are: lint → `format:check` → `npm test` → `npm run build` → package. **There is no `tsc --noEmit` step.** As a result, some pre-existing type errors exist in the tree (e.g. a `warmupEnabled` error in `useAppModel.ts`) that do not block CI. When you run `tsc`, scope your check to the files you touched (`... | grep <yourfile>`) — don't assume a clean global typecheck.
+- CI steps are: lint → `format:check` → `npm run typecheck` → `npm test` → `npm run build` → package. The typecheck step (`tsc --noEmit`) gates the build, and the tree currently has a clean global typecheck — keep it that way (`npm run typecheck` before pushing to `main`/tags). Note that `npm run build` itself uses esbuild/Vite and does NOT type-check, so `tsc` is the only thing catching type regressions.
 - A clean `format:check` is required — run `prettier --write` on new/changed files before committing or CI fails.
 - `main` is protected (PRs required) but release pushes bypass it. Commit messages follow Conventional Commits (`feat`, `fix`, `docs`, `style`, `refactor`, `chore(release)`).
 
