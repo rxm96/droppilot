@@ -2,6 +2,7 @@ import type {
   ChannelEntry,
   ChannelLiveDiff,
   ChannelTrackerStatus,
+  CampaignDropSummary,
   CampaignSummary,
   InventoryItem,
   PriorityPlan,
@@ -240,7 +241,7 @@ export const isInventoryItem = (value: unknown): value is InventoryItem => {
 const isInventoryStatus = (value: unknown): value is InventoryItem["status"] =>
   value === "locked" || value === "progress" || value === "claimed";
 
-const isCampaignDropSummary = (value: unknown): boolean => {
+const isCampaignDropSummary = (value: unknown): value is CampaignDropSummary => {
   if (!isRecord(value)) return false;
   return (
     isString(value.id) &&

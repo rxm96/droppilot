@@ -382,7 +382,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
         return result.nextInventory;
       });
 
-      const result = patchResult;
+      const result = patchResult as ReturnType<typeof applyPubSubEventToInventoryState> | null;
       if (!result?.patched) return { patched: false };
       totalMinutesRef.current = result.nextTotalMinutes ?? totalMinutesRef.current ?? 0;
       if (result.deltaMinutes > 0) {
@@ -397,7 +397,8 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
         setProgressAnchorByDropId((prev) => mergeProgressAnchors(prev, anchorIds, eventAt));
       }
       if (result.updatedId) {
-        setInventoryChanges((prev) => markUpdatedInventoryChange(prev, result.updatedId));
+        const updatedId = result.updatedId;
+        setInventoryChanges((prev) => markUpdatedInventoryChange(prev, updatedId));
       }
       return {
         patched: true,
@@ -492,7 +493,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
     if (inventory.status === "ready") return inventory.items;
     if (inventory.status === "error" && inventory.items) return inventory.items;
     return [];
-  }, [inventory.items, inventory.status]);
+  }, [inventory]);
 
   const uniqueGames = useMemo(
     () => Array.from(new Set(inventoryItems.map((i) => i.game))).sort(),

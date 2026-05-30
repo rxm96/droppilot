@@ -65,10 +65,13 @@ export const applyPubSubEventToInventoryState = (
     }
   }
 
+  // By this point `items` was non-empty, so `inventory` is either "ready" or
+  // "error" (idle/loading returned early above). Reconstruct per-status so the
+  // result stays a valid InventoryState — a spread of idle/loading + items is not.
   const nextInventory: InventoryState =
-    inventory.status === "ready"
-      ? { status: "ready", items: patch.items }
-      : { ...inventory, items: patch.items };
+    inventory.status === "error"
+      ? { ...inventory, items: patch.items }
+      : { status: "ready", items: patch.items };
 
   return {
     patched: true,
