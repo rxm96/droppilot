@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@renderer/shared/components/ui/select";
 import { SectionLabel } from "@renderer/shared/components/ui/section-label";
+import { ReleaseHistory } from "./ReleaseHistory";
 import { SettingRow } from "../SettingRow";
 import type { UpdateChannel } from "../../../../shared/updateChannels";
 import { useI18n } from "@renderer/shared/i18n";
@@ -146,6 +147,8 @@ export function UpdatesSection(props: UpdatesSectionProps) {
           }
         />
       </div>
+
+      <ReleaseHistory />
     </div>
   );
 }
