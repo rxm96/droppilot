@@ -15,6 +15,7 @@ import { TwitchServiceError } from "../twitch/errors";
 import type { ChannelTracker, ChannelTrackerDiffEvent } from "../twitch/tracker";
 import type { UserPubSub, UserPubSubEvent } from "../twitch/userPubSub";
 import { allowsPrereleaseBuilds } from "../../shared/updateChannels";
+import { loadReleaseHistory, type ReleaseCache } from "../../shared/releaseHistory";
 
 function extractReleaseNoteText(entry: unknown): string {
   if (typeof entry === "string") return entry;
@@ -115,6 +116,8 @@ export function registerIpcHandlers(deps: {
     resetStats,
     applyAutoStartSetting,
   } = deps;
+
+  let releaseHistoryCache: ReleaseCache = null;
 
   const broadcastChannelsDiff = (payload: ChannelTrackerDiffEvent) => {
     for (const win of BrowserWindow.getAllWindows()) {
@@ -492,6 +495,19 @@ export function registerIpcHandlers(deps: {
 
   ipcMain.handle("app/getVersion", async () => {
     return { version: app.getVersion() };
+  });
+
+  ipcMain.handle("app/releaseHistory", async () => {
+    const settings = await loadSettings();
+    const allowPrerelease = allowsPrereleaseBuilds(settings.updateChannel);
+    const { result, cache } = await loadReleaseHistory({
+      allowPrerelease,
+      cache: releaseHistoryCache,
+      now: Date.now(),
+      fetchImpl: fetch,
+    });
+    releaseHistoryCache = cache;
+    return result;
   });
 
   ipcMain.handle("app/notify", async (_event, payload: { title?: string; body?: string }) => {

@@ -163,6 +163,7 @@ const api = {
       return () => ipcRenderer.removeListener("app/updateStatus", listener);
     },
     getVersion: () => ipcRenderer.invoke("app/getVersion"),
+    releaseHistory: () => ipcRenderer.invoke("app/releaseHistory"),
     notify: (payload: { title: string; body?: string }) =>
       ipcRenderer.invoke("app/notify", payload),
   },
