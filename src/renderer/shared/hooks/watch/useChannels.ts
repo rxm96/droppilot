@@ -932,6 +932,9 @@ export function useChannels({
       clearWatching();
       return;
     }
+    // computeAutoSwitchAction only returns a "switch" when `watching` is set,
+    // so this never returns at runtime — it just makes the invariant explicit.
+    if (!watching) return;
     setWatchingFromChannel(action.nextChannel);
     setAutoSwitch({
       at: Date.now(),

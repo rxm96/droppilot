@@ -39,6 +39,7 @@ type Params = {
   autoClaim: boolean;
   autoSelectEnabled: boolean;
   autoSwitchEnabled: boolean;
+  warmupEnabled: boolean;
   obeyPriority: boolean;
   allowWatching: boolean;
   refreshMinMs: number;
@@ -74,6 +75,7 @@ export function useDebugSnapshot({
   autoClaim,
   autoSelectEnabled,
   autoSwitchEnabled,
+  warmupEnabled,
   obeyPriority,
   allowWatching,
   refreshMinMs,
@@ -128,6 +130,7 @@ export function useDebugSnapshot({
         autoClaim,
         autoSelectEnabled,
         autoSwitchEnabled,
+        warmupEnabled,
         obeyPriority,
         allowWatching,
         refreshMinMs,
@@ -172,6 +175,7 @@ export function useDebugSnapshot({
       autoClaim,
       autoSelectEnabled,
       autoSwitchEnabled,
+      warmupEnabled,
       channelError,
       channelsCount,
       channelsLoading,
