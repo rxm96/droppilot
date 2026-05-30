@@ -50,3 +50,56 @@ export function parseReleaseNotes(body: string | null | undefined): {
   }
   return { notes, fullChangelog };
 }
+
+export type RawGithubRelease = {
+  tag_name?: unknown;
+  name?: unknown;
+  published_at?: unknown;
+  created_at?: unknown;
+  prerelease?: unknown;
+  draft?: unknown;
+  body?: unknown;
+  html_url?: unknown;
+};
+
+export function normalizeRelease(raw: RawGithubRelease): ReleaseEntry | null {
+  if (!raw || typeof raw !== "object") return null;
+  if (raw.draft === true) return null;
+  const tag = typeof raw.tag_name === "string" ? raw.tag_name.trim() : "";
+  if (!tag) return null;
+
+  const dateStr =
+    typeof raw.published_at === "string"
+      ? raw.published_at
+      : typeof raw.created_at === "string"
+        ? raw.created_at
+        : null;
+  const parsed = dateStr ? Date.parse(dateStr) : NaN;
+  const { notes, fullChangelog } = parseReleaseNotes(typeof raw.body === "string" ? raw.body : "");
+
+  return {
+    version: tag.replace(/^v/i, ""),
+    tag,
+    date: Number.isFinite(parsed) ? parsed : 0,
+    prerelease: raw.prerelease === true,
+    notes,
+    fullChangelog,
+    url: typeof raw.html_url === "string" ? raw.html_url : "",
+  };
+}
+
+export function filterReleasesByChannel(
+  entries: ReleaseEntry[],
+  allowPrerelease: boolean,
+): ReleaseEntry[] {
+  const filtered = allowPrerelease ? entries : entries.filter((e) => !e.prerelease);
+  return [...filtered].sort((a, b) => b.date - a.date);
+}
+
+export function isReleaseHistoryResult(value: unknown): value is ReleaseHistoryResult {
+  if (!value || typeof value !== "object") return false;
+  const v = value as { status?: unknown; releases?: unknown };
+  if (v.status === "ready") return Array.isArray(v.releases);
+  if (v.status === "error") return true;
+  return false;
+}
