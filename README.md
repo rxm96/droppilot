@@ -90,6 +90,19 @@ CPU snapshots appear in the Debug snapshot.
 - **App feels slow** → disable the Debug tab and restart.
 - **Need verbose logs** → enable Debug tools in Settings.
 
+## Acknowledgements
+
+DropPilot's drop-mining approach is heavily informed by
+[**Twitch Drops Miner**](https://github.com/DevilXD/TwitchDropsMiner) by
+[DevilXD](https://github.com/DevilXD). Much of the core behavior — stream-less
+watch pings, drop/campaign validation, automatic channel switching, and
+PubSub-based status tracking — is derived from that project. Huge thanks to
+DevilXD and the Twitch Drops Miner contributors.
+
+Twitch Drops Miner is MIT-licensed (Copyright © 2024 DevilXD); its license is
+reproduced in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+
 ## License
 
 MIT
+
