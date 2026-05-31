@@ -34,6 +34,7 @@ type OverviewProps = {
     | "idle-no-watchable-drops";
   watchSuppressionReason: "manual-stop" | "stall-stop" | null;
   lastWatchOk?: number | null;
+  watchingSince?: number | null;
   inventoryFetchedAt?: number | null;
   trackerStatus?: ChannelTrackerStatus | null;
   watchError?: ErrorInfo | null;
@@ -59,6 +60,7 @@ export function OverviewView({
   channelsCount,
   watchDecision,
   lastWatchOk,
+  watchingSince,
   trackerStatus,
   watchError,
   onPause,
@@ -109,6 +111,7 @@ export function OverviewView({
         <ActivityPanel />
         <EnginePanel
           lastWatchOk={lastWatchOk}
+          watchingSince={watchingSince}
           cycleSeconds={
             typeof refreshMinMs === "number" ? Math.round(refreshMinMs / 1000) : undefined
           }

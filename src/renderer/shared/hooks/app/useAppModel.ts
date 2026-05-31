@@ -16,6 +16,7 @@ import {
   useWatchPing,
   WATCH_INTERVAL_MS,
   useWatchingController,
+  useWatchingSince,
   buildWatchStallTrackerKey,
   evaluateNoProgressStall,
   pickStallRecoveryChannel,
@@ -148,6 +149,10 @@ export function useAppModel() {
     login: string;
   } | null>(null);
   const { watching, setWatchingFromChannel, clearWatching } = useWatchingController();
+  // Engine-watch uptime: stamped when watching starts, kept across channel
+  // switches, cleared on pause/stop. Derived here (not in EnginePanel) so it
+  // survives Overview tab remounts.
+  const watchingSince = useWatchingSince(Boolean(watching));
   const [autoSelectEnabled, setAutoSelectEnabled] = useState<boolean>(true);
   const claimProbeInFlightRef = useRef(false);
   const claimProbeLastAtRef = useRef(0);
@@ -1417,6 +1422,7 @@ export function useAppModel() {
     watchDecision: watchEngineSnapshot.decision,
     watchSuppressionReason: watchEngineSnapshot.suppression?.reason ?? null,
     lastWatchOk: watchStats.lastOk,
+    watchingSince,
     inventoryFetchedAt,
     trackerStatus,
     watchError: watchStats.lastError,

@@ -40,7 +40,10 @@ export function formatRelative(
   timestamp: number | null | undefined,
   now: number = Date.now(),
 ): string {
-  if (typeof timestamp !== "number" || !Number.isFinite(timestamp)) return "--";
+  // `timestamp <= 0` covers the idle/never-set sentinel (watchStats.lastOk
+  // defaults to 0). Without this guard `now - 0` renders as "~20604d ago"
+  // (milliseconds since the 1970 epoch) instead of "--".
+  if (typeof timestamp !== "number" || !Number.isFinite(timestamp) || timestamp <= 0) return "--";
   const diff = Math.max(0, now - timestamp);
   const seconds = Math.floor(diff / 1000);
   if (seconds < 60) return `${seconds}s ago`;

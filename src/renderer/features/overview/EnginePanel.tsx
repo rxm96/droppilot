@@ -4,17 +4,19 @@ import { useI18n } from "@renderer/shared/i18n";
 
 export type EnginePanelProps = {
   lastWatchOk?: number | null;
+  /** Timestamp the engine started actively watching, or null when stopped. */
+  watchingSince?: number | null;
   cycleSeconds?: number;
   cadenceSeconds?: number;
 };
 
 export function EnginePanel({
   lastWatchOk,
+  watchingSince,
   cycleSeconds = 30,
   cadenceSeconds = 30,
 }: EnginePanelProps) {
   const { t } = useI18n();
-  const sessionStartRef = React.useRef<number>(Date.now());
   const [now, setNow] = React.useState<number>(() => Date.now());
 
   React.useEffect(() => {
@@ -33,7 +35,7 @@ export function EnginePanel({
     {
       id: "uptime",
       label: t("engine.row.uptime"),
-      value: formatUptime(sessionStartRef.current, now),
+      value: typeof watchingSince === "number" ? formatUptime(watchingSince, now) : "--",
     },
   ];
 
