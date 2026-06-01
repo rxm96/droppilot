@@ -1,4 +1,5 @@
 export * from "./channelAllowlist";
+export * from "./channelEngine";
 export * from "./useChannels";
 export * from "./useWatchingActions";
 export * from "./useWatchingController";

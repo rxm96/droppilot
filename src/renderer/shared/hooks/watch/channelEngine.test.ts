@@ -5,12 +5,11 @@ import {
   buildChannelDiff,
   computeAutoSwitchAction,
   isManualPriorityOverrideActive,
-  hasRecentInventory,
   isFreshCache,
   mergeChannelList,
   shouldClearTrackerAfterStaleResponse,
   shouldAutoSelectChannel,
-} from "./useChannels";
+} from "./channelEngine";
 
 const makeChannel = (overrides: Partial<ChannelEntry> = {}): ChannelEntry => ({
   id: "1",
@@ -222,13 +221,6 @@ describe("useChannels helpers", () => {
         refreshWindowMs: 1_000,
       }),
     ).toBe(true);
-    expect(
-      hasRecentInventory({
-        inventoryFetchedAt: 1_000,
-        now: 4_000,
-        recentWindowMs: 2_000,
-      }),
-    ).toBe(false);
   });
 
   it("activates manual override only for matching game and time window", () => {
