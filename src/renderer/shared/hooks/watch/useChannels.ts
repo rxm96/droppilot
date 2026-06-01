@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useInterval } from "@renderer/shared/hooks/useInterval";
-import { DropChannelRestriction, type ChannelAllowlist } from "@renderer/shared/domain/dropDomain";
+import { type ChannelAllowlist } from "@renderer/shared/domain/dropDomain";
 import { sameGameName } from "@renderer/shared/domain/gameName";
+import {
+  buildAllowlistKey,
+  normalizeAllowlist,
+  prioritizeChannelsByAllowlist,
+} from "./channelAllowlist";
 import type {
   AutoSwitchInfo,
   ChannelDiff,
@@ -319,43 +324,6 @@ export const shouldClearTrackerAfterStaleResponse = ({
 }): boolean => {
   // If tracking is currently disabled, stale responses must not revive tracker subscriptions.
   return !shouldTrackChannels;
-};
-
-const normalizeAllowlist = (allowlist?: ChannelAllowlist | null): DropChannelRestriction | null => {
-  const restriction = DropChannelRestriction.fromAllowlist(allowlist);
-  return restriction.hasConstraints ? restriction : null;
-};
-
-const prioritizeChannelsByAllowlist = (
-  channels: ChannelEntry[],
-  allowlist?: ChannelAllowlist | null,
-): ChannelEntry[] => {
-  const normalized = normalizeAllowlist(allowlist);
-  if (!normalized) return channels;
-  const allowed: ChannelEntry[] = [];
-  const fallback: ChannelEntry[] = [];
-  let sawFallback = false;
-  let requiresReorder = false;
-  for (const channel of channels) {
-    const allowedMatch = normalized.allowsChannel(channel);
-    if (allowedMatch) {
-      allowed.push(channel);
-      if (sawFallback) requiresReorder = true;
-    } else {
-      fallback.push(channel);
-      sawFallback = true;
-    }
-  }
-  if (!requiresReorder) return channels;
-  return [...allowed, ...fallback];
-};
-
-const buildAllowlistKey = (allowlist?: ChannelAllowlist | null): string => {
-  const normalized = normalizeAllowlist(allowlist);
-  if (!normalized) return "";
-  const ids = Array.from(normalized.ids).sort().join(",");
-  const logins = Array.from(normalized.logins).sort().join(",");
-  return `${ids}|${logins}`;
 };
 
 export function useChannels({
