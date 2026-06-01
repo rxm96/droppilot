@@ -1,27 +1,15 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { type ChannelAllowlist } from "@renderer/shared/domain/dropDomain";
-import { sameGameName } from "@renderer/shared/domain/gameName";
-import { normalizeAllowlist, prioritizeChannelsByAllowlist } from "./channelAllowlist";
+import { normalizeAllowlist } from "./channelAllowlist";
 import {
-  applyLiveDiff,
-  buildChannelDiff,
   computeAutoSwitchAction,
   isManualPriorityOverrideActive,
-  mergeChannelList,
-  mergeViewerLiveDiff,
   shouldAutoSelectChannel,
 } from "./channelEngine";
-import type {
-  ChannelEntry,
-  ChannelLiveDiff,
-  ChannelTrackerMode,
-  View,
-  WatchingState,
-} from "@renderer/shared/types";
+import type { ChannelEntry, ChannelTrackerMode, View, WatchingState } from "@renderer/shared/types";
 import { useChannelStore } from "./useChannelStore";
 import { useChannelFetch } from "./useChannelFetch";
-import { isChannelLiveDiff } from "@renderer/shared/utils/ipc";
-import { logDebug } from "@renderer/shared/utils/logger";
+import { useChannelLiveDiff } from "./useChannelLiveDiff";
 
 type Params = {
   targetGame: string;
@@ -73,18 +61,8 @@ export function useChannels({
     channelsLoading,
     channelsRefreshing,
     autoSwitch,
-    channelsRef,
-    targetGameRef,
-    applyChannelsState,
-    setChannelDiff,
-    setChannelsLoading,
-    setChannelsRefreshing,
     setAutoSwitch,
-    setFetchedAt,
-    setFetchedGame,
   } = store;
-  const pendingViewerDiffRef = useRef<ChannelLiveDiff | null>(null);
-  const viewerFlushTimerRef = useRef<number | null>(null);
 
   const fetchChannels = useChannelFetch({
     store,
@@ -98,73 +76,14 @@ export function useChannels({
     refreshWindowMs: TRACKER_REFRESH_WINDOW_MS,
   });
 
-  useEffect(() => {
-    if (demoMode) return;
-    const applyPayload = (payload: ChannelLiveDiff) => {
-      if (!allowWatching) return;
-      if (!shouldTrackChannels) return;
-      if (!targetGameRef.current) return;
-      if (!sameGameName(payload.game, targetGameRef.current)) return;
-      const prevList = channelsRef.current;
-      const nextListRaw = applyLiveDiff(prevList, payload);
-      const nextListPrioritized = prioritizeChannelsByAllowlist(nextListRaw, channelAllowlist);
-      const nextList = mergeChannelList(prevList, nextListPrioritized);
-      const diff = buildChannelDiff(prevList, nextList, payload.at);
-      if (!diff) return;
-      applyChannelsState(nextList);
-      setChannelDiff(diff);
-      setFetchedAt(payload.at);
-      setFetchedGame(payload.game);
-      setChannelsLoading(false);
-      setChannelsRefreshing(false);
-      logDebug("channels: diff push", {
-        game: payload.game,
-        source: payload.source,
-        reason: payload.reason,
-        added: payload.added.length,
-        removed: payload.removedIds.length,
-        updated: payload.updated.length,
-      });
-    };
-    const flushViewerDiff = () => {
-      const queued = pendingViewerDiffRef.current;
-      pendingViewerDiffRef.current = null;
-      if (viewerFlushTimerRef.current !== null) {
-        window.clearTimeout(viewerFlushTimerRef.current);
-        viewerFlushTimerRef.current = null;
-      }
-      if (queued) {
-        applyPayload(queued);
-      }
-    };
-    const unsubscribe = window.electronAPI.twitch.onChannelsDiff((payload: unknown) => {
-      if (!isChannelLiveDiff(payload)) return;
-      if (payload.reason === "viewers") {
-        pendingViewerDiffRef.current = mergeViewerLiveDiff(pendingViewerDiffRef.current, payload);
-        if (viewerFlushTimerRef.current === null) {
-          viewerFlushTimerRef.current = window.setTimeout(flushViewerDiff, 350);
-        }
-        return;
-      }
-      flushViewerDiff();
-      applyPayload(payload);
-    });
-    return () => {
-      if (viewerFlushTimerRef.current !== null) {
-        window.clearTimeout(viewerFlushTimerRef.current);
-        viewerFlushTimerRef.current = null;
-      }
-      pendingViewerDiffRef.current = null;
-      if (typeof unsubscribe === "function") unsubscribe();
-    };
-  }, [
+  useChannelLiveDiff({
+    store,
     allowWatching,
-    applyChannelsState,
     demoMode,
-    shouldTrackChannels,
     channelAllowlist,
     watching,
-  ]);
+    shouldTrackChannels,
+  });
 
   // Auto-select first channel if none selected
   useEffect(() => {
