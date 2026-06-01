@@ -24,6 +24,7 @@ type AutopilotParams = {
   clearWatching: () => void;
 };
 
+// No demoMode guard: autopilot (auto-select + auto-switch) applies in both demo and live modes, matching the original behavior.
 export function useChannelAutopilot({
   store,
   allowWatching,
@@ -62,7 +63,7 @@ export function useChannelAutopilot({
   }, [
     channels,
     watching,
-    targetGame,
+    targetGame, // intentional dep (not read in body): re-evaluates auto-select on game change. Do not drop in the Task 8 lint pass.
     autoSelectEnabled,
     allowWatching,
     canWatchTarget,
