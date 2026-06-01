@@ -11,7 +11,10 @@ export type AttentionStripProps = {
   trackerStatus: ChannelTrackerStatus | null | undefined;
 };
 
-export function AttentionStrip({
+// Memoized: its props (counts, game name, error/tracker refs) are all stable
+// across the per-second watch tick, so it bails out of the Overview's 1Hz
+// re-render instead of rebuilding its pills every second while watching.
+export const AttentionStrip = React.memo(function AttentionStrip({
   claimableDrops,
   watchError,
   activeGame,
@@ -62,4 +65,4 @@ export function AttentionStrip({
   if (pills.length === 0) return null;
 
   return <div className="flex flex-wrap gap-2 mb-4">{pills}</div>;
-}
+});

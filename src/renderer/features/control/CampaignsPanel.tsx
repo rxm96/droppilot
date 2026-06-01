@@ -31,7 +31,10 @@ export type CampaignsPanelProps = {
   onSelectCampaign: (id: string) => void;
 };
 
-export function CampaignsPanel({
+// Memoized: groups is memoized upstream and onSelectCampaign is a stable state
+// setter, so the per-second watch tick that re-renders ControlView no longer
+// reconciles the campaign list every second while watching.
+export const CampaignsPanel = React.memo(function CampaignsPanel({
   groups,
   selectedCampaignId,
   onSelectCampaign,
@@ -172,4 +175,4 @@ export function CampaignsPanel({
       </div>
     </div>
   );
-}
+});

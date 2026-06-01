@@ -6,6 +6,7 @@ import { Check, Pause, RotateCw } from "@renderer/shared/lib/icons";
 import { formatRemainingFromEta } from "./formatters";
 import { useI18n } from "@renderer/shared/i18n";
 import { cn } from "@renderer/shared/lib/utils";
+import { TimeText } from "@renderer/shared/components/TimeText";
 
 export type HeroPanelProps = {
   activeGame?: string;
@@ -50,7 +51,6 @@ export function HeroPanel({
   claimStatus,
 }: HeroPanelProps) {
   const { t } = useI18n();
-  const [now, setNow] = React.useState<number>(() => Date.now());
   const [claiming, setClaiming] = React.useState(false);
 
   const handleClaim = React.useCallback(async () => {
@@ -62,14 +62,7 @@ export function HeroPanel({
       setClaiming(false);
     }
   }, [onClaimNow, claiming]);
-  React.useEffect(() => {
-    const hasEta = typeof activeDropEta === "number" && Number.isFinite(activeDropEta);
-    if (!hasEta) return;
-    const id = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, [activeDropEta]);
-
-  const etaText = formatRemainingFromEta(activeDropEta, activeDropRemainingMinutes, now);
+  const hasEta = typeof activeDropEta === "number" && Number.isFinite(activeDropEta);
   const progressPct = Math.max(0, Math.min(100, Math.round(activeDropProgress ?? targetProgress)));
   const openDrops = Math.max(0, totalDrops - claimedDrops);
   const hasClaimable = claimableDrops > 0;
@@ -118,7 +111,14 @@ export function HeroPanel({
           <div className="pr-4">
             <Stat
               label={t("hero.stat.eta")}
-              value={etaText}
+              value={
+                <TimeText
+                  active={hasEta}
+                  render={(now) =>
+                    formatRemainingFromEta(activeDropEta, activeDropRemainingMinutes, now)
+                  }
+                />
+              }
               sub={t("hero.stat.percentComplete", { pct: progressPct })}
               accent
             />

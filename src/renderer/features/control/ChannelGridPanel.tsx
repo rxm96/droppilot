@@ -118,7 +118,13 @@ const ChannelTile = React.memo(function ChannelTile({
   );
 });
 
-export function ChannelGridPanel({
+// Memoized so the per-second watch-progress tick (which re-renders ControlView
+// from above) no longer reconciles the whole channel grid: all props are stable
+// across a tick (combinedChannels/channelChangedIds are memoized, the handlers
+// are stable useCallbacks, animatedViewersById only changes during rAF bursts).
+// During those rAF bursts the panel does re-render, but the memoized ChannelTile
+// limits that to the tiles whose values actually changed.
+export const ChannelGridPanel = React.memo(function ChannelGridPanel({
   channels,
   animatedViewersById,
   channelChangedIds,
@@ -205,4 +211,4 @@ export function ChannelGridPanel({
       </div>
     </div>
   );
-}
+});

@@ -8,6 +8,7 @@ import { useAppModel } from "@renderer/shared/hooks";
 import { I18nProvider, useI18n } from "@renderer/shared/i18n";
 import { DevPrimitivesView } from "@renderer/features/dev-primitives";
 import { formatRelative } from "@renderer/features/overview/formatters";
+import { TimeText } from "@renderer/shared/components/TimeText";
 
 function App() {
   const model = useAppModel();
@@ -50,12 +51,6 @@ function AppShell({ model }: { model: Model }) {
     debugEnabled,
     updateOverlayProps,
   } = model;
-
-  const [now, setNow] = React.useState<number>(() => Date.now());
-  React.useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 5000);
-    return () => window.clearInterval(id);
-  }, []);
 
   const {
     theme: titleBarTheme,
@@ -211,7 +206,14 @@ function AppShell({ model }: { model: Model }) {
           {
             label: `drops · ${overviewProps.claimedDrops}/${overviewProps.totalDrops}`,
           },
-          { label: `last sync · ${formatRelative(overviewProps.lastWatchOk, now)}` },
+          {
+            label: (
+              <TimeText
+                intervalMs={5000}
+                render={(now) => `last sync · ${formatRelative(overviewProps.lastWatchOk, now)}`}
+              />
+            ),
+          },
         ]}
         right={[{ label: `v${titleBarVersion ?? "—"}` }]}
       />
