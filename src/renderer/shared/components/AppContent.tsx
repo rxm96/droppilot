@@ -1,16 +1,32 @@
 import type { ComponentProps, ReactNode } from "react";
-import { Profiler, useCallback } from "react";
-import {
-  ControlView,
-  DebugView,
-  InventoryView,
-  OverviewView,
-  PriorityView,
-  SettingsView,
-  StatsView,
-} from "@renderer/features";
+import { Profiler, Suspense, lazy, useCallback } from "react";
+import { OverviewView } from "@renderer/features/overview";
 import type { View } from "@renderer/shared/types";
 import { isPerfEnabled, recordRender } from "@renderer/shared/utils/perfStore";
+
+// Non-overview views are code-split. Importing each from its own feature entry
+// (not the @renderer/features barrel, which would eagerly pull every view) keeps
+// @dnd-kit (priorities), Radix (settings), the stats charts and the
+// diagnostics-only DebugView out of the startup chunk. Overview is the default
+// landing view, so it stays eager for an instant first paint.
+const ControlView = lazy(() =>
+  import("@renderer/features/control").then((m) => ({ default: m.ControlView })),
+);
+const DebugView = lazy(() =>
+  import("@renderer/features/debug").then((m) => ({ default: m.DebugView })),
+);
+const InventoryView = lazy(() =>
+  import("@renderer/features/inventory").then((m) => ({ default: m.InventoryView })),
+);
+const PriorityView = lazy(() =>
+  import("@renderer/features/priority").then((m) => ({ default: m.PriorityView })),
+);
+const SettingsView = lazy(() =>
+  import("@renderer/features/settings").then((m) => ({ default: m.SettingsView })),
+);
+const StatsView = lazy(() =>
+  import("@renderer/features/stats").then((m) => ({ default: m.StatsView })),
+);
 
 type NavProps = {
   view: View;
@@ -55,14 +71,17 @@ export function AppContent({
 
   return (
     <main className="px-8 py-7 max-w-[1640px] mx-auto">
-      {view === "overview" && renderWithPerf("OverviewView", <OverviewView {...overviewProps} />)}
-      {view === "stats" && renderWithPerf("StatsView", <StatsView {...statsProps} />)}
-      {view === "inventory" &&
-        renderWithPerf("InventoryView", <InventoryView {...inventoryProps} />)}
-      {view === "priorities" && renderWithPerf("PriorityView", <PriorityView {...priorityProps} />)}
-      {view === "settings" && renderWithPerf("SettingsView", <SettingsView {...settingsProps} />)}
-      {view === "control" && renderWithPerf("ControlView", <ControlView {...controlProps} />)}
-      {view === "debug" && renderWithPerf("DebugView", <DebugView snapshot={debugSnapshot} />)}
+      <Suspense fallback={null}>
+        {view === "overview" && renderWithPerf("OverviewView", <OverviewView {...overviewProps} />)}
+        {view === "stats" && renderWithPerf("StatsView", <StatsView {...statsProps} />)}
+        {view === "inventory" &&
+          renderWithPerf("InventoryView", <InventoryView {...inventoryProps} />)}
+        {view === "priorities" &&
+          renderWithPerf("PriorityView", <PriorityView {...priorityProps} />)}
+        {view === "settings" && renderWithPerf("SettingsView", <SettingsView {...settingsProps} />)}
+        {view === "control" && renderWithPerf("ControlView", <ControlView {...controlProps} />)}
+        {view === "debug" && renderWithPerf("DebugView", <DebugView snapshot={debugSnapshot} />)}
+      </Suspense>
     </main>
   );
 }
