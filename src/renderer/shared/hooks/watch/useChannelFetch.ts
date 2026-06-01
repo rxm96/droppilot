@@ -235,6 +235,11 @@ export function useChannelFetch({
         }
       }
     },
+    // NOTE: `watching` is intentionally kept in these deps even though the body no
+    // longer reads it. It previously fed a diagnostic snapshot (since removed); keeping
+    // it preserves the original behavior where fetchChannels is re-created on watching
+    // changes, which re-fires the fetch-on-active / allowlist effects. Removing it would
+    // change behavior — do not drop it during the Task 8 lint pass.
     [
       allowWatching,
       applyChannelsState,
