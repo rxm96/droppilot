@@ -358,110 +358,6 @@ const buildAllowlistKey = (allowlist?: ChannelAllowlist | null): string => {
   return `${ids}|${logins}`;
 };
 
-const getAllowlistMatchKind = (
-  channel: ChannelEntry,
-  normalized: DropChannelRestriction | null,
-): "id" | "login" | "none" => {
-  if (!normalized) return "none";
-  if (normalized.matchesId(channel.id)) return "id";
-  if (normalized.matchesLogin(channel.login)) return "login";
-  return "none";
-};
-
-const countAllowlistedChannels = (
-  channels: ChannelEntry[],
-  normalized: DropChannelRestriction | null,
-): number => {
-  if (!normalized) return 0;
-  let count = 0;
-  for (const channel of channels) {
-    if (getAllowlistMatchKind(channel, normalized) !== "none") count += 1;
-  }
-  return count;
-};
-
-const findFirstAllowlistedIndex = (
-  channels: ChannelEntry[],
-  normalized: DropChannelRestriction | null,
-): number => {
-  if (!normalized) return -1;
-  return channels.findIndex((channel) => getAllowlistMatchKind(channel, normalized) !== "none");
-};
-
-const buildChannelPrioritySample = (
-  channels: ChannelEntry[],
-  normalized: DropChannelRestriction | null,
-  limit = 5,
-) =>
-  channels.slice(0, limit).map((channel) => ({
-    id: channel.id,
-    login: channel.login,
-    viewers: channel.viewers,
-    allowMatch: getAllowlistMatchKind(channel, normalized),
-  }));
-
-const isWatchingAllowlisted = (
-  watching: WatchingState,
-  normalized: DropChannelRestriction | null,
-): boolean | null => {
-  if (!watching || !normalized) return null;
-  return normalized.allowsWatching(watching);
-};
-
-const logChannelPrioritySnapshot = ({
-  context,
-  game,
-  raw,
-  prioritized,
-  allowlist,
-  watching,
-  source,
-  reason,
-  force,
-}: {
-  context: "fetch" | "demo-fetch" | "live-diff";
-  game: string;
-  raw: ChannelEntry[];
-  prioritized: ChannelEntry[];
-  allowlist?: ChannelAllowlist | null;
-  watching: WatchingState;
-  source?: "ws" | "fetch";
-  reason?: "snapshot" | "stream-up" | "stream-down" | "viewers";
-  force?: boolean;
-}) => {
-  const normalized = normalizeAllowlist(allowlist);
-  const payload = {
-    game,
-    context,
-    source,
-    reason,
-    force,
-    totalRaw: raw.length,
-    totalPrioritized: prioritized.length,
-    allowlistActive: Boolean(normalized),
-    allowlistIds: normalized ? Array.from(normalized.ids).slice(0, 5) : [],
-    allowlistLogins: normalized ? Array.from(normalized.logins).slice(0, 5) : [],
-    allowlistedRawCount: countAllowlistedChannels(raw, normalized),
-    allowlistedPrioritizedCount: countAllowlistedChannels(prioritized, normalized),
-    firstAllowlistedRawIndex: findFirstAllowlistedIndex(raw, normalized),
-    firstAllowlistedPrioritizedIndex: findFirstAllowlistedIndex(prioritized, normalized),
-    watching: watching
-      ? {
-          id: watching.channelId ?? watching.id ?? "",
-          login: watching.login ?? watching.name ?? "",
-          allowlisted: isWatchingAllowlisted(watching, normalized),
-        }
-      : null,
-    topRaw: buildChannelPrioritySample(raw, normalized),
-    topPrioritized: buildChannelPrioritySample(prioritized, normalized),
-  };
-  if (normalized) {
-    logInfo("channels: priority snapshot", payload);
-    return;
-  }
-  logDebug("channels: priority snapshot", payload);
-};
-
 export function useChannels({
   targetGame,
   view,
@@ -586,15 +482,6 @@ export function useChannels({
             return;
           }
           latestAppliedRequestRef.current = requestId;
-          logChannelPrioritySnapshot({
-            context: "demo-fetch",
-            game: gameName,
-            raw: rawList,
-            prioritized: prioritizedList,
-            allowlist: channelAllowlist,
-            watching,
-            force,
-          });
           const diff = buildChannelDiff(prevList, prioritizedList, now);
           setChannelDiff(diff);
           applyChannelsState(mergeChannelList(prevList, prioritizedList));
@@ -654,15 +541,6 @@ export function useChannels({
         }
         const rawList = res;
         const list = prioritizeChannelsByAllowlist(rawList, channelAllowlist);
-        logChannelPrioritySnapshot({
-          context: "fetch",
-          game: gameName,
-          raw: rawList,
-          prioritized: list,
-          allowlist: channelAllowlist,
-          watching,
-          force,
-        });
         logInfo("channels: fetch success", { game: gameName, count: list.length });
         logDebug("channels: sample", list.slice(0, 3));
         const diff = buildChannelDiff(prevList, list, now);
@@ -741,18 +619,6 @@ export function useChannels({
       const prevList = channelsRef.current;
       const nextListRaw = applyLiveDiff(prevList, payload);
       const nextListPrioritized = prioritizeChannelsByAllowlist(nextListRaw, channelAllowlist);
-      if (payload.reason !== "viewers") {
-        logChannelPrioritySnapshot({
-          context: "live-diff",
-          game: payload.game,
-          raw: nextListRaw,
-          prioritized: nextListPrioritized,
-          allowlist: channelAllowlist,
-          watching,
-          source: payload.source,
-          reason: payload.reason,
-        });
-      }
       const nextList = mergeChannelList(prevList, nextListPrioritized);
       const diff = buildChannelDiff(prevList, nextList, payload.at);
       if (!diff) return;
