@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useInterval } from "@renderer/shared/hooks/useInterval";
 import { type ChannelAllowlist } from "@renderer/shared/domain/dropDomain";
 import { sameGameName } from "@renderer/shared/domain/gameName";
@@ -19,15 +19,13 @@ import {
   shouldClearTrackerAfterStaleResponse,
 } from "./channelEngine";
 import type {
-  AutoSwitchInfo,
-  ChannelDiff,
   ChannelEntry,
   ChannelLiveDiff,
   ChannelTrackerMode,
-  ErrorInfo,
   View,
   WatchingState,
 } from "@renderer/shared/types";
+import { useChannelStore } from "./useChannelStore";
 import { getDemoChannels } from "@renderer/shared/demoData";
 import { errorInfoFromIpc, errorInfoFromUnknown } from "@renderer/shared/utils/errors";
 import {
@@ -77,34 +75,41 @@ export function useChannels({
 }: Params) {
   const TRACKER_REFRESH_WINDOW_MS =
     trackerMode && trackerMode !== "polling" ? 10 * 60_000 : 5 * 60_000;
-  const [channels, setChannels] = useState<ChannelEntry[]>([]);
-  const channelsRef = useRef<ChannelEntry[]>([]);
-  const [channelError, setChannelError] = useState<ErrorInfo | null>(null);
-  const [channelsLoading, setChannelsLoading] = useState<boolean>(false);
-  const [channelsRefreshing, setChannelsRefreshing] = useState<boolean>(false);
-  const [channelDiff, setChannelDiff] = useState<ChannelDiff | null>(null);
-  const [fetchedAt, setFetchedAt] = useState<number | null>(null);
-  const [fetchedGame, setFetchedGame] = useState<string>("");
-  const [autoSwitch, setAutoSwitch] = useState<AutoSwitchInfo | null>(null);
+  const hasTrackableTarget = Boolean(targetGame) && (canWatchTarget || Boolean(watching));
+  const shouldTrackChannels =
+    allowWatching &&
+    hasTrackableTarget &&
+    (view === "control" || autoSelectEnabled || !!watching || autoSwitchEnabled);
+  const store = useChannelStore({ targetGame, shouldTrackChannels, demoMode });
+  const {
+    channels,
+    channelDiff,
+    channelError,
+    channelsLoading,
+    channelsRefreshing,
+    autoSwitch,
+    fetchedAt,
+    fetchedGame,
+    channelsRef,
+    targetGameRef,
+    shouldTrackChannelsRef,
+    applyChannelsState,
+    setChannelDiff,
+    setChannelError,
+    setChannelsLoading,
+    setChannelsRefreshing,
+    setAutoSwitch,
+    setFetchedAt,
+    setFetchedGame,
+    resetChannelData,
+  } = store;
   const inFlightGamesRef = useRef<Set<string>>(new Set());
   const requestSeqRef = useRef(0);
   const latestAppliedRequestRef = useRef(0);
-  const targetGameRef = useRef(targetGame);
   const pendingViewerDiffRef = useRef<ChannelLiveDiff | null>(null);
   const viewerFlushTimerRef = useRef<number | null>(null);
   const allowlistKeyRef = useRef<string>("");
-  const trackerClearedRef = useRef(false);
   const lastTrackedGameRef = useRef<string>("");
-
-  targetGameRef.current = targetGame;
-
-  const applyChannelsState = useCallback(
-    (next: ChannelEntry[]) => {
-      channelsRef.current = next;
-      setChannels(next);
-    },
-    [setChannels],
-  );
 
   const isFresh = useCallback(
     (game: string, now = Date.now()) =>
@@ -117,13 +122,6 @@ export function useChannels({
       }),
     [fetchedAt, fetchedGame, TRACKER_REFRESH_WINDOW_MS],
   );
-  const hasTrackableTarget = Boolean(targetGame) && (canWatchTarget || Boolean(watching));
-  const shouldTrackChannels =
-    allowWatching &&
-    hasTrackableTarget &&
-    (view === "control" || autoSelectEnabled || !!watching || autoSwitchEnabled);
-  const shouldTrackChannelsRef = useRef(shouldTrackChannels);
-  shouldTrackChannelsRef.current = shouldTrackChannels;
   const clearTrackerIfTrackingDisabled = useCallback(
     (
       context: "stale-demo-response" | "stale-response" | "stale-failure",
@@ -300,14 +298,10 @@ export function useChannels({
     const previous = lastTrackedGameRef.current;
     if (previous && previous !== targetGame) {
       void window.electronAPI.twitch.trackerClearChannels?.();
-      applyChannelsState([]);
-      setChannelDiff(null);
-      setChannelError(null);
-      setFetchedAt(null);
-      setFetchedGame("");
+      resetChannelData();
     }
     lastTrackedGameRef.current = targetGame;
-  }, [allowWatching, applyChannelsState, shouldTrackChannels, targetGame]);
+  }, [allowWatching, resetChannelData, shouldTrackChannels, targetGame]);
 
   useEffect(() => {
     if (demoMode) return;
@@ -376,19 +370,6 @@ export function useChannels({
     channelAllowlist,
     watching,
   ]);
-
-  // Reset when switching demo mode
-  useEffect(() => {
-    if (demoMode === undefined) return;
-    applyChannelsState([]);
-    setChannelDiff(null);
-    setChannelError(null);
-    setChannelsLoading(false);
-    setChannelsRefreshing(false);
-    setFetchedAt(null);
-    setFetchedGame("");
-    setAutoSwitch(null);
-  }, [applyChannelsState, demoMode]);
 
   useEffect(() => {
     const prev = channelsRef.current;
@@ -521,25 +502,6 @@ export function useChannels({
     clearWatching,
     setWatchingFromChannel,
   ]);
-
-  useEffect(() => {
-    if (shouldTrackChannels) {
-      trackerClearedRef.current = false;
-      return;
-    }
-    applyChannelsState([]);
-    setChannelDiff(null);
-    setChannelError(null);
-    setChannelsLoading(false);
-    setChannelsRefreshing(false);
-    setFetchedAt(null);
-    setFetchedGame("");
-    setAutoSwitch(null);
-    if (!trackerClearedRef.current) {
-      trackerClearedRef.current = true;
-      void window.electronAPI.twitch.trackerClearChannels?.();
-    }
-  }, [applyChannelsState, shouldTrackChannels]);
 
   return {
     channels,
