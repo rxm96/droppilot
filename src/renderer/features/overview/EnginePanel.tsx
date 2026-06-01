@@ -1,6 +1,7 @@
 import * as React from "react";
 import { formatRelative, formatUptime } from "./formatters";
 import { useI18n } from "@renderer/shared/i18n";
+import { TimeText } from "@renderer/shared/components/TimeText";
 
 export type EnginePanelProps = {
   lastWatchOk?: number | null;
@@ -10,32 +11,34 @@ export type EnginePanelProps = {
   cadenceSeconds?: number;
 };
 
-export function EnginePanel({
+// Memoized: props are stable across the per-second watch tick. The two
+// time-relative rows own their own ticking <TimeText> leaf, so the panel body
+// no longer re-renders every second (and the tick pauses while hidden).
+export const EnginePanel = React.memo(function EnginePanel({
   lastWatchOk,
   watchingSince,
   cycleSeconds = 30,
   cadenceSeconds = 30,
 }: EnginePanelProps) {
   const { t } = useI18n();
-  const [now, setNow] = React.useState<number>(() => Date.now());
 
-  React.useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, []);
-
-  const rows: Array<{ id: string; label: string; value: string; tone?: "ok" }> = [
+  const rows: Array<{ id: string; label: string; value: React.ReactNode; tone?: "ok" }> = [
     { id: "watchCycle", label: t("engine.row.watchCycle"), value: `${cycleSeconds}s` },
     {
       id: "lastRefresh",
       label: t("engine.row.lastRefresh"),
-      value: formatRelative(lastWatchOk, now),
+      value: <TimeText render={(now) => formatRelative(lastWatchOk, now)} />,
     },
     { id: "cadence", label: t("engine.row.cadence"), value: `${cadenceSeconds}s` },
     {
       id: "uptime",
       label: t("engine.row.uptime"),
-      value: typeof watchingSince === "number" ? formatUptime(watchingSince, now) : "--",
+      value:
+        typeof watchingSince === "number" ? (
+          <TimeText render={(now) => formatUptime(watchingSince, now)} />
+        ) : (
+          "--"
+        ),
     },
   ];
 
@@ -62,4 +65,4 @@ export function EnginePanel({
       </div>
     </div>
   );
-}
+});
