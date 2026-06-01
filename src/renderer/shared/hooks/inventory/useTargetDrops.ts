@@ -7,6 +7,34 @@ import { sameGameName } from "@renderer/shared/domain/gameName";
 
 type WithCategory = { item: InventoryItem; category: string };
 
+/**
+ * Domain objects derived purely from inventory data — no time input.
+ * Constructing these is the allocation-heavy part of computeTargetDrops: every
+ * InventoryDrop builds a DropChannelRestriction holding two Sets, so a full
+ * rebuild is ~2N drop objects + ~4N Sets. Both InventoryDrop and
+ * InventoryDropCollection are immutable (all getters read from `raw`,
+ * `isExpired(now)` takes `now` per call), so a prebuilt domain is safe to reuse
+ * across renders. useTargetDrops memoizes it on the data so the per-second live
+ * tick no longer re-allocates the whole collection.
+ */
+export type DropDomain = {
+  collection: InventoryDropCollection;
+  withCategoryDrops: Array<{ drop: InventoryDrop; category: string }>;
+};
+
+export function buildDropDomain(
+  inventoryItems: InventoryItem[],
+  withCategories: WithCategory[],
+): DropDomain {
+  return {
+    collection: new InventoryDropCollection(inventoryItems),
+    withCategoryDrops: withCategories.map(({ item, category }) => ({
+      drop: new InventoryDrop(item),
+      category,
+    })),
+  };
+}
+
 export type ActiveDropInfo = {
   id: string;
   title: string;
@@ -62,7 +90,16 @@ type Params = {
   stickyActiveDropId?: string | null;
 };
 
-type ComputeParams = Params & { now?: number };
+type ComputeParams = Params & {
+  now?: number;
+  /**
+   * Optionally reuse a prebuilt drop domain (see buildDropDomain) instead of
+   * constructing it from inventoryItems/withCategories. useTargetDrops passes a
+   * memoized domain so the per-second `now` tick skips the allocation-heavy
+   * rebuild. When omitted (e.g. tests), it's built inline — behavior is identical.
+   */
+  domain?: DropDomain;
+};
 
 export function computeTargetDrops({
   targetGame,
@@ -76,6 +113,7 @@ export function computeTargetDrops({
   watchStartedAt,
   stickyActiveDropId,
   now: providedNow,
+  domain,
 }: ComputeParams): TargetDropsResult {
   if (!targetGame) {
     return {
@@ -93,11 +131,8 @@ export function computeTargetDrops({
     };
   }
   const now = providedNow ?? Date.now();
-  const collection = new InventoryDropCollection(inventoryItems);
-  const withCategoryDrops = withCategories.map(({ item, category }) => ({
-    drop: new InventoryDrop(item),
-    category,
-  }));
+  const { collection, withCategoryDrops } =
+    domain ?? buildDropDomain(inventoryItems, withCategories);
   const nonExpiredForGame = collection.forGame(targetGame).filter((drop) => !drop.isExpired(now));
   const isWatchableUpcomingDrop = (drop: InventoryDrop): boolean => {
     return canEarnDrop(drop.raw, {
@@ -379,6 +414,15 @@ export function useTargetDrops({
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
   useInterval(() => setNowMs(Date.now()), 1000, isLiveActive);
 
+  // Build the (data-only) drop domain once per inventory change. The live
+  // recompute below still re-runs every `nowMs` tick, but reuses this memo so it
+  // no longer re-allocates the whole InventoryDrop collection + restriction Sets
+  // each second — only the cheap now-dependent filtering/selection re-runs.
+  const domain = useMemo(
+    () => buildDropDomain(inventoryItems, withCategories),
+    [inventoryItems, withCategories],
+  );
+
   // Remember the last active drop so the selection can prefer it across
   // recomputes (anti-flicker). Read in the memo, refreshed after each commit.
   const lastActiveDropIdRef = useRef<string | null>(null);
@@ -396,11 +440,13 @@ export function useTargetDrops({
         watchStartedAt,
         stickyActiveDropId: lastActiveDropIdRef.current,
         now: isLiveActive ? nowMs : undefined,
+        domain,
       }),
     [
       allowWatching,
       allowUnlinkedGames,
       inventoryFetchedAt,
+      domain,
       inventoryItems,
       progressAnchorByDropId,
       watchStartedAt,
