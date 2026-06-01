@@ -9,6 +9,7 @@ import {
   mergeChannelList,
   shouldClearTrackerAfterStaleResponse,
   shouldAutoSelectChannel,
+  sortChannelsByViewers,
 } from "./channelEngine";
 
 const makeChannel = (overrides: Partial<ChannelEntry> = {}): ChannelEntry => ({
@@ -21,7 +22,7 @@ const makeChannel = (overrides: Partial<ChannelEntry> = {}): ChannelEntry => ({
   ...overrides,
 });
 
-describe("useChannels helpers", () => {
+describe("channelEngine helpers", () => {
   it("merges channel lists while preserving identical references", () => {
     const a = makeChannel();
     const prev = [a];
@@ -63,6 +64,23 @@ describe("useChannels helpers", () => {
     };
     const next = applyLiveDiff(prev, payload);
     expect(next[0].id).toBe("3");
+  });
+
+  it("sortChannelsByViewers orders by viewers descending", () => {
+    const out = sortChannelsByViewers([
+      makeChannel({ id: "a", viewers: 5 }),
+      makeChannel({ id: "b", viewers: 20 }),
+      makeChannel({ id: "c", viewers: 10 }),
+    ]);
+    expect(out.map((c) => c.id)).toEqual(["b", "c", "a"]);
+  });
+
+  it("sortChannelsByViewers breaks ties by displayName", () => {
+    const out = sortChannelsByViewers([
+      makeChannel({ id: "1", displayName: "Bravo", viewers: 10 }),
+      makeChannel({ id: "2", displayName: "Alpha", viewers: 10 }),
+    ]);
+    expect(out.map((c) => c.displayName)).toEqual(["Alpha", "Bravo"]);
   });
 
   it("decides when to auto-select a channel", () => {
