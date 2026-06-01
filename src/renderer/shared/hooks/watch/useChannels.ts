@@ -1,15 +1,9 @@
-import { useEffect } from "react";
 import { type ChannelAllowlist } from "@renderer/shared/domain/dropDomain";
-import { normalizeAllowlist } from "./channelAllowlist";
-import {
-  computeAutoSwitchAction,
-  isManualPriorityOverrideActive,
-  shouldAutoSelectChannel,
-} from "./channelEngine";
 import type { ChannelEntry, ChannelTrackerMode, View, WatchingState } from "@renderer/shared/types";
 import { useChannelStore } from "./useChannelStore";
 import { useChannelFetch } from "./useChannelFetch";
 import { useChannelLiveDiff } from "./useChannelLiveDiff";
+import { useChannelAutopilot } from "./useChannelAutopilot";
 
 type Params = {
   targetGame: string;
@@ -54,15 +48,6 @@ export function useChannels({
     hasTrackableTarget &&
     (view === "control" || autoSelectEnabled || !!watching || autoSwitchEnabled);
   const store = useChannelStore({ targetGame, shouldTrackChannels, demoMode });
-  const {
-    channels,
-    channelDiff,
-    channelError,
-    channelsLoading,
-    channelsRefreshing,
-    autoSwitch,
-    setAutoSwitch,
-  } = store;
 
   const fetchChannels = useChannelFetch({
     store,
@@ -85,89 +70,28 @@ export function useChannels({
     shouldTrackChannels,
   });
 
-  // Auto-select first channel if none selected
-  useEffect(() => {
-    if (
-      !shouldAutoSelectChannel({
-        allowWatching,
-        autoSelectEnabled,
-        canWatchTarget,
-        channels,
-        watching,
-        channelAllowlist,
-      })
-    )
-      return;
-    const normalizedAllowlist = normalizeAllowlist(channelAllowlist);
-    const first = normalizedAllowlist
-      ? channels.find((channel) => normalizedAllowlist.allowsChannel(channel))
-      : channels[0];
-    if (!first) return;
-    setWatchingFromChannel(first);
-  }, [
-    channels,
-    watching,
-    targetGame,
+  useChannelAutopilot({
+    store,
+    allowWatching,
     autoSelectEnabled,
-    allowWatching,
-    canWatchTarget,
-    channelAllowlist,
-    setWatchingFromChannel,
-  ]);
-
-  // Auto-switch if current channel disappears
-  useEffect(() => {
-    const now = Date.now();
-    const manualPriorityOverrideActive = isManualPriorityOverrideActive({
-      manualWatchOverride,
-      targetGame,
-      now,
-    });
-    const action = computeAutoSwitchAction({
-      allowWatching,
-      watching,
-      channels,
-      autoSwitchEnabled,
-      forcePrioritySwitch: forcePrioritySwitch && !manualPriorityOverrideActive,
-      canWatchTarget,
-      channelAllowlist,
-    });
-    if (action.action === "none") return;
-    if (action.action === "clear") {
-      clearWatching();
-      return;
-    }
-    // computeAutoSwitchAction only returns a "switch" when `watching` is set,
-    // so this never returns at runtime — it just makes the invariant explicit.
-    if (!watching) return;
-    setWatchingFromChannel(action.nextChannel);
-    setAutoSwitch({
-      at: Date.now(),
-      reason: action.reason,
-      from: { id: watching.id, name: watching.name },
-      to: { id: action.nextChannel.id, name: action.nextChannel.displayName },
-    });
-  }, [
-    channels,
-    watching,
-    targetGame,
-    manualWatchOverride,
-    allowWatching,
     autoSwitchEnabled,
-    forcePrioritySwitch,
     canWatchTarget,
     channelAllowlist,
-    clearWatching,
+    forcePrioritySwitch,
+    manualWatchOverride,
+    targetGame,
+    watching,
     setWatchingFromChannel,
-  ]);
+    clearWatching,
+  });
 
   return {
-    channels,
-    channelDiff,
-    channelError,
-    channelsLoading,
-    channelsRefreshing,
-    autoSwitch,
+    channels: store.channels,
+    channelDiff: store.channelDiff,
+    channelError: store.channelError,
+    channelsLoading: store.channelsLoading,
+    channelsRefreshing: store.channelsRefreshing,
+    autoSwitch: store.autoSwitch,
     fetchChannels,
   };
 }
