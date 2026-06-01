@@ -23,7 +23,6 @@ export type ChannelStore = {
   setFetchedAt: Dispatch<SetStateAction<number | null>>;
   setFetchedGame: Dispatch<SetStateAction<string>>;
   resetChannelData: () => void;
-  resetAll: () => void;
 };
 
 export function useChannelStore({
@@ -56,6 +55,10 @@ export function useChannelStore({
     setChannels(next);
   }, []);
 
+  // Two reset depths. resetChannelData wipes the data plane only (list/diff/error/
+  // fetch metadata); resetAll additionally clears the loading flags and autoSwitch.
+  // The target-game-switch path uses the former; demo-toggle and tracking-disabled
+  // use the latter. Keep them distinct — collapsing them would change behavior.
   const resetChannelData = useCallback(() => {
     applyChannelsState([]);
     setChannelDiff(null);
@@ -77,7 +80,10 @@ export function useChannelStore({
     resetAll();
   }, [demoMode, resetAll]);
 
-  // Tear down + clear tracker subscriptions when tracking is disabled.
+  // Tracking turned off -> wipe state AND tell the main process to stop the tracker.
+  // The trackerClearChannels IPC is co-located with resetAll (rather than split into a
+  // separate effect in useChannels) so the "disabled" transition stays atomic and the
+  // trackerCleared guard has a single owner.
   useEffect(() => {
     if (shouldTrackChannels) {
       trackerClearedRef.current = false;
@@ -111,6 +117,5 @@ export function useChannelStore({
     setFetchedAt,
     setFetchedGame,
     resetChannelData,
-    resetAll,
   };
 }
