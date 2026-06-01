@@ -181,6 +181,12 @@ describe("channel allowlist helpers", () => {
     expect(prioritizeChannelsByAllowlist(channels, null)).toBe(channels);
   });
 
+  it("prioritizeChannelsByAllowlist returns the same array when already in order", () => {
+    const channels = [ch({ id: "2", login: "beta" }), ch({ id: "1", login: "alpha" })];
+    // "beta" matches by login and is already first; "alpha" does not match → no reorder needed
+    expect(prioritizeChannelsByAllowlist(channels, { ids: [], logins: ["beta"] })).toBe(channels);
+  });
+
   it("buildAllowlistKey is stable regardless of input order", () => {
     const a = buildAllowlistKey({ ids: ["b", "a"], logins: ["y", "x"] });
     const b = buildAllowlistKey({ ids: ["a", "b"], logins: ["x", "y"] });
