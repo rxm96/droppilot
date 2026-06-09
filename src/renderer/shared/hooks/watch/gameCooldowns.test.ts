@@ -46,6 +46,18 @@ describe("gameCooldowns", () => {
     expect(nextCooldownExpiry({ A: 5_000, B: 3_000 })).toBe(3_000);
   });
 
+  it("upsert preserves sibling entries", () => {
+    expect(upsertCooldown({ "Dota 2": 5_000 }, "Rust", 1_000)).toEqual({
+      "Dota 2": 5_000,
+      Rust: 1_000,
+    });
+  });
+
+  it("nextCooldownExpiry ignores non-finite entries", () => {
+    expect(nextCooldownExpiry({ A: Number.NaN })).toBeNull();
+    expect(nextCooldownExpiry({ A: Number.NaN, B: 3_000 })).toBe(3_000);
+  });
+
   it("isGameInCooldown checks trimmed name against now", () => {
     const map = { Rust: 5_000 };
     expect(isGameInCooldown(map, " Rust ", 1_000)).toBe(true);

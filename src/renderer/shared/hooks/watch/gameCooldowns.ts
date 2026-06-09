@@ -42,7 +42,7 @@ export const pruneExpiredCooldowns = (map: GameCooldownMap, now: number): GameCo
 };
 
 export const nextCooldownExpiry = (map: GameCooldownMap): number | null => {
-  const untils = Object.values(map);
+  const untils = Object.values(map).filter((until) => Number.isFinite(until));
   if (untils.length === 0) return null;
   return Math.min(...untils);
 };
