@@ -1,4 +1,5 @@
 export * from "./channelAllowlist";
+export * from "./gameCooldowns";
 export * from "./channelEngine";
 export * from "./useChannels";
 export * from "./useClaimProbe";
