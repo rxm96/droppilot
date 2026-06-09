@@ -33,6 +33,7 @@ import {
   useWatchEngine,
   useWatchSessionMeta,
   useWatchSuppressionSync,
+  rotateToNextPriorityTarget,
   type WatchStallTracker,
 } from "@renderer/shared/hooks/watch";
 import { useActiveCampaignDebugLog } from "./useActiveCampaignDebugLog";
@@ -366,24 +367,14 @@ export function useAppModel() {
     watching?.game ?? "",
   );
   const getNextPriorityTargetGame = useCallback(
-    (currentGame: string): string => {
-      const current = currentGame.trim();
-      const ordered = priorityOrder
-        .map((game) => game.trim())
-        .filter((game, index, all) => game.length > 0 && all.indexOf(game) === index);
-      if (ordered.length === 0) return "";
-      const currentIndex = ordered.indexOf(current);
-      const rotated =
-        currentIndex >= 0
-          ? [...ordered.slice(currentIndex + 1), ...ordered.slice(0, currentIndex)]
-          : ordered;
-      const candidates = rotated.filter((game) => game !== current && !isGameInStallCooldown(game));
-      if (candidates.length === 0) return "";
-      const actionable = candidates.find((game) =>
-        isGameActionable(game, orchestrationCategories, { allowUpcoming: allowUnlinkedGames }),
-      );
-      return actionable ?? candidates[0] ?? "";
-    },
+    (currentGame: string): string =>
+      rotateToNextPriorityTarget({
+        priorityOrder,
+        currentGame,
+        isGameBlocked: (game) => isGameInStallCooldown(game),
+        isGameActionable: (game) =>
+          isGameActionable(game, orchestrationCategories, { allowUpcoming: allowUnlinkedGames }),
+      }),
     [allowUnlinkedGames, isGameInStallCooldown, orchestrationCategories, priorityOrder],
   );
   const handleStopWatching = actions.handleStopWatching;
