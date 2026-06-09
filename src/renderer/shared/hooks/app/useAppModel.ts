@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAlertEffects } from "./useAlertEffects";
 import { useAppActions } from "./useAppActions";
 import { useAppBootstrap } from "./useAppBootstrap";
@@ -30,10 +30,8 @@ import {
   selectVisibleTargetGame,
   shouldForceClearWatchingOnSuppressedTarget,
   useDropProgressPoll,
+  useWatchEngine,
   useWatchSessionMeta,
-  watchEngineReducer,
-  type WatchEngineEvent,
-  WATCH_ENGINE_INITIAL_STATE,
   type WatchStallTracker,
 } from "@renderer/shared/hooks/watch";
 import { useActiveCampaignDebugLog } from "./useActiveCampaignDebugLog";
@@ -49,7 +47,7 @@ import { DropChannelRestriction } from "@renderer/shared/domain/dropDomain";
 import { canEarnDrop } from "@renderer/shared/domain/inventory";
 import { sameGameName } from "@renderer/shared/domain/gameName";
 import type { FilterKey, View } from "@renderer/shared/types";
-import { isVerboseLoggingEnabled, logDebug, logInfo } from "@renderer/shared/utils/logger";
+import { isVerboseLoggingEnabled, logInfo } from "@renderer/shared/utils/logger";
 
 const STALL_NO_PROGRESS_WINDOW_MS = 15 * 60_000;
 const STALL_NO_PROGRESS_WINDOW_NEAR_END_MS = 3 * 60_000;
@@ -131,11 +129,7 @@ export function useAppModel() {
     settingsError,
   } = useSettingsStore();
   const [gameFilter, setGameFilter] = useState<string>("all");
-  const [watchEngineState, dispatchWatchEngine] = useReducer(
-    watchEngineReducer,
-    WATCH_ENGINE_INITIAL_STATE,
-  );
-  const watchEngineStateRef = useRef(watchEngineState);
+  const { state: watchEngineState, dispatchEvent: dispatchWatchEngineEvent } = useWatchEngine();
   const [manualWatchOverride, setManualWatchOverride] = useState<{
     at: number;
     game: string;
@@ -176,59 +170,6 @@ export function useAppModel() {
   );
 
   const authErrorHandlerRef = useRef<(message?: string) => void>(() => {});
-  useEffect(() => {
-    watchEngineStateRef.current = watchEngineState;
-  }, [watchEngineState]);
-  const dispatchWatchEngineEvent = useCallback(
-    (event: WatchEngineEvent, context: string) => {
-      const stampedEvent: WatchEngineEvent = (() => {
-        switch (event.type) {
-          case "watch/stop":
-          case "watch/stall_stop":
-            if (typeof event.at === "number" && Number.isFinite(event.at)) return event;
-            return { ...event, at: Date.now() };
-          case "sync":
-            if (typeof event.now === "number" && Number.isFinite(event.now)) return event;
-            return { ...event, now: Date.now() };
-          default:
-            return event;
-        }
-      })();
-      const prev = watchEngineStateRef.current;
-      const next = watchEngineReducer(prev, stampedEvent);
-      const changed =
-        prev.suppressedTargetGame !== next.suppressedTargetGame ||
-        prev.suppressionReason !== next.suppressionReason ||
-        prev.suppressedAt !== next.suppressedAt;
-      const eventTargetGame =
-        "activeTargetGame" in stampedEvent
-          ? stampedEvent.activeTargetGame
-          : stampedEvent.type === "target/manual_set"
-            ? stampedEvent.nextTargetGame
-            : "";
-      const prevVisibleTarget = selectVisibleTargetGame(prev, eventTargetGame);
-      const nextVisibleTarget = selectVisibleTargetGame(next, eventTargetGame);
-      if (stampedEvent.type !== "sync" || changed) {
-        logDebug("watch-engine: event", { context, event: stampedEvent, prev, next, changed });
-      }
-      if (changed) {
-        logInfo("watch-engine: suppression", {
-          context,
-          event: stampedEvent.type,
-          suppressionFrom: prev.suppressedTargetGame || null,
-          suppressionTo: next.suppressedTargetGame || null,
-          reasonFrom: prev.suppressionReason ?? null,
-          reasonTo: next.suppressionReason ?? null,
-          suppressedAtFrom: prev.suppressedAt ?? null,
-          suppressedAtTo: next.suppressedAt ?? null,
-          visibleTargetFrom: prevVisibleTarget || null,
-          visibleTargetTo: nextVisibleTarget || null,
-        });
-      }
-      dispatchWatchEngine(stampedEvent);
-    },
-    [dispatchWatchEngine],
-  );
   const forwardAuthError = useCallback((message?: string) => {
     authErrorHandlerRef.current?.(message);
   }, []);
