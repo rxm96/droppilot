@@ -374,6 +374,16 @@ describe("decideIdleNoFarmable", () => {
       durationMs: NO_FARMABLE_GAME_COOLDOWN_MS,
       reason: "stall-no-farmable",
     });
+    expect(actions[1]).toEqual({
+      kind: "log",
+      message: "watch-engine: no-farmable idle evaluate",
+      data: { from: "Rust", to: "Dota 2", channelsCount: 1, allowlistActive: true },
+    });
+    expect(actions[2]).toEqual({
+      kind: "log",
+      message: "watch-engine: retarget",
+      data: { reason: "stall-no-farmable-idle", from: "Rust", to: "Dota 2" },
+    });
     expect(actions[3]).toEqual({ kind: "retarget", to: "Dota 2" });
     expect(actions[5]).toEqual({
       kind: "dispatch-stall-stop",
@@ -392,6 +402,10 @@ describe("decideIdleNoFarmable", () => {
       "dispatch-stall-stop",
     ]);
     const skip = actions[2] as Extract<StallRecoveryAction, { kind: "log" }>;
-    expect(skip.message).toBe("watch-engine: retarget skipped");
+    expect(skip).toEqual({
+      kind: "log",
+      message: "watch-engine: retarget skipped",
+      data: { reason: "stall-no-farmable-idle-no-next-target", from: "Rust" },
+    });
   });
 });

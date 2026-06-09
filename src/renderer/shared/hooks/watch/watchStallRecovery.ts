@@ -86,6 +86,8 @@ export const decideIdleNoFarmable = (input: IdleNoFarmableInput): StallRecoveryD
   if (hasAllowlistedChannel) {
     return { actions: [], noFarmable: null };
   }
+  // Two bindings mirroring the original's two consts; the || activeTargetGame
+  // fallback below is only reachable when targetGame is whitespace-only.
   const stalledGame = activeTargetGame.trim() || targetGame.trim();
   const currentForRetarget = activeTargetGame.trim() || targetGame.trim();
   const nextTargetGame = currentForRetarget ? getNextTargetGame(currentForRetarget) : "";
