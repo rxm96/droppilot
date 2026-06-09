@@ -28,6 +28,7 @@ import {
   selectVisibleTargetGame,
   shouldForceClearWatchingOnSuppressedTarget,
   useDropProgressPoll,
+  useWatchSessionMeta,
   watchEngineReducer,
   type WatchEngineEvent,
   WATCH_ENGINE_INITIAL_STATE,
@@ -145,11 +146,8 @@ export function useAppModel() {
     at: number;
     game: string;
   } | null>(null);
-  const [lastWatchedChannelIdentity, setLastWatchedChannelIdentity] = useState<{
-    id: string;
-    login: string;
-  } | null>(null);
   const { watching, setWatchingFromChannel, clearWatching } = useWatchingController();
+  const { lastWatchedChannelIdentity, watchStartedAt } = useWatchSessionMeta(watching);
   // Engine-watch uptime: stamped when watching starts, kept across channel
   // switches, cleared on pause/stop. Derived here (not in EnginePanel) so it
   // survives Overview tab remounts.
@@ -342,38 +340,6 @@ export function useAppModel() {
     }
     globalThis.open(url, "_blank", "noopener,noreferrer");
   }, []);
-
-  useEffect(() => {
-    if (!watching) return;
-    const normalizedLogin = (watching.login ?? watching.name ?? "").trim().toLowerCase();
-    setLastWatchedChannelIdentity((prev) => {
-      if (prev?.id === watching.id && prev.login === normalizedLogin) {
-        return prev;
-      }
-      return {
-        id: watching.id,
-        login: normalizedLogin,
-      };
-    });
-  }, [watching]);
-
-  // Stamp when the current watch session (channel+stream) began so useTargetDrops
-  // can clamp its live-progress anchor to it — we must not credit elapsed time
-  // from before the user started watching (e.g. a stale inventory snapshot).
-  // Same session-key semantics ControlView uses, so both views agree.
-  const watchSessionKeyRef = useRef<string | null>(null);
-  const [watchStartedAt, setWatchStartedAt] = useState<number | null>(null);
-  useEffect(() => {
-    if (!watching) {
-      watchSessionKeyRef.current = null;
-      setWatchStartedAt(null);
-      return;
-    }
-    const sessionKey = `${watching.id}:${watching.streamId ?? ""}`;
-    if (watchSessionKeyRef.current === sessionKey) return;
-    watchSessionKeyRef.current = sessionKey;
-    setWatchStartedAt(Date.now());
-  }, [watching]);
 
   const { stats, bumpStats, resetStats } = useStats({ demoMode });
   const { notify } = useSmartAlerts({

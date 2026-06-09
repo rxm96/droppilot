@@ -8,4 +8,5 @@ export * from "./useWatchingController";
 export * from "./useWatchingSince";
 export * from "./useWatchPing";
 export * from "./watchEngine";
+export * from "./useWatchSessionMeta";
 export * from "./watchStallRecovery";
