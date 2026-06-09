@@ -32,6 +32,7 @@ import {
   useDropProgressPoll,
   useWatchEngine,
   useWatchSessionMeta,
+  useWatchSuppressionSync,
   type WatchStallTracker,
 } from "@renderer/shared/hooks/watch";
 import { useActiveCampaignDebugLog } from "./useActiveCampaignDebugLog";
@@ -403,64 +404,14 @@ export function useAppModel() {
     dispatchWatchEngineEvent({ type: "watch/stop", activeTargetGame }, "manual-watch-stop");
   }, [activeTargetGame, dispatchWatchEngineEvent, handleStopWatching]);
 
-  useEffect(() => {
-    if (shouldClearSuppressedWatching) {
-      clearWatching();
-      return;
-    }
-    dispatchWatchEngineEvent(
-      {
-        type: "sync",
-        activeTargetGame,
-        watchingGame: watching?.game ?? "",
-      },
-      "sync",
-    );
-  }, [
-    activeTargetGame,
-    clearWatching,
+  useWatchSuppressionSync({
+    watchEngineState,
     dispatchWatchEngineEvent,
+    activeTargetGame,
+    watchingGame: watching?.game ?? "",
     shouldClearSuppressedWatching,
-    watching?.game,
-  ]);
-
-  useEffect(() => {
-    const reason = watchEngineState.suppressionReason;
-    if (reason !== "stall-stop" && reason !== "manual-stop") return;
-    const suppressedGame = watchEngineState.suppressedTargetGame.trim();
-    const suppressedAt = watchEngineState.suppressedAt;
-    const watchingGame = (watching?.game ?? "").trim();
-    if (!suppressedGame) return;
-    if (typeof suppressedAt !== "number" || !Number.isFinite(suppressedAt)) return;
-    const holdMs =
-      reason === "stall-stop" ? STALL_STOP_SUPPRESSION_HOLD_MS : MANUAL_STOP_SUPPRESSION_HOLD_MS;
-    const runSync = () => {
-      dispatchWatchEngineEvent(
-        {
-          type: "sync",
-          activeTargetGame,
-          watchingGame,
-          now: Date.now(),
-        },
-        `${reason}-hold-expire-sync`,
-      );
-    };
-    const dueAt = suppressedAt + holdMs;
-    const remainingMs = dueAt - Date.now();
-    if (remainingMs <= 0) {
-      runSync();
-      return;
-    }
-    const timer = window.setTimeout(runSync, remainingMs);
-    return () => window.clearTimeout(timer);
-  }, [
-    activeTargetGame,
-    dispatchWatchEngineEvent,
-    watchEngineState.suppressedAt,
-    watchEngineState.suppressedTargetGame,
-    watchEngineState.suppressionReason,
-    watching?.game,
-  ]);
+    clearWatching,
+  });
 
   useEffect(() => {
     if (watchEngineState.suppressionReason !== "stall-stop") return;

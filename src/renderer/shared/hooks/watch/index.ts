@@ -12,4 +12,5 @@ export * from "./useWatchPing";
 export * from "./watchEngine";
 export * from "./useWatchEngine";
 export * from "./useWatchSessionMeta";
+export * from "./useWatchSuppressionSync";
 export * from "./watchStallRecovery";
