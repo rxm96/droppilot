@@ -5,8 +5,10 @@ import {
   selectIsTargetSuppressed,
   selectVisibleTargetGame,
   shouldForceClearWatchingOnSuppressedTarget,
+  stampWatchEngineEvent,
   watchEngineReducer,
   WATCH_ENGINE_INITIAL_STATE,
+  type WatchEngineEvent,
 } from "./watchEngine";
 
 describe("watchEngine", () => {
@@ -205,5 +207,41 @@ describe("watchEngine", () => {
     expect(selectIsTargetSuppressed(suppressed, "EA Sports FC 26")).toBe(true);
     expect(selectVisibleTargetGame(suppressed, "EA Sports FC 26")).toBe("");
     expect(shouldForceClearWatchingOnSuppressedTarget(suppressed, "EA Sports FC 26")).toBe(true);
+  });
+});
+
+describe("stampWatchEngineEvent", () => {
+  it("stamps watch/stop and watch/stall_stop with now when at is missing", () => {
+    expect(stampWatchEngineEvent({ type: "watch/stop", activeTargetGame: "Rust" }, 42)).toEqual({
+      type: "watch/stop",
+      activeTargetGame: "Rust",
+      at: 42,
+    });
+    expect(
+      stampWatchEngineEvent({ type: "watch/stall_stop", activeTargetGame: "Rust" }, 42),
+    ).toEqual({ type: "watch/stall_stop", activeTargetGame: "Rust", at: 42 });
+  });
+
+  it("keeps an existing finite at", () => {
+    const event: WatchEngineEvent = { type: "watch/stop", activeTargetGame: "Rust", at: 7 };
+    expect(stampWatchEngineEvent(event, 42)).toBe(event);
+  });
+
+  it("stamps sync with now when missing, keeps existing now", () => {
+    expect(
+      stampWatchEngineEvent({ type: "sync", activeTargetGame: "", watchingGame: "" }, 42),
+    ).toEqual({ type: "sync", activeTargetGame: "", watchingGame: "", now: 42 });
+    const synced: WatchEngineEvent = {
+      type: "sync",
+      activeTargetGame: "",
+      watchingGame: "",
+      now: 7,
+    };
+    expect(stampWatchEngineEvent(synced, 42)).toBe(synced);
+  });
+
+  it("passes other events through unchanged", () => {
+    const event: WatchEngineEvent = { type: "target/manual_set", nextTargetGame: "Rust" };
+    expect(stampWatchEngineEvent(event, 42)).toBe(event);
   });
 });
