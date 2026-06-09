@@ -244,4 +244,21 @@ describe("stampWatchEngineEvent", () => {
     const event: WatchEngineEvent = { type: "target/manual_set", nextTargetGame: "Rust" };
     expect(stampWatchEngineEvent(event, 42)).toBe(event);
   });
+
+  it("re-stamps non-finite timestamps", () => {
+    expect(
+      stampWatchEngineEvent({ type: "watch/stop", activeTargetGame: "Rust", at: Number.NaN }, 42),
+    ).toEqual({ type: "watch/stop", activeTargetGame: "Rust", at: 42 });
+    expect(
+      stampWatchEngineEvent(
+        { type: "sync", activeTargetGame: "", watchingGame: "", now: Infinity },
+        42,
+      ),
+    ).toEqual({ type: "sync", activeTargetGame: "", watchingGame: "", now: 42 });
+  });
+
+  it("keeps an existing finite at on watch/stall_stop", () => {
+    const event: WatchEngineEvent = { type: "watch/stall_stop", activeTargetGame: "Rust", at: 7 };
+    expect(stampWatchEngineEvent(event, 42)).toBe(event);
+  });
 });
