@@ -41,7 +41,7 @@ export type IdleNoFarmableInput = {
   autoSelectEnabled: boolean;
   targetGame: string;
   activeTargetGame: string;
-  channelAllowlist: ChannelAllowlist;
+  channelAllowlist: ChannelAllowlist | null;
   channels: ChannelEntry[];
   channelsLoading: boolean;
   channelsRefreshing: boolean;
@@ -520,7 +520,7 @@ export type WatchingNoFarmableInput = {
   watching: NonNullable<WatchingState>;
   targetGame: string;
   activeTargetGame: string;
-  channelAllowlist: ChannelAllowlist;
+  channelAllowlist: ChannelAllowlist | null;
   channels: ChannelEntry[];
   channelsLoading: boolean;
   targetDrops: InventoryItem[];
