@@ -13,6 +13,7 @@ import {
 import {
   buildChannelAllowlist,
   useChannels,
+  useClaimProbe,
   useWatchPing,
   WATCH_INTERVAL_MS,
   useWatchingController,
@@ -23,6 +24,7 @@ import {
   shouldProbeNoProgressConfirmation,
   STALL_STOP_SUPPRESSION_HOLD_MS,
   MANUAL_STOP_SUPPRESSION_HOLD_MS,
+  CLAIM_PROBE_NEAR_END_MINUTES,
   selectVisibleTargetGame,
   shouldForceClearWatchingOnSuppressedTarget,
   useDropProgressPoll,
@@ -46,8 +48,6 @@ import { isVerboseLoggingEnabled, logDebug, logInfo } from "@renderer/shared/uti
 import { recordActivity } from "@renderer/shared/utils/activityFeed";
 import type { ActivityEvent } from "@renderer/shared/utils/activityFeed";
 
-const CLAIM_PROBE_NEAR_END_MINUTES = 1;
-const CLAIM_PROBE_INTERVAL_MS = 25_000;
 const STALL_NO_PROGRESS_WINDOW_MS = 15 * 60_000;
 const STALL_NO_PROGRESS_WINDOW_NEAR_END_MS = 3 * 60_000;
 const STALL_RECOVERY_COOLDOWN_MS = 60_000;
@@ -155,8 +155,6 @@ export function useAppModel() {
   // survives Overview tab remounts.
   const watchingSince = useWatchingSince(Boolean(watching));
   const [autoSelectEnabled, setAutoSelectEnabled] = useState<boolean>(true);
-  const claimProbeInFlightRef = useRef(false);
-  const claimProbeLastAtRef = useRef(0);
   const watchStallTrackerRef = useRef<WatchStallTracker | null>(null);
   const watchConfirmationProbeRef = useRef<{
     key: string;
@@ -868,44 +866,13 @@ export function useAppModel() {
 
   // --- End activity feed wiring ---
 
-  useEffect(() => {
-    if (!watching || !activeDropInfo) return;
-    const anchorAt = activeDropInfo.progressAnchorAt ?? inventoryFetchedAt;
-    const remainingBase = Math.max(
-      0,
-      activeDropInfo.requiredMinutes - activeDropInfo.earnedMinutes,
-    );
-    const elapsedMinutes =
-      typeof anchorAt === "number" && Number.isFinite(anchorAt)
-        ? Math.max(0, (Date.now() - anchorAt) / 60_000)
-        : 0;
-    const predictedRemainingMinutes = Math.max(0, remainingBase - elapsedMinutes);
-    if (predictedRemainingMinutes > CLAIM_PROBE_NEAR_END_MINUTES) return;
-
-    let cancelled = false;
-    const runProbe = async () => {
-      if (cancelled) return;
-      const now = Date.now();
-      if (claimProbeInFlightRef.current) return;
-      if (now - claimProbeLastAtRef.current < CLAIM_PROBE_INTERVAL_MS) return;
-      claimProbeInFlightRef.current = true;
-      claimProbeLastAtRef.current = now;
-      try {
-        await fetchInventory({ forceLoading: true });
-      } finally {
-        claimProbeInFlightRef.current = false;
-      }
-    };
-
-    void runProbe();
-    const timer = window.setInterval(() => {
-      void runProbe();
-    }, CLAIM_PROBE_INTERVAL_MS);
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
-  }, [activeDropInfo, fetchInventory, inventoryFetchedAt, watchStats.lastOk, watching]);
+  useClaimProbe({
+    watching,
+    activeDropInfo,
+    inventoryFetchedAt,
+    lastWatchOk: watchStats.lastOk,
+    fetchInventory,
+  });
 
   useEffect(() => {
     if (!watching) {

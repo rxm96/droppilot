@@ -1,6 +1,13 @@
 import type { ChannelEntry, WatchingState } from "@renderer/shared/types";
 import { DropChannelRestriction } from "@renderer/shared/domain/dropDomain";
 
+/**
+ * "Near end" threshold shared by the claim probe and the no-progress stall
+ * window: once a drop's predicted remaining time is at or below this, both
+ * tighten their cadence.
+ */
+export const CLAIM_PROBE_NEAR_END_MINUTES = 1;
+
 export type StallRecoveryDrop = {
   id: string;
   earnedMinutes: number;
