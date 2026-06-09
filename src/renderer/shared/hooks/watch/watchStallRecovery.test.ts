@@ -10,8 +10,11 @@ import {
   NO_FARMABLE_GAME_COOLDOWN_MS,
   pickStallRecoveryChannel,
   shouldProbeNoProgressConfirmation,
+  STALL_CONFIRMATION_PROBE_COOLDOWN_MS,
   STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS,
+  STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS_NEAR_END,
   STALL_NO_PROGRESS_WINDOW_MS,
+  STALL_NO_PROGRESS_WINDOW_NEAR_END_MS,
 } from "./watchStallRecovery";
 import type {
   NoFarmableMarker,
@@ -780,6 +783,136 @@ describe("decideNoProgressRecovery", () => {
       kind: "dispatch-stall-stop",
       game: "Rust",
       context: "stall-no-progress",
+    });
+  });
+
+  it("emits a fresh probe when confirmationProbe has a mismatched key", () => {
+    const tracker: WatchStallTracker = {
+      key: trackerKey,
+      lastEarnedMinutes: 10,
+      lastProgressAt: 0,
+      lastActionAt: 0,
+      recoveryCount: 0,
+    };
+    // Same timing as the "emits a confirmation probe" test: inside probe window
+    const now = STALL_NO_PROGRESS_WINDOW_MS - 60_000;
+    const staleProbe: WatchConfirmationProbe = {
+      key: "rust:other",
+      baselineProgressAt: 0,
+      lastProbeAt: now - 1_000, // recent — but key mismatch means it must NOT suppress
+    };
+    const result = decideNoProgressRecovery({
+      ...noProgressBase,
+      tracker,
+      now,
+      lastWatchOk: now - 1_000,
+      confirmationProbe: staleProbe,
+    });
+    // Stale probe is discarded (key mismatch), so a fresh probe is emitted for trackerKey
+    expect(result.actions.map((a) => a.kind)).toEqual(["log", "refresh-inventory"]);
+    expect(result.confirmationProbe).toEqual({
+      key: trackerKey,
+      baselineProgressAt: 0,
+      lastProbeAt: now,
+    });
+  });
+
+  it("suppresses the probe and passes the existing probe through when within probe cooldown", () => {
+    const tracker: WatchStallTracker = {
+      key: trackerKey,
+      lastEarnedMinutes: 10,
+      lastProgressAt: 0,
+      lastActionAt: 0,
+      recoveryCount: 0,
+    };
+    // Same timing as the "emits a confirmation probe" test: inside probe window
+    const now = STALL_NO_PROGRESS_WINDOW_MS - 60_000;
+    const recentProbe: WatchConfirmationProbe = {
+      key: trackerKey,
+      baselineProgressAt: 0,
+      lastProbeAt: now - 1_000, // 1s ago — well within STALL_CONFIRMATION_PROBE_COOLDOWN_MS (60s)
+    };
+    const result = decideNoProgressRecovery({
+      ...noProgressBase,
+      tracker,
+      now,
+      lastWatchOk: now - 1_000,
+      confirmationProbe: recentProbe,
+    });
+    expect(result.actions).toEqual([]);
+    // The probe object is passed through unchanged — same reference
+    expect(result.confirmationProbe).toBe(recentProbe);
+    // Confirm the constant makes the assertion meaningful
+    expect(now - recentProbe.lastProbeAt).toBeLessThan(STALL_CONFIRMATION_PROBE_COOLDOWN_MS);
+  });
+
+  it("escalates immediately when near-end budget (1) is exhausted on second recovery", () => {
+    // remainingMinutes: 1 → nearEndNoProgressProbe = true
+    // noProgressWindowMs = STALL_NO_PROGRESS_WINDOW_NEAR_END_MS (180_000)
+    // tracker.recoveryCount: 1 → evaluateNoProgressStall increments to 2
+    // maxChannelRecoveryAttempts = STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS_NEAR_END = 1
+    // allowChannelRecovery = 2 <= 1 → false → escalation
+    const tracker: WatchStallTracker = {
+      key: trackerKey,
+      lastEarnedMinutes: 10,
+      lastProgressAt: 0,
+      lastActionAt: 0,
+      recoveryCount: 1,
+    };
+    const now = STALL_NO_PROGRESS_WINDOW_NEAR_END_MS + 1;
+    const result = decideNoProgressRecovery({
+      ...noProgressBase,
+      activeDropInfo: activeDrop({ remainingMinutes: 1 }),
+      tracker,
+      now,
+      channels: [channel("w1", "streamer"), channel("c2", "other")],
+    });
+    expect(result.actions.map((a) => a.kind)).toEqual([
+      "log",
+      "set-cooldown",
+      "log",
+      "retarget",
+      "enable-auto-select",
+      "stop-watching",
+      "dispatch-stall-stop",
+    ]);
+    const escalationLog = result.actions[0] as Extract<StallRecoveryAction, { kind: "log" }>;
+    expect(escalationLog.data).toMatchObject({
+      nearEndProbe: true,
+      noProgressWindowMs: STALL_NO_PROGRESS_WINDOW_NEAR_END_MS,
+      attempts: 2,
+      maxChannelRecoveryAttempts: STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS_NEAR_END,
+    });
+  });
+
+  it("takes the refresh path on the last allowed normal-window attempt (recoveryCount reaches budget)", () => {
+    // recoveryCount: 1 → evaluateNoProgressStall increments to 2
+    // maxChannelRecoveryAttempts = STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS = 2
+    // allowChannelRecovery = 2 <= 2 → true
+    // No alternate channel → refresh path
+    const tracker: WatchStallTracker = {
+      key: trackerKey,
+      lastEarnedMinutes: 10,
+      lastProgressAt: 0,
+      lastActionAt: 0,
+      recoveryCount: 1,
+    };
+    const result = decideNoProgressRecovery({
+      ...noProgressBase,
+      tracker,
+      now: STALL_NO_PROGRESS_WINDOW_MS + 1,
+      channels: [channel("w1", "streamer")], // only the watched channel → no alternate
+    });
+    expect(result.actions.map((a) => a.kind)).toEqual([
+      "log",
+      "refresh-channels",
+      "refresh-inventory",
+    ]);
+    const refreshLog = result.actions[0] as Extract<StallRecoveryAction, { kind: "log" }>;
+    expect(refreshLog.data).toMatchObject({
+      attempts: 2,
+      nearEndProbe: false,
+      noProgressWindowMs: STALL_NO_PROGRESS_WINDOW_MS,
     });
   });
 });
