@@ -34,6 +34,7 @@ import {
   WATCH_ENGINE_INITIAL_STATE,
   type WatchStallTracker,
 } from "@renderer/shared/hooks/watch";
+import { useActiveCampaignDebugLog } from "./useActiveCampaignDebugLog";
 import { useActivityFeedWiring } from "./useActivityFeedWiring";
 import { useDebugCpu } from "./useDebugCpu";
 import { useDebugSnapshot } from "./useDebugSnapshot";
@@ -57,14 +58,6 @@ const STALL_CONFIRMATION_PROBE_COOLDOWN_MS = 60_000;
 const NO_FARMABLE_DROP_GRACE_MS = 30_000;
 const NO_FARMABLE_GAME_COOLDOWN_MS = 10 * 60_000;
 const NO_PROGRESS_GAME_COOLDOWN_MS = 30 * 60_000;
-
-const toConsoleSnapshot = <T>(value: T): T => {
-  try {
-    return JSON.parse(JSON.stringify(value)) as T;
-  } catch {
-    return value;
-  }
-};
 
 export function useAppModel() {
   const { auth, startLogin, logout } = useAuth();
@@ -163,7 +156,6 @@ export function useAppModel() {
     {},
   );
   const stalledGameCooldownUntilRef = useRef<Record<string, number>>({});
-  const activeCampaignDebugSignatureRef = useRef<string>("");
 
   const isLinked = auth.status === "ok";
   const isLinkedOrDemo = isLinked || demoMode;
@@ -666,48 +658,14 @@ export function useAppModel() {
     watchStartedAt,
   });
 
-  useEffect(() => {
-    const activeDropId = activeDropInfo?.id?.trim() ?? "";
-    const activeCampaignId = activeDropInfo?.campaignId?.trim() ?? "";
-    const watchingId = watching?.channelId ?? watching?.id ?? "";
-    const signature = [
-      activeDropId,
-      activeCampaignId,
-      targetGame,
-      watchingId,
-      inventoryFetchedAt ?? "",
-    ].join("|");
-    if (activeCampaignDebugSignatureRef.current === signature) return;
-    activeCampaignDebugSignatureRef.current = signature;
-
-    const activeDropRaw =
-      (activeDropId ? inventoryItems.find((item) => item.id === activeDropId) : null) ?? null;
-    const activeCampaignSummary =
-      (activeCampaignId ? campaigns.find((campaign) => campaign.id === activeCampaignId) : null) ??
-      null;
-    const activeCampaignDropsFromInventory = activeCampaignId
-      ? inventoryItems.filter((item) => item.campaignId === activeCampaignId)
-      : activeDropRaw?.campaignId
-        ? inventoryItems.filter((item) => item.campaignId === activeDropRaw.campaignId)
-        : [];
-
-    console.log(
-      "[DropPilot] active-campaign-debug",
-      toConsoleSnapshot({
-        at: new Date().toISOString(),
-        targetGame,
-        watching,
-        inventoryFetchedAt,
-        activeDropInfo,
-        activeDropRaw,
-        activeCampaignSummary,
-        activeCampaignDropsFromSummary: activeCampaignSummary?.drops ?? null,
-        activeCampaignDropsFromInventory,
-        inventoryItemsCount: inventoryItems.length,
-        campaignsCount: campaigns.length,
-      }),
-    );
-  }, [activeDropInfo, campaigns, inventoryFetchedAt, inventoryItems, targetGame, watching]);
+  useActiveCampaignDebugLog({
+    activeDropInfo,
+    campaigns,
+    inventoryFetchedAt,
+    inventoryItems,
+    targetGame,
+    watching,
+  });
 
   const channelAllowlist = useMemo(
     () =>
