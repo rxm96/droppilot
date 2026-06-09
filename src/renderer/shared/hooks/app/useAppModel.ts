@@ -12,12 +12,14 @@ import {
 } from "@renderer/shared/hooks/inventory";
 import {
   buildChannelAllowlist,
+  filterCategoriesForOrchestration,
   useChannels,
   useClaimProbe,
   useWatchPing,
   WATCH_INTERVAL_MS,
   useWatchingController,
   useWatchingSince,
+  useStalledGameCooldowns,
   buildWatchStallTrackerKey,
   evaluateNoProgressStall,
   pickStallRecoveryChannel,
@@ -152,10 +154,12 @@ export function useAppModel() {
     lastProbeAt: number;
   } | null>(null);
   const noFarmableDropRef = useRef<{ key: string; sinceAt: number } | null>(null);
-  const [stalledGameCooldownUntil, setStalledGameCooldownUntil] = useState<Record<string, number>>(
-    {},
-  );
-  const stalledGameCooldownUntilRef = useRef<Record<string, number>>({});
+  const {
+    cooldowns: stalledGameCooldownUntil,
+    setCooldown: setStalledGameCooldown,
+    clearCooldown: clearStalledGameCooldown,
+    isInCooldown: isGameInStallCooldown,
+  } = useStalledGameCooldowns();
 
   const isLinked = auth.status === "ok";
   const isLinkedOrDemo = isLinked || demoMode;
@@ -225,91 +229,6 @@ export function useAppModel() {
     },
     [dispatchWatchEngine],
   );
-  const setStalledGameCooldown = useCallback(
-    (rawGame: string, durationMs: number, reason: "stall-no-farmable" | "stall-no-progress") => {
-      const game = rawGame.trim();
-      if (!game) return;
-      const now = Date.now();
-      const until = now + durationMs;
-      const current = stalledGameCooldownUntilRef.current[game] ?? 0;
-      if (current >= until) return;
-      stalledGameCooldownUntilRef.current = {
-        ...stalledGameCooldownUntilRef.current,
-        [game]: until,
-      };
-      logInfo("watch-engine: cooldown", {
-        reason,
-        game,
-        durationMs,
-        until,
-      });
-      setStalledGameCooldownUntil((prev) => {
-        const prevUntil = prev[game] ?? 0;
-        if (prevUntil >= until) return prev;
-        return { ...prev, [game]: until };
-      });
-    },
-    [],
-  );
-  const clearStalledGameCooldown = useCallback((rawGame: string, context: string) => {
-    const game = rawGame.trim();
-    if (!game) return;
-    if (!(game in stalledGameCooldownUntilRef.current)) return;
-    const nextRef = { ...stalledGameCooldownUntilRef.current };
-    delete nextRef[game];
-    stalledGameCooldownUntilRef.current = nextRef;
-    logInfo("watch-engine: cooldown clear", { context, game });
-    setStalledGameCooldownUntil((prev) => {
-      if (!(game in prev)) return prev;
-      const next = { ...prev };
-      delete next[game];
-      return next;
-    });
-  }, []);
-  useEffect(() => {
-    stalledGameCooldownUntilRef.current = stalledGameCooldownUntil;
-  }, [stalledGameCooldownUntil]);
-  useEffect(() => {
-    const entries = Object.entries(stalledGameCooldownUntil);
-    if (entries.length === 0) return;
-    const now = Date.now();
-    const expiredGames = entries
-      .filter(([, until]) => !Number.isFinite(until) || until <= now)
-      .map(([game]) => game);
-    if (expiredGames.length > 0) {
-      setStalledGameCooldownUntil((prev) => {
-        const next = { ...prev };
-        let changed = false;
-        for (const game of expiredGames) {
-          if (!(game in next)) continue;
-          delete next[game];
-          changed = true;
-        }
-        return changed ? next : prev;
-      });
-      return;
-    }
-    const nextExpiry = Math.min(...entries.map(([, until]) => until));
-    const timer = window.setTimeout(
-      () => {
-        setStalledGameCooldownUntil((prev) => {
-          const cutoff = Date.now();
-          let changed = false;
-          const next: Record<string, number> = {};
-          for (const [game, until] of Object.entries(prev)) {
-            if (Number.isFinite(until) && until > cutoff) {
-              next[game] = until;
-              continue;
-            }
-            changed = true;
-          }
-          return changed ? next : prev;
-        });
-      },
-      Math.max(0, nextExpiry - now) + 32,
-    );
-    return () => window.clearTimeout(timer);
-  }, [stalledGameCooldownUntil]);
   const forwardAuthError = useCallback((message?: string) => {
     authErrorHandlerRef.current?.(message);
   }, []);
@@ -468,27 +387,15 @@ export function useAppModel() {
     watchEngineState.suppressionReason === "stall-stop"
       ? watchEngineState.suppressedTargetGame
       : "";
-  const isGameInStallCooldown = useCallback(
-    (rawGame: string, now = Date.now()): boolean => {
-      const game = rawGame.trim();
-      if (!game) return false;
-      const until = stalledGameCooldownUntil[game];
-      return typeof until === "number" && Number.isFinite(until) && until > now;
-    },
-    [stalledGameCooldownUntil],
+  const orchestrationCategories = useMemo(
+    () =>
+      filterCategoriesForOrchestration(withCategories, {
+        suppressedGame: stallSuppressedGame,
+        cooldowns: stalledGameCooldownUntil,
+        now: Date.now(),
+      }),
+    [stallSuppressedGame, stalledGameCooldownUntil, withCategories],
   );
-  const orchestrationCategories = useMemo(() => {
-    if (!stallSuppressedGame && Object.keys(stalledGameCooldownUntil).length === 0) {
-      return withCategories;
-    }
-    const now = Date.now();
-    return withCategories.filter(({ item }) => {
-      const game = item.game.trim();
-      if (!game) return true;
-      if (stallSuppressedGame && game === stallSuppressedGame) return false;
-      return !isGameInStallCooldown(game, now);
-    });
-  }, [isGameInStallCooldown, stallSuppressedGame, stalledGameCooldownUntil, withCategories]);
 
   const { activeTargetGame, setActiveTargetGame, priorityOrder, priorityListPreemptionActive } =
     usePriorityOrchestration({
