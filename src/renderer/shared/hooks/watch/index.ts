@@ -1,6 +1,7 @@
 export * from "./channelAllowlist";
 export * from "./channelEngine";
 export * from "./useChannels";
+export * from "./useDropProgressPoll";
 export * from "./useWatchingActions";
 export * from "./useWatchingController";
 export * from "./useWatchingSince";
