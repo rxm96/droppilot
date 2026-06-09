@@ -420,6 +420,8 @@ const watchingRust: WatchingState = {
   game: "Rust",
 };
 
+// Must satisfy canEarnDrop's positive gates for category "in-progress" —
+// if canEarnDrop gains new requirements, extend this stub, not the decision fn.
 const progressDrop = (id: string, allowedChannelLogins?: string[]) =>
   ({
     id,
@@ -521,5 +523,63 @@ describe("decideWatchingNoFarmable", () => {
       message: "watch-engine: retarget",
       data: { reason: "stall-no-farmable-direct", from: "Rust", to: "Dota 2" },
     });
+  });
+
+  it("escalates without log/retarget actions when no next target exists", () => {
+    const result = decideWatchingNoFarmable({
+      ...watchingBase,
+      noFarmable: { key: "Rust", sinceAt: 1 },
+      getNextTargetGame: () => "",
+    });
+    expect(result.actions.map((a) => a.kind)).toEqual([
+      "set-cooldown",
+      "enable-auto-select",
+      "stop-watching",
+      "dispatch-stall-stop",
+    ]);
+    expect(result.resetStallTracking).toBe(true);
+  });
+
+  it("keeps scanning candidates until one has a watchable channel", () => {
+    const result = decideWatchingNoFarmable({
+      ...watchingBase,
+      noFarmable: { key: "Rust", sinceAt: 1 },
+      targetDrops: [progressDrop("d1", ["nobody-live"]), progressDrop("d2", ["other"])],
+    });
+    expect(result.actions).toEqual([{ kind: "switch-channel", channel: watchingBase.channels[1] }]);
+  });
+
+  it("wrong-game fallback respects an allowlist constraint", () => {
+    const result = decideWatchingNoFarmable({
+      ...watchingBase,
+      watching: { ...watchingRust, game: "Other Game" },
+      channelAllowlist: { ids: [], logins: ["other"] },
+      noFarmable: { key: "Rust", sinceAt: 1 },
+    });
+    expect(result.actions).toEqual([{ kind: "switch-channel", channel: watchingBase.channels[1] }]);
+  });
+
+  it("ignores drops that are not in progress", () => {
+    const claimedDrop = {
+      id: "d3",
+      status: "claimed",
+      earnedMinutes: 5,
+      requiredMinutes: 60,
+      game: "Rust",
+      allowedChannelLogins: ["other"],
+    } as never;
+    const result = decideWatchingNoFarmable({
+      ...watchingBase,
+      noFarmable: { key: "Rust", sinceAt: 1 },
+      targetDrops: [claimedDrop],
+    });
+    expect(result.actions.map((a) => a.kind)).toEqual([
+      "set-cooldown",
+      "log",
+      "retarget",
+      "enable-auto-select",
+      "stop-watching",
+      "dispatch-stall-stop",
+    ]);
   });
 });
