@@ -61,6 +61,21 @@ documented in the PR description / an issue, **not** fixed inline.
 | `app/useActivityFeedWiring`     | The 4 rising-edge activity-feed effects (828–895)                                      |
 | `app/useActiveCampaignDebugLog` | Signature-deduplicated campaign debug log (732–773)                                    |
 
+### What stays in `useAppModel` (deliberately)
+
+- **Props assembly** (~lines 1384–1625) and all view-prop objects.
+- **Manual watch handlers** `handleStartWatching` /
+  `handleStopWatchingWithSuppressedTarget` (611–627) — thin glue between
+  `useAppActions` and the engine dispatch; they shrink to 2–3 lines each once
+  dispatch/cooldown live in hooks.
+- **Thin wiring memos**: the `filterCategoriesForOrchestration` call
+  (`orchestrationCategories`), the `selectVisibleTargetGame` /
+  `displayTargetGame` selectors — one-liners over pure functions; the logic
+  lives in the pure modules.
+- **Tiny wiring state**: `manualWatchOverride`, `autoSelectEnabled` — glue
+  between `useAppActions`, `useChannels`, bootstrap, and stall recovery; moving
+  them would force an awkward shared owner for no gain.
+
 ### Decision/executor split
 
 Decision functions are pure: they take a state snapshot and return **action
@@ -69,7 +84,7 @@ descriptors**; the hook only executes them. Action union (in `watchStallRecovery
 ```ts
 type StallRecoveryAction =
   | { kind: "switch-channel"; channel: ChannelInfo }
-  | { kind: "set-cooldown"; game: string; durationMs: number; reason: CooldownReason }
+  | { kind: "set-cooldown"; game: string; durationMs: number; reason: CooldownReason } // = today's inline "stall-no-farmable" | "stall-no-progress", named in gameCooldowns.ts
   | { kind: "retarget"; from: string; to: string; reason: string }
   | { kind: "enable-auto-select" }
   | { kind: "stop-watching" }
@@ -155,7 +170,10 @@ commit, `refactor(watch):` / `test(watch):` / `docs(watch):` prefixes:
 2. **Cooldowns**: `gameCooldowns.ts` pure + tests → `useStalledGameCooldowns` + wiring.
 3. **Engine dispatch**: `stampWatchEngineEvent` + test → `useWatchEngine`.
 4. **Suppression sync**: `useWatchSuppressionSync`.
-5. **Retarget policy**: `retargetPolicy.ts` + tests → replace inline callback.
+5. **Retarget policy**: `retargetPolicy.ts` + tests; the inline
+   `getNextPriorityTargetGame` callback becomes a thin wrapper over it. The wrapper
+   itself disappears in step 7 — after the executor lands, the rotation's only
+   consumer is `useStallRecovery`, which calls the pure function directly.
 6. **Stall decisions** (3 commits): one per `decide*` function, each with tests
    pinning current behavior.
 7. **Executor**: `useStallRecovery`, remove the giant effect.
