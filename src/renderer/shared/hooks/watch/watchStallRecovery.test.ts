@@ -3,14 +3,22 @@ import type { ChannelEntry, WatchingState } from "@renderer/shared/types";
 import {
   buildWatchStallTrackerKey,
   decideIdleNoFarmable,
+  decideNoProgressRecovery,
   decideWatchingNoFarmable,
   evaluateNoProgressStall,
   NO_FARMABLE_DROP_GRACE_MS,
   NO_FARMABLE_GAME_COOLDOWN_MS,
   pickStallRecoveryChannel,
   shouldProbeNoProgressConfirmation,
+  STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS,
+  STALL_NO_PROGRESS_WINDOW_MS,
 } from "./watchStallRecovery";
-import type { NoFarmableMarker, StallRecoveryAction } from "./watchStallRecovery";
+import type {
+  NoFarmableMarker,
+  StallRecoveryAction,
+  WatchConfirmationProbe,
+  WatchStallTracker,
+} from "./watchStallRecovery";
 
 const makeChannel = (overrides: Partial<ChannelEntry> = {}): ChannelEntry => ({
   id: "1",
@@ -581,5 +589,197 @@ describe("decideWatchingNoFarmable", () => {
       "stop-watching",
       "dispatch-stall-stop",
     ]);
+  });
+});
+
+const activeDrop = (over: Partial<Record<string, unknown>> = {}) =>
+  ({
+    id: "d1",
+    title: "Drop",
+    requiredMinutes: 60,
+    earnedMinutes: 10,
+    virtualEarned: 10,
+    remainingMinutes: 50,
+    eta: null,
+    allowedChannelLogins: ["other"],
+    ...over,
+  }) as never;
+
+// buildWatchStallTrackerKey(watchingRust, "d1"):
+//   game = "Rust".trim().toLowerCase() = "rust"
+//   key  = "rust:d1"
+const trackerKey = "rust:d1";
+
+const noProgressBase = {
+  watching: watchingRust,
+  activeDropInfo: activeDrop(),
+  targetGame: "Rust",
+  activeTargetGame: "Rust",
+  channels: [channel("w1", "streamer"), channel("c2", "other")],
+  lastWatchOk: 0,
+  now: 1_000_000,
+  tracker: null as WatchStallTracker | null,
+  confirmationProbe: null as WatchConfirmationProbe | null,
+  getNextTargetGame: () => "Dota 2",
+};
+
+describe("decideNoProgressRecovery", () => {
+  it("resets tracking when the drop id is blank", () => {
+    expect(
+      decideNoProgressRecovery({ ...noProgressBase, activeDropInfo: activeDrop({ id: "  " }) }),
+    ).toEqual({ actions: [], tracker: null, confirmationProbe: null });
+  });
+
+  it("seeds the tracker on first evaluation without recovering", () => {
+    const result = decideNoProgressRecovery(noProgressBase);
+    expect(result.actions).toEqual([]);
+    expect(result.tracker).toEqual({
+      key: trackerKey,
+      lastEarnedMinutes: 10,
+      lastProgressAt: 1_000_000,
+      lastActionAt: 0,
+      recoveryCount: 0,
+    });
+  });
+
+  it("emits a confirmation probe shortly before the window elapses", () => {
+    const tracker: WatchStallTracker = {
+      key: trackerKey,
+      lastEarnedMinutes: 10,
+      lastProgressAt: 0,
+      lastActionAt: 0,
+      recoveryCount: 0,
+    };
+    // window 15min, lead = min(2min, 5min) = 2min → probe window [13min, 15min)
+    const now = STALL_NO_PROGRESS_WINDOW_MS - 60_000;
+    const result = decideNoProgressRecovery({
+      ...noProgressBase,
+      tracker,
+      now,
+      lastWatchOk: now - 1_000, // recent ping, after lastProgressAt
+    });
+    expect(result.actions.map((a) => a.kind)).toEqual(["log", "refresh-inventory"]);
+    expect(result.actions[0]).toEqual({
+      kind: "log",
+      message: "watch-engine: confirmation probe",
+      data: {
+        reason: "stall-no-progress-confirmation-probe",
+        key: trackerKey,
+        noProgressWindowMs: STALL_NO_PROGRESS_WINDOW_MS,
+        probeLeadMs: 2 * 60_000,
+        lastConfirmedProgressMsAgo: Math.max(0, now - 0),
+      },
+    });
+    expect(result.confirmationProbe).toEqual({
+      key: trackerKey,
+      baselineProgressAt: 0,
+      lastProbeAt: now,
+    });
+  });
+
+  it("switches channel on first recovery", () => {
+    const tracker: WatchStallTracker = {
+      key: trackerKey,
+      lastEarnedMinutes: 10,
+      lastProgressAt: 0,
+      lastActionAt: 0,
+      recoveryCount: 0,
+    };
+    const result = decideNoProgressRecovery({
+      ...noProgressBase,
+      tracker,
+      now: STALL_NO_PROGRESS_WINDOW_MS + 1,
+    });
+    expect(result.actions).toEqual([
+      { kind: "switch-channel", channel: noProgressBase.channels[1] },
+    ]);
+    expect(result.tracker?.recoveryCount).toBe(1);
+  });
+
+  it("refreshes channels+inventory when no alternate channel is visible", () => {
+    const tracker: WatchStallTracker = {
+      key: trackerKey,
+      lastEarnedMinutes: 10,
+      lastProgressAt: 0,
+      lastActionAt: 0,
+      recoveryCount: 0,
+    };
+    const result = decideNoProgressRecovery({
+      ...noProgressBase,
+      channels: [channel("w1", "streamer")], // only the watched channel
+      tracker,
+      now: STALL_NO_PROGRESS_WINDOW_MS + 1,
+    });
+    expect(result.actions.map((a) => a.kind)).toEqual([
+      "log",
+      "refresh-channels",
+      "refresh-inventory",
+    ]);
+    expect(result.actions[0]).toEqual({
+      kind: "log",
+      message: "watch-engine: no-progress refresh",
+      data: {
+        reason: "stall-no-progress-refresh",
+        game: "Rust",
+        nearEndProbe: false,
+        noProgressWindowMs: STALL_NO_PROGRESS_WINDOW_MS,
+        attempts: 1,
+        maxChannelRecoveryAttempts: STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS,
+      },
+    });
+  });
+
+  it("escalates to retarget once the recovery budget is exhausted", () => {
+    const tracker: WatchStallTracker = {
+      key: trackerKey,
+      lastEarnedMinutes: 10,
+      lastProgressAt: 0,
+      lastActionAt: 0,
+      recoveryCount: 2, // becomes 3 on this recovery → over budget (max 2)
+    };
+    const result = decideNoProgressRecovery({
+      ...noProgressBase,
+      tracker,
+      now: STALL_NO_PROGRESS_WINDOW_MS + 1,
+    });
+    expect(result.actions.map((a) => a.kind)).toEqual([
+      "log",
+      "set-cooldown",
+      "log",
+      "retarget",
+      "enable-auto-select",
+      "stop-watching",
+      "dispatch-stall-stop",
+    ]);
+    expect(result.actions[0]).toEqual({
+      kind: "log",
+      message: "watch-engine: retarget escalation",
+      data: {
+        reason: "stall-no-progress-recovery-budget",
+        from: "Rust",
+        nearEndProbe: false,
+        noProgressWindowMs: STALL_NO_PROGRESS_WINDOW_MS,
+        attempts: 3,
+        maxChannelRecoveryAttempts: STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS,
+      },
+    });
+    expect(result.actions[2]).toEqual({
+      kind: "log",
+      message: "watch-engine: retarget",
+      data: {
+        reason: "stall-no-progress-direct",
+        from: "Rust",
+        to: "Dota 2",
+      },
+    });
+    const stallStop = result.actions[result.actions.length - 1] as Extract<
+      StallRecoveryAction,
+      { kind: "dispatch-stall-stop" }
+    >;
+    expect(stallStop).toEqual({
+      kind: "dispatch-stall-stop",
+      game: "Rust",
+      context: "stall-no-progress",
+    });
   });
 });

@@ -1,4 +1,6 @@
 import type { ChannelEntry, InventoryItem, WatchingState } from "@renderer/shared/types";
+import { WATCH_INTERVAL_MS } from "./useWatchPing";
+import type { ActiveDropInfo } from "@renderer/shared/hooks/inventory";
 import { canEarnDrop } from "@renderer/shared/domain/inventory";
 import { sameGameName } from "@renderer/shared/domain/gameName";
 import { DropChannelRestriction } from "@renderer/shared/domain/dropDomain";
@@ -307,6 +309,211 @@ export const pickStallRecoveryChannel = ({
     return channel;
   }
   return null;
+};
+
+/** Confirmation-probe bookkeeping (was watchConfirmationProbeRef). */
+export type WatchConfirmationProbe = {
+  key: string;
+  baselineProgressAt: number;
+  lastProbeAt: number;
+};
+
+export type NoProgressRecoveryInput = {
+  watching: NonNullable<WatchingState>;
+  activeDropInfo: ActiveDropInfo;
+  targetGame: string;
+  activeTargetGame: string;
+  channels: ChannelEntry[];
+  lastWatchOk: number;
+  now: number;
+  tracker: WatchStallTracker | null;
+  confirmationProbe: WatchConfirmationProbe | null;
+  getNextTargetGame: (currentGame: string) => string;
+};
+
+export type NoProgressRecoveryDecision = {
+  actions: StallRecoveryAction[];
+  tracker: WatchStallTracker | null;
+  confirmationProbe: WatchConfirmationProbe | null;
+};
+
+/**
+ * Watching with an active drop: track earned-minutes progress; just before the
+ * no-progress window elapses, spend one cheap inventory poll to rule out a
+ * stale snapshot; on a confirmed stall, switch channels (within a small
+ * budget), force-refresh once no alternate is visible, and finally give up on
+ * the game (cooldown + retarget + stall-stop).
+ */
+export const decideNoProgressRecovery = (
+  input: NoProgressRecoveryInput,
+): NoProgressRecoveryDecision => {
+  const {
+    watching,
+    activeDropInfo,
+    targetGame,
+    activeTargetGame,
+    channels,
+    lastWatchOk,
+    now,
+    tracker,
+    confirmationProbe,
+    getNextTargetGame,
+  } = input;
+  const dropId = activeDropInfo.id?.trim();
+  if (!dropId) {
+    return { actions: [], tracker: null, confirmationProbe: null };
+  }
+  const actions: StallRecoveryAction[] = [];
+  const earnedMinutes = Math.max(0, Number(activeDropInfo.earnedMinutes) || 0);
+  const key = buildWatchStallTrackerKey(watching, dropId);
+  const nearEndNoProgressProbe = activeDropInfo.remainingMinutes <= CLAIM_PROBE_NEAR_END_MINUTES;
+  const noProgressWindowMs = nearEndNoProgressProbe
+    ? STALL_NO_PROGRESS_WINDOW_NEAR_END_MS
+    : STALL_NO_PROGRESS_WINDOW_MS;
+  const evaluation = evaluateNoProgressStall({
+    tracker,
+    key,
+    earnedMinutes,
+    now,
+    noProgressWindowMs,
+    actionCooldownMs: STALL_RECOVERY_COOLDOWN_MS,
+  });
+  let probe = confirmationProbe;
+  if (
+    probe &&
+    (probe.key !== key || probe.baselineProgressAt < evaluation.tracker.lastProgressAt)
+  ) {
+    probe = null;
+  }
+  const probeLeadMs = Math.min(2 * 60_000, Math.floor(noProgressWindowMs / 3));
+  const recentWatchPingGraceMs = WATCH_INTERVAL_MS + 30_000;
+  const lastProbeAt =
+    probe?.key === key && probe?.baselineProgressAt === evaluation.tracker.lastProgressAt
+      ? probe.lastProbeAt
+      : 0;
+  if (
+    shouldProbeNoProgressConfirmation({
+      tracker: evaluation.tracker,
+      key,
+      now,
+      noProgressWindowMs,
+      probeLeadMs,
+      lastWatchOk,
+      watchPingGraceMs: recentWatchPingGraceMs,
+      lastProbeAt,
+      probeCooldownMs: STALL_CONFIRMATION_PROBE_COOLDOWN_MS,
+    })
+  ) {
+    probe = {
+      key,
+      baselineProgressAt: evaluation.tracker.lastProgressAt,
+      lastProbeAt: now,
+    };
+    actions.push(
+      {
+        kind: "log",
+        message: "watch-engine: confirmation probe",
+        data: {
+          reason: "stall-no-progress-confirmation-probe",
+          key,
+          noProgressWindowMs,
+          probeLeadMs,
+          lastConfirmedProgressMsAgo: Math.max(0, now - evaluation.tracker.lastProgressAt),
+        },
+      },
+      { kind: "refresh-inventory" },
+    );
+  }
+  if (!evaluation.shouldRecover) {
+    return { actions, tracker: evaluation.tracker, confirmationProbe: probe };
+  }
+  const maxChannelRecoveryAttempts = nearEndNoProgressProbe
+    ? STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS_NEAR_END
+    : STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS;
+  const allowChannelRecovery = evaluation.tracker.recoveryCount <= maxChannelRecoveryAttempts;
+
+  if (allowChannelRecovery) {
+    const nextChannel = pickStallRecoveryChannel({
+      channels,
+      watching,
+      drop: {
+        id: activeDropInfo.id,
+        earnedMinutes: activeDropInfo.earnedMinutes,
+        allowedChannelIds: activeDropInfo.allowedChannelIds,
+        allowedChannelLogins: activeDropInfo.allowedChannelLogins,
+      },
+    });
+    if (nextChannel) {
+      actions.push({ kind: "switch-channel", channel: nextChannel });
+      return { actions, tracker: evaluation.tracker, confirmationProbe: probe };
+    }
+    // No alternate channel currently visible: force-refresh state before game-level retarget.
+    // This avoids premature target jumps when tracker/inventory snapshots are briefly stale.
+    const recoveryGame = activeTargetGame.trim() || targetGame.trim() || watching.game.trim();
+    actions.push({
+      kind: "log",
+      message: "watch-engine: no-progress refresh",
+      data: {
+        reason: "stall-no-progress-refresh",
+        game: recoveryGame || null,
+        nearEndProbe: nearEndNoProgressProbe,
+        noProgressWindowMs,
+        attempts: evaluation.tracker.recoveryCount,
+        maxChannelRecoveryAttempts,
+      },
+    });
+    if (recoveryGame) {
+      actions.push({ kind: "refresh-channels", game: recoveryGame });
+    }
+    actions.push({ kind: "refresh-inventory" });
+    return { actions, tracker: evaluation.tracker, confirmationProbe: probe };
+  } else {
+    actions.push({
+      kind: "log",
+      message: "watch-engine: retarget escalation",
+      data: {
+        reason: "stall-no-progress-recovery-budget",
+        from: activeTargetGame || null,
+        nearEndProbe: nearEndNoProgressProbe,
+        noProgressWindowMs,
+        attempts: evaluation.tracker.recoveryCount,
+        maxChannelRecoveryAttempts,
+      },
+    });
+  }
+  const stalledGame = activeTargetGame.trim() || targetGame.trim() || watching.game.trim();
+  actions.push({
+    kind: "set-cooldown",
+    game: stalledGame,
+    durationMs: NO_PROGRESS_GAME_COOLDOWN_MS,
+    reason: "stall-no-progress",
+  });
+  const currentForRetarget = activeTargetGame.trim() || targetGame.trim();
+  const nextTargetGame = currentForRetarget ? getNextTargetGame(currentForRetarget) : "";
+  if (nextTargetGame) {
+    actions.push(
+      {
+        kind: "log",
+        message: "watch-engine: retarget",
+        data: {
+          reason: "stall-no-progress-direct",
+          from: activeTargetGame,
+          to: nextTargetGame,
+        },
+      },
+      { kind: "retarget", to: nextTargetGame },
+    );
+  }
+  actions.push(
+    { kind: "enable-auto-select" },
+    { kind: "stop-watching" },
+    {
+      kind: "dispatch-stall-stop",
+      game: stalledGame || activeTargetGame,
+      context: "stall-no-progress",
+    },
+  );
+  return { actions, tracker: evaluation.tracker, confirmationProbe: probe };
 };
 
 export type WatchingNoFarmableInput = {
