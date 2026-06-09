@@ -1,4 +1,6 @@
-import type { ChannelEntry, WatchingState } from "@renderer/shared/types";
+import type { ChannelEntry, InventoryItem, WatchingState } from "@renderer/shared/types";
+import { canEarnDrop } from "@renderer/shared/domain/inventory";
+import { sameGameName } from "@renderer/shared/domain/gameName";
 import { DropChannelRestriction } from "@renderer/shared/domain/dropDomain";
 import type { ChannelAllowlist } from "@renderer/shared/domain/dropDomain";
 import type { CooldownReason } from "./gameCooldowns";
@@ -305,4 +307,124 @@ export const pickStallRecoveryChannel = ({
     return channel;
   }
   return null;
+};
+
+export type WatchingNoFarmableInput = {
+  watching: NonNullable<WatchingState>;
+  targetGame: string;
+  activeTargetGame: string;
+  channelAllowlist: ChannelAllowlist;
+  channels: ChannelEntry[];
+  channelsLoading: boolean;
+  targetDrops: InventoryItem[];
+  noFarmable: NoFarmableMarker | null;
+  now: number;
+  getNextTargetGame: (currentGame: string) => string;
+};
+
+/**
+ * Watching, but useTargetDrops sees no active (farmable) drop. Give the
+ * inventory a grace window to catch up, then try drop-allowlisted candidate
+ * channels, then any allowed channel if we're on the wrong game — and only
+ * then give up on the game (cooldown + retarget + stall-stop).
+ */
+export const decideWatchingNoFarmable = (
+  input: WatchingNoFarmableInput,
+): StallRecoveryDecision & { resetStallTracking: boolean } => {
+  const {
+    watching,
+    targetGame,
+    activeTargetGame,
+    channelAllowlist,
+    channels,
+    channelsLoading,
+    targetDrops,
+    noFarmable,
+    now,
+    getNextTargetGame,
+  } = input;
+  const noFarmableKey = targetGame;
+  if (!noFarmable || noFarmable.key !== noFarmableKey) {
+    return {
+      actions: [],
+      noFarmable: { key: noFarmableKey, sinceAt: now },
+      resetStallTracking: false,
+    };
+  }
+  if (now - noFarmable.sinceAt < NO_FARMABLE_DROP_GRACE_MS) {
+    return { actions: [], noFarmable, resetStallTracking: false };
+  }
+  // Asymmetry vs. the idle branch is original behavior: only `channelsLoading`
+  // gates here (not `channelsRefreshing`).
+  if (channelsLoading && channels.length === 0) {
+    return { actions: [], noFarmable, resetStallTracking: false };
+  }
+  const candidateDrops = targetDrops.filter(
+    (drop) => drop.status === "progress" && canEarnDrop(drop, { category: "in-progress" }),
+  );
+  for (const candidate of candidateDrops) {
+    const nextChannel = pickStallRecoveryChannel({
+      channels,
+      watching,
+      drop: {
+        id: candidate.id,
+        earnedMinutes: candidate.earnedMinutes,
+        allowedChannelIds: candidate.allowedChannelIds,
+        allowedChannelLogins: candidate.allowedChannelLogins,
+      },
+    });
+    if (nextChannel) {
+      return {
+        actions: [{ kind: "switch-channel", channel: nextChannel }],
+        noFarmable: null,
+        resetStallTracking: false,
+      };
+    }
+  }
+  const allowlistRestriction = DropChannelRestriction.fromAllowlist(channelAllowlist);
+  const fallbackChannel = allowlistRestriction.hasConstraints
+    ? channels.find((channel) => allowlistRestriction.allowsChannel(channel))
+    : channels[0];
+  if (!sameGameName(watching.game, targetGame) && fallbackChannel) {
+    return {
+      actions: [{ kind: "switch-channel", channel: fallbackChannel }],
+      noFarmable: null,
+      resetStallTracking: false,
+    };
+  }
+  const stalledGame = activeTargetGame.trim() || targetGame.trim() || watching.game.trim();
+  const currentForRetarget = activeTargetGame.trim() || targetGame.trim();
+  const nextTargetGame = currentForRetarget ? getNextTargetGame(currentForRetarget) : "";
+  const actions: StallRecoveryAction[] = [
+    {
+      kind: "set-cooldown",
+      game: stalledGame,
+      durationMs: NO_FARMABLE_GAME_COOLDOWN_MS,
+      reason: "stall-no-farmable",
+    },
+  ];
+  if (nextTargetGame) {
+    actions.push(
+      {
+        kind: "log",
+        message: "watch-engine: retarget",
+        data: {
+          reason: "stall-no-farmable-direct",
+          from: activeTargetGame,
+          to: nextTargetGame,
+        },
+      },
+      { kind: "retarget", to: nextTargetGame },
+    );
+  }
+  actions.push(
+    { kind: "enable-auto-select" },
+    { kind: "stop-watching" },
+    {
+      kind: "dispatch-stall-stop",
+      game: stalledGame || activeTargetGame,
+      context: "stall-no-farmable",
+    },
+  );
+  return { actions, noFarmable: null, resetStallTracking: true };
 };

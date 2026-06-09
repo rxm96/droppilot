@@ -3,7 +3,9 @@ import type { ChannelEntry, WatchingState } from "@renderer/shared/types";
 import {
   buildWatchStallTrackerKey,
   decideIdleNoFarmable,
+  decideWatchingNoFarmable,
   evaluateNoProgressStall,
+  NO_FARMABLE_DROP_GRACE_MS,
   NO_FARMABLE_GAME_COOLDOWN_MS,
   pickStallRecoveryChannel,
   shouldProbeNoProgressConfirmation,
@@ -406,6 +408,118 @@ describe("decideIdleNoFarmable", () => {
       kind: "log",
       message: "watch-engine: retarget skipped",
       data: { reason: "stall-no-farmable-idle-no-next-target", from: "Rust" },
+    });
+  });
+});
+
+const watchingRust: WatchingState = {
+  id: "w1",
+  channelId: "w1",
+  name: "streamer",
+  login: "streamer",
+  game: "Rust",
+};
+
+const progressDrop = (id: string, allowedChannelLogins?: string[]) =>
+  ({
+    id,
+    status: "progress",
+    earnedMinutes: 5,
+    requiredMinutes: 60,
+    game: "Rust",
+    allowedChannelLogins,
+  }) as never;
+
+const watchingBase = {
+  watching: watchingRust,
+  targetGame: "Rust",
+  activeTargetGame: "Rust",
+  channelAllowlist: { ids: [], logins: [] },
+  channels: [channel("w1", "streamer"), channel("c2", "other")],
+  channelsLoading: false,
+  targetDrops: [] as never[],
+  noFarmable: null as NoFarmableMarker | null,
+  now: 100_000,
+  getNextTargetGame: () => "Dota 2",
+};
+
+describe("decideWatchingNoFarmable", () => {
+  it("starts the grace period on first sight", () => {
+    expect(decideWatchingNoFarmable(watchingBase)).toEqual({
+      actions: [],
+      noFarmable: { key: "Rust", sinceAt: 100_000 },
+      resetStallTracking: false,
+    });
+  });
+
+  it("restarts the grace period when the target changes", () => {
+    const result = decideWatchingNoFarmable({
+      ...watchingBase,
+      noFarmable: { key: "Dota 2", sinceAt: 1 },
+    });
+    expect(result.noFarmable).toEqual({ key: "Rust", sinceAt: 100_000 });
+  });
+
+  it("waits silently inside the grace window", () => {
+    const marker = { key: "Rust", sinceAt: 100_000 - NO_FARMABLE_DROP_GRACE_MS + 1 };
+    expect(decideWatchingNoFarmable({ ...watchingBase, noFarmable: marker })).toEqual({
+      actions: [],
+      noFarmable: marker,
+      resetStallTracking: false,
+    });
+  });
+
+  it("waits while channels are loading and the list is empty", () => {
+    const marker = { key: "Rust", sinceAt: 1 };
+    expect(
+      decideWatchingNoFarmable({
+        ...watchingBase,
+        channels: [],
+        channelsLoading: true,
+        noFarmable: marker,
+      }).noFarmable,
+    ).toBe(marker);
+  });
+
+  it("switches to a candidate channel that can farm an in-progress drop", () => {
+    const result = decideWatchingNoFarmable({
+      ...watchingBase,
+      noFarmable: { key: "Rust", sinceAt: 1 },
+      targetDrops: [progressDrop("d1", ["other"])],
+    });
+    expect(result.actions).toEqual([{ kind: "switch-channel", channel: watchingBase.channels[1] }]);
+    expect(result.noFarmable).toBeNull();
+    expect(result.resetStallTracking).toBe(false);
+  });
+
+  it("falls back to any allowed channel when watching the wrong game", () => {
+    const result = decideWatchingNoFarmable({
+      ...watchingBase,
+      watching: { ...watchingRust, game: "Other Game" },
+      noFarmable: { key: "Rust", sinceAt: 1 },
+    });
+    expect(result.actions).toEqual([{ kind: "switch-channel", channel: watchingBase.channels[0] }]);
+  });
+
+  it("escalates after the grace period: cooldown, retarget, stop, stall-stop, reset tracking", () => {
+    const result = decideWatchingNoFarmable({
+      ...watchingBase,
+      noFarmable: { key: "Rust", sinceAt: 1 },
+    });
+    expect(result.actions.map((a) => a.kind)).toEqual([
+      "set-cooldown",
+      "log",
+      "retarget",
+      "enable-auto-select",
+      "stop-watching",
+      "dispatch-stall-stop",
+    ]);
+    expect(result.noFarmable).toBeNull();
+    expect(result.resetStallTracking).toBe(true);
+    expect(result.actions[1]).toEqual({
+      kind: "log",
+      message: "watch-engine: retarget",
+      data: { reason: "stall-no-farmable-direct", from: "Rust", to: "Dota 2" },
     });
   });
 });
