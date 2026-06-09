@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 import type { ChannelEntry, WatchingState } from "@renderer/shared/types";
 import {
   buildWatchStallTrackerKey,
+  decideIdleNoFarmable,
   evaluateNoProgressStall,
+  NO_FARMABLE_GAME_COOLDOWN_MS,
   pickStallRecoveryChannel,
   shouldProbeNoProgressConfirmation,
 } from "./watchStallRecovery";
+import type { NoFarmableMarker, StallRecoveryAction } from "./watchStallRecovery";
 
 const makeChannel = (overrides: Partial<ChannelEntry> = {}): ChannelEntry => ({
   id: "1",
@@ -298,5 +301,97 @@ describe("watchStallRecovery helpers", () => {
       },
     });
     expect(picked).toBeNull();
+  });
+});
+
+const channel = (id: string, login = id): ChannelEntry =>
+  ({ id, login, displayName: login, title: "", viewers: 0, game: "Rust" }) as ChannelEntry;
+
+const idleBase = {
+  allowWatching: true,
+  autoSelectEnabled: true,
+  targetGame: "Rust",
+  activeTargetGame: "Rust",
+  channelAllowlist: { ids: ["allowed-1"], logins: [] },
+  channels: [channel("other-1")],
+  channelsLoading: false,
+  channelsRefreshing: false,
+  noFarmable: null as NoFarmableMarker | null,
+  getNextTargetGame: () => "Dota 2",
+};
+
+describe("decideIdleNoFarmable", () => {
+  it("does nothing (and clears the marker) when idle evaluation is off", () => {
+    expect(decideIdleNoFarmable({ ...idleBase, autoSelectEnabled: false })).toEqual({
+      actions: [],
+      noFarmable: null,
+    });
+    expect(decideIdleNoFarmable({ ...idleBase, targetGame: "" })).toEqual({
+      actions: [],
+      noFarmable: null,
+    });
+  });
+
+  it("does nothing when the allowlist has no constraints", () => {
+    expect(
+      decideIdleNoFarmable({ ...idleBase, channelAllowlist: { ids: [], logins: [] } }),
+    ).toEqual({ actions: [], noFarmable: null });
+  });
+
+  it("keeps the marker untouched while channels are still loading", () => {
+    const marker = { key: "Rust", sinceAt: 1 };
+    expect(
+      decideIdleNoFarmable({
+        ...idleBase,
+        channels: [],
+        channelsLoading: true,
+        noFarmable: marker,
+      }).noFarmable,
+    ).toBe(marker);
+  });
+
+  it("does nothing when an allowlisted channel is live", () => {
+    expect(decideIdleNoFarmable({ ...idleBase, channels: [channel("allowed-1")] })).toEqual({
+      actions: [],
+      noFarmable: null,
+    });
+  });
+
+  it("escalates when no allowlisted channel is live: cooldown, retarget, auto-select, stall-stop", () => {
+    const { actions, noFarmable } = decideIdleNoFarmable(idleBase);
+    expect(noFarmable).toBeNull();
+    expect(actions.map((a) => a.kind)).toEqual([
+      "set-cooldown",
+      "log",
+      "log",
+      "retarget",
+      "enable-auto-select",
+      "dispatch-stall-stop",
+    ]);
+    expect(actions[0]).toEqual({
+      kind: "set-cooldown",
+      game: "Rust",
+      durationMs: NO_FARMABLE_GAME_COOLDOWN_MS,
+      reason: "stall-no-farmable",
+    });
+    expect(actions[3]).toEqual({ kind: "retarget", to: "Dota 2" });
+    expect(actions[5]).toEqual({
+      kind: "dispatch-stall-stop",
+      game: "Rust",
+      context: "stall-no-farmable",
+    });
+  });
+
+  it("logs a retarget skip when no next target exists", () => {
+    const { actions } = decideIdleNoFarmable({ ...idleBase, getNextTargetGame: () => "" });
+    expect(actions.map((a) => a.kind)).toEqual([
+      "set-cooldown",
+      "log",
+      "log",
+      "enable-auto-select",
+      "dispatch-stall-stop",
+    ]);
+    const skip = actions[2] as Extract<StallRecoveryAction, { kind: "log" }>;
+    expect(skip.message).toBe("watch-engine: retarget skipped");
   });
 });
