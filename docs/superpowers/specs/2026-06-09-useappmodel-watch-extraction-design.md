@@ -83,15 +83,18 @@ descriptors**; the hook only executes them. Action union (in `watchStallRecovery
 
 ```ts
 type StallRecoveryAction =
-  | { kind: "switch-channel"; channel: ChannelInfo }
-  | { kind: "set-cooldown"; game: string; durationMs: number; reason: CooldownReason } // = today's inline "stall-no-farmable" | "stall-no-progress", named in gameCooldowns.ts
-  | { kind: "retarget"; from: string; to: string; reason: string }
+  | { kind: "log"; message: string; data: Record<string, unknown> }
+  | { kind: "switch-channel"; channel: ChannelEntry }
+  | { kind: "set-cooldown"; game: string; durationMs: number; reason: CooldownReason }
+  | { kind: "retarget"; to: string }
   | { kind: "enable-auto-select" }
   | { kind: "stop-watching" }
-  | { kind: "dispatch-stall-stop"; game: string }
+  | { kind: "dispatch-stall-stop"; game: string; context: string }
   | { kind: "refresh-channels"; game: string }
   | { kind: "refresh-inventory" };
 ```
+
+Amended during implementation: info-only log lines travel as `log` actions so byte-identical log parity is testable; `dispatch-stall-stop` carries its dispatch `context`.
 
 The three branches of the giant stall effect become:
 

@@ -3075,4 +3075,12 @@ git add -A && git commit -m "docs(watch): point watch-engine.md at the extracted
 
 ## Findings
 
-(Record any discovered-but-not-fixed oddities here during implementation, with file/line and why they look wrong. Candidates already known from planning: none yet.)
+Discovered during implementation (none fixed inline — all pre-existing or out of scope):
+
+1. **Duplicate channel-identity types** — `useControlViewState.ts` defines `ResumeChannelIdentity` and `ControlView.tsx` an inline `{ id; login }`, both now shadowing `WatchedChannelIdentity` exported from `watch/useWatchSessionMeta.ts`. Follow-up: point both at the canonical type.
+2. **`WATCH_INTERVAL_MS` layering** — the pure `watchStallRecovery.ts` imports it from the hook module `useWatchPing.ts` (values-only, plan-sanctioned). Cleaner follow-up: hoist watch timing constants into a leaf `watchTiming.ts`.
+3. **Snapshot cooldown filter duplication** — `useWatchEngineSnapshot`'s `activeCooldowns` pipeline hand-rolls the trim/finite/`until > now` filter that `gameCooldowns.ts` centralizes. Candidate helper: `activeCooldownsSnapshot(map, now)`.
+4. **Render-phase ref writes** (pre-existing pattern, moved verbatim): `useDropProgressPoll` and `useWatchPing` assign `ref.current` during render. Harmless today; a `useLayoutEffect` pass would be cleaner.
+5. **Ungated debug `console.log`** (pre-existing): `useActiveCampaignDebugLog` logs unconditionally in production.
+6. **Defensive optional chaining on non-nullable param** (pre-existing, moved verbatim): `useActivityFeedWiring`'s Source-3 effect uses `inventoryChanges?.added?.size` although the param type is non-nullable.
+7. **Minor test-hardening candidates**: retargetPolicy (blocked-current game; rotation past a blocked successor), watchDecision (precedence-dominance rows with multiple flags set).
