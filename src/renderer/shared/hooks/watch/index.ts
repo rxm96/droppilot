@@ -16,3 +16,5 @@ export * from "./useWatchSuppressionSync";
 export * from "./watchStallRecovery";
 export * from "./useStallRecovery";
 export * from "./retargetPolicy";
+export * from "./watchDecision";
+export * from "./useWatchEngineSnapshot";

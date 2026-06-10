@@ -20,12 +20,11 @@ import {
   useWatchingSince,
   useStalledGameCooldowns,
   useStallRecovery,
-  STALL_STOP_SUPPRESSION_HOLD_MS,
-  MANUAL_STOP_SUPPRESSION_HOLD_MS,
   selectVisibleTargetGame,
   shouldForceClearWatchingOnSuppressedTarget,
   useDropProgressPoll,
   useWatchEngine,
+  useWatchEngineSnapshot,
   useWatchSessionMeta,
   useWatchSuppressionSync,
 } from "@renderer/shared/hooks/watch";
@@ -38,7 +37,6 @@ import { useSettingsStore } from "./useSettingsStore";
 import { useSmartAlerts } from "./useSmartAlerts";
 import { useStats } from "./useStats";
 import { useAccent, useFontPair, useTheme } from "@renderer/shared/theme";
-import { DropChannelRestriction } from "@renderer/shared/domain/dropDomain";
 import type { FilterKey, View } from "@renderer/shared/types";
 import { isVerboseLoggingEnabled } from "@renderer/shared/utils/logger";
 
@@ -535,130 +533,21 @@ export function useAppModel() {
     userPubSubStatus,
     warmup: warmupState,
   });
-  const watchEngineSnapshot = useMemo(() => {
-    const now = Date.now();
-    const suppressionGame = watchEngineState.suppressedTargetGame.trim();
-    const suppressionReason = watchEngineState.suppressionReason;
-    const suppressionAt = watchEngineState.suppressedAt;
-    const holdMs =
-      suppressionReason === "stall-stop"
-        ? STALL_STOP_SUPPRESSION_HOLD_MS
-        : suppressionReason === "manual-stop"
-          ? MANUAL_STOP_SUPPRESSION_HOLD_MS
-          : 0;
-    const suppressionHoldRemainingMs =
-      holdMs && typeof suppressionAt === "number" && Number.isFinite(suppressionAt)
-        ? Math.max(0, suppressionAt + holdMs - now)
-        : 0;
-    const activeCooldowns = Object.entries(stalledGameCooldownUntil)
-      .map(([rawGame, until]) => ({ game: rawGame.trim(), until }))
-      .filter(
-        ({ game, until }) =>
-          game.length > 0 && typeof until === "number" && Number.isFinite(until) && until > now,
-      )
-      .sort((a, b) => a.until - b.until)
-      .map(({ game, until }) => ({
-        game,
-        until,
-        remainingMs: Math.max(0, until - now),
-      }));
-    const allowlistRestriction = DropChannelRestriction.fromAllowlist(channelAllowlist);
-    const allowlistedLiveChannels = allowlistRestriction.hasConstraints
-      ? channels.filter((channel) => allowlistRestriction.allowsChannel(channel)).length
-      : channels.length;
-    const stallTracker = watchStallTrackerRef.current;
-    const noProgressTracker =
-      stallTracker && watching
-        ? {
-            recoveryCount: stallTracker.recoveryCount,
-            sinceProgressMs: Math.max(0, now - stallTracker.lastProgressAt),
-          }
-        : null;
-    const hasPredictiveProgress = Boolean(
-      activeDropInfo &&
-      typeof activeDropInfo.eta === "number" &&
-      Number.isFinite(activeDropInfo.eta),
-    );
-    const hasFarmableActiveDrop = Boolean(activeDropInfo);
-    const isRecoveringNoProgress = Boolean(
-      noProgressTracker && noProgressTracker.recoveryCount > 0,
-    );
-
-    let decision:
-      | "no-target"
-      | "suppressed"
-      | "cooldown"
-      | "watching-progress"
-      | "watching-recover"
-      | "watching-no-farmable"
-      | "watching-no-watchable"
-      | "idle-loading-channels"
-      | "idle-no-channels"
-      | "idle-ready"
-      | "idle-no-watchable-drops" = "no-target";
-    const activeTarget = activeTargetGame.trim();
-    if (suppressionGame && activeTarget && suppressionGame === activeTarget) {
-      decision = "suppressed";
-    } else if (targetGame && isGameInStallCooldown(targetGame, now)) {
-      decision = "cooldown";
-    } else if (!targetGame) {
-      decision = "no-target";
-    } else if (watching) {
-      if (!canWatchTarget) {
-        decision = "watching-no-watchable";
-      } else if (isRecoveringNoProgress) {
-        decision = "watching-recover";
-      } else if (hasPredictiveProgress || hasFarmableActiveDrop) {
-        decision = "watching-progress";
-      } else {
-        decision = "watching-no-farmable";
-      }
-    } else if (channelsLoading || channelsRefreshing) {
-      decision = "idle-loading-channels";
-    } else if (allowlistedLiveChannels === 0) {
-      decision = "idle-no-channels";
-    } else if (canWatchTarget) {
-      decision = "idle-ready";
-    } else {
-      decision = "idle-no-watchable-drops";
-    }
-
-    return {
-      decision,
-      targetGame,
-      activeTargetGame,
-      suppression:
-        suppressionGame && suppressionReason
-          ? {
-              game: suppressionGame,
-              reason: suppressionReason,
-              sinceAt: suppressionAt,
-              holdRemainingMs: suppressionHoldRemainingMs,
-            }
-          : null,
-      activeCooldowns,
-      allowlistActive: allowlistRestriction.hasConstraints,
-      allowlistedLiveChannels,
-      totalLiveChannels: channels.length,
-      noProgressTracker,
-    };
-  }, [
-    activeDropInfo,
-    activeTargetGame,
-    canWatchTarget,
+  const watchEngineSnapshot = useWatchEngineSnapshot({
+    watchEngineState,
+    stalledGameCooldownUntil,
+    isInCooldown: isGameInStallCooldown,
     channelAllowlist,
     channels,
     channelsLoading,
     channelsRefreshing,
-    isGameInStallCooldown,
-    stalledGameCooldownUntil,
     targetGame,
-    watchEngineState.suppressedAt,
-    watchEngineState.suppressedTargetGame,
-    watchEngineState.suppressionReason,
-    watchStallTrackerRef,
+    activeTargetGame,
+    activeDropInfo,
+    canWatchTarget,
     watching,
-  ]);
+    stallTrackerRef: watchStallTrackerRef,
+  });
 
   const navProps = {
     view,
