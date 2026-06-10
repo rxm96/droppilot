@@ -40,7 +40,7 @@ import { useStats } from "./useStats";
 import { useAccent, useFontPair, useTheme } from "@renderer/shared/theme";
 import { DropChannelRestriction } from "@renderer/shared/domain/dropDomain";
 import type { FilterKey, View } from "@renderer/shared/types";
-import { isVerboseLoggingEnabled, logInfo } from "@renderer/shared/utils/logger";
+import { isVerboseLoggingEnabled } from "@renderer/shared/utils/logger";
 
 export function useAppModel() {
   const { auth, startLogin, logout } = useAuth();
@@ -656,6 +656,7 @@ export function useAppModel() {
     watchEngineState.suppressedAt,
     watchEngineState.suppressedTargetGame,
     watchEngineState.suppressionReason,
+    watchStallTrackerRef,
     watching,
   ]);
 
