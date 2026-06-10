@@ -133,6 +133,12 @@ export function useStallRecovery({
           case "refresh-inventory":
             void fetchInventory({ forceLoading: true });
             break;
+          default: {
+            // Compile-time exhaustiveness: a new StallRecoveryAction kind must be handled here.
+            const unhandled: never = action;
+            void unhandled;
+            break;
+          }
         }
       }
     },
