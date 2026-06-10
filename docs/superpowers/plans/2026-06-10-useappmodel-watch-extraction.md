@@ -3084,3 +3084,4 @@ Discovered during implementation (none fixed inline — all pre-existing or out 
 5. **Ungated debug `console.log`** (pre-existing): `useActiveCampaignDebugLog` logs unconditionally in production.
 6. **Defensive optional chaining on non-nullable param** (pre-existing, moved verbatim): `useActivityFeedWiring`'s Source-3 effect uses `inventoryChanges?.added?.size` although the param type is non-nullable.
 7. **Minor test-hardening candidates**: retargetPolicy (blocked-current game; rotation past a blocked successor), watchDecision (precedence-dominance rows with multiple flags set).
+8. **Duplicate `WatchDecision` union** (final review) — `features/control/controlHelpers.ts` keeps its own member-identical `WatchEngineDecision` union with `default:` fallbacks, so a future divergence from the canonical `watch/watchDecision.ts` type would not fail tsc. Follow-up: import the canonical `WatchDecision` there.
