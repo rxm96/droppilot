@@ -5,12 +5,12 @@ import {
   buildChannelDiff,
   computeAutoSwitchAction,
   isManualPriorityOverrideActive,
-  hasRecentInventory,
   isFreshCache,
   mergeChannelList,
   shouldClearTrackerAfterStaleResponse,
   shouldAutoSelectChannel,
-} from "./useChannels";
+  sortChannelsByViewers,
+} from "./channelEngine";
 
 const makeChannel = (overrides: Partial<ChannelEntry> = {}): ChannelEntry => ({
   id: "1",
@@ -22,7 +22,7 @@ const makeChannel = (overrides: Partial<ChannelEntry> = {}): ChannelEntry => ({
   ...overrides,
 });
 
-describe("useChannels helpers", () => {
+describe("channelEngine helpers", () => {
   it("merges channel lists while preserving identical references", () => {
     const a = makeChannel();
     const prev = [a];
@@ -64,6 +64,23 @@ describe("useChannels helpers", () => {
     };
     const next = applyLiveDiff(prev, payload);
     expect(next[0].id).toBe("3");
+  });
+
+  it("sortChannelsByViewers orders by viewers descending", () => {
+    const out = sortChannelsByViewers([
+      makeChannel({ id: "a", viewers: 5 }),
+      makeChannel({ id: "b", viewers: 20 }),
+      makeChannel({ id: "c", viewers: 10 }),
+    ]);
+    expect(out.map((c) => c.id)).toEqual(["b", "c", "a"]);
+  });
+
+  it("sortChannelsByViewers breaks ties by displayName", () => {
+    const out = sortChannelsByViewers([
+      makeChannel({ id: "1", displayName: "Bravo", viewers: 10 }),
+      makeChannel({ id: "2", displayName: "Alpha", viewers: 10 }),
+    ]);
+    expect(out.map((c) => c.displayName)).toEqual(["Alpha", "Bravo"]);
   });
 
   it("decides when to auto-select a channel", () => {
@@ -222,13 +239,6 @@ describe("useChannels helpers", () => {
         refreshWindowMs: 1_000,
       }),
     ).toBe(true);
-    expect(
-      hasRecentInventory({
-        inventoryFetchedAt: 1_000,
-        now: 4_000,
-        recentWindowMs: 2_000,
-      }),
-    ).toBe(false);
   });
 
   it("activates manual override only for matching game and time window", () => {
