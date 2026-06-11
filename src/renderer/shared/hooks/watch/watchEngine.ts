@@ -143,3 +143,21 @@ export const shouldForceClearWatchingOnSuppressedTarget = (
   const watching = normalize(watchingGame);
   return Boolean(state.suppressedTargetGame && watching && watching === state.suppressedTargetGame);
 };
+
+/**
+ * Stamp time onto events that carry one, only when the caller didn't provide
+ * a finite value. Keeps reducer replays deterministic in tests/logs.
+ */
+export const stampWatchEngineEvent = (event: WatchEngineEvent, now: number): WatchEngineEvent => {
+  switch (event.type) {
+    case "watch/stop":
+    case "watch/stall_stop":
+      if (typeof event.at === "number" && Number.isFinite(event.at)) return event;
+      return { ...event, at: now };
+    case "sync":
+      if (typeof event.now === "number" && Number.isFinite(event.now)) return event;
+      return { ...event, now };
+    default:
+      return event;
+  }
+};
