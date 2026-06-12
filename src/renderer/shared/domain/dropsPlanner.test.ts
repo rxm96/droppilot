@@ -28,6 +28,7 @@ describe("buildDropsPlan", () => {
     );
     expect(plan).toHaveLength(1);
     expect(plan[0].totalDropCount).toBe(2);
+    expect(plan[0].gameLabel).toBe("Marvel Rivals");
   });
 
   it("treats parallel tiers as feasible against their own deadlines (regression)", () => {
@@ -109,5 +110,28 @@ describe("buildDropsPlan", () => {
       NOW,
     );
     expect(plan).toEqual([]);
+  });
+
+  it("breaks deadline ties by longest-remaining then game key", () => {
+    const plan = buildDropsPlan(
+      [
+        makeItem({ id: "big", game: "Zebra", requiredMinutes: 120, endsAt: iso(120) }),
+        makeItem({ id: "small", game: "Apex", requiredMinutes: 30, endsAt: iso(120) }),
+      ],
+      NOW,
+    );
+    // Same deadline → shorter remaining (Apex, 30) sorts before longer (Zebra, 120).
+    expect(plan.map((e) => e.gameLabel)).toEqual(["Apex", "Zebra"]);
+  });
+
+  it("orders each game's drops by remaining minutes ascending", () => {
+    const plan = buildDropsPlan(
+      [
+        makeItem({ id: "long", game: "Rust", requiredMinutes: 120 }),
+        makeItem({ id: "short", game: "Rust", requiredMinutes: 20 }),
+      ],
+      NOW,
+    );
+    expect(plan[0].drops.map((d) => d.remainingMinutes)).toEqual([20, 120]);
   });
 });

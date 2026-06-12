@@ -19,7 +19,7 @@ export type PlanEntry = {
   gameKey: string;
   gameLabel: string;
   watchMinutes: number;
-  deadlineMs: number | null;
+  deadlineMs: number | null; // earliest tier deadline — EDF sort key + countdown; per-drop feasibility uses each drop's own deadlineMs
   status: "ok" | "partial" | "lost";
   feasibleDropCount: number;
   totalDropCount: number;
@@ -92,7 +92,7 @@ export function buildDropsPlan(items: InventoryItem[], now: number): PlanEntry[]
     const wa = Math.max(0, ...a.drops.map((d) => d.remainingMinutes));
     const wb = Math.max(0, ...b.drops.map((d) => d.remainingMinutes));
     if (wa !== wb) return wa - wb;
-    return a.gameLabel.localeCompare(b.gameLabel);
+    return a.gameKey < b.gameKey ? -1 : a.gameKey > b.gameKey ? 1 : 0;
   });
 
   // 5. Feasibility walk: a cursor of watch-minutes accumulates across games.
@@ -106,6 +106,8 @@ export function buildDropsPlan(items: InventoryItem[], now: number): PlanEntry[]
       return { ...d, feasible };
     });
     const feasibleDrops = drops.filter((d) => d.feasible);
+    // Minutes actually spent here: max remaining among feasible drops only
+    // (a partial game's lost tiers are excluded; a fully-lost game → 0).
     const watchMinutes = feasibleDrops.length
       ? Math.max(...feasibleDrops.map((d) => d.remainingMinutes))
       : 0;
