@@ -897,6 +897,7 @@ const translations: Translations = {
     "plan.feasibleCount": "{count} of {total} fully reachable",
     "plan.atRisk": "{count} of {total} drops won't make it",
     "plan.lost": "won't make it",
+    "plan.fallbackDivider": "then (fallback)",
 
     "queue.manage": "manage →",
     "queue.empty": "no drops in queue",
@@ -1930,6 +1931,7 @@ const translations: Translations = {
     "plan.feasibleCount": "{count} von {total} voll schaffbar",
     "plan.atRisk": "{count} von {total} Drops nicht schaffbar",
     "plan.lost": "nicht schaffbar",
+    "plan.fallbackDivider": "danach (Fallback)",
 
     "queue.manage": "verwalten →",
     "queue.empty": "keine drops in der queue",
