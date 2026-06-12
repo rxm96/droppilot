@@ -1,8 +1,12 @@
 # Settings Pipeline Refactor — Design
 
 **Date:** 2026-06-12
-**Branches:** `refactor/settings-schema` (PR 1) → `refactor/settings-renderer` (PR 2), stacked on `refactor/useappmodel-watch-extraction` (PR #52)
-**Status:** Approved (brainstorming) — pending implementation plan
+**Branches:** `refactor/settings-schema` (PR 1, based on `main` post-#51 — touches no
+file PR #52 touches, independently mergeable) → `refactor/settings-renderer` (PR 2,
+requires both PR 1 and `refactor/useappmodel-watch-extraction` (PR #52) in its base,
+since it rewrites `useAppModel` consumption)
+**Status:** Approved (brainstorming) — plan written (amended during planning, see
+"Planning amendments")
 
 ## Goal
 
@@ -249,6 +253,25 @@ Per the repo convention (pure functions, no rendered hooks):
 - **Stacking:** both sit on top of `refactor/useappmodel-watch-extraction` (PR #52),
   since PR 2 touches `useAppModel`. Observe the existing merge order
   (usechannels-split → #52 → these).
+
+## Planning amendments (discovered while writing the implementation plan)
+
+1. **`autoSwitch` rename scope narrowed.** The blanket "rename `autoSwitchEnabled` →
+   `autoSwitch` everywhere" collides in the watch layer: `useChannels` already
+   _returns_ an `autoSwitch` value (the AutoSwitchInfo event object consumed by
+   `useAlertEffects`). The rename therefore applies to the settings layer and Settings
+   UI only; the watch/debug subsystems keep their `autoSwitchEnabled` parameter name
+   (the better name for a boolean), fed once per call site in `useAppModel`
+   (`autoSwitchEnabled: autoSwitch`). Affected param sites that keep their name:
+   `useChannels`, `useChannelAutopilot`, `channelEngine`, `useDebugSnapshot`.
+2. **Branch bases changed.** PR #51 (usechannels-split) merged into `main` mid-design;
+   PR 1 touches no renderer hook files and is now based directly on `main` instead of
+   stacking on PR #52. Only PR 2 needs PR #52 in its base.
+3. **Fourth type copy found in preload.** `src/preload/index.ts` defines its own
+   `SettingsPayload` — missing `debugEnabled`, `closeToTray`, `minimizeToTray`,
+   `windowBounds`, which today pass through save() untyped (structural assignability
+   hides it). PR 1 replaces it with the schema's `SettingsSaveData`, which also removes
+   preload's layering-smell import of `Language` from `renderer/shared/i18n`.
 
 ## Out of scope / findings
 
