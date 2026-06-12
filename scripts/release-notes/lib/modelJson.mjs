@@ -44,6 +44,7 @@ export function parseGenerationOutput(text, validIds) {
 export function parseJudgeOutput(text, bulletCount) {
   const obj = extractJson(text);
   if (!obj || !Array.isArray(obj.verdicts)) return null;
+  const seen = new Set();
   const verdicts = Array.from({ length: bulletCount }, () => ({
     supported: false,
     concrete: false,
@@ -51,7 +52,19 @@ export function parseJudgeOutput(text, bulletCount) {
   for (const v of obj.verdicts) {
     const idx = Number(v?.bullet) - 1;
     if (!Number.isInteger(idx) || idx < 0 || idx >= bulletCount) continue;
-    verdicts[idx] = { supported: v.supported === true, concrete: v.concrete === true };
+    const supported = v.supported === true;
+    const concrete = v.concrete === true;
+    if (seen.has(idx)) {
+      // Duplicate verdicts for one bullet AND-merge: a rejection always wins,
+      // so an extra permissive verdict can never override a real one.
+      verdicts[idx] = {
+        supported: verdicts[idx].supported && supported,
+        concrete: verdicts[idx].concrete && concrete,
+      };
+    } else {
+      seen.add(idx);
+      verdicts[idx] = { supported, concrete };
+    }
   }
   return verdicts;
 }

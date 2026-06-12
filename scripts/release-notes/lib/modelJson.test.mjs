@@ -49,6 +49,12 @@ describe("parseGenerationOutput", () => {
     expect(parseGenerationOutput("Sure! Here are some bullets: - a - b", VALID_IDS)).toBeNull();
     expect(parseGenerationOutput('{"notes":"x"}', VALID_IDS)).toBeNull();
   });
+
+  it("garbage items inside a well-formed bullets array are dropped without retry", () => {
+    expect(parseGenerationOutput('{"bullets":[42,"x",null,true]}', VALID_IDS)).toEqual({
+      bullets: [],
+    });
+  });
 });
 
 describe("parseJudgeOutput", () => {
@@ -73,5 +79,15 @@ describe("parseJudgeOutput", () => {
   it("returns null for an unusable response (caller falls back to internal line)", () => {
     expect(parseJudgeOutput("cannot judge", 1)).toBeNull();
     expect(parseJudgeOutput('{"verdicts":"all good"}', 1)).toBeNull();
+  });
+
+  it("duplicate verdicts for one bullet AND-merge (a rejection always wins)", () => {
+    const text = JSON.stringify({
+      verdicts: [
+        { bullet: 1, supported: false, concrete: true },
+        { bullet: 1, supported: true, concrete: true },
+      ],
+    });
+    expect(parseJudgeOutput(text, 1)).toEqual([{ supported: false, concrete: true }]);
   });
 });
