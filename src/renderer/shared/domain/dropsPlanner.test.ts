@@ -202,4 +202,27 @@ describe("buildDropsPlan — priority-aware", () => {
     });
     expect(plan).toEqual([]);
   });
+
+  it("a priority game with no plannable drops is absent from the plan (not a lost entry)", () => {
+    const plan = buildDropsPlan([makeItem({ game: "Rust", status: "claimed" })], NOW, {
+      priorityGames: ["Rust"],
+      obeyPriority: true,
+    });
+    expect(plan).toEqual([]);
+  });
+
+  it("permissive: a priority game's cursor debt makes a feasible-under-EDF fallback game lost", () => {
+    const items = [
+      makeItem({ id: "p", game: "Priority", requiredMinutes: 200, endsAt: iso(10000) }),
+      makeItem({ id: "f", game: "Fallback", requiredMinutes: 60, endsAt: iso(240) }),
+    ];
+    // Under pure EDF, Fallback (deadline 240) is farmed first → ok.
+    expect(buildDropsPlan(items, NOW).find((e) => e.gameLabel === "Fallback")?.status).toBe("ok");
+    // Permissive with Priority first: cursor = 200 before Fallback → 200+60 = 260 > 240 → lost.
+    const permissive = buildDropsPlan(items, NOW, {
+      priorityGames: ["Priority"],
+      obeyPriority: false,
+    });
+    expect(permissive.find((e) => e.gameLabel === "Fallback")?.status).toBe("lost");
+  });
 });

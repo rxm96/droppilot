@@ -19,7 +19,7 @@ export type PlanEntry = {
   gameKey: string;
   gameLabel: string;
   watchMinutes: number;
-  deadlineMs: number | null; // earliest tier deadline — countdown; per-drop feasibility uses each drop's own deadlineMs
+  deadlineMs: number | null; // earliest deadline across the game's open tiers; used for the UI countdown
   status: "ok" | "partial" | "lost";
   feasibleDropCount: number;
   totalDropCount: number;
@@ -29,7 +29,13 @@ export type PlanEntry = {
 };
 
 export type DropsPlanOptions = {
+  /** Games to prioritize, matched case-insensitively. Duplicates use the first occurrence. */
   priorityGames: string[];
+  /**
+   * When true ("strict"), only priority games are planned, so an empty priorityGames
+   * produces an empty plan. When false ("permissive"), priority games are planned first,
+   * followed by the remaining games sorted by EDF.
+   */
   obeyPriority: boolean;
 };
 
@@ -56,6 +62,7 @@ type Shell = {
   gameKey: string;
   gameLabel: string;
   deadlineMs: number | null;
+  maxRemaining: number;
   drops: Omit<PlanDrop, "feasible">[];
 };
 
@@ -94,7 +101,8 @@ export function buildDropsPlan(
       .sort((a, b) => a.remainingMinutes - b.remainingMinutes);
     const deadlines = drops.map((d) => d.deadlineMs).filter((v): v is number => v !== null);
     const deadlineMs = deadlines.length ? Math.min(...deadlines) : null;
-    shells.push({ gameKey: key, gameLabel: label, deadlineMs, drops });
+    const maxRemaining = drops.length ? drops[drops.length - 1].remainingMinutes : 0;
+    shells.push({ gameKey: key, gameLabel: label, deadlineMs, maxRemaining, drops });
   }
 
   // 4. Order by the engine's actual farming order, not pure deadline.
@@ -110,9 +118,7 @@ export function buildDropsPlan(
     const da = a.deadlineMs ?? Number.POSITIVE_INFINITY;
     const db = b.deadlineMs ?? Number.POSITIVE_INFINITY;
     if (da !== db) return da - db;
-    const wa = Math.max(0, ...a.drops.map((d) => d.remainingMinutes));
-    const wb = Math.max(0, ...b.drops.map((d) => d.remainingMinutes));
-    if (wa !== wb) return wa - wb;
+    if (a.maxRemaining !== b.maxRemaining) return a.maxRemaining - b.maxRemaining;
     return a.gameKey < b.gameKey ? -1 : a.gameKey > b.gameKey ? 1 : 0;
   };
 
