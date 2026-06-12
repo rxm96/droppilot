@@ -1,4 +1,4 @@
-# Settings Pipeline Refactor Implementation Plan
+﻿# Settings Pipeline Refactor Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -28,7 +28,7 @@
 - Create: `src/shared/settingsSchema.ts`
 - Create: `src/shared/settingsSchema.test.ts`
 
-- [ ] **Step 1: Write the failing test for descriptors + derived artifacts**
+- [x] **Step 1: Write the failing test for descriptors + derived artifacts**
 
 Create `src/shared/settingsSchema.test.ts`:
 
@@ -179,12 +179,12 @@ describe("SETTINGS_SCHEMA descriptors", () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `npx vitest run src/shared/settingsSchema.test.ts`
 Expected: FAIL — `Cannot find module './settingsSchema'` (or equivalent resolve error).
 
-- [ ] **Step 3: Write the schema module (descriptors + schema + derived artifacts only — pipeline functions come in Task 2)**
+- [x] **Step 3: Write the schema module (descriptors + schema + derived artifacts only — pipeline functions come in Task 2)**
 
 Create `src/shared/settingsSchema.ts`:
 
@@ -361,12 +361,12 @@ export const automationResetPatch = (): Partial<AppSettings> =>
 export { normalizeUpdateChannel as __internalNormalizeUpdateChannel };
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `npx vitest run src/shared/settingsSchema.test.ts`
 Expected: PASS (all descriptor + defaults + reset-keys tests green).
 
-- [ ] **Step 5: Typecheck, format, commit**
+- [x] **Step 5: Typecheck, format, commit**
 
 ```bash
 npx tsc --noEmit -p tsconfig.json
@@ -384,7 +384,7 @@ git commit -m "feat(settings): add descriptor schema with derived types and defa
 - Modify: `src/shared/settingsSchema.ts` (append functions, remove the temporary re-export)
 - Modify: `src/shared/settingsSchema.test.ts` (append a describe block)
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `src/shared/settingsSchema.test.ts` (extend the import to include the two functions):
 
@@ -536,12 +536,12 @@ describe("applySettingsPatch (save path: fallback = current)", () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests to verify the new blocks fail**
+- [x] **Step 2: Run the tests to verify the new blocks fail**
 
 Run: `npx vitest run src/shared/settingsSchema.test.ts`
 Expected: FAIL — `normalizeSettings is not a function` / export missing (Task 1 tests stay green).
 
-- [ ] **Step 3: Implement the pipeline functions**
+- [x] **Step 3: Implement the pipeline functions**
 
 In `src/shared/settingsSchema.ts`, **delete** the temporary re-export line:
 
@@ -619,12 +619,12 @@ Note: `windowBounds: undefined` in a patch is "absent" under the `source[key] ==
 check — matching the legacy `restData.windowBounds !== undefined` guard. The
 `theme`/`accent` null values pass through because `null !== undefined`.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `npx vitest run src/shared/settingsSchema.test.ts`
 Expected: PASS — all blocks.
 
-- [ ] **Step 5: Typecheck, format, commit**
+- [x] **Step 5: Typecheck, format, commit**
 
 ```bash
 npx tsc --noEmit -p tsconfig.json
@@ -648,7 +648,7 @@ not the test — fix the descriptor, never the expectation.
 
 - Create: `src/shared/settingsSchema.characterization.test.ts`
 
-- [ ] **Step 1: Write the characterization tests (they must pass immediately against Task 2's implementation)**
+- [x] **Step 1: Write the characterization tests (they must pass immediately against Task 2's implementation)**
 
 Create `src/shared/settingsSchema.characterization.test.ts`:
 
@@ -855,14 +855,14 @@ describe("characterization: legacy persistSettings equivalence", () => {
 });
 ```
 
-- [ ] **Step 2: Run the characterization suite**
+- [x] **Step 2: Run the characterization suite**
 
 Run: `npx vitest run src/shared/settingsSchema.characterization.test.ts`
 Expected: PASS. If any case fails, STOP — re-read the legacy code path in
 `src/main/core/settings.ts` for that field and fix the descriptor/pipeline in
 `src/shared/settingsSchema.ts` (never the expectation), then re-run.
 
-- [ ] **Step 3: Run the full suite, format, commit**
+- [x] **Step 3: Run the full suite, format, commit**
 
 ```bash
 npm test
@@ -885,7 +885,7 @@ the local type definitions are replaced.
 - Modify: `src/preload/index.ts` (replace the local `SettingsPayload` type)
 - Modify: `tsconfig.node.json` (one line — make the main-process typecheck runnable)
 
-- [ ] **Step 0: Make the node tsconfig usable as a gate**
+- [x] **Step 0: Make the node tsconfig usable as a gate**
 
 Discovered during Task 1 review: `npm run typecheck` covers ONLY `src/renderer`
 (tsconfig.json); the main-process program (tsconfig.node.json) is gated by nothing —
@@ -909,7 +909,7 @@ task's rewrite, settings.ts/preload contribute 2 errors via their renderer-i18n
 imports — this task removes both.) Apply the same scoped reading wherever a
 verification block below runs the node tsc.
 
-- [ ] **Step 1: Rewrite `src/main/core/settings.ts`**
+- [x] **Step 1: Rewrite `src/main/core/settings.ts`**
 
 Replace the entire file content with:
 
@@ -1031,12 +1031,12 @@ consumers in `src/main/ipc/index.ts` and `src/main/index.ts` import
 in those files. Note the legacy renderer-`Language` import from
 `../../renderer/i18n` is gone (layering fix).
 
-- [ ] **Step 2: Typecheck + full suite**
+- [x] **Step 2: Typecheck + full suite**
 
 Run: `npx tsc --noEmit -p tsconfig.json && npm test`
 Expected: clean typecheck, all tests PASS (characterization suite now guards the swap).
 
-- [ ] **Step 3: Replace preload's `SettingsPayload`**
+- [x] **Step 3: Replace preload's `SettingsPayload`**
 
 In `src/preload/index.ts`:
 
@@ -1082,7 +1082,7 @@ If `Language` is referenced anywhere else in `src/preload/index.ts` (it is not, 
 time of writing), leave its import in place — verify with:
 `npx tsc --noEmit -p tsconfig.json`.
 
-- [ ] **Step 4: Verify, format, commit**
+- [x] **Step 4: Verify, format, commit**
 
 ```bash
 npx tsc --noEmit -p tsconfig.json
@@ -1097,7 +1097,7 @@ git commit -m "refactor(settings): drive main settings persistence from the shar
 
 ### Task 5: PR 1 verification + PR
 
-- [ ] **Step 1: Full local gate (CI does not run on PRs — this IS the gate)**
+- [x] **Step 1: Full local gate (CI does not run on PRs — this IS the gate)**
 
 ```bash
 npm run lint
@@ -1110,14 +1110,14 @@ npm run build
 
 Expected: lint exits 0 (warnings allowed), format clean, both tsc programs clean, all tests pass, build succeeds.
 
-- [ ] **Step 2: Behavioral smoke (main process)**
+- [x] **Step 2: Behavioral smoke (main process)**
 
 Run `npm run dev`, then in the app: toggle any setting (e.g. Auto-Claim) → quit →
 inspect `%APPDATA%/droppilot/settings.json` (userData dir) → confirm the toggle
 persisted, key order looks unchanged, and `settings.bak.json` mirrors it. Relaunch and
 confirm the toggle state survived.
 
-- [ ] **Step 3: Update the plan checkboxes, then hand off**
+- [x] **Step 3: Update the plan checkboxes, then hand off**
 
 Mark Tasks 1–5 complete in this file, commit the plan update
 (`docs(settings): check off PR 1 tasks`), then use the
@@ -2288,3 +2288,20 @@ fixed inline)
      ws `RawData` vs `unknown` handler mismatch
      These are pinned and tolerated by this plan's scoped node-tsc gate; fixing them
      belongs to the separate CI-typecheck task, not this refactor.
+
+3. **PR 1 verification record (Task 5, 2026-06-12).** Gate: lint 0 errors (5
+   pre-existing watch-hook warnings), format:check clean, renderer tsc clean, node
+   tsc = exactly the 9 pinned errors, 339/339 tests, build clean. Live smoke against
+   the real user profile (dev build `v3.2.0+32843b5`): app booted from a
+   legacy-written settings.json (load path ✓ — engine running, auto-watch active);
+   an organic main-initiated windowBounds save produced a file **byte-identical** to
+   the legacy-written snapshot (key order + backup mirror ✓); renderer-initiated IPC
+   round-trip via `electronAPI.settings.save({ autoClaim: false })` → response
+   carried all 31 keys, file flipped on disk, restore save returned the file to
+   **byte-identical** with the pre-refactor snapshot.
+
+4. **Stray `settings.json.<pid>.<n>.tmp` files in userData** (smoke prep). The
+   atomicWrite tmp files are leaked when a write is interrupted between `writeFile`
+   and `rename` (9 found, dating back weeks, mostly 0 bytes — the legacy code leaked
+   them the same way). Cosmetic; a startup cleanup sweep would be a tiny follow-up,
+   out of scope here.
