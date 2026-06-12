@@ -33,7 +33,17 @@ describe("finalizeBullets", () => {
   it("caps at 6 bullets in model order", () => {
     const bullets = ["a", "b", "c", "d", "e", "f", "g"].map(B);
     const verdicts = bullets.map(() => KEEP);
-    expect(finalizeBullets(bullets, verdicts)).toHaveLength(6);
+    expect(finalizeBullets(bullets, verdicts)).toEqual(bullets.slice(0, 6));
+  });
+
+  it("a banned bullet frees its slot for the 7th verified bullet", () => {
+    const bullets = [B("Performance improvements"), ...["a", "b", "c", "d", "e", "f"].map(B)];
+    const verdicts = bullets.map(() => KEEP);
+    expect(finalizeBullets(bullets, verdicts)).toEqual(["a", "b", "c", "d", "e", "f"].map(B));
+  });
+
+  it("the internal note itself trips the banned guard (self-defending backstop)", () => {
+    expect(violatesBannedPhrases(INTERNAL_NOTE)).toBe(true);
   });
 });
 
@@ -100,6 +110,28 @@ describe("assembleReleaseBody", () => {
       baseTag: "",
     });
     expect(body).toContain("Compared against the previous release.");
+  });
+
+  it("normalizes multiline/empty bullet text locally (defense in depth)", () => {
+    const body = assembleReleaseBody({
+      bullets: [
+        { text: "line1\nline2", evidence: ["E1"] },
+        { text: "   ", evidence: ["E1"] },
+      ],
+      techNotes: TECH,
+      commitSubjects: [],
+      baseTag: "v3.1.0",
+    });
+    expect(body).toContain("- line1 line2\n");
+    expect(body).not.toContain(INTERNAL_NOTE);
+  });
+
+  it("zero-bullet body round-trips through parseReleaseNotes as the internal note", async () => {
+    const { parseReleaseNotes } = await import("../../../src/shared/releaseHistory.ts");
+    const parsed = parseReleaseNotes(
+      assembleReleaseBody({ bullets: [], techNotes: TECH, commitSubjects: [], baseTag: "" }),
+    );
+    expect(parsed.notes).toEqual([INTERNAL_NOTE]);
   });
 
   it("matches the parseReleaseNotes contract from src/shared/releaseHistory.ts", async () => {

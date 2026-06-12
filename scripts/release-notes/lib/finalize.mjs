@@ -40,11 +40,24 @@ export function finalizeBullets(bullets, verdicts) {
 }
 
 export function assembleReleaseBody({ bullets, techNotes, commitSubjects, baseTag }) {
-  const noteLines = bullets.length ? bullets.map((b) => `- ${b.text}`) : [`- ${INTERNAL_NOTE}`];
+  // Locally enforce the one-line, non-empty bullet contract instead of only
+  // trusting upstream normalization (defense in depth — parseReleaseNotes
+  // silently drops continuation lines). This also makes the function total:
+  // any input degrades to a valid body, never a throw.
+  const cleaned = (bullets ?? [])
+    .map((b) => ({
+      ...b,
+      text: String(b?.text ?? "")
+        .replace(/\s+/g, " ")
+        .trim(),
+    }))
+    .filter((b) => b.text.length > 0);
+  const noteLines = cleaned.length ? cleaned.map((b) => `- ${b.text}`) : [`- ${INTERNAL_NOTE}`];
   let changelog = String(techNotes ?? "").trim();
   if (!changelog) {
-    changelog = commitSubjects.length
-      ? ["## What's Changed", ...commitSubjects.map((s) => `* ${s}`)].join("\n")
+    const subjects = commitSubjects ?? [];
+    changelog = subjects.length
+      ? ["## What's Changed", ...subjects.map((s) => `* ${s}`)].join("\n")
       : `Compared against ${baseTag || "the previous release"}.`;
   }
   return `## What's new for users\n\n${noteLines.join("\n")}\n\n## Full changelog\n\n${changelog}\n`;
