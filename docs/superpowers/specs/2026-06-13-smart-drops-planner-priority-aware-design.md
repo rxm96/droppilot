@@ -86,9 +86,15 @@ export function buildDropsPlan(
 
 ## UI (`DropsPlanCard.tsx`)
 
-- The card reads `const { priorityGames, obeyPriority } = useSettingsStore();` and passes them as
-  `buildDropsPlan(items, now, { priorityGames, obeyPriority })`. **No new props, no `OverviewView`
-  / `useAppModel` plumbing** (it stays mounted as `<DropsPlanCard items={items} />`).
+- The card receives `priorityGames: string[]` and `obeyPriority: boolean` as **props** and passes
+  them as `buildDropsPlan(items, now, { priorityGames, obeyPriority })`. They are threaded from
+  `useAppModel` (which already holds them) through `overviewProps` → `OverviewView` →
+  `<DropsPlanCard items={items} priorityGames={priorityGames} obeyPriority={obeyPriority} />`.
+  > **Why props, not `useSettingsStore()` in the card:** `useSettingsStore` is a plain
+  > `useState`/`useEffect` hook with **no shared store/Context** — calling it a second time spins up
+  > a *duplicate* settings instance with its own IPC load/persist, diverging from the canonical
+  > store in `useAppModel`. The values must be threaded, not re-read. (Corrects the earlier
+  > "read the hook directly" assumption.)
 - **Rank cell:** priority games show their priority position — `#{priorityRank}` (e.g. `#1`).
   Fallback games show a `·` marker instead of a number.
 - **Fallback divider (permissive only):** when the plan contains at least one priority entry
@@ -144,8 +150,9 @@ The card remains untested (project convention); all logic stays in the pure func
 | --- | --- |
 | `src/renderer/shared/domain/dropsPlanner.ts` | add `DropsPlanOptions`, partition/order logic, `isPriority`/`priorityRank` |
 | `src/renderer/shared/domain/dropsPlanner.test.ts` | new priority-ordering tests |
-| `src/renderer/features/overview/DropsPlanCard.tsx` | read `useSettingsStore`, pass options, priority rank + fallback divider |
+| `src/renderer/features/overview/DropsPlanCard.tsx` | accept `priorityGames`/`obeyPriority` props, pass options, priority rank + fallback divider |
+| `src/renderer/features/overview/OverviewView.tsx` | add the two fields to `OverviewProps`, pass them to `DropsPlanCard` |
+| `src/renderer/shared/hooks/app/useAppModel.ts` | add `priorityGames` / `obeyPriority` to `overviewProps` |
 | `src/renderer/shared/i18n.tsx` | new `plan.fallbackDivider` (EN + DE) |
 
-No changes to `src/main`, IPC, preload, the watch engine, priority orchestration, `useAppModel`,
-`AppContent`, or `OverviewView`.
+No changes to `src/main`, IPC, preload, the watch engine, priority orchestration, or `AppContent`.
