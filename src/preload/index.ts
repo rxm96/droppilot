@@ -1,37 +1,5 @@
-import type { Language } from "../renderer/shared/i18n";
 import { contextBridge, ipcRenderer, shell } from "electron";
-import type { UpdateChannel } from "../shared/updateChannels";
-
-type SettingsPayload = {
-  priorityGames?: string[];
-  excludeGames?: string[];
-  obeyPriority?: boolean;
-  language?: Language;
-  autoStart?: boolean;
-  autoClaim?: boolean;
-  autoSelect?: boolean;
-  autoSwitch?: boolean;
-  warmupEnabled?: boolean;
-  updateChannel?: UpdateChannel;
-  betaUpdates?: boolean;
-  refreshMinMs?: number;
-  refreshMaxMs?: number;
-  demoMode?: boolean;
-  alertsEnabled?: boolean;
-  alertsNotifyWhileFocused?: boolean;
-  alertsDropClaimed?: boolean;
-  alertsDropEndingSoon?: boolean;
-  alertsDropEndingMinutes?: number;
-  alertsWatchError?: boolean;
-  alertsAutoSwitch?: boolean;
-  alertsNewDrops?: boolean;
-  enableBadgesEmotes?: boolean;
-  allowUnlinkedGames?: boolean;
-  theme?: "light" | "dark" | null;
-  accent?: string | null;
-  fontPair?: string;
-  uiPrefsMigrated?: boolean;
-};
+import type { SettingsSaveData } from "../shared/settingsSchema";
 
 type ChannelsDiffPayload = {
   game: string;
@@ -124,9 +92,9 @@ const api = {
   },
   settings: {
     get: () => ipcRenderer.invoke("settings/get"),
-    save: (payload: SettingsPayload) => ipcRenderer.invoke("settings/save", payload),
+    save: (payload: SettingsSaveData) => ipcRenderer.invoke("settings/save", payload),
     export: () => ipcRenderer.invoke("settings/export"),
-    import: (payload: SettingsPayload) => ipcRenderer.invoke("settings/import", payload),
+    import: (payload: SettingsSaveData) => ipcRenderer.invoke("settings/import", payload),
   },
   stats: {
     get: () => ipcRenderer.invoke("stats/get"),
