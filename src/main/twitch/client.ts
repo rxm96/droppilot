@@ -80,7 +80,7 @@ export class TwitchClient {
     this.sessionId = randomUUID();
   }
 
-  private async authHeaders(): Promise<HeadersInit> {
+  private async authHeaders(): Promise<Record<string, string>> {
     const session = await this.sessionProvider();
     if (!session?.accessToken) {
       throw new TwitchAuthError("Not logged in");
@@ -111,7 +111,7 @@ export class TwitchClient {
     return (await res.json()) as T;
   }
 
-  private async gqlHeaders(): Promise<HeadersInit> {
+  private async gqlHeaders(): Promise<Record<string, string>> {
     // Only the web client requires integrity; Android app client works without it.
     if (this.requireIntegrity) {
       await this.ensureIntegrity();
@@ -249,8 +249,8 @@ export class TwitchClient {
       this.log("Integrity failed", res.status, text);
       throw new Error(`Integrity fetch failed ${res.status}: ${text}`);
     }
-    const data = (await res.json()) as any;
-    const token = data?.token;
+    const data = (await res.json()) as { token?: unknown } | null;
+    const token = typeof data?.token === "string" ? data.token : "";
     if (!token) {
       throw new Error("Integrity token missing in response");
     }
@@ -261,7 +261,7 @@ export class TwitchClient {
     }
     this.log("Integrity ok", {
       clientVersion: this.clientVersion,
-      tokenPreview: this.integrityToken.slice(0, 8),
+      tokenPreview: token.slice(0, 8),
     });
   }
 

@@ -16,15 +16,15 @@ npx vitest run <path> -t "name"   # single test by name
 npm run lint           # eslint (warnings do NOT fail; exit 0 on warnings-only)
 npm run format         # prettier --write
 npm run format:check   # prettier --check (this DOES gate CI)
-npx tsc --noEmit -p tsconfig.json   # typecheck (see gotcha below)
+npm run typecheck      # tsc on BOTH configs: tsconfig.json (renderer) + tsconfig.node.json (main/preload)
 ```
 
 Releases: `npm run release:patch` (also `:minor`, `:major`, and prerelease `:rc` / `:test`). Each bumps the version, creates a `chore(release): vX` commit + tag, and pushes with `--follow-tags`. The tag push triggers CI to build Win/macOS artifacts and publish a GitHub Release with AI-generated notes.
 
 ## CI / verification gotchas (important)
 
-- **CI (`.github/workflows/build.yml`) runs only on push to `main` and on `v*` tags — NOT on pull requests.** A PR gets no automated CI; verify locally before merging.
-- CI steps are: lint → `format:check` → `npm run typecheck` → `npm test` → `npm run build` → package. The typecheck step (`tsc --noEmit`) gates the build, and the tree currently has a clean global typecheck — keep it that way (`npm run typecheck` before pushing to `main`/tags). Note that `npm run build` itself uses esbuild/Vite and does NOT type-check, so `tsc` is the only thing catching type regressions.
+- **CI (`.github/workflows/build.yml`):** pull requests run a `verify` job (ubuntu: lint → `format:check` → `npm run typecheck` → `npm test` → `npm run build`); pushes to `main` and `v*` tags run the full `build` job (same steps + Win/macOS packaging). Packaging/release never runs on PRs.
+- `npm run typecheck` covers **both** tsconfigs (renderer + main/preload) and the tree is clean — keep it that way before pushing. Note that `npm run build` itself uses esbuild/Vite and does NOT type-check, so `tsc` is the only thing catching type regressions.
 - A clean `format:check` is required — run `prettier --write` on new/changed files before committing or CI fails.
 - `main` is protected (PRs required) but release pushes bypass it. Commit messages follow Conventional Commits (`feat`, `fix`, `docs`, `style`, `refactor`, `chore(release)`).
 
