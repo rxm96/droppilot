@@ -749,7 +749,17 @@ describe("finalizeBullets", () => {
   it("caps at 6 bullets in model order", () => {
     const bullets = ["a", "b", "c", "d", "e", "f", "g"].map(B);
     const verdicts = bullets.map(() => KEEP);
-    expect(finalizeBullets(bullets, verdicts)).toHaveLength(6);
+    expect(finalizeBullets(bullets, verdicts)).toEqual(bullets.slice(0, 6));
+  });
+
+  it("a banned bullet frees its slot for the 7th verified bullet", () => {
+    const bullets = [B("Performance improvements"), ...["a", "b", "c", "d", "e", "f"].map(B)];
+    const verdicts = bullets.map(() => KEEP);
+    expect(finalizeBullets(bullets, verdicts)).toEqual(["a", "b", "c", "d", "e", "f"].map(B));
+  });
+
+  it("the internal note itself trips the banned guard (self-defending backstop)", () => {
+    expect(violatesBannedPhrases(INTERNAL_NOTE)).toBe(true);
   });
 });
 
@@ -816,6 +826,28 @@ describe("assembleReleaseBody", () => {
       baseTag: "",
     });
     expect(body).toContain("Compared against the previous release.");
+  });
+
+  it("normalizes multiline/empty bullet text locally (defense in depth)", () => {
+    const body = assembleReleaseBody({
+      bullets: [
+        { text: "line1\nline2", evidence: ["E1"] },
+        { text: "   ", evidence: ["E1"] },
+      ],
+      techNotes: TECH,
+      commitSubjects: [],
+      baseTag: "v3.1.0",
+    });
+    expect(body).toContain("- line1 line2\n");
+    expect(body).not.toContain(INTERNAL_NOTE);
+  });
+
+  it("zero-bullet body round-trips through parseReleaseNotes as the internal note", async () => {
+    const { parseReleaseNotes } = await import("../../../src/shared/releaseHistory.ts");
+    const parsed = parseReleaseNotes(
+      assembleReleaseBody({ bullets: [], techNotes: TECH, commitSubjects: [], baseTag: "" }),
+    );
+    expect(parsed.notes).toEqual([INTERNAL_NOTE]);
   });
 
   it("matches the parseReleaseNotes contract from src/shared/releaseHistory.ts", async () => {
@@ -886,11 +918,24 @@ export function finalizeBullets(bullets, verdicts) {
 }
 
 export function assembleReleaseBody({ bullets, techNotes, commitSubjects, baseTag }) {
-  const noteLines = bullets.length ? bullets.map((b) => `- ${b.text}`) : [`- ${INTERNAL_NOTE}`];
+  // Locally enforce the one-line, non-empty bullet contract instead of only
+  // trusting upstream normalization (defense in depth — parseReleaseNotes
+  // silently drops continuation lines). This also makes the function total:
+  // any input degrades to a valid body, never a throw.
+  const cleaned = (bullets ?? [])
+    .map((b) => ({
+      ...b,
+      text: String(b?.text ?? "")
+        .replace(/\s+/g, " ")
+        .trim(),
+    }))
+    .filter((b) => b.text.length > 0);
+  const noteLines = cleaned.length ? cleaned.map((b) => `- ${b.text}`) : [`- ${INTERNAL_NOTE}`];
   let changelog = String(techNotes ?? "").trim();
   if (!changelog) {
-    changelog = commitSubjects.length
-      ? ["## What's Changed", ...commitSubjects.map((s) => `* ${s}`)].join("\n")
+    const subjects = commitSubjects ?? [];
+    changelog = subjects.length
+      ? ["## What's Changed", ...subjects.map((s) => `* ${s}`)].join("\n")
       : `Compared against ${baseTag || "the previous release"}.`;
   }
   return `## What's new for users\n\n${noteLines.join("\n")}\n\n## Full changelog\n\n${changelog}\n`;
@@ -1060,7 +1105,7 @@ import {
   commitsFromCompareResponse,
   extractPrTitlesFromTechNotes,
 } from "./lib/evidence.mjs";
-import { INTERNAL_NOTE, assembleReleaseBody, finalizeBullets } from "./lib/finalize.mjs";
+import { assembleReleaseBody, finalizeBullets } from "./lib/finalize.mjs";
 import { fetchCompareCommits } from "./lib/githubApi.mjs";
 import { STRICT_JSON_SUFFIX, buildGenerationPrompt, buildJudgePrompt } from "./lib/prompts.mjs";
 import { parseGenerationOutput, parseJudgeOutput } from "./lib/modelJson.mjs";
@@ -1164,7 +1209,14 @@ function finalize() {
     });
   } catch (err) {
     console.warn(`[release-notes] finalize degraded to internal note: ${err}`);
-    body = `## What's new for users\n\n- ${INTERNAL_NOTE}\n\n## Full changelog\n\n${(process.env.TECH_NOTES ?? "").trim() || "Changelog unavailable."}\n`;
+    // assembleReleaseBody is total (normalizes/defaults all inputs), so the
+    // degraded path reuses it — the body template exists in exactly one place.
+    body = assembleReleaseBody({
+      bullets: [],
+      techNotes: process.env.TECH_NOTES ?? "",
+      commitSubjects: [],
+      baseTag: "",
+    });
   }
   mkdirSync(WORK_DIR, { recursive: true });
   writeFileSync(workPath("release_body.md"), body);
