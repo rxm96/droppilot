@@ -894,7 +894,7 @@ const translations: Translations = {
     "plan.empty": "No open drops scheduled",
     "plan.remaining": "{time} left",
     "plan.endsIn": "ends in {time}",
-    "plan.feasibleCount": "{count} of {total} reachable",
+    "plan.feasibleCount": "{count} of {total} fully reachable",
     "plan.atRisk": "{count} of {total} drops won't make it",
     "plan.lost": "won't make it",
 
@@ -1927,7 +1927,7 @@ const translations: Translations = {
     "plan.empty": "Keine offenen Drops eingeplant",
     "plan.remaining": "noch {time}",
     "plan.endsIn": "endet in {time}",
-    "plan.feasibleCount": "{count} von {total} schaffbar",
+    "plan.feasibleCount": "{count} von {total} voll schaffbar",
     "plan.atRisk": "{count} von {total} Drops nicht schaffbar",
     "plan.lost": "nicht schaffbar",
 
