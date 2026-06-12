@@ -7,22 +7,32 @@ import { useVisibleTick } from "@renderer/shared/hooks/useVisibleTick";
 import { cn } from "@renderer/shared/lib/utils";
 import { buildDropsPlan, type PlanEntry } from "@renderer/shared/domain/dropsPlanner";
 import { formatRemaining } from "@renderer/shared/utils";
-import { padRank } from "./formatters";
 
 const URGENT_MS = 2 * 60 * 60 * 1000;
 type TFn = ReturnType<typeof useI18n>["t"];
 
 export type DropsPlanCardProps = {
   items: InventoryItem[];
+  priorityGames?: string[];
+  obeyPriority?: boolean;
 };
 
-export function DropsPlanCard({ items }: DropsPlanCardProps) {
+export function DropsPlanCard({
+  items,
+  priorityGames = [],
+  obeyPriority = false,
+}: DropsPlanCardProps) {
   const { t } = useI18n();
   // Owns its own 60s tick (paused while the window is hidden) so feasibility/
   // countdowns refresh without any useAppModel plumbing.
   const now = useVisibleTick(60_000);
-  const plan = React.useMemo(() => buildDropsPlan(items, now), [items, now]);
+  const plan = React.useMemo(
+    () => buildDropsPlan(items, now, { priorityGames, obeyPriority }),
+    [items, now, priorityGames, obeyPriority],
+  );
   const feasibleCount = plan.filter((e) => e.status === "ok").length;
+  // Boundary between priority games and the permissive fallback tail.
+  const firstFallbackIdx = plan.findIndex((e) => !e.isPriority);
 
   return (
     <Card className="bg-[color:var(--dp-bg-elevated)] border-[color:var(--dp-border)] rounded-[var(--dp-radius-lg)]">
@@ -44,7 +54,14 @@ export function DropsPlanCard({ items }: DropsPlanCardProps) {
         ) : (
           <ul className="divide-y divide-[color:var(--dp-border-soft)]">
             {plan.map((entry, idx) => (
-              <PlanRow key={entry.gameKey} entry={entry} rank={idx + 1} now={now} t={t} />
+              <React.Fragment key={entry.gameKey}>
+                {idx === firstFallbackIdx && firstFallbackIdx > 0 && (
+                  <li className="px-5 py-1.5 text-center font-mono text-[10px] uppercase tracking-[0.12em] text-[color:var(--dp-text-dimmer)]">
+                    — {t("plan.fallbackDivider")} —
+                  </li>
+                )}
+                <PlanRow entry={entry} now={now} t={t} />
+              </React.Fragment>
             ))}
           </ul>
         )}
@@ -53,7 +70,7 @@ export function DropsPlanCard({ items }: DropsPlanCardProps) {
   );
 }
 
-function PlanRow({ entry, rank, now, t }: { entry: PlanEntry; rank: number; now: number; t: TFn }) {
+function PlanRow({ entry, now, t }: { entry: PlanEntry; now: number; t: TFn }) {
   // Representative = the longest open drop (drops are sorted by remaining asc).
   const rep = entry.drops[entry.drops.length - 1];
   const pct =
@@ -78,7 +95,7 @@ function PlanRow({ entry, rank, now, t }: { entry: PlanEntry; rank: number; now:
       )}
     >
       <span className="font-mono text-[11px] tabular-nums text-[color:var(--dp-text-dimmer)]">
-        {padRank(rank)}
+        {entry.priorityRank !== null ? `#${entry.priorityRank}` : "·"}
       </span>
       <div className="min-w-0 flex-1">
         <div
