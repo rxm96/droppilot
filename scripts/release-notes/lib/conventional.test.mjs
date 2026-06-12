@@ -35,6 +35,7 @@ describe("parseConventionalSubject", () => {
     ).toBeNull();
     expect(parseConventionalSubject("Update README")).toBeNull();
     expect(parseConventionalSubject("")).toBeNull();
+    expect(parseConventionalSubject(null)).toBeNull();
   });
 });
 
@@ -45,6 +46,7 @@ describe("isUserFacing", () => {
     "perf(control,inventory): x",
     "revert: feat: x",
     'Revert "fix: x"',
+    "Fix: x",
   ])("candidate: %s", (s) => expect(isUserFacing(s)).toBe(true));
 
   it.each([
