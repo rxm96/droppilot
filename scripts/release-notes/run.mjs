@@ -62,6 +62,9 @@ async function collect() {
     workPath("evidence.json"),
     JSON.stringify({ tag, baseTag, units, candidateIds, commitSubjects }, null, 2),
   );
+  console.log(
+    `[release-notes] evidence: units=${units.length} candidates=[${candidateIds.join(", ")}]`,
+  );
 
   const candidates = units.filter((u) => u.userFacing);
   if (candidates.length > 0) {
@@ -106,6 +109,7 @@ function finalize() {
       const verdicts = parseJudgeOutput(readResponseFile("JUDGE_RESPONSE_FILE"), generated.length);
       kept = finalizeBullets(generated, verdicts);
     }
+    console.log(`[release-notes] bullets: generated=${generated.length} kept=${kept.length}`);
     body = assembleReleaseBody({
       bullets: kept,
       techNotes,

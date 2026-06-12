@@ -92,4 +92,29 @@ describe("run.mjs phases", () => {
     expect(body).toContain("- Internal maintenance and stability improvements.");
     expect(body).toContain("## Full changelog");
   });
+
+  it("a crashed phase still exits 0 with fail-closed outputs (never fail the release)", () => {
+    const workDir = mkdtempSync(join(tmpdir(), "rn-"));
+    // parse-gen with no evidence.json → JSON.parse throws → top-level catch
+    const out = runPhase("parse-gen", { ATTEMPT: "1" }, workDir);
+    expect(out).toContain("parse_ok=false");
+    expect(out).toContain("has_bullets=false");
+  });
+
+  it("missing judge response fails closed through the CLI (internal note, no leak)", () => {
+    const workDir = mkdtempSync(join(tmpdir(), "rn-"));
+    runPhase("collect", { TAG: "v9.9.9", BASE_TAG: "", TECH_NOTES }, workDir);
+    const genResponse = join(workDir, "gen-response.txt");
+    writeFileSync(
+      genResponse,
+      JSON.stringify({
+        bullets: [{ text: "The Engine panel shows accurate uptime.", evidence: ["E1"] }],
+      }),
+    );
+    runPhase("parse-gen", { RESPONSE_FILE: genResponse, ATTEMPT: "1" }, workDir);
+    runPhase("finalize", {}, workDir); // no JUDGE_RESPONSE_FILE set
+    const body = readFileSync(join(workDir, "release_body.md"), "utf8");
+    expect(body).toContain("- Internal maintenance and stability improvements.");
+    expect(body).not.toContain("The Engine panel shows accurate uptime.");
+  });
 });
