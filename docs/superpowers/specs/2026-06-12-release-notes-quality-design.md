@@ -154,8 +154,7 @@ else a multiline step output — verify during implementation).
   check the success criteria from Goal.
 - **Live proof after merge:** a `release:test` prerelease (lands as a draft
   release) exercises the pipeline end-to-end without reaching users.
-- The `verify` CI job (PR #56) covers lint/format/typecheck/tests for the new
-  script code automatically once #56 is merged.
+- The `verify` CI job (PR #56, merged) runs on every PR; for the new script code it effectively gates **format and tests** — eslint and tsc do not cover `scripts/` (plain dependency-free `.mjs` outside both tsconfig programs and the eslint `src/**` glob; accepted, the modules are small and fully unit-tested).
 
 ## Out of scope
 

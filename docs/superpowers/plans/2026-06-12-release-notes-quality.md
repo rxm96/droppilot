@@ -1,6 +1,6 @@
 # Release Notes Quality Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Replace the release job's inline-YAML AI notes generation with a deterministic-gate + grounded-generation + LLM-verify pipeline so published bullets are evidence-backed, vagueness-free, and the fallback line can never leak next to real bullets.
 
@@ -45,7 +45,7 @@ Workflow work dir: `rn-work/` in the runner workspace (override with env `RN_WOR
 - Create: `scripts/release-notes/lib/conventional.mjs`
 - Test: `scripts/release-notes/lib/conventional.test.mjs`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```js
 // scripts/release-notes/lib/conventional.test.mjs
@@ -113,7 +113,7 @@ describe("isUserFacing", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run scripts/release-notes/lib/conventional.test.mjs`
 Expected: FAIL — vitest finds no test because the include pattern does not cover `scripts/` yet. First extend `vitest.config.ts` (this is needed by every later task):
@@ -126,7 +126,7 @@ Expected: FAIL — vitest finds no test because the include pattern does not cov
 Re-run: `npx vitest run scripts/release-notes/lib/conventional.test.mjs`
 Expected: FAIL with "Cannot find module './conventional.mjs'"
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```js
 // scripts/release-notes/lib/conventional.mjs
@@ -163,17 +163,17 @@ export function isUserFacing(subject) {
 
 Note: `revert: feat: x` parses as type `revert` (candidate); `Revert "fix: x"` unwraps to the inner type — both user-facing, while `Revert "chore: …"` stays internal.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run scripts/release-notes/lib/conventional.test.mjs`
 Expected: PASS (all tests)
 
-- [ ] **Step 5: Verify the existing suite still passes (config change!)**
+- [x] **Step 5: Verify the existing suite still passes (config change!)**
 
 Run: `npm test`
 Expected: all previous tests + the new file pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 npx prettier --write scripts/release-notes/lib/conventional.mjs scripts/release-notes/lib/conventional.test.mjs vitest.config.ts
@@ -190,7 +190,7 @@ git commit -m "feat(release-notes): conventional-commit classification + vitest 
 - Create: `scripts/release-notes/lib/evidence.mjs`
 - Test: `scripts/release-notes/lib/evidence.test.mjs`
 
-- [ ] **Step 1: Write the failing test** (fixtures are the real v3.1.1 / v3.1.0 ranges)
+- [x] **Step 1: Write the failing test** (fixtures are the real v3.1.1 / v3.1.0 ranges)
 
 ```js
 // scripts/release-notes/lib/evidence.test.mjs
@@ -288,12 +288,12 @@ describe("buildEvidence", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run scripts/release-notes/lib/evidence.test.mjs`
 Expected: FAIL with "Cannot find module './evidence.mjs'"
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```js
 // scripts/release-notes/lib/evidence.mjs
@@ -350,12 +350,12 @@ export function buildEvidence({ prTitles, commitSubjects }) {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run scripts/release-notes/lib/evidence.test.mjs`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 npx prettier --write scripts/release-notes/lib/evidence.mjs scripts/release-notes/lib/evidence.test.mjs
@@ -372,7 +372,7 @@ git commit -m "feat(release-notes): evidence collection from PR titles + compare
 - Create: `scripts/release-notes/lib/prompts.mjs`
 - Test: `scripts/release-notes/lib/prompts.test.mjs`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```js
 // scripts/release-notes/lib/prompts.test.mjs
@@ -427,12 +427,12 @@ describe("STRICT_JSON_SUFFIX", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run scripts/release-notes/lib/prompts.test.mjs`
 Expected: FAIL with "Cannot find module './prompts.mjs'"
 
-- [ ] **Step 3: Write the implementation** (prompts are code — this is the full production wording)
+- [x] **Step 3: Write the implementation** (prompts are code — this is the full production wording)
 
 ```js
 // scripts/release-notes/lib/prompts.mjs
@@ -487,12 +487,12 @@ Respond with ONLY this JSON shape (no markdown fences, no prose), one verdict pe
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run scripts/release-notes/lib/prompts.test.mjs`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 npx prettier --write scripts/release-notes/lib/prompts.mjs scripts/release-notes/lib/prompts.test.mjs
@@ -509,7 +509,7 @@ git commit -m "feat(release-notes): generation + judge prompts as tested code"
 - Create: `scripts/release-notes/lib/modelJson.mjs`
 - Test: `scripts/release-notes/lib/modelJson.test.mjs`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ````js
 // scripts/release-notes/lib/modelJson.test.mjs
@@ -608,12 +608,12 @@ describe("parseJudgeOutput", () => {
 });
 ````
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run scripts/release-notes/lib/modelJson.test.mjs`
 Expected: FAIL with "Cannot find module './modelJson.mjs'"
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ````js
 // scripts/release-notes/lib/modelJson.mjs
@@ -688,12 +688,12 @@ export function parseJudgeOutput(text, bulletCount) {
 }
 ````
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run scripts/release-notes/lib/modelJson.test.mjs`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 npx prettier --write scripts/release-notes/lib/modelJson.mjs scripts/release-notes/lib/modelJson.test.mjs
@@ -710,7 +710,7 @@ git commit -m "feat(release-notes): tolerant JSON extraction + strict output val
 - Create: `scripts/release-notes/lib/finalize.mjs`
 - Test: `scripts/release-notes/lib/finalize.test.mjs`
 
-- [ ] **Step 1: Write the failing test** (includes the leak-impossible and v3.2.0 banned-phrase scenarios)
+- [x] **Step 1: Write the failing test** (includes the leak-impossible and v3.2.0 banned-phrase scenarios)
 
 ```js
 // scripts/release-notes/lib/finalize.test.mjs
@@ -868,12 +868,12 @@ describe("assembleReleaseBody", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run scripts/release-notes/lib/finalize.test.mjs`
 Expected: FAIL with "Cannot find module './finalize.mjs'"
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```js
 // scripts/release-notes/lib/finalize.mjs
@@ -942,12 +942,12 @@ export function assembleReleaseBody({ bullets, techNotes, commitSubjects, baseTa
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run scripts/release-notes/lib/finalize.test.mjs`
 Expected: PASS — including the cross-import contract test against `parseReleaseNotes`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 npx prettier --write scripts/release-notes/lib/finalize.mjs scripts/release-notes/lib/finalize.test.mjs
@@ -965,7 +965,7 @@ git commit -m "feat(release-notes): verdict application, banned-phrase guard, bo
 - Create: `scripts/release-notes/run.mjs`
 - Test: `scripts/release-notes/run.test.mjs`
 
-- [ ] **Step 1: Write the failing test** (drives the CLI through real files in a temp dir — `collect` offline via empty BASE_TAG, `parse-gen`, `finalize`)
+- [x] **Step 1: Write the failing test** (drives the CLI through real files in a temp dir — `collect` offline via empty BASE_TAG, `parse-gen`, `finalize`)
 
 ```js
 // scripts/release-notes/run.test.mjs
@@ -1092,12 +1092,12 @@ describe("run.mjs phases", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run scripts/release-notes/run.test.mjs`
 Expected: FAIL ("Cannot find module …/run.mjs" from execFileSync)
 
-- [ ] **Step 3: Write `githubApi.mjs`** (thin, no unit test — the response parsing it feeds is tested in Task 2)
+- [x] **Step 3: Write `githubApi.mjs`** (thin, no unit test — the response parsing it feeds is tested in Task 2)
 
 ```js
 // scripts/release-notes/lib/githubApi.mjs
@@ -1117,7 +1117,7 @@ export async function fetchCompareCommits({ repo, baseTag, tag, token }) {
 }
 ```
 
-- [ ] **Step 4: Write `run.mjs`**
+- [x] **Step 4: Write `run.mjs`**
 
 ```js
 // scripts/release-notes/run.mjs
@@ -1284,17 +1284,17 @@ try {
 }
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `npx vitest run scripts/release-notes/run.test.mjs`
 Expected: PASS (4 tests)
 
-- [ ] **Step 6: Run the whole suite**
+- [x] **Step 6: Run the whole suite**
 
 Run: `npm test`
 Expected: all files pass (previous 403 + new script tests).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 npx prettier --write scripts/release-notes/run.mjs scripts/release-notes/run.test.mjs scripts/release-notes/lib/githubApi.mjs
@@ -1310,7 +1310,7 @@ git commit -m "feat(release-notes): CLI phases (collect/parse-gen/finalize) + co
 
 - Modify: `.github/workflows/build.yml` — `release` job only
 
-- [ ] **Step 1: Replace the release-job steps.** Delete these steps entirely: `Gather additional release context`, `Generate user-friendly notes with GitHub Models`, `Validate generated user notes`, `Retry user-friendly notes (strict mode)`, `Validate retried user notes`, `Resolve final user notes`, `Build release body`. Keep `Generate technical release notes`, `Resolve release visibility`, `Publish GitHub Release` (with one path change below). Insert `Checkout`/`Setup Node` at the top of the job. The job becomes:
+- [x] **Step 1: Replace the release-job steps.** Delete these steps entirely: `Gather additional release context`, `Generate user-friendly notes with GitHub Models`, `Validate generated user notes`, `Retry user-friendly notes (strict mode)`, `Validate retried user notes`, `Resolve final user notes`, `Build release body`. Keep `Generate technical release notes`, `Resolve release visibility`, `Publish GitHub Release` (with one path change below). Insert `Checkout`/`Setup Node` at the top of the job. The job becomes:
 
 ```yaml
 release:
@@ -1425,12 +1425,12 @@ Also add a debug-artifact step directly after "Finalize release body" (the `rn-w
 
 Additionally add `rn-work/` to `.gitignore` (running the CLI locally drops the work dir at the repo root).
 
-- [ ] **Step 2: Validate the YAML parses**
+- [x] **Step 2: Validate the YAML parses**
 
 Run: `node -e "const y=require('js-yaml'),f=require('fs');y.load(f.readFileSync('.github/workflows/build.yml','utf8'));console.log('yaml ok')"`
 Expected: `yaml ok`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add .github/workflows/build.yml
@@ -1446,7 +1446,7 @@ git commit -m "ci(release-notes): wire gate + generation + judge pipeline into r
 - Modify: `CLAUDE.md` (Releases paragraph, one sentence)
 - Modify: `docs/superpowers/specs/2026-06-12-release-notes-quality-design.md` (already corrected during planning — verify it is committed)
 
-- [ ] **Step 1: Run the complete local gate**
+- [x] **Step 1: Run the complete local gate**
 
 ```bash
 npm run typecheck && npm run lint && npm run format:check && npm test && npm run build
@@ -1454,13 +1454,13 @@ npm run typecheck && npm run lint && npm run format:check && npm test && npm run
 
 Expected: typecheck clean (scripts are plain `.mjs` — not part of either tsc program, by design), lint 0 errors (5 pre-existing watch-hook warnings), format clean, all tests pass, build clean.
 
-- [ ] **Step 2: Append one sentence to the Releases paragraph in CLAUDE.md** (after "…publish a GitHub Release with AI-generated notes.")
+- [x] **Step 2: Append one sentence to the Releases paragraph in CLAUDE.md** (after "…publish a GitHub Release with AI-generated notes.")
 
 ```markdown
 The notes pipeline lives in `scripts/release-notes/` (deterministic conventional-commit gate → grounded generation → LLM judge; spec: `docs/superpowers/specs/2026-06-12-release-notes-quality-design.md`) — dependency-free Node, tested via `scripts/**/*.test.mjs`.
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 npx prettier --write CLAUDE.md
@@ -1468,7 +1468,7 @@ git add CLAUDE.md docs/superpowers/specs/2026-06-12-release-notes-quality-design
 git commit -m "docs(release-notes): document pipeline location + corrected spec criteria"
 ```
 
-- [ ] **Step 4: Push and open the PR**
+- [x] **Step 4: Push and open the PR**
 
 ```bash
 git push -u origin feat/release-notes-quality
@@ -1477,7 +1477,7 @@ gh pr create --title "feat(release-notes): grounded release notes generation (ga
 
 Expected: the `verify` CI job (from PR #56, if merged) runs lint/format/typecheck/tests/build on the PR.
 
-- [ ] **Step 5: Record the live-verification plan in the PR body** — after merge, run `npm run release:test` (draft prerelease, invisible to users) and check on the run: gate decision matches the range's commits, prompts contain only evidence texts, the published draft body parses in the in-app changelog format, and no internal-note leak. Delete the draft release + tag afterwards:
+- [x] **Step 5: Record the live-verification plan in the PR body** — after merge, run `npm run release:test` (draft prerelease, invisible to users) and check on the run: gate decision matches the range's commits, prompts contain only evidence texts, the published draft body parses in the in-app changelog format, and no internal-note leak. Delete the draft release + tag afterwards:
 
 ```bash
 gh release delete <tag> --yes && git push --delete origin <tag>
