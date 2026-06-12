@@ -828,6 +828,19 @@ describe("assembleReleaseBody", () => {
     expect(body).toContain("Compared against the previous release.");
   });
 
+  it("link-only tech notes (GitHub's real no-PR body) get the commit list prepended", () => {
+    const body = assembleReleaseBody({
+      bullets: [],
+      techNotes: "**Full Changelog**: https://github.com/rxm96/droppilot/compare/v3.1.0...v3.1.1",
+      commitSubjects: ["fix(overview): correct Engine panel last_refresh and uptime"],
+      baseTag: "v3.1.0",
+    });
+    expect(body).toContain(
+      "## What's Changed\n* fix(overview): correct Engine panel last_refresh and uptime",
+    );
+    expect(body).toContain("**Full Changelog**: https://github.com/rxm96/droppilot/compare/");
+  });
+
   it("normalizes multiline/empty bullet text locally (defense in depth)", () => {
     const body = assembleReleaseBody({
       bullets: [
@@ -904,6 +917,10 @@ export function violatesBannedPhrases(text) {
   return BANNED_PATTERNS.some((re) => re.test(text));
 }
 
+// GitHub's generateReleaseNotes body for a range without PRs is exactly this
+// one line (verified against the published v3.1.1 release).
+const FULL_CHANGELOG_LINK_RE = /^\*\*Full Changelog\*\*:\s*\S+$/;
+
 export function applyVerdicts(bullets, verdicts) {
   if (!verdicts) return []; // judge unusable → fail closed
   return bullets.filter(
@@ -932,11 +949,15 @@ export function assembleReleaseBody({ bullets, techNotes, commitSubjects, baseTa
     .filter((b) => b.text.length > 0);
   const noteLines = cleaned.length ? cleaned.map((b) => `- ${b.text}`) : [`- ${INTERNAL_NOTE}`];
   let changelog = String(techNotes ?? "").trim();
+  const subjects = commitSubjects ?? [];
   if (!changelog) {
-    const subjects = commitSubjects ?? [];
     changelog = subjects.length
       ? ["## What's Changed", ...subjects.map((s) => `* ${s}`)].join("\n")
       : `Compared against ${baseTag || "the previous release"}.`;
+  } else if (FULL_CHANGELOG_LINK_RE.test(changelog) && subjects.length) {
+    // GitHub's real no-PR body is not empty — it is exactly the bold compare
+    // link. Prepend the commit list so the section isn't bare (v3.1.1 case).
+    changelog = ["## What's Changed", ...subjects.map((s) => `* ${s}`), "", changelog].join("\n");
   }
   return `## What's new for users\n\n${noteLines.join("\n")}\n\n## Full changelog\n\n${changelog}\n`;
 }
@@ -1468,7 +1489,7 @@ git add CLAUDE.md docs/superpowers/specs/2026-06-12-release-notes-quality-design
 git commit -m "docs(release-notes): document pipeline location + corrected spec criteria"
 ```
 
-- [x] **Step 4: Push and open the PR**
+- [ ] **Step 4: Push and open the PR**
 
 ```bash
 git push -u origin feat/release-notes-quality
@@ -1477,7 +1498,7 @@ gh pr create --title "feat(release-notes): grounded release notes generation (ga
 
 Expected: the `verify` CI job (from PR #56, if merged) runs lint/format/typecheck/tests/build on the PR.
 
-- [x] **Step 5: Record the live-verification plan in the PR body** — after merge, run `npm run release:test` (draft prerelease, invisible to users) and check on the run: gate decision matches the range's commits, prompts contain only evidence texts, the published draft body parses in the in-app changelog format, and no internal-note leak. Delete the draft release + tag afterwards:
+- [ ] **Step 5: Record the live-verification plan in the PR body** — after merge, run `npm run release:test` (draft prerelease, invisible to users) and check on the run: gate decision matches the range's commits, prompts contain only evidence texts, the published draft body parses in the in-app changelog format, and no internal-note leak. Delete the draft release + tag afterwards:
 
 ```bash
 gh release delete <tag> --yes && git push --delete origin <tag>

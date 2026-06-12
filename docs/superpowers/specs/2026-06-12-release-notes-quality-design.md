@@ -1,8 +1,8 @@
 # Release Notes Quality — Design
 
 **Date:** 2026-06-12
-**Branch:** `feat/release-notes-quality` (based on `main`; independent of PR #56 —
-both touch `build.yml` but different regions, rebase if #56 merges first)
+**Branch:** `feat/release-notes-quality` (based on `main` post-#56 — the
+verify-job/PR-CI change is already part of this branch's merge base)
 **Status:** Approved (brainstorming)
 
 ## Goal
@@ -121,9 +121,10 @@ resolve), "Gather additional release context", and "Build release body":
   guard (third line of defense), plus a hard cap of 6 bullets (model order,
   truncate the rest).
 - Assemble `release_body.md`. If the GitHub-generated technical changelog is
-  empty (no PRs in range, the v3.1.1 case), fill the "Full changelog" section
-  deterministically with the commit-subject list (excluding `chore(release)`
-  version bumps, mirroring the existing filter) so the section is never bare.
+  empty or consists only of the `**Full Changelog**:` compare link (GitHub's
+  real body for a range without PRs — the v3.1.1 case), fill/prepend the
+  commit-subject list deterministically (excluding `chore(release)` version
+  bumps, mirroring the existing filter) so the section is never bare.
 
 ## Code layout
 
@@ -145,7 +146,7 @@ else a multiline step output — verify during implementation).
 
 ## Testing & verification
 
-- `vitest.config.ts` `include` gains `scripts/**/*.test.ts` (one line). All
+- `vitest.config.ts` `include` gains `scripts/**/*.test.mjs` (one line). All
   pure functions above get unit tests per repo convention, including fixtures
   reproducing the three real failure modes (v3.1.0 hallucination evidence set,
   v3.1.1 empty range, v3.2.0 single-chore range).
@@ -154,7 +155,7 @@ else a multiline step output — verify during implementation).
   check the success criteria from Goal.
 - **Live proof after merge:** a `release:test` prerelease (lands as a draft
   release) exercises the pipeline end-to-end without reaching users.
-- The `verify` CI job (PR #56, merged) runs on every PR; for the new script code it effectively gates **format and tests** — eslint and tsc do not cover `scripts/` (plain dependency-free `.mjs` outside both tsconfig programs and the eslint `src/**` glob; accepted, the modules are small and fully unit-tested).
+- The `verify` CI job (PR #56, merged) runs on every PR; for the new script code it gates **format and tests** (the prettier `format`/`format:check` globs were extended to include `scripts/**/*.mjs`) — eslint and tsc do not cover `scripts/` (plain dependency-free `.mjs` outside both tsconfig programs and the eslint `src/**` glob; accepted, the modules are small and fully unit-tested).
 
 ## Out of scope
 
