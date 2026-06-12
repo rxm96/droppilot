@@ -9,6 +9,8 @@ import { AttentionStrip } from "./AttentionStrip";
 type OverviewProps = {
   inventory: InventoryState;
   activeGame: string;
+  priorityGames: string[];
+  obeyPriority: boolean;
   activeDropTitle?: string;
   activeDropRemainingMinutes?: number;
   activeDropEta?: number | null;
@@ -50,6 +52,8 @@ type OverviewProps = {
 export function OverviewView({
   inventory,
   activeGame,
+  priorityGames,
+  obeyPriority,
   activeDropTitle,
   activeDropRemainingMinutes,
   activeDropEta,
@@ -107,7 +111,7 @@ export function OverviewView({
           claimStatus={claimStatus}
         />
         <QueuePanel items={items} activeDrop={activeDrop ?? null} targetGame={activeGame} />
-        <DropsPlanCard items={items} />
+        <DropsPlanCard items={items} priorityGames={priorityGames} obeyPriority={obeyPriority} />
       </div>
       <div className="flex flex-col gap-4">
         <ActivityPanel />

@@ -570,6 +570,8 @@ export function useAppModel() {
   const statsProps = { stats, resetStats };
   const overviewProps = {
     inventory,
+    priorityGames,
+    obeyPriority,
     activeGame: displayTargetGame,
     activeDropTitle: activeDropInfo?.title,
     activeDropRemainingMinutes: activeDropInfo?.remainingMinutes,
