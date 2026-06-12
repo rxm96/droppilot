@@ -644,12 +644,12 @@ export function extractBenefitEdges(drop: CampaignDropNode): BenefitEdge[] {
           if (edge.node) return { benefit: edge.node };
           return undefined;
         })
-        .filter((edge): edge is BenefitEdge => !!edge?.benefit)
+        .filter((edge): edge is { benefit: BenefitNode } => !!edge?.benefit)
     : [];
   const nodesFromConnection = Array.isArray(raw.nodes)
     ? raw.nodes
         .map((node) => (node ? { benefit: node } : undefined))
-        .filter((edge): edge is BenefitEdge => !!edge?.benefit)
+        .filter((edge): edge is { benefit: BenefitNode } => !!edge?.benefit)
     : [];
   return [...edgesFromConnection, ...nodesFromConnection];
 }

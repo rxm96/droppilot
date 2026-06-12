@@ -2274,6 +2274,9 @@ fixed inline)
    Step 0 adds `ignoreDeprecations` and every later gate runs both tsc programs
    (scoped — see Finding #2). Proper follow-up (out of scope here): add the node
    typecheck to `package.json`/CI.
+   **Resolved 2026-06-12** (`chore/node-typecheck-gate`): `npm run typecheck` now
+   runs both tsc programs, and PRs get a CI `verify` job (lint → format → typecheck
+   → test → build) in `build.yml`.
 
 2. **9 pre-existing type errors in the node program** (Task 4 Step 0, first
    execution). Un-gating `tsconfig.node.json` revealed errors that accumulated while
@@ -2288,6 +2291,12 @@ fixed inline)
      ws `RawData` vs `unknown` handler mismatch
      These are pinned and tolerated by this plan's scoped node-tsc gate; fixing them
      belongs to the separate CI-typecheck task, not this refactor.
+     **Resolved 2026-06-12** (`chore/node-typecheck-gate`): all 9 fixed at the root —
+     the ws errors by deleting the hand-written `ws-shim.d.ts` in favor of the real
+     `@types/ws` (the shim's generic `on()` signature and its `RawData` type were
+     both wrong); the rest by narrowing (`{ benefit: BenefitNode }` predicate, local
+     `token`), `Record<string, string>` headers, and a commented cast for Electron's
+     argument-less `"minimize"` typing.
 
 3. **PR 1 verification record (Task 5, 2026-06-12).** Gate: lint 0 errors (5
    pre-existing watch-hook warnings), format:check clean, renderer tsc clean, node

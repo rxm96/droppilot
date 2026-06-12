@@ -293,12 +293,15 @@ function createWindow(
 
   // Minimize-to-tray: when on, hide rather than minimize so the window
   // drops out of the taskbar entirely. The tray icon brings it back.
-  win.on("minimize", (event: Electron.Event) => {
+  // Electron's typings declare "minimize" without arguments, but the runtime
+  // passes a preventable event — preventDefault stops the OS minimize.
+  const onMinimize = (event: Electron.Event) => {
     if (appBehavior.minimizeToTray) {
       event.preventDefault();
       win.hide();
     }
-  });
+  };
+  win.on("minimize", onMinimize as () => void);
 
   return win;
 }
