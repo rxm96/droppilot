@@ -1085,7 +1085,9 @@ describe("run.mjs phases", () => {
     runPhase("finalize", {}, workDir); // no JUDGE_RESPONSE_FILE set
     const body = readFileSync(join(workDir, "release_body.md"), "utf8");
     expect(body).toContain("- Internal maintenance and stability improvements.");
-    expect(body).not.toContain("Engine panel");
+    // Assert the exact bullet text is absent — "Engine panel" alone also
+    // appears legitimately in the tech-notes changelog section.
+    expect(body).not.toContain("The Engine panel shows accurate uptime.");
   });
 });
 ```
