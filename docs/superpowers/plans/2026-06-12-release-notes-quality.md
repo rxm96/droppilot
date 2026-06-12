@@ -4,9 +4,9 @@
 
 **Goal:** Replace the release job's inline-YAML AI notes generation with a deterministic-gate + grounded-generation + LLM-verify pipeline so published bullets are evidence-backed, vagueness-free, and the fallback line can never leak next to real bullets.
 
-**Architecture:** Dependency-free Node ESM modules under `scripts/release-notes/` (pure functions + thin CLI), invoked by three workflow steps interleaved with two `actions/ai-inference@v1` calls (gpt-4o, free GitHub Models). Evidence comes from Conventional-Commit classification of compare-range commits + PR titles; generation outputs JSON bullets citing evidence ids; a judge pass rejects unsupported/vague bullets; finalize assembles the body in the exact format `src/shared/releaseHistory.ts` parses.
+**Architecture:** Dependency-free Node ESM modules under `scripts/release-notes/` (pure functions + thin CLI), invoked by three workflow steps interleaved with two `actions/ai-inference@v2` calls (gpt-4o, free GitHub Models). Evidence comes from Conventional-Commit classification of compare-range commits + PR titles; generation outputs JSON bullets citing evidence ids; a judge pass rejects unsupported/vague bullets; finalize assembles the body in the exact format `src/shared/releaseHistory.ts` parses.
 
-**Tech Stack:** Node 20 stdlib only (global `fetch`), Vitest (`*.test.mjs`), GitHub Actions (`actions/ai-inference@v1` — verified inputs: `prompt-file`, `model`, `max-completion-tokens`, `temperature`; outputs: `response`, `response-file`).
+**Tech Stack:** Node 20 stdlib only (global `fetch`), Vitest (`*.test.mjs`), GitHub Actions (`actions/ai-inference@v2` — `max-completion-tokens` and `temperature` exist ONLY in v2; v1 silently ignores them and caps at `max-tokens: 200`, which would truncate multi-bullet JSON. Outputs `response`, `response-file` unchanged across v1/v2).
 
 **Spec:** `docs/superpowers/specs/2026-06-12-release-notes-quality-design.md`
 
@@ -1197,9 +1197,16 @@ async function collect() {
 
 function parseGen() {
   const evidence = JSON.parse(readWorkFile("evidence.json"));
-  const parsed = parseGenerationOutput(readResponseFile("RESPONSE_FILE"), evidence.candidateIds);
+  const attempt = process.env.ATTEMPT ?? "1";
+  const response = readResponseFile("RESPONSE_FILE");
+  if (response) {
+    // Capture the raw model response for the debug artifact — the
+    // response-file itself lives in RUNNER_TEMP and dies with the runner.
+    writeFileSync(workPath(`gen-response-${attempt}.txt`), response);
+  }
+  const parsed = parseGenerationOutput(response, evidence.candidateIds);
   if (!parsed) {
-    if ((process.env.ATTEMPT ?? "1") === "1") {
+    if (attempt === "1") {
       writeFileSync(
         workPath("gen-prompt-strict.txt"),
         readWorkFile("gen-prompt.txt") + STRICT_JSON_SUFFIX,
@@ -1228,7 +1235,11 @@ function finalize() {
     const generated = bulletsRaw ? JSON.parse(bulletsRaw).bullets : [];
     let kept = [];
     if (generated.length > 0) {
-      const verdicts = parseJudgeOutput(readResponseFile("JUDGE_RESPONSE_FILE"), generated.length);
+      const judgeResponse = readResponseFile("JUDGE_RESPONSE_FILE");
+      if (judgeResponse) {
+        writeFileSync(workPath("judge-response.txt"), judgeResponse);
+      }
+      const verdicts = parseJudgeOutput(judgeResponse, generated.length);
       kept = finalizeBullets(generated, verdicts);
     }
     console.log(`[release-notes] bullets: generated=${generated.length} kept=${kept.length}`);
@@ -1336,7 +1347,7 @@ release:
       id: gen
       if: steps.collect.outputs.has_candidates == 'true'
       continue-on-error: true
-      uses: actions/ai-inference@v1
+      uses: actions/ai-inference@v2
       with:
         model: openai/gpt-4o
         prompt-file: rn-work/gen-prompt.txt
@@ -1355,7 +1366,7 @@ release:
       id: gen_retry
       if: steps.collect.outputs.has_candidates == 'true' && steps.parse_gen.outputs.parse_ok == 'false'
       continue-on-error: true
-      uses: actions/ai-inference@v1
+      uses: actions/ai-inference@v2
       with:
         model: openai/gpt-4o
         prompt-file: rn-work/gen-prompt-strict.txt
@@ -1374,7 +1385,7 @@ release:
       id: judge
       if: steps.parse_gen.outputs.has_bullets == 'true' || steps.parse_gen_retry.outputs.has_bullets == 'true'
       continue-on-error: true
-      uses: actions/ai-inference@v1
+      uses: actions/ai-inference@v2
       with:
         model: openai/gpt-4o
         prompt-file: rn-work/judge-prompt.txt
@@ -1400,12 +1411,19 @@ Also add a debug-artifact step directly after "Finalize release body" (the `rn-w
 ```yaml
 - name: Upload notes-pipeline debug artifacts
   if: always()
+  # A debug artifact must never gate the publish, and re-runs must be able
+  # to overwrite the previous attempt's capture (artifact names are shared
+  # across re-run attempts; without overwrite the upload fails the job).
+  continue-on-error: true
   uses: actions/upload-artifact@v4
   with:
     name: release-notes-debug
     path: rn-work/
     if-no-files-found: ignore
+    overwrite: true
 ```
+
+Additionally add `rn-work/` to `.gitignore` (running the CLI locally drops the work dir at the repo root).
 
 - [ ] **Step 2: Validate the YAML parses**
 
