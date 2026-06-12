@@ -883,6 +883,24 @@ the local type definitions are replaced.
 
 - Modify: `src/main/core/settings.ts` (full rewrite below — shrinks ~390 → ~120 lines)
 - Modify: `src/preload/index.ts` (replace the local `SettingsPayload` type)
+- Modify: `tsconfig.node.json` (one line — make the main-process typecheck runnable)
+
+- [ ] **Step 0: Make the node tsconfig usable as a gate**
+
+Discovered during Task 1 review: `npm run typecheck` covers ONLY `src/renderer`
+(tsconfig.json); the main-process program (tsconfig.node.json) is gated by nothing —
+and currently exits 2 on a TS5107 deprecation error (`moduleResolution=node10`),
+before checking any code. From this task on, `src/main` imports the schema, so the
+node program must be checkable. Add one line to the `compilerOptions` of
+`tsconfig.node.json`:
+
+```json
+    "ignoreDeprecations": "6.0",
+```
+
+Then run `npx tsc --noEmit -p tsconfig.node.json` — expected: exit 0 BEFORE the
+settings.ts rewrite (if pre-existing code errors surface, STOP and report instead of
+fixing unrelated code). This command is now part of every verification block below.
 
 - [ ] **Step 1: Rewrite `src/main/core/settings.ts`**
 
@@ -1061,9 +1079,10 @@ time of writing), leave its import in place — verify with:
 
 ```bash
 npx tsc --noEmit -p tsconfig.json
+npx tsc --noEmit -p tsconfig.node.json
 npm test
-npx prettier --write src/main/core/settings.ts src/preload/index.ts
-git add src/main/core/settings.ts src/preload/index.ts
+npx prettier --write src/main/core/settings.ts src/preload/index.ts tsconfig.node.json
+git add src/main/core/settings.ts src/preload/index.ts tsconfig.node.json
 git commit -m "refactor(settings): drive main settings persistence from the shared schema"
 ```
 
@@ -1077,11 +1096,12 @@ git commit -m "refactor(settings): drive main settings persistence from the shar
 npm run lint
 npm run format:check
 npx tsc --noEmit -p tsconfig.json
+npx tsc --noEmit -p tsconfig.node.json
 npm test
 npm run build
 ```
 
-Expected: lint exits 0 (warnings allowed), format clean, tsc clean, all tests pass, build succeeds.
+Expected: lint exits 0 (warnings allowed), format clean, both tsc programs clean, all tests pass, build succeeds.
 
 - [ ] **Step 2: Behavioral smoke (main process)**
 
@@ -2193,6 +2213,7 @@ git commit -m "refactor(settings): derive Language from the settings schema"
 npm run lint
 npm run format:check
 npx tsc --noEmit -p tsconfig.json
+npx tsc --noEmit -p tsconfig.node.json
 npm test
 npm run build
 ```
@@ -2235,3 +2256,14 @@ import-drift-bug fix with the smoke step that proves it.
 
 (append discoveries here during execution — pre-existing oddities are documented, not
 fixed inline)
+
+1. **Typecheck blind spot for shared/main code** (Task 1 quality review). The CI
+   typecheck (`npm run typecheck` → `tsc -p tsconfig.json`) compiles only
+   `src/renderer`+imports; `tsconfig.node.json` (main/preload program) is run by
+   nothing and currently exits 2 on a TS5107 deprecation error before checking any
+   code. Consequence: `settingsSchema.ts` was committed with a latent 31-error
+   `satisfies` violation (invariant arrow-property `normalize`) that no gate could
+   see — fixed in `8d00fc7` (method signature). Mitigation in this plan: Task 4
+   Step 0 adds `ignoreDeprecations` and every later gate runs both tsc programs.
+   Proper follow-up (out of scope here): add the node typecheck to
+   `package.json`/CI.
