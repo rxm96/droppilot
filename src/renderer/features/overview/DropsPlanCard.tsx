@@ -7,6 +7,7 @@ import { useVisibleTick } from "@renderer/shared/hooks/useVisibleTick";
 import { cn } from "@renderer/shared/lib/utils";
 import { buildDropsPlan, type PlanEntry } from "@renderer/shared/domain/dropsPlanner";
 import { formatRemaining } from "@renderer/shared/utils";
+import { padRank } from "./formatters";
 
 const URGENT_MS = 2 * 60 * 60 * 1000;
 type TFn = ReturnType<typeof useI18n>["t"];
@@ -56,9 +57,11 @@ function PlanRow({ entry, rank, now, t }: { entry: PlanEntry; rank: number; now:
   // Representative = the longest open drop (drops are sorted by remaining asc).
   const rep = entry.drops[entry.drops.length - 1];
   const pct =
-    rep.requiredMinutes > 0 ? Math.round((rep.earnedMinutes / rep.requiredMinutes) * 100) : 0;
-  const urgent = entry.deadlineMs !== null && entry.deadlineMs - now < URGENT_MS;
+    rep.requiredMinutes > 0
+      ? Math.max(0, Math.min(100, Math.round((rep.earnedMinutes / rep.requiredMinutes) * 100)))
+      : 0;
   const lost = entry.status === "lost";
+  const urgent = !lost && entry.deadlineMs !== null && entry.deadlineMs - now < URGENT_MS;
   const countdown =
     entry.deadlineMs !== null
       ? t("plan.endsIn", {
@@ -71,11 +74,11 @@ function PlanRow({ entry, rank, now, t }: { entry: PlanEntry; rank: number; now:
       className={cn(
         "flex items-center gap-3 px-5 py-3",
         lost && "opacity-50",
-        urgent && !lost && "border-l-2 border-l-[color:var(--dp-signal-err)]",
+        urgent && "border-l-2 border-l-[color:var(--dp-signal-err)]",
       )}
     >
       <span className="font-mono text-[11px] tabular-nums text-[color:var(--dp-text-dimmer)]">
-        {String(rank).padStart(2, "0")}
+        {padRank(rank)}
       </span>
       <div className="min-w-0 flex-1">
         <div
@@ -84,19 +87,25 @@ function PlanRow({ entry, rank, now, t }: { entry: PlanEntry; rank: number; now:
           {entry.gameLabel}
           <span className="text-[color:var(--dp-text-dimmer)]"> · {rep.title}</span>
         </div>
-        <div className="mt-1 h-[5px] w-full overflow-hidden rounded-full bg-[color:var(--dp-border)]">
-          <div
-            className="h-full bg-[color:var(--dp-signal-ok)]"
-            style={{ width: `${Math.max(0, Math.min(100, pct))}%` }}
-          />
+        <div
+          role="progressbar"
+          aria-valuenow={pct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={entry.gameLabel}
+          className="mt-1 h-[5px] w-full overflow-hidden rounded-full bg-[color:var(--dp-border)]"
+        >
+          <div className="h-full bg-[color:var(--dp-signal-ok)]" style={{ width: `${pct}%` }} />
         </div>
       </div>
       <div className="flex flex-col items-end gap-1">
         {entry.status === "lost" ? (
-          <Pill tone="err">⚠ {t("plan.lost")}</Pill>
+          <Pill tone="err">
+            <span aria-hidden="true">⚠</span> {t("plan.lost")}
+          </Pill>
         ) : entry.status === "partial" ? (
           <Pill tone="warn">
-            ⚠{" "}
+            <span aria-hidden="true">⚠</span>{" "}
             {t("plan.atRisk", {
               count: entry.totalDropCount - entry.feasibleDropCount,
               total: entry.totalDropCount,
@@ -104,16 +113,16 @@ function PlanRow({ entry, rank, now, t }: { entry: PlanEntry; rank: number; now:
           </Pill>
         ) : (
           <Pill tone="ok">
-            ⏳ {t("plan.remaining", { time: formatRemaining(entry.watchMinutes * 60) })}
+            {/* watchMinutes is in minutes; *60 → seconds for formatRemaining */}
+            <span aria-hidden="true">⏳</span>{" "}
+            {t("plan.remaining", { time: formatRemaining(entry.watchMinutes * 60) })}
           </Pill>
         )}
         {countdown && (
           <span
             className={cn(
               "font-mono text-[10px]",
-              urgent && !lost
-                ? "text-[color:var(--dp-signal-err)]"
-                : "text-[color:var(--dp-text-dimmer)]",
+              urgent ? "text-[color:var(--dp-signal-err)]" : "text-[color:var(--dp-text-dimmer)]",
             )}
           >
             {countdown}
