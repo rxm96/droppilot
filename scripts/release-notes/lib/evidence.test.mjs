@@ -9,7 +9,10 @@ const TECH_NOTES_V310 = `## What's Changed
 * fix(types): resolve 17 pre-existing type errors + gate CI on tsc by @rxm96 in https://github.com/rxm96/droppilot/pull/49
 * chore(deps): dependency pass — in-range updates + lucide/TS6 majors by @rxm96 in https://github.com/rxm96/droppilot/pull/47
 * chore(deps): upgrade Electron 40 → 42 by @rxm96 in https://github.com/rxm96/droppilot/pull/48
+* fix: handle messages by @viewer in chat panel by @rxm96 in https://github.com/rxm96/droppilot/pull/51
 
+## New Contributors
+* @newuser made their first contribution in https://github.com/rxm96/droppilot/pull/51
 
 **Full Changelog**: https://github.com/rxm96/droppilot/compare/v3.0.6...v3.1.0`;
 
@@ -19,6 +22,7 @@ describe("extractPrTitlesFromTechNotes", () => {
       "fix(types): resolve 17 pre-existing type errors + gate CI on tsc",
       "chore(deps): dependency pass — in-range updates + lucide/TS6 majors",
       "chore(deps): upgrade Electron 40 → 42",
+      "fix: handle messages by @viewer in chat panel",
     ]);
   });
 
