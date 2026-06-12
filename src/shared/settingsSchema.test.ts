@@ -141,4 +141,40 @@ describe("SETTINGS_SCHEMA descriptors", () => {
       allowUnlinkedGames: false,
     });
   });
+
+  it("schema key order is the settings.json serialization contract", () => {
+    expect(Object.keys(SETTINGS_SCHEMA)).toEqual([
+      "priorityGames",
+      "excludeGames",
+      "obeyPriority",
+      "language",
+      "autoStart",
+      "autoClaim",
+      "autoSelect",
+      "autoSwitch",
+      "warmupEnabled",
+      "updateChannel",
+      "refreshMinMs",
+      "refreshMaxMs",
+      "demoMode",
+      "debugEnabled",
+      "alertsEnabled",
+      "alertsNotifyWhileFocused",
+      "alertsDropClaimed",
+      "alertsDropEndingSoon",
+      "alertsDropEndingMinutes",
+      "alertsWatchError",
+      "alertsAutoSwitch",
+      "alertsNewDrops",
+      "enableBadgesEmotes",
+      "allowUnlinkedGames",
+      "closeToTray",
+      "minimizeToTray",
+      "theme",
+      "accent",
+      "fontPair",
+      "uiPrefsMigrated",
+      "windowBounds",
+    ]);
+  });
 });

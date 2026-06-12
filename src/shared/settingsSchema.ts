@@ -12,7 +12,7 @@ import { DEFAULT_UPDATE_CHANNEL, UPDATE_CHANNELS, normalizeUpdateChannel } from 
  */
 export type SettingDescriptor<T> = {
   default: T;
-  normalize: (raw: unknown, fallback: T) => T;
+  normalize(raw: unknown, fallback: T): T;
 };
 
 export type WindowBounds = {
@@ -142,6 +142,8 @@ export type SettingsSetter = <K extends SettingKey>(key: K, value: AppSettings[K
 /** Save payload: any subset of settings, plus the accepted legacy input key. */
 export type SettingsSaveData = Partial<AppSettings> & { betaUpdates?: boolean };
 
+// SETTING_KEYS preserves the schema declaration order — it IS the settings.json
+// serialization contract; never sort or reorder it.
 const SETTING_KEYS = Object.keys(SETTINGS_SCHEMA) as SettingKey[];
 
 export const SETTINGS_DEFAULTS: AppSettings = Object.fromEntries(
