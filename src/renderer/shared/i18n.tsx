@@ -1,7 +1,8 @@
 ﻿import { createContext, useContext, useMemo } from "react";
 import type { ReactNode } from "react";
+import type { AppSettings } from "../../shared/settingsSchema";
 
-export type Language = "de" | "en";
+export type Language = AppSettings["language"];
 
 type Translations = Record<Language, Record<string, string>>;
 
