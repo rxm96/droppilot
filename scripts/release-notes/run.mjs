@@ -75,9 +75,16 @@ async function collect() {
 
 function parseGen() {
   const evidence = JSON.parse(readWorkFile("evidence.json"));
-  const parsed = parseGenerationOutput(readResponseFile("RESPONSE_FILE"), evidence.candidateIds);
+  const attempt = process.env.ATTEMPT ?? "1";
+  const response = readResponseFile("RESPONSE_FILE");
+  if (response) {
+    // Capture the raw model response for the debug artifact — the
+    // response-file itself lives in RUNNER_TEMP and dies with the runner.
+    writeFileSync(workPath(`gen-response-${attempt}.txt`), response);
+  }
+  const parsed = parseGenerationOutput(response, evidence.candidateIds);
   if (!parsed) {
-    if ((process.env.ATTEMPT ?? "1") === "1") {
+    if (attempt === "1") {
       writeFileSync(
         workPath("gen-prompt-strict.txt"),
         readWorkFile("gen-prompt.txt") + STRICT_JSON_SUFFIX,
@@ -106,7 +113,11 @@ function finalize() {
     const generated = bulletsRaw ? JSON.parse(bulletsRaw).bullets : [];
     let kept = [];
     if (generated.length > 0) {
-      const verdicts = parseJudgeOutput(readResponseFile("JUDGE_RESPONSE_FILE"), generated.length);
+      const judgeResponse = readResponseFile("JUDGE_RESPONSE_FILE");
+      if (judgeResponse) {
+        writeFileSync(workPath("judge-response.txt"), judgeResponse);
+      }
+      const verdicts = parseJudgeOutput(judgeResponse, generated.length);
       kept = finalizeBullets(generated, verdicts);
     }
     console.log(`[release-notes] bullets: generated=${generated.length} kept=${kept.length}`);

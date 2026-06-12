@@ -176,7 +176,7 @@ jobs:
         id: gen
         if: steps.collect.outputs.has_candidates == 'true'
         continue-on-error: true
-        uses: actions/ai-inference@v1
+        uses: actions/ai-inference@v2
         with:
           model: openai/gpt-4o
           prompt-file: rn-work/gen-prompt.txt
@@ -195,7 +195,7 @@ jobs:
         id: gen_retry
         if: steps.collect.outputs.has_candidates == 'true' && steps.parse_gen.outputs.parse_ok == 'false'
         continue-on-error: true
-        uses: actions/ai-inference@v1
+        uses: actions/ai-inference@v2
         with:
           model: openai/gpt-4o
           prompt-file: rn-work/gen-prompt-strict.txt
@@ -214,7 +214,7 @@ jobs:
         id: judge
         if: steps.parse_gen.outputs.has_bullets == 'true' || steps.parse_gen_retry.outputs.has_bullets == 'true'
         continue-on-error: true
-        uses: actions/ai-inference@v1
+        uses: actions/ai-inference@v2
         with:
           model: openai/gpt-4o
           prompt-file: rn-work/judge-prompt.txt
@@ -229,11 +229,16 @@ jobs:
 
       - name: Upload notes-pipeline debug artifacts
         if: always()
+        # A debug artifact must never gate the publish, and re-runs must be able
+        # to overwrite the previous attempt's capture (artifact names are shared
+        # across re-run attempts; without overwrite the upload fails the job).
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: release-notes-debug
           path: rn-work/
           if-no-files-found: ignore
+          overwrite: true
 
       - name: Resolve release visibility
         id: release_visibility
