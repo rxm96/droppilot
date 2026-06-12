@@ -35,12 +35,18 @@ which evidence supports each bullet, and a judge pass rejects unsupported or
 vague bullets. The fallback sentence exists only in script code, never in a
 prompt.
 
-Success criteria: replaying the v3.1.0/v3.1.1/v3.2.0 evidence through the new
-pipeline yields (a) exactly the single internal-maintenance line for
-v3.1.1/v3.2.0 with zero model calls, and (b) no unsupported bullet (e.g. "demo
-mode") surviving the judge for v3.1.0. The published body format stays
-byte-compatible with the `parseReleaseNotes` contract in
-`src/shared/releaseHistory.ts`.
+Success criteria (corrected during planning against the real compare ranges —
+v3.1.1 contains a real `fix(overview)` commit and v3.2.0 a `perf` commit, so
+neither is internal-only): (a) a range with zero `feat`/`fix`/`perf`/`revert`
+entries produces exactly the single internal-maintenance line with **zero model
+calls**; (b) the internal-maintenance line can never appear alongside other
+bullets (leak structurally impossible — v3.1.1's failure); (c) the generation
+prompt contains only the listed evidence texts — no file-name-derived material
+(v3.1.0's hallucination source), and bullets citing invalid evidence ids are
+dropped; (d) a bare vagueness bullet like "Performance improvements" is
+rejected by judge-concreteness and, as last resort, the banned-phrase guard
+(v3.2.0's failure). The published body format stays byte-compatible with the
+`parseReleaseNotes` contract in `src/shared/releaseHistory.ts`.
 
 ## Decisions (locked during brainstorming)
 
