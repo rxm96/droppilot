@@ -3,7 +3,9 @@ import {
   AUTOMATION_RESET_KEYS,
   SETTINGS_DEFAULTS,
   SETTINGS_SCHEMA,
+  applySettingsPatch,
   automationResetPatch,
+  normalizeSettings,
 } from "./settingsSchema";
 
 describe("SETTINGS_SCHEMA descriptors", () => {
@@ -176,5 +178,140 @@ describe("SETTINGS_SCHEMA descriptors", () => {
       "uiPrefsMigrated",
       "windowBounds",
     ]);
+  });
+});
+
+describe("normalizeSettings (load path: fallback = default)", () => {
+  it("non-object input yields all defaults", () => {
+    expect(normalizeSettings(undefined)).toEqual(SETTINGS_DEFAULTS);
+    expect(normalizeSettings(null)).toEqual(SETTINGS_DEFAULTS);
+    expect(normalizeSettings("garbage")).toEqual(SETTINGS_DEFAULTS);
+  });
+
+  it("wrong-typed fields fall back to defaults, valid fields pass through", () => {
+    const result = normalizeSettings({
+      autoClaim: "yes",
+      demoMode: true,
+      language: "fr",
+      priorityGames: "nope",
+      theme: "blue",
+      accent: 42,
+    });
+    expect(result.autoClaim).toBe(true); // default
+    expect(result.demoMode).toBe(true); // valid input
+    expect(result.language).toBe("de"); // default
+    expect(result.priorityGames).toEqual([]); // default
+    expect(result.theme).toBe(null); // default
+    expect(result.accent).toBe(null); // default
+  });
+
+  it("legacy betaUpdates maps to the preview channel", () => {
+    expect(normalizeSettings({ betaUpdates: true }).updateChannel).toBe("preview");
+    expect(normalizeSettings({ betaUpdates: false }).updateChannel).toBe("stable");
+    // Explicit valid channel wins over the legacy flag:
+    expect(normalizeSettings({ updateChannel: "stable", betaUpdates: true }).updateChannel).toBe(
+      "stable",
+    );
+    // Invalid channel + legacy flag → flag decides:
+    expect(normalizeSettings({ updateChannel: "weird", betaUpdates: true }).updateChannel).toBe(
+      "preview",
+    );
+  });
+
+  it("clamps the refresh pair cross-field (min ≥ 1h, min ≤ max, max ≥ min)", () => {
+    const low = normalizeSettings({ refreshMinMs: 1000, refreshMaxMs: 999_999_999 });
+    expect(low.refreshMinMs).toBe(3_600_000);
+    expect(low.refreshMaxMs).toBe(999_999_999);
+
+    const inverted = normalizeSettings({ refreshMinMs: 7_200_000, refreshMaxMs: 3_600_000 });
+    expect(inverted.refreshMinMs).toBe(3_600_000);
+    expect(inverted.refreshMaxMs).toBe(3_600_000);
+
+    const invalid = normalizeSettings({ refreshMinMs: "soon", refreshMaxMs: null });
+    expect(invalid.refreshMinMs).toBe(3_600_000);
+    expect(invalid.refreshMaxMs).toBe(4_200_000);
+  });
+
+  it("drops unknown keys", () => {
+    const result = normalizeSettings({ futureFlag: true, autoClaim: false });
+    expect("futureFlag" in result).toBe(false);
+    expect(result.autoClaim).toBe(false);
+  });
+
+  it("never emits a betaUpdates key", () => {
+    expect("betaUpdates" in normalizeSettings({ betaUpdates: true })).toBe(false);
+  });
+});
+
+describe("applySettingsPatch (save path: fallback = current)", () => {
+  const current = { ...SETTINGS_DEFAULTS, autoClaim: false, language: "en" as const };
+
+  it("applies valid patch values and keeps everything else", () => {
+    const next = applySettingsPatch(current, { demoMode: true });
+    expect(next.demoMode).toBe(true);
+    expect(next.autoClaim).toBe(false); // untouched
+    expect(next.language).toBe("en"); // untouched
+  });
+
+  it("invalid patch values fall back to CURRENT, not default", () => {
+    const next = applySettingsPatch(current, { autoClaim: "yes", language: 42 });
+    expect(next.autoClaim).toBe(false); // current, NOT the default true
+    expect(next.language).toBe("en"); // current, NOT the default "de"
+  });
+
+  it("keys explicitly set to undefined are treated as absent", () => {
+    const withBounds = {
+      ...current,
+      windowBounds: { x: 1, y: 2, width: 800, height: 600, isMaximized: false },
+    };
+    const next = applySettingsPatch(withBounds, { windowBounds: undefined, autoClaim: undefined });
+    expect(next.windowBounds).toEqual(withBounds.windowBounds);
+    expect(next.autoClaim).toBe(false);
+  });
+
+  it("windowBounds: an INVALID present value clears the current bounds (legacy quirk)", () => {
+    const withBounds = {
+      ...current,
+      windowBounds: { x: 1, y: 2, width: 800, height: 600, isMaximized: false },
+    };
+    const next = applySettingsPatch(withBounds, {
+      windowBounds: { x: 0, y: 0, width: 10, height: 10, isMaximized: false },
+    });
+    expect(next.windowBounds).toBe(undefined);
+  });
+
+  it("updateChannel: an invalid string in the patch resolves to the DEFAULT, not current (legacy quirk)", () => {
+    const onPreview = { ...SETTINGS_DEFAULTS, updateChannel: "preview" as const };
+    expect(applySettingsPatch(onPreview, { updateChannel: "weird" }).updateChannel).toBe("stable");
+    // Legacy flag still accepted on the patch path:
+    expect(applySettingsPatch(SETTINGS_DEFAULTS, { betaUpdates: true }).updateChannel).toBe(
+      "preview",
+    );
+    // Neither key present → current is kept:
+    expect(applySettingsPatch(onPreview, { autoClaim: true }).updateChannel).toBe("preview");
+    // Non-string channel without the flag → current is kept (legacy || condition):
+    expect(applySettingsPatch(onPreview, { updateChannel: 42 }).updateChannel).toBe("preview");
+  });
+
+  it("clamps the refresh pair against patch-or-current values", () => {
+    const next = applySettingsPatch(SETTINGS_DEFAULTS, { refreshMaxMs: 3_700_000 });
+    expect(next.refreshMinMs).toBe(3_600_000);
+    expect(next.refreshMaxMs).toBe(3_700_000);
+
+    // Patch min above current max: min is clamped down to max.
+    const inverted = applySettingsPatch(SETTINGS_DEFAULTS, { refreshMinMs: 9_999_999 });
+    expect(inverted.refreshMinMs).toBe(4_200_000);
+    expect(inverted.refreshMaxMs).toBe(4_200_000);
+  });
+
+  it("drops unknown keys instead of persisting them (deliberate delta vs legacy spread)", () => {
+    const next = applySettingsPatch(SETTINGS_DEFAULTS, { futureFlag: true });
+    expect("futureFlag" in next).toBe(false);
+  });
+
+  it("does not mutate the current object", () => {
+    const before = JSON.parse(JSON.stringify(current));
+    applySettingsPatch(current, { demoMode: true });
+    expect(current).toEqual(before);
   });
 });

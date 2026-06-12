@@ -167,6 +167,64 @@ export const automationResetPatch = (): Partial<AppSettings> =>
     AUTOMATION_RESET_KEYS.map((key) => [key, SETTINGS_DEFAULTS[key]]),
   ) as Partial<AppSettings>;
 
-// normalizeUpdateChannel is re-used by the pipeline functions added in Task 2.
-// This export keeps TS from flagging it unused until then; Task 2 removes it.
-export { normalizeUpdateChannel as __internalNormalizeUpdateChannel };
+const MIN_REFRESH_MS = 3_600_000;
+
+const asRecord = (raw: unknown): Record<string, unknown> =>
+  raw !== null && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+
+/**
+ * Cross-field pass: the refresh pair is clamped together (min ≥ 1h, min ≤ max,
+ * max ≥ min) — a per-key normalize cannot see its sibling. Exact port of the
+ * legacy normalizeRefreshIntervals formula.
+ */
+const clampRefreshIntervals = (settings: AppSettings): AppSettings => {
+  const clampedMin = Math.max(
+    MIN_REFRESH_MS,
+    Math.min(settings.refreshMinMs, settings.refreshMaxMs),
+  );
+  const clampedMax = Math.max(clampedMin, settings.refreshMaxMs);
+  if (clampedMin === settings.refreshMinMs && clampedMax === settings.refreshMaxMs) {
+    return settings;
+  }
+  return { ...settings, refreshMinMs: clampedMin, refreshMaxMs: clampedMax };
+};
+
+/**
+ * Load path: per-key normalize with fallback = default, then the legacy
+ * updateChannel/betaUpdates resolution (always runs on load), then the
+ * cross-field clamp. Non-object input yields all defaults.
+ */
+export function normalizeSettings(raw: unknown): AppSettings {
+  const source = asRecord(raw);
+  const result = {} as Record<SettingKey, unknown>;
+  for (const key of SETTING_KEYS) {
+    const descriptor = SETTINGS_SCHEMA[key] as SettingDescriptor<unknown>;
+    result[key] = descriptor.normalize(source[key], descriptor.default);
+  }
+  const settings = result as AppSettings;
+  settings.updateChannel = normalizeUpdateChannel(source.updateChannel, source.betaUpdates);
+  return clampRefreshIntervals(settings);
+}
+
+/**
+ * Save path: only keys PRESENT in the patch are applied, each normalized with
+ * fallback = current[key] (an invalid patch value keeps the stored value).
+ * Unknown keys are dropped. Two legacy quirks are preserved deliberately:
+ * updateChannel resolves through normalizeUpdateChannel whenever the patch
+ * carries a string channel OR a boolean betaUpdates (an invalid string thus
+ * resolves to the default, not to current), and windowBounds' descriptor
+ * ignores the fallback (invalid bounds clear the stored value).
+ */
+export function applySettingsPatch(current: AppSettings, patch: unknown): AppSettings {
+  const source = asRecord(patch);
+  const next: AppSettings = { ...current };
+  for (const key of SETTING_KEYS) {
+    if (source[key] === undefined) continue;
+    const descriptor = SETTINGS_SCHEMA[key] as SettingDescriptor<unknown>;
+    (next as Record<SettingKey, unknown>)[key] = descriptor.normalize(source[key], current[key]);
+  }
+  if (typeof source.updateChannel === "string" || typeof source.betaUpdates === "boolean") {
+    next.updateChannel = normalizeUpdateChannel(source.updateChannel, source.betaUpdates);
+  }
+  return clampRefreshIntervals(next);
+}
