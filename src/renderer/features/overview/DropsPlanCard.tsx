@@ -9,6 +9,7 @@ import { buildDropsPlan, type PlanEntry } from "@renderer/shared/domain/dropsPla
 import { formatRemaining } from "@renderer/shared/utils";
 
 const URGENT_MS = 2 * 60 * 60 * 1000;
+const EMPTY_GAMES: string[] = [];
 type TFn = ReturnType<typeof useI18n>["t"];
 
 export type DropsPlanCardProps = {
@@ -19,7 +20,7 @@ export type DropsPlanCardProps = {
 
 export function DropsPlanCard({
   items,
-  priorityGames = [],
+  priorityGames = EMPTY_GAMES,
   obeyPriority = false,
 }: DropsPlanCardProps) {
   const { t } = useI18n();
@@ -56,7 +57,10 @@ export function DropsPlanCard({
             {plan.map((entry, idx) => (
               <React.Fragment key={entry.gameKey}>
                 {idx === firstFallbackIdx && firstFallbackIdx > 0 && (
-                  <li className="px-5 py-1.5 text-center font-mono text-[10px] uppercase tracking-[0.12em] text-[color:var(--dp-text-dimmer)]">
+                  <li
+                    aria-hidden="true"
+                    className="border-t-0 px-5 py-1.5 text-center font-mono text-[10px] uppercase tracking-[0.12em] text-[color:var(--dp-text-dimmer)]"
+                  >
                     — {t("plan.fallbackDivider")} —
                   </li>
                 )}
