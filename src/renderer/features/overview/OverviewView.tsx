@@ -1,6 +1,7 @@
 import type { ChannelTrackerStatus, ErrorInfo, InventoryState } from "@renderer/shared/types";
 import { HeroPanel } from "./HeroPanel";
 import { QueuePanel } from "./QueuePanel";
+import { DropsPlanCard } from "./DropsPlanCard";
 import { ActivityPanel } from "./ActivityPanel";
 import { EnginePanel } from "./EnginePanel";
 import { AttentionStrip } from "./AttentionStrip";
@@ -106,6 +107,7 @@ export function OverviewView({
           claimStatus={claimStatus}
         />
         <QueuePanel items={items} activeDrop={activeDrop ?? null} targetGame={activeGame} />
+        <DropsPlanCard items={items} />
       </div>
       <div className="flex flex-col gap-4">
         <ActivityPanel />
