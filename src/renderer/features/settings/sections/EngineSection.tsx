@@ -4,28 +4,15 @@ import { Input } from "@renderer/shared/components/ui/input";
 import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { SettingRow } from "../SettingRow";
 import { SettingsToggle } from "../SettingsToggle";
+import type { AppSettings, SettingsSetter } from "../../../../shared/settingsSchema";
 import { useI18n } from "@renderer/shared/i18n";
 
 export type EngineSectionProps = {
-  autoStart?: boolean;
-  setAutoStart?: (val: boolean) => void;
+  settings: AppSettings;
+  setSetting: SettingsSetter;
   showAutoStart?: boolean;
-  autoClaim: boolean;
-  setAutoClaim: (val: boolean) => void;
-  autoSelect: boolean;
-  setAutoSelect: (val: boolean) => void;
-  autoSwitchEnabled: boolean;
-  setAutoSwitchEnabled: (val: boolean) => void;
-  warmupEnabled: boolean;
-  setWarmupEnabled: (val: boolean) => void;
-  refreshMinMs: number;
-  refreshMaxMs: number;
   setRefreshIntervals: (minMs: number, maxMs: number) => void;
   resetAutomation: () => void;
-  closeToTray?: boolean;
-  setCloseToTray?: (val: boolean) => void;
-  minimizeToTray?: boolean;
-  setMinimizeToTray?: (val: boolean) => void;
 };
 
 export function EngineSection(props: EngineSectionProps) {
@@ -40,8 +27,8 @@ export function EngineSection(props: EngineSectionProps) {
             description={t("settings.row.autoStart.description")}
             control={
               <SettingsToggle
-                checked={!!props.autoStart}
-                onChange={(v) => props.setAutoStart?.(v)}
+                checked={props.settings.autoStart}
+                onChange={(v) => props.setSetting("autoStart", v)}
               />
             }
           />
@@ -51,8 +38,8 @@ export function EngineSection(props: EngineSectionProps) {
             description={t("settings.row.closeToTray.description")}
             control={
               <SettingsToggle
-                checked={!!props.closeToTray}
-                onChange={(v) => props.setCloseToTray?.(v)}
+                checked={props.settings.closeToTray}
+                onChange={(v) => props.setSetting("closeToTray", v)}
               />
             }
           />
@@ -62,8 +49,8 @@ export function EngineSection(props: EngineSectionProps) {
             description={t("settings.row.minimizeToTray.description")}
             control={
               <SettingsToggle
-                checked={!!props.minimizeToTray}
-                onChange={(v) => props.setMinimizeToTray?.(v)}
+                checked={props.settings.minimizeToTray}
+                onChange={(v) => props.setSetting("minimizeToTray", v)}
               />
             }
           />
@@ -75,13 +62,23 @@ export function EngineSection(props: EngineSectionProps) {
         <SettingRow
           label={t("settings.autoClaim")}
           description={t("settings.autoClaimHint")}
-          control={<SettingsToggle checked={props.autoClaim} onChange={props.setAutoClaim} />}
+          control={
+            <SettingsToggle
+              checked={props.settings.autoClaim}
+              onChange={(v) => props.setSetting("autoClaim", v)}
+            />
+          }
         />
         <SettingRow
           divided
           label={t("settings.autoSelect")}
           description={t("settings.autoSelectHint")}
-          control={<SettingsToggle checked={props.autoSelect} onChange={props.setAutoSelect} />}
+          control={
+            <SettingsToggle
+              checked={props.settings.autoSelect}
+              onChange={(v) => props.setSetting("autoSelect", v)}
+            />
+          }
         />
         <SettingRow
           divided
@@ -89,8 +86,8 @@ export function EngineSection(props: EngineSectionProps) {
           description={t("settings.autoSwitchHint")}
           control={
             <SettingsToggle
-              checked={props.autoSwitchEnabled}
-              onChange={props.setAutoSwitchEnabled}
+              checked={props.settings.autoSwitch}
+              onChange={(v) => props.setSetting("autoSwitch", v)}
             />
           }
         />
@@ -99,7 +96,10 @@ export function EngineSection(props: EngineSectionProps) {
           label={t("settings.warmup")}
           description={t("settings.warmupHint")}
           control={
-            <SettingsToggle checked={props.warmupEnabled} onChange={props.setWarmupEnabled} />
+            <SettingsToggle
+              checked={props.settings.warmupEnabled}
+              onChange={(v) => props.setSetting("warmupEnabled", v)}
+            />
           }
         />
       </div>
@@ -115,10 +115,10 @@ export function EngineSection(props: EngineSectionProps) {
                 tone="dp"
                 type="number"
                 min={5}
-                value={Math.round(props.refreshMinMs / 1000)}
+                value={Math.round(props.settings.refreshMinMs / 1000)}
                 onChange={(e) => {
                   const min = Math.max(5, Number(e.target.value) || 0) * 1000;
-                  props.setRefreshIntervals(min, Math.max(min, props.refreshMaxMs));
+                  props.setRefreshIntervals(min, Math.max(min, props.settings.refreshMaxMs));
                 }}
                 aria-label={t("settings.aria.minIntervalSeconds")}
                 className="w-20"
@@ -130,10 +130,10 @@ export function EngineSection(props: EngineSectionProps) {
                 tone="dp"
                 type="number"
                 min={5}
-                value={Math.round(props.refreshMaxMs / 1000)}
+                value={Math.round(props.settings.refreshMaxMs / 1000)}
                 onChange={(e) => {
                   const max = Math.max(5, Number(e.target.value) || 0) * 1000;
-                  props.setRefreshIntervals(Math.min(max, props.refreshMinMs), max);
+                  props.setRefreshIntervals(Math.min(max, props.settings.refreshMinMs), max);
                 }}
                 aria-label={t("settings.aria.maxIntervalSeconds")}
                 className="w-20"

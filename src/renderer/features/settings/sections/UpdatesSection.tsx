@@ -13,11 +13,12 @@ import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { ReleaseHistory } from "./ReleaseHistory";
 import { SettingRow } from "../SettingRow";
 import type { UpdateChannel } from "../../../../shared/updateChannels";
+import type { AppSettings, SettingsSetter } from "../../../../shared/settingsSchema";
 import { useI18n } from "@renderer/shared/i18n";
 
 export type UpdatesSectionProps = {
-  updateChannel: UpdateChannel;
-  setUpdateChannel: (val: UpdateChannel) => void;
+  settings: AppSettings;
+  setSetting: SettingsSetter;
   updateStatus?: {
     state:
       | "idle"
@@ -94,8 +95,8 @@ export function UpdatesSection(props: UpdatesSectionProps) {
         description={t("settings.row.updateChannel.description")}
         control={
           <Select
-            value={props.updateChannel}
-            onValueChange={(v) => props.setUpdateChannel(v as UpdateChannel)}
+            value={props.settings.updateChannel}
+            onValueChange={(v) => props.setSetting("updateChannel", v as UpdateChannel)}
           >
             <SelectTrigger tone="dp" aria-label={t("settings.aria.updateChannel")}>
               <SelectValue />

@@ -3,37 +3,29 @@ import { Input } from "@renderer/shared/components/ui/input";
 import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { SettingRow } from "../SettingRow";
 import { SettingsToggle } from "../SettingsToggle";
+import type { AppSettings, SettingsSetter } from "../../../../shared/settingsSchema";
 import { useI18n } from "@renderer/shared/i18n";
 
 export type AlertsSectionProps = {
-  alertsEnabled: boolean;
-  setAlertsEnabled: (val: boolean) => void;
-  alertsNotifyWhileFocused: boolean;
-  setAlertsNotifyWhileFocused: (val: boolean) => void;
-  alertsDropClaimed: boolean;
-  setAlertsDropClaimed: (val: boolean) => void;
-  alertsDropEndingSoon: boolean;
-  setAlertsDropEndingSoon: (val: boolean) => void;
-  alertsDropEndingMinutes: number;
-  setAlertsDropEndingMinutes: (val: number) => void;
-  alertsWatchError: boolean;
-  setAlertsWatchError: (val: boolean) => void;
-  alertsAutoSwitch: boolean;
-  setAlertsAutoSwitch: (val: boolean) => void;
-  alertsNewDrops: boolean;
-  setAlertsNewDrops: (val: boolean) => void;
+  settings: AppSettings;
+  setSetting: SettingsSetter;
 };
 
 export function AlertsSection(props: AlertsSectionProps) {
   const { t } = useI18n();
-  const disabledByMaster = !props.alertsEnabled;
+  const disabledByMaster = !props.settings.alertsEnabled;
   return (
     <div className="flex flex-col">
       <SectionLabel>{t("settings.subsection.masterSwitch")}</SectionLabel>
       <SettingRow
         label={t("settings.row.alertsEnabled.label")}
         description={t("settings.row.alertsEnabled.description")}
-        control={<SettingsToggle checked={props.alertsEnabled} onChange={props.setAlertsEnabled} />}
+        control={
+          <SettingsToggle
+            checked={props.settings.alertsEnabled}
+            onChange={(v) => props.setSetting("alertsEnabled", v)}
+          />
+        }
       />
       <SettingRow
         divided
@@ -42,8 +34,8 @@ export function AlertsSection(props: AlertsSectionProps) {
         description={t("settings.row.alertsNotifyWhileFocused.description")}
         control={
           <SettingsToggle
-            checked={props.alertsNotifyWhileFocused}
-            onChange={props.setAlertsNotifyWhileFocused}
+            checked={props.settings.alertsNotifyWhileFocused}
+            onChange={(v) => props.setSetting("alertsNotifyWhileFocused", v)}
             disabled={disabledByMaster}
           />
         }
@@ -57,8 +49,8 @@ export function AlertsSection(props: AlertsSectionProps) {
           description={t("settings.row.alertsDropClaimed.description")}
           control={
             <SettingsToggle
-              checked={props.alertsDropClaimed}
-              onChange={props.setAlertsDropClaimed}
+              checked={props.settings.alertsDropClaimed}
+              onChange={(v) => props.setSetting("alertsDropClaimed", v)}
               disabled={disabledByMaster}
             />
           }
@@ -70,15 +62,15 @@ export function AlertsSection(props: AlertsSectionProps) {
           description={t("settings.row.alertsDropEndingSoon.description")}
           control={
             <SettingsToggle
-              checked={props.alertsDropEndingSoon}
-              onChange={props.setAlertsDropEndingSoon}
+              checked={props.settings.alertsDropEndingSoon}
+              onChange={(v) => props.setSetting("alertsDropEndingSoon", v)}
               disabled={disabledByMaster}
             />
           }
         />
         <SettingRow
           divided
-          disabled={disabledByMaster || !props.alertsDropEndingSoon}
+          disabled={disabledByMaster || !props.settings.alertsDropEndingSoon}
           label={t("settings.row.alertsDropEndingMinutes.label")}
           description={t("settings.row.alertsDropEndingMinutes.description")}
           control={
@@ -87,11 +79,14 @@ export function AlertsSection(props: AlertsSectionProps) {
                 tone="dp"
                 type="number"
                 min={1}
-                value={props.alertsDropEndingMinutes}
+                value={props.settings.alertsDropEndingMinutes}
                 onChange={(e) =>
-                  props.setAlertsDropEndingMinutes(Math.max(1, Number(e.target.value) || 1))
+                  props.setSetting(
+                    "alertsDropEndingMinutes",
+                    Math.max(1, Number(e.target.value) || 1),
+                  )
                 }
-                disabled={disabledByMaster || !props.alertsDropEndingSoon}
+                disabled={disabledByMaster || !props.settings.alertsDropEndingSoon}
                 aria-label={t("settings.aria.endingSoonMinutes")}
                 className="w-24"
               />
@@ -108,8 +103,8 @@ export function AlertsSection(props: AlertsSectionProps) {
           description={t("settings.row.alertsNewDrops.description")}
           control={
             <SettingsToggle
-              checked={props.alertsNewDrops}
-              onChange={props.setAlertsNewDrops}
+              checked={props.settings.alertsNewDrops}
+              onChange={(v) => props.setSetting("alertsNewDrops", v)}
               disabled={disabledByMaster}
             />
           }
@@ -124,8 +119,8 @@ export function AlertsSection(props: AlertsSectionProps) {
           description={t("settings.row.alertsWatchError.description")}
           control={
             <SettingsToggle
-              checked={props.alertsWatchError}
-              onChange={props.setAlertsWatchError}
+              checked={props.settings.alertsWatchError}
+              onChange={(v) => props.setSetting("alertsWatchError", v)}
               disabled={disabledByMaster}
             />
           }
@@ -137,8 +132,8 @@ export function AlertsSection(props: AlertsSectionProps) {
           description={t("settings.row.alertsAutoSwitch.description")}
           control={
             <SettingsToggle
-              checked={props.alertsAutoSwitch}
-              onChange={props.setAlertsAutoSwitch}
+              checked={props.settings.alertsAutoSwitch}
+              onChange={(v) => props.setSetting("alertsAutoSwitch", v)}
               disabled={disabledByMaster}
             />
           }

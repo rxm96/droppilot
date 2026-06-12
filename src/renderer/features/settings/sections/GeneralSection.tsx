@@ -11,13 +11,12 @@ import { Button } from "@renderer/shared/components/ui/button";
 import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { SettingRow } from "../SettingRow";
 import { SettingsToggle } from "../SettingsToggle";
+import type { AppSettings, SettingsSetter } from "../../../../shared/settingsSchema";
 import { useI18n } from "@renderer/shared/i18n";
 
 export type GeneralSectionProps = {
-  language: "de" | "en";
-  setLanguage: (val: "de" | "en") => void;
-  demoMode: boolean;
-  setDemoMode: (val: boolean) => void;
+  settings: AppSettings;
+  setSetting: SettingsSetter;
   sendTestAlert: () => void;
 };
 
@@ -30,7 +29,10 @@ export function GeneralSection(props: GeneralSectionProps) {
         label={t("settings.language")}
         description={t("settings.row.language.description")}
         control={
-          <Select value={props.language} onValueChange={(v) => props.setLanguage(v as "de" | "en")}>
+          <Select
+            value={props.settings.language}
+            onValueChange={(v) => props.setSetting("language", v as "de" | "en")}
+          >
             <SelectTrigger tone="dp" aria-label={t("settings.aria.language")}>
               <SelectValue />
             </SelectTrigger>
@@ -47,7 +49,12 @@ export function GeneralSection(props: GeneralSectionProps) {
         divided
         label={t("settings.demoMode")}
         description={t("settings.row.demoMode.description")}
-        control={<SettingsToggle checked={props.demoMode} onChange={props.setDemoMode} />}
+        control={
+          <SettingsToggle
+            checked={props.settings.demoMode}
+            onChange={(v) => props.setSetting("demoMode", v)}
+          />
+        }
       />
 
       <div className="mt-6">

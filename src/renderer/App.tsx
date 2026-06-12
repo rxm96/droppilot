@@ -144,8 +144,8 @@ function AppShell({ model }: { model: Model }) {
       onSwitchTarget: () => setView("priorities"),
       onClaimNow: model.heroProps.onClaimNow,
       claimStatus: model.heroProps.claimStatus,
-      refreshMinMs: settingsProps.refreshMinMs,
-      refreshMaxMs: settingsProps.refreshMaxMs,
+      refreshMinMs: settingsProps.settings.refreshMinMs,
+      refreshMaxMs: settingsProps.settings.refreshMaxMs,
     }),
     [
       overviewProps,
@@ -153,8 +153,8 @@ function AppShell({ model }: { model: Model }) {
       setView,
       model.heroProps.onClaimNow,
       model.heroProps.claimStatus,
-      settingsProps.refreshMinMs,
-      settingsProps.refreshMaxMs,
+      settingsProps.settings.refreshMinMs,
+      settingsProps.settings.refreshMaxMs,
     ],
   );
 

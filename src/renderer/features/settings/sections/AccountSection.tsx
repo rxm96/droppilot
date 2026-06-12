@@ -4,14 +4,15 @@ import { Button } from "@renderer/shared/components/ui/button";
 import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { SettingRow } from "../SettingRow";
 import { SettingsToggle } from "../SettingsToggle";
+import type { AppSettings, SettingsSetter } from "../../../../shared/settingsSchema";
 import { useI18n } from "@renderer/shared/i18n";
 
 export type AccountSectionProps = {
   isLinked: boolean;
   onLogout: () => void;
   onLogin: () => void;
-  allowUnlinkedGames: boolean;
-  setAllowUnlinkedGames: (val: boolean) => void;
+  settings: AppSettings;
+  setSetting: SettingsSetter;
 };
 
 export function AccountSection(props: AccountSectionProps) {
@@ -53,8 +54,8 @@ export function AccountSection(props: AccountSectionProps) {
           description={t("settings.row.allowUnlinked.description")}
           control={
             <SettingsToggle
-              checked={props.allowUnlinkedGames}
-              onChange={props.setAllowUnlinkedGames}
+              checked={props.settings.allowUnlinkedGames}
+              onChange={(v) => props.setSetting("allowUnlinkedGames", v)}
             />
           }
         />

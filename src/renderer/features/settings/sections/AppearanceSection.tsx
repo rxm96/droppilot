@@ -14,17 +14,18 @@ import { AccentPicker } from "../AccentPicker";
 import { FontPicker } from "../FontPicker";
 import type { ThemePreference } from "@renderer/shared/theme";
 import type { FontPairId } from "@renderer/shared/fontPairs";
+import type { AppSettings, SettingsSetter } from "../../../../shared/settingsSchema";
 import { useI18n } from "@renderer/shared/i18n";
 
 export type AppearanceSectionProps = {
   theme: ThemePreference;
   setTheme: (val: ThemePreference) => void;
-  enableBadgesEmotes: boolean;
-  setEnableBadgesEmotes: (val: boolean) => void;
   accent: string | null;
   setAccent: (val: string | null) => void;
   fontPair: FontPairId;
   setFontPair: (val: FontPairId) => void;
+  settings: AppSettings;
+  setSetting: SettingsSetter;
 };
 
 export function AppearanceSection(props: AppearanceSectionProps) {
@@ -76,8 +77,8 @@ export function AppearanceSection(props: AppearanceSectionProps) {
           description={t("settings.row.badgesEmotes.description")}
           control={
             <SettingsToggle
-              checked={props.enableBadgesEmotes}
-              onChange={props.setEnableBadgesEmotes}
+              checked={props.settings.enableBadgesEmotes}
+              onChange={(v) => props.setSetting("enableBadgesEmotes", v)}
             />
           }
         />

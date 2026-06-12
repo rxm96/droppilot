@@ -1,6 +1,6 @@
 import * as React from "react";
 import type { ThemePreference } from "@renderer/shared/theme";
-import type { UpdateChannel } from "../../../shared/updateChannels";
+import type { AppSettings, SettingsSetter } from "../../../shared/settingsSchema";
 import { SettingsSidebar, type SettingsSectionKey } from "./SettingsSidebar";
 import { useSettingsViewState } from "./useSettingsViewState";
 import { GeneralSection } from "./sections/GeneralSection";
@@ -16,57 +16,15 @@ type SettingsProps = {
   isLinked: boolean;
   onLogout: () => void;
   onLogin: () => void;
-  language: "de" | "en";
-  setLanguage: (val: "de" | "en") => void;
+  settings: AppSettings;
+  setSetting: SettingsSetter;
   theme: ThemePreference;
   setTheme: (val: ThemePreference) => void;
   accent: string | null;
   setAccent: (val: string | null) => void;
   fontPair: import("@renderer/shared/fontPairs").FontPairId;
   setFontPair: (val: import("@renderer/shared/fontPairs").FontPairId) => void;
-  autoStart: boolean;
-  setAutoStart: (val: boolean) => void;
-  autoClaim: boolean;
-  setAutoClaim: (val: boolean) => void;
-  autoSelect: boolean;
-  setAutoSelect: (val: boolean) => void;
-  autoSwitchEnabled: boolean;
-  setAutoSwitchEnabled: (val: boolean) => void;
-  warmupEnabled: boolean;
-  setWarmupEnabled: (val: boolean) => void;
-  updateChannel: UpdateChannel;
-  setUpdateChannel: (val: UpdateChannel) => void;
-  demoMode: boolean;
-  setDemoMode: (val: boolean) => void;
-  debugEnabled: boolean;
-  setDebugEnabled: (val: boolean) => void;
-  alertsEnabled: boolean;
-  setAlertsEnabled: (val: boolean) => void;
-  alertsNotifyWhileFocused: boolean;
-  setAlertsNotifyWhileFocused: (val: boolean) => void;
-  alertsDropClaimed: boolean;
-  setAlertsDropClaimed: (val: boolean) => void;
-  alertsDropEndingSoon: boolean;
-  setAlertsDropEndingSoon: (val: boolean) => void;
-  alertsDropEndingMinutes: number;
-  setAlertsDropEndingMinutes: (val: number) => void;
-  alertsWatchError: boolean;
-  setAlertsWatchError: (val: boolean) => void;
-  alertsAutoSwitch: boolean;
-  setAlertsAutoSwitch: (val: boolean) => void;
-  alertsNewDrops: boolean;
-  setAlertsNewDrops: (val: boolean) => void;
-  enableBadgesEmotes: boolean;
-  setEnableBadgesEmotes: (val: boolean) => void;
-  allowUnlinkedGames: boolean;
-  setAllowUnlinkedGames: (val: boolean) => void;
-  closeToTray: boolean;
-  setCloseToTray: (val: boolean) => void;
-  minimizeToTray: boolean;
-  setMinimizeToTray: (val: boolean) => void;
   sendTestAlert: () => void;
-  refreshMinMs: number;
-  refreshMaxMs: number;
   setRefreshIntervals: (minMs: number, maxMs: number) => void;
   resetAutomation: () => void;
   settingsJson: string;
@@ -142,52 +100,36 @@ export function SettingsView(props: SettingsProps) {
         <main className="flex-1 min-w-0 rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] px-6 py-5">
           {active === "general" && (
             <GeneralSection
-              language={props.language}
-              setLanguage={props.setLanguage}
-              demoMode={props.demoMode}
-              setDemoMode={props.setDemoMode}
+              settings={props.settings}
+              setSetting={props.setSetting}
               sendTestAlert={props.sendTestAlert}
             />
           )}
           {active === "engine" && (
             <EngineSection
-              autoStart={props.autoStart}
-              setAutoStart={props.setAutoStart}
+              settings={props.settings}
+              setSetting={props.setSetting}
               showAutoStart={props.showAutoStart}
-              autoClaim={props.autoClaim}
-              setAutoClaim={props.setAutoClaim}
-              autoSelect={props.autoSelect}
-              setAutoSelect={props.setAutoSelect}
-              autoSwitchEnabled={props.autoSwitchEnabled}
-              setAutoSwitchEnabled={props.setAutoSwitchEnabled}
-              warmupEnabled={props.warmupEnabled}
-              setWarmupEnabled={props.setWarmupEnabled}
-              refreshMinMs={props.refreshMinMs}
-              refreshMaxMs={props.refreshMaxMs}
               setRefreshIntervals={props.setRefreshIntervals}
               resetAutomation={props.resetAutomation}
-              closeToTray={props.closeToTray}
-              setCloseToTray={props.setCloseToTray}
-              minimizeToTray={props.minimizeToTray}
-              setMinimizeToTray={props.setMinimizeToTray}
             />
           )}
           {active === "appearance" && (
             <AppearanceSection
               theme={props.theme}
               setTheme={props.setTheme}
-              enableBadgesEmotes={props.enableBadgesEmotes}
-              setEnableBadgesEmotes={props.setEnableBadgesEmotes}
               accent={props.accent}
               setAccent={props.setAccent}
               fontPair={props.fontPair}
               setFontPair={props.setFontPair}
+              settings={props.settings}
+              setSetting={props.setSetting}
             />
           )}
           {active === "updates" && props.showUpdateCheck && (
             <UpdatesSection
-              updateChannel={props.updateChannel}
-              setUpdateChannel={props.setUpdateChannel}
+              settings={props.settings}
+              setSetting={props.setSetting}
               updateStatus={props.updateStatus}
               checkUpdates={props.checkUpdates}
               downloadUpdate={props.downloadUpdate}
@@ -195,38 +137,21 @@ export function SettingsView(props: SettingsProps) {
             />
           )}
           {active === "alerts" && (
-            <AlertsSection
-              alertsEnabled={props.alertsEnabled}
-              setAlertsEnabled={props.setAlertsEnabled}
-              alertsNotifyWhileFocused={props.alertsNotifyWhileFocused}
-              setAlertsNotifyWhileFocused={props.setAlertsNotifyWhileFocused}
-              alertsDropClaimed={props.alertsDropClaimed}
-              setAlertsDropClaimed={props.setAlertsDropClaimed}
-              alertsDropEndingSoon={props.alertsDropEndingSoon}
-              setAlertsDropEndingSoon={props.setAlertsDropEndingSoon}
-              alertsDropEndingMinutes={props.alertsDropEndingMinutes}
-              setAlertsDropEndingMinutes={props.setAlertsDropEndingMinutes}
-              alertsWatchError={props.alertsWatchError}
-              setAlertsWatchError={props.setAlertsWatchError}
-              alertsAutoSwitch={props.alertsAutoSwitch}
-              setAlertsAutoSwitch={props.setAlertsAutoSwitch}
-              alertsNewDrops={props.alertsNewDrops}
-              setAlertsNewDrops={props.setAlertsNewDrops}
-            />
+            <AlertsSection settings={props.settings} setSetting={props.setSetting} />
           )}
           {active === "account" && (
             <AccountSection
               isLinked={props.isLinked}
               onLogout={props.onLogout}
               onLogin={props.onLogin}
-              allowUnlinkedGames={props.allowUnlinkedGames}
-              setAllowUnlinkedGames={props.setAllowUnlinkedGames}
+              settings={props.settings}
+              setSetting={props.setSetting}
             />
           )}
           {active === "advanced" && (
             <AdvancedSection
-              debugEnabled={props.debugEnabled}
-              setDebugEnabled={props.setDebugEnabled}
+              settings={props.settings}
+              setSetting={props.setSetting}
               settingsJson={props.settingsJson}
               setSettingsJson={props.setSettingsJson}
               exportSettings={props.exportSettings}

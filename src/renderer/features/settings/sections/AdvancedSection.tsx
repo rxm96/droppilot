@@ -3,11 +3,12 @@ import { Button } from "@renderer/shared/components/ui/button";
 import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { SettingRow } from "../SettingRow";
 import { SettingsToggle } from "../SettingsToggle";
+import type { AppSettings, SettingsSetter } from "../../../../shared/settingsSchema";
 import { useI18n } from "@renderer/shared/i18n";
 
 export type AdvancedSectionProps = {
-  debugEnabled: boolean;
-  setDebugEnabled: (val: boolean) => void;
+  settings: AppSettings;
+  setSetting: SettingsSetter;
   settingsJson: string;
   setSettingsJson: (val: string) => void;
   exportSettings: () => void;
@@ -40,7 +41,12 @@ export function AdvancedSection(props: AdvancedSectionProps) {
       <SettingRow
         label={t("settings.row.debugView.label")}
         description={t("settings.row.debugView.description")}
-        control={<SettingsToggle checked={props.debugEnabled} onChange={props.setDebugEnabled} />}
+        control={
+          <SettingsToggle
+            checked={props.settings.debugEnabled}
+            onChange={(v) => props.setSetting("debugEnabled", v)}
+          />
+        }
       />
 
       <div className="mt-6">
