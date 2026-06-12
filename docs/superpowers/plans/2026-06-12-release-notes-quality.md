@@ -1062,6 +1062,31 @@ describe("run.mjs phases", () => {
     expect(body).toContain("- Internal maintenance and stability improvements.");
     expect(body).toContain("## Full changelog");
   });
+
+  it("a crashed phase still exits 0 with fail-closed outputs (never fail the release)", () => {
+    const workDir = mkdtempSync(join(tmpdir(), "rn-"));
+    // parse-gen with no evidence.json → JSON.parse throws → top-level catch
+    const out = runPhase("parse-gen", { ATTEMPT: "1" }, workDir);
+    expect(out).toContain("parse_ok=false");
+    expect(out).toContain("has_bullets=false");
+  });
+
+  it("missing judge response fails closed through the CLI (internal note, no leak)", () => {
+    const workDir = mkdtempSync(join(tmpdir(), "rn-"));
+    runPhase("collect", { TAG: "v9.9.9", BASE_TAG: "", TECH_NOTES }, workDir);
+    const genResponse = join(workDir, "gen-response.txt");
+    writeFileSync(
+      genResponse,
+      JSON.stringify({
+        bullets: [{ text: "The Engine panel shows accurate uptime.", evidence: ["E1"] }],
+      }),
+    );
+    runPhase("parse-gen", { RESPONSE_FILE: genResponse, ATTEMPT: "1" }, workDir);
+    runPhase("finalize", {}, workDir); // no JUDGE_RESPONSE_FILE set
+    const body = readFileSync(join(workDir, "release_body.md"), "utf8");
+    expect(body).toContain("- Internal maintenance and stability improvements.");
+    expect(body).not.toContain("Engine panel");
+  });
 });
 ```
 
@@ -1157,6 +1182,9 @@ async function collect() {
     workPath("evidence.json"),
     JSON.stringify({ tag, baseTag, units, candidateIds, commitSubjects }, null, 2),
   );
+  console.log(
+    `[release-notes] evidence: units=${units.length} candidates=[${candidateIds.join(", ")}]`,
+  );
 
   const candidates = units.filter((u) => u.userFacing);
   if (candidates.length > 0) {
@@ -1201,6 +1229,7 @@ function finalize() {
       const verdicts = parseJudgeOutput(readResponseFile("JUDGE_RESPONSE_FILE"), generated.length);
       kept = finalizeBullets(generated, verdicts);
     }
+    console.log(`[release-notes] bullets: generated=${generated.length} kept=${kept.length}`);
     body = assembleReleaseBody({
       bullets: kept,
       techNotes,
@@ -1362,7 +1391,19 @@ release:
     #   body_path: release_body.md   →   body_path: rn-work/release_body.md
 ```
 
-Skip/failure semantics to preserve exactly: gate closed → `gen`…`judge` all skip and `finalize` writes the internal line with zero model calls; an errored ai-inference step (`continue-on-error`) leaves `response-file` empty, which the parse phases treat as a parse failure (retry, then fail closed); a crashed `parse_gen` leaves `parse_ok` empty so the retry condition (`== 'false'`) stays false and `finalize` degrades to the internal line.
+Skip/failure semantics to preserve exactly: gate closed → `gen`…`judge` all skip and `finalize` writes the internal line with zero model calls; an errored ai-inference step (`continue-on-error`) leaves `response-file` empty, which the parse phases treat as a parse failure (retry, then fail closed); a crashed `parse_gen` still emits `parse_ok=false` via its top-level catch, so the retry fires against a missing `gen-prompt-strict.txt`, errors under `continue-on-error`, and `parse_gen_retry` fails closed — one wasted ai-inference step on a path that still ends at the internal line (accepted). A hard process death (OOM/runner kill) in a script step fails the job before `finalize` — accepted residual risk, since the catch-based never-fail invariant cannot survive process death.
+
+Also add a debug-artifact step directly after "Finalize release body" (the `rn-work/` dir dies with the runner; this makes every notes run post-mortemable):
+
+```yaml
+- name: Upload notes-pipeline debug artifacts
+  if: always()
+  uses: actions/upload-artifact@v4
+  with:
+    name: release-notes-debug
+    path: rn-work/
+    if-no-files-found: ignore
+```
 
 - [ ] **Step 2: Validate the YAML parses**
 
