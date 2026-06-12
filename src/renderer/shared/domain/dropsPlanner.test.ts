@@ -135,3 +135,71 @@ describe("buildDropsPlan", () => {
     expect(plan[0].drops.map((d) => d.remainingMinutes)).toEqual([20, 120]);
   });
 });
+
+describe("buildDropsPlan — priority-aware", () => {
+  it("strict mode shows only priority games, in priority order", () => {
+    const plan = buildDropsPlan(
+      [
+        makeItem({ id: "a", game: "Apex", endsAt: iso(60) }),
+        makeItem({ id: "b", game: "Brawl", endsAt: iso(30) }),
+        makeItem({ id: "c", game: "Cult", endsAt: iso(10) }),
+      ],
+      NOW,
+      { priorityGames: ["Brawl", "Apex"], obeyPriority: true },
+    );
+    expect(plan.map((e) => e.gameLabel)).toEqual(["Brawl", "Apex"]);
+    expect(plan.some((e) => e.gameLabel === "Cult")).toBe(false);
+  });
+
+  it("permissive mode lists priority games first, then fallback by EDF", () => {
+    const plan = buildDropsPlan(
+      [
+        makeItem({ id: "p1", game: "P1", endsAt: iso(600) }),
+        makeItem({ id: "f-late", game: "FLate", endsAt: iso(300) }),
+        makeItem({ id: "f-soon", game: "FSoon", endsAt: iso(120) }),
+      ],
+      NOW,
+      { priorityGames: ["P1"], obeyPriority: false },
+    );
+    expect(plan.map((e) => e.gameLabel)).toEqual(["P1", "FSoon", "FLate"]);
+    expect(plan.map((e) => e.isPriority)).toEqual([true, false, false]);
+  });
+
+  it("assigns 1-based priorityRank matched case-insensitively", () => {
+    const plan = buildDropsPlan([makeItem({ game: "Rust" })], NOW, {
+      priorityGames: ["rust"],
+      obeyPriority: false,
+    });
+    expect(plan[0].isPriority).toBe(true);
+    expect(plan[0].priorityRank).toBe(1);
+  });
+
+  it("computes feasibility along priority order (deadline risk), not EDF", () => {
+    const items = [
+      makeItem({ id: "a", game: "A", requiredMinutes: 180, endsAt: iso(10000) }),
+      makeItem({ id: "b", game: "B", requiredMinutes: 60, endsAt: iso(90) }),
+    ];
+    const strict = buildDropsPlan(items, NOW, { priorityGames: ["A", "B"], obeyPriority: true });
+    expect(strict.find((e) => e.gameLabel === "B")?.status).toBe("lost");
+    const edf = buildDropsPlan(items, NOW);
+    expect(edf.find((e) => e.gameLabel === "B")?.status).toBe("ok");
+  });
+
+  it("empty priority list + permissive equals the pure-EDF (no-options) result", () => {
+    const items = [
+      makeItem({ id: "x", game: "X", endsAt: iso(120) }),
+      makeItem({ id: "y", game: "Y", endsAt: iso(60) }),
+    ];
+    expect(buildDropsPlan(items, NOW, { priorityGames: [], obeyPriority: false })).toEqual(
+      buildDropsPlan(items, NOW),
+    );
+  });
+
+  it("empty priority list + strict yields an empty plan", () => {
+    const plan = buildDropsPlan([makeItem({ game: "X", endsAt: iso(60) })], NOW, {
+      priorityGames: [],
+      obeyPriority: true,
+    });
+    expect(plan).toEqual([]);
+  });
+});

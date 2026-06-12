@@ -19,12 +19,21 @@ export type PlanEntry = {
   gameKey: string;
   gameLabel: string;
   watchMinutes: number;
-  deadlineMs: number | null; // earliest tier deadline — EDF sort key + countdown; per-drop feasibility uses each drop's own deadlineMs
+  deadlineMs: number | null; // earliest tier deadline — countdown; per-drop feasibility uses each drop's own deadlineMs
   status: "ok" | "partial" | "lost";
   feasibleDropCount: number;
   totalDropCount: number;
+  isPriority: boolean; // game is on the priority list
+  priorityRank: number | null; // 1-based priority position; null for fallback games
   drops: PlanDrop[];
 };
+
+export type DropsPlanOptions = {
+  priorityGames: string[];
+  obeyPriority: boolean;
+};
+
+const DEFAULT_OPTIONS: DropsPlanOptions = { priorityGames: [], obeyPriority: false };
 
 /** ISO → ms with a finite guard (mirrors InventoryDrop.isExpired parsing). */
 function parseFiniteMs(value: string | undefined): number | null {
@@ -43,7 +52,18 @@ export function isPlannableDrop(item: InventoryItem, now: number): boolean {
   return true;
 }
 
-export function buildDropsPlan(items: InventoryItem[], now: number): PlanEntry[] {
+type Shell = {
+  gameKey: string;
+  gameLabel: string;
+  deadlineMs: number | null;
+  drops: Omit<PlanDrop, "feasible">[];
+};
+
+export function buildDropsPlan(
+  items: InventoryItem[],
+  now: number,
+  options: DropsPlanOptions = DEFAULT_OPTIONS,
+): PlanEntry[] {
   // 1. Filter to plannable drops.
   const plannable = items.filter((it) => isPlannableDrop(it, now));
 
@@ -57,12 +77,6 @@ export function buildDropsPlan(items: InventoryItem[], now: number): PlanEntry[]
   }
 
   // 3. Build per-game shells: drops (sorted by remaining asc) + earliest deadline.
-  type Shell = {
-    gameKey: string;
-    gameLabel: string;
-    deadlineMs: number | null;
-    drops: Omit<PlanDrop, "feasible">[];
-  };
   const shells: Shell[] = [];
   for (const [key, { label, items: groupItems }] of groups) {
     const drops = groupItems
@@ -83,9 +97,16 @@ export function buildDropsPlan(items: InventoryItem[], now: number): PlanEntry[]
     shells.push({ gameKey: key, gameLabel: label, deadlineMs, drops });
   }
 
-  // 4. EDF sort: earliest deadline first (null = +Infinity, last). Tiebreak by the
-  //    binding (longest) drop's remaining, then label, for determinism.
-  shells.sort((a, b) => {
+  // 4. Order by the engine's actual farming order, not pure deadline.
+  //    priorityRankByKey: normalized priority game → 1-based rank (lowest index wins).
+  const priorityRankByKey = new Map<string, number>();
+  options.priorityGames.forEach((game, idx) => {
+    const key = normalizeGameName(game);
+    if (key && !priorityRankByKey.has(key)) priorityRankByKey.set(key, idx + 1);
+  });
+
+  // EDF comparator — used for the fallback tail and the no-priority case.
+  const byEdf = (a: Shell, b: Shell) => {
     const da = a.deadlineMs ?? Number.POSITIVE_INFINITY;
     const db = b.deadlineMs ?? Number.POSITIVE_INFINITY;
     if (da !== db) return da - db;
@@ -93,12 +114,22 @@ export function buildDropsPlan(items: InventoryItem[], now: number): PlanEntry[]
     const wb = Math.max(0, ...b.drops.map((d) => d.remainingMinutes));
     if (wa !== wb) return wa - wb;
     return a.gameKey < b.gameKey ? -1 : a.gameKey > b.gameKey ? 1 : 0;
-  });
+  };
 
-  // 5. Feasibility walk: a cursor of watch-minutes accumulates across games.
+  const priorityShells = shells
+    .filter((s) => priorityRankByKey.has(s.gameKey))
+    .sort((a, b) => priorityRankByKey.get(a.gameKey)! - priorityRankByKey.get(b.gameKey)!);
+  const fallbackShells = shells.filter((s) => !priorityRankByKey.has(s.gameKey)).sort(byEdf);
+
+  // Strict: only priority games. Permissive: priority games, then fallback (EDF).
+  const orderedShells = options.obeyPriority
+    ? priorityShells
+    : [...priorityShells, ...fallbackShells];
+
+  // 5. Feasibility walk along the engine order: a watch-minute cursor accumulates.
   const result: PlanEntry[] = [];
   let cursor = 0;
-  for (const shell of shells) {
+  for (const shell of orderedShells) {
     const cursorStart = cursor;
     const drops: PlanDrop[] = shell.drops.map((d) => {
       const completionMs = now + (cursorStart + d.remainingMinutes) * MINUTE_MS;
@@ -113,6 +144,7 @@ export function buildDropsPlan(items: InventoryItem[], now: number): PlanEntry[]
       : 0;
     const status: PlanEntry["status"] =
       feasibleDrops.length === drops.length ? "ok" : feasibleDrops.length > 0 ? "partial" : "lost";
+    const priorityRank = priorityRankByKey.get(shell.gameKey) ?? null;
     cursor = cursorStart + watchMinutes;
     result.push({
       gameKey: shell.gameKey,
@@ -122,6 +154,8 @@ export function buildDropsPlan(items: InventoryItem[], now: number): PlanEntry[]
       status,
       feasibleDropCount: feasibleDrops.length,
       totalDropCount: drops.length,
+      isPriority: priorityRank !== null,
+      priorityRank,
       drops,
     });
   }
