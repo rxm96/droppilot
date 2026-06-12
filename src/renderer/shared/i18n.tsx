@@ -888,6 +888,16 @@ const translations: Translations = {
 
     // queue.* — new namespace, QueuePanel
     "queue.header": "queue · next up",
+
+    // plan.* — Smart Drops Planner
+    "plan.title": "Plan",
+    "plan.empty": "No open drops scheduled",
+    "plan.remaining": "{time} left",
+    "plan.endsIn": "ends in {time}",
+    "plan.feasibleCount": "{count} of {total} reachable",
+    "plan.atRisk": "{count} of {total} drops won't make it",
+    "plan.lost": "won't make it",
+
     "queue.manage": "manage →",
     "queue.empty": "no drops in queue",
     "queue.table.dropGame": "drop · game",
@@ -1911,6 +1921,16 @@ const translations: Translations = {
 
     // queue.* — new namespace, QueuePanel
     "queue.header": "queue · als nächstes",
+
+    // plan.* — Smart Drops Planner
+    "plan.title": "Plan",
+    "plan.empty": "Keine offenen Drops eingeplant",
+    "plan.remaining": "noch {time}",
+    "plan.endsIn": "endet in {time}",
+    "plan.feasibleCount": "{count} von {total} schaffbar",
+    "plan.atRisk": "{count} von {total} Drops nicht schaffbar",
+    "plan.lost": "nicht schaffbar",
+
     "queue.manage": "verwalten →",
     "queue.empty": "keine drops in der queue",
     "queue.table.dropGame": "drop · spiel",
