@@ -111,7 +111,9 @@ function PlanRow({ entry, rank, now, t }: { entry: PlanEntry; rank: number; now:
           <span
             className={cn(
               "font-mono text-[10px]",
-              urgent ? "text-[color:var(--dp-signal-err)]" : "text-[color:var(--dp-text-dimmer)]",
+              urgent && !lost
+                ? "text-[color:var(--dp-signal-err)]"
+                : "text-[color:var(--dp-text-dimmer)]",
             )}
           >
             {countdown}
