@@ -110,6 +110,14 @@ jobs:
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -155,295 +163,82 @@ jobs:
             core.setOutput("tag", tag);
             core.setOutput("is_prerelease", String(isPrereleaseTag));
 
-      - name: Gather additional release context
-        id: release_context
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const tag = context.ref.replace("refs/tags/", "");
-            const base = `${{ steps.generated_notes.outputs.base_tag }}`.trim();
+      - name: Collect evidence and gate
+        id: collect
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.generated_notes.outputs.tag }}
+          BASE_TAG: ${{ steps.generated_notes.outputs.base_tag }}
+          TECH_NOTES: ${{ steps.generated_notes.outputs.notes }}
+        run: node scripts/release-notes/run.mjs collect
 
-            if (!base) {
-              core.setOutput("context", "No previous tag available for commit comparison.");
-              return;
-            }
-
-            try {
-              const { data } = await github.rest.repos.compareCommitsWithBasehead({
-                owner,
-                repo,
-                basehead: `${base}...${tag}`,
-                per_page: 100,
-              });
-
-              const commitSummaries = Array.from(
-                new Set(
-                  (data.commits ?? [])
-                    .map((commit) => String(commit.commit?.message ?? "").split("\n")[0].trim())
-                    .filter((line) => line.length > 0)
-                    .filter((line) => !/^chore\(release\):\s*v/i.test(line)),
-                ),
-              ).slice(0, 20);
-
-              const changedFiles = Array.from(
-                new Set((data.files ?? []).map((file) => file.filename).filter(Boolean)),
-              ).slice(0, 30);
-
-              const inferArea = (file) => {
-                if (/priority|target/i.test(file)) return "priority-targeting";
-                if (/inventory/i.test(file)) return "inventory";
-                if (/channel/i.test(file)) return "channels";
-                if (/update|overlay/i.test(file)) return "updates";
-                if (/auth|session/i.test(file)) return "auth-session";
-                if (/settings|theme|i18n/i.test(file)) return "settings";
-                if (/build\.yml|workflow|package\.json/i.test(file))
-                  return "release-pipeline";
-                return null;
-              };
-              const inferredAreas = Array.from(
-                new Set(changedFiles.map((file) => inferArea(file)).filter(Boolean)),
-              ).slice(0, 8);
-
-              const commitSection = commitSummaries.length
-                ? commitSummaries.map((line) => `- ${line}`).join("\n")
-                : "- (no commit summaries found)";
-              const filesSection = changedFiles.length
-                ? changedFiles.map((line) => `- ${line}`).join("\n")
-                : "- (no changed files listed)";
-              const areaSection = inferredAreas.length
-                ? inferredAreas.map((line) => `- ${line}`).join("\n")
-                : "- (no feature areas inferred)";
-
-              const contextBlock = [
-                `Base tag: ${base}`,
-                `Target tag: ${tag}`,
-                "",
-                "Commit summaries:",
-                commitSection,
-                "",
-                "Changed files:",
-                filesSection,
-                "",
-                "Inferred feature tags:",
-                areaSection,
-              ].join("\n");
-
-              core.setOutput("context", contextBlock);
-            } catch (error) {
-              core.warning(`Failed to collect compare context: ${error}`);
-              core.setOutput("context", `Base tag: ${base}\nTarget tag: ${tag}\n- Comparison lookup failed.`);
-            }
-
-      - name: Generate user-friendly notes with GitHub Models
-        id: user_notes
-        uses: actions/ai-inference@v1
+      - name: Generate user notes
+        id: gen
+        if: steps.collect.outputs.has_candidates == 'true'
         continue-on-error: true
+        uses: actions/ai-inference@v2
         with:
-          model: openai/gpt-4o-mini
-          prompt: |
-            You are writing user-facing release notes for DropPilot (a Twitch Drops automation desktop app).
-            Audience: non-technical end users.
+          model: openai/gpt-4o
+          prompt-file: rn-work/gen-prompt.txt
+          max-completion-tokens: "800"
+          temperature: "0.2"
 
-            Product context (must be respected):
-            - DropPilot is a background app for Twitch Drops tracking and claiming.
-            - The app does not provide in-app video playback.
-            - Avoid wording that implies users actively watch streams inside the app.
-
-            Output rules:
-            - Return only markdown bullet points (3 to 6 bullets).
-            - Use plain, concrete language focused on user-visible changes.
-            - Do not mention file paths, commits, pull requests, CI, refactoring, or architecture.
-            - Do not invent behavior that is not supported by the provided context.
-            - Every bullet must be directly supported by the changelog/context below; if not, omit it.
-            - Prefer outcomes ("Auto-watch now picks ...") over implementation details.
-            - Use changed files only to infer user-facing feature areas; never show file names in output.
-            - Inferred feature tags are hints only and are not sufficient evidence for a bullet on their own.
-            - Do not use hype or guarantees (forbidden examples: "never miss", "always", "ensuring", "guaranteed").
-            - Do not use vague quality claims (forbidden examples: "more smoothly", "enhancing your viewing experience", "improved reliability", "better performance") unless explicitly evidenced in the inputs.
-            - Do not mention "streaming sessions" unless that phrase is explicitly present in the inputs.
-            - Do not use wording that implies in-app viewing/video playback (forbidden examples: "viewing experience", "watch streams in the app", "watching got smoother").
-            - Do not claim performance/stability improvements unless explicitly evidenced in the inputs.
-            - If evidence is mostly technical/internal, return exactly this single bullet:
-            - Internal maintenance and stability improvements.
-
-            Release metadata:
-            - Version tag: ${{ steps.generated_notes.outputs.tag }}
-            - Pre-release: ${{ steps.generated_notes.outputs.is_prerelease }}
-
-            Technical changelog (GitHub-generated):
-            ${{ steps.generated_notes.outputs.notes }}
-
-            Additional context from git comparison:
-            ${{ steps.release_context.outputs.context }}
-
-      - name: Validate generated user notes
-        id: validated_user_notes
-        uses: actions/github-script@v7
+      - name: Parse generation output
+        id: parse_gen
+        if: steps.collect.outputs.has_candidates == 'true'
         env:
-          RAW_USER_NOTES: ${{ steps.user_notes.outputs.response }}
-        with:
-          script: |
-            const fallback = "- Internal maintenance and stability improvements.";
-            const raw = String(process.env.RAW_USER_NOTES ?? "").trim();
+          RESPONSE_FILE: ${{ steps.gen.outputs.response-file }}
+          ATTEMPT: "1"
+        run: node scripts/release-notes/run.mjs parse-gen
 
-            if (!raw) {
-              core.warning("No model output for user notes; using fallback.");
-              core.setOutput("notes", fallback);
-              core.setOutput("used_fallback", "true");
-              return;
-            }
-
-            const lines = raw
-              .split(/\r?\n/)
-              .map((line) => line.trim())
-              .filter((line) => line.length > 0);
-            const bullets = lines.filter((line) => line.startsWith("- "));
-
-            const bannedPatterns = [
-              /\bmore smoothly\b/i,
-              /\benhancing your viewing experience\b/i,
-              /\bviewing experience\b/i,
-              /\bwatch streams? in the app\b/i,
-              /\bwatching got smoother\b/i,
-              /\bvideo playback\b/i,
-              /\bbetter (performance|reliability|stability|experience)\b/i,
-              /\bimproved (performance|reliability|stability|experience)\b/i,
-              /\bseamless(ly)?\b/i,
-            ];
-            const hasBanned = bullets.some((line) =>
-              bannedPatterns.some((pattern) => pattern.test(line)),
-            );
-
-            const validCount = bullets.length >= 1 && bullets.length <= 6;
-            if (!validCount || hasBanned) {
-              core.warning("Generated notes were invalid or too vague; using fallback.");
-              core.setOutput("notes", fallback);
-              core.setOutput("used_fallback", "true");
-              return;
-            }
-
-            core.setOutput("notes", bullets.join("\n"));
-            core.setOutput("used_fallback", "false");
-
-      - name: Retry user-friendly notes (strict mode)
-        id: user_notes_retry
-        if: steps.validated_user_notes.outputs.used_fallback == 'true'
-        uses: actions/ai-inference@v1
+      - name: Generate user notes (strict retry)
+        id: gen_retry
+        if: steps.collect.outputs.has_candidates == 'true' && steps.parse_gen.outputs.parse_ok == 'false'
         continue-on-error: true
+        uses: actions/ai-inference@v2
         with:
-          model: openai/gpt-4o-mini
-          prompt: |
-            Rewrite release notes for DropPilot.
-            Output only markdown bullets (3 to 5 lines), each line starting with "- ".
-            Do not use any of these words or phrases: improved, enhancing, better, smoother, seamless, performance, reliability, stability, experience.
-            Do not mention file paths, commits, CI, architecture, refactoring, or implementation details.
-            Do not claim in-app video playback or "watch streams in the app".
-            Use concrete user-visible outcomes only.
-            If evidence is mostly internal/technical, output exactly:
-            - Internal maintenance and stability improvements.
+          model: openai/gpt-4o
+          prompt-file: rn-work/gen-prompt-strict.txt
+          max-completion-tokens: "800"
+          temperature: "0"
 
-            Version tag: ${{ steps.generated_notes.outputs.tag }}
-            Pre-release: ${{ steps.generated_notes.outputs.is_prerelease }}
-
-            Technical changelog:
-            ${{ steps.generated_notes.outputs.notes }}
-
-            Comparison context:
-            ${{ steps.release_context.outputs.context }}
-
-      - name: Validate retried user notes
-        id: validated_user_notes_retry
-        if: steps.validated_user_notes.outputs.used_fallback == 'true'
-        uses: actions/github-script@v7
+      - name: Parse retry output
+        id: parse_gen_retry
+        if: steps.collect.outputs.has_candidates == 'true' && steps.parse_gen.outputs.parse_ok == 'false'
         env:
-          RAW_USER_NOTES: ${{ steps.user_notes_retry.outputs.response }}
+          RESPONSE_FILE: ${{ steps.gen_retry.outputs.response-file }}
+          ATTEMPT: "2"
+        run: node scripts/release-notes/run.mjs parse-gen
+
+      - name: Judge bullets
+        id: judge
+        if: steps.parse_gen.outputs.has_bullets == 'true' || steps.parse_gen_retry.outputs.has_bullets == 'true'
+        continue-on-error: true
+        uses: actions/ai-inference@v2
         with:
-          script: |
-            const fallback = "- Internal maintenance and stability improvements.";
-            const raw = String(process.env.RAW_USER_NOTES ?? "").trim();
+          model: openai/gpt-4o
+          prompt-file: rn-work/judge-prompt.txt
+          max-completion-tokens: "600"
+          temperature: "0"
 
-            if (!raw) {
-              core.warning("Retry output missing; keeping fallback.");
-              core.setOutput("notes", fallback);
-              core.setOutput("used_fallback", "true");
-              return;
-            }
-
-            const lines = raw
-              .split(/\r?\n/)
-              .map((line) => line.trim())
-              .filter((line) => line.length > 0);
-            const bullets = lines.filter((line) => line.startsWith("- "));
-
-            const bannedPatterns = [
-              /\bmore smoothly\b/i,
-              /\benhancing your viewing experience\b/i,
-              /\bviewing experience\b/i,
-              /\bwatch streams? in the app\b/i,
-              /\bwatching got smoother\b/i,
-              /\bvideo playback\b/i,
-              /\bbetter (performance|reliability|stability|experience)\b/i,
-              /\bimproved (performance|reliability|stability|experience)\b/i,
-              /\bseamless(ly)?\b/i,
-            ];
-            const hasBanned = bullets.some((line) =>
-              bannedPatterns.some((pattern) => pattern.test(line)),
-            );
-
-            const validCount = bullets.length >= 1 && bullets.length <= 6;
-            if (!validCount || hasBanned) {
-              core.warning("Retry notes were invalid; keeping fallback.");
-              core.setOutput("notes", fallback);
-              core.setOutput("used_fallback", "true");
-              return;
-            }
-
-            core.setOutput("notes", bullets.join("\n"));
-            core.setOutput("used_fallback", "false");
-
-      - name: Resolve final user notes
-        id: final_user_notes
-        uses: actions/github-script@v7
+      - name: Finalize release body
         env:
-          PRIMARY_NOTES: ${{ steps.validated_user_notes.outputs.notes }}
-          PRIMARY_USED_FALLBACK: ${{ steps.validated_user_notes.outputs.used_fallback }}
-          RETRY_NOTES: ${{ steps.validated_user_notes_retry.outputs.notes }}
-          RETRY_USED_FALLBACK: ${{ steps.validated_user_notes_retry.outputs.used_fallback }}
+          TECH_NOTES: ${{ steps.generated_notes.outputs.notes }}
+          JUDGE_RESPONSE_FILE: ${{ steps.judge.outputs.response-file }}
+        run: node scripts/release-notes/run.mjs finalize
+
+      - name: Upload notes-pipeline debug artifacts
+        if: always()
+        # A debug artifact must never gate the publish, and re-runs must be able
+        # to overwrite the previous attempt's capture (artifact names are shared
+        # across re-run attempts; without overwrite the upload fails the job).
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
         with:
-          script: |
-            const primaryNotes = String(process.env.PRIMARY_NOTES ?? "").trim();
-            const primaryUsedFallback =
-              String(process.env.PRIMARY_USED_FALLBACK ?? "false").toLowerCase() === "true";
-            const retryNotes = String(process.env.RETRY_NOTES ?? "").trim();
-            const retryUsedFallback =
-              String(process.env.RETRY_USED_FALLBACK ?? "true").toLowerCase() === "true";
-
-            if (primaryUsedFallback === false && primaryNotes) {
-              core.setOutput("notes", primaryNotes);
-              return;
-            }
-            if (retryUsedFallback === false && retryNotes) {
-              core.setOutput("notes", retryNotes);
-              return;
-            }
-            core.setOutput(
-              "notes",
-              primaryNotes || retryNotes || "- Internal maintenance and stability improvements.",
-            );
-
-      - name: Build release body
-        run: |
-          cat <<'EOF' > release_body.md
-          ## What's new for users
-
-          ${{ steps.final_user_notes.outputs.notes || '- No major user-facing changes in this release.' }}
-
-          ## Full changelog
-
-          ${{ steps.generated_notes.outputs.notes || format('Compared against {0}. No detailed changelog entries were generated for this tag range.', steps.generated_notes.outputs.base_tag || 'the previous release') }}
-          EOF
+          name: release-notes-debug
+          path: rn-work/
+          if-no-files-found: ignore
+          overwrite: true
 
       - name: Resolve release visibility
         id: release_visibility
@@ -463,7 +258,7 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          body_path: release_body.md
+          body_path: rn-work/release_body.md
           draft: ${{ steps.release_visibility.outputs.draft }}
           prerelease: ${{ steps.release_visibility.outputs.prerelease }}
           files: |

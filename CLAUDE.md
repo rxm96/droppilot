@@ -19,7 +19,7 @@ npm run format:check   # prettier --check (this DOES gate CI)
 npm run typecheck      # tsc on BOTH configs: tsconfig.json (renderer) + tsconfig.node.json (main/preload)
 ```
 
-Releases: `npm run release:patch` (also `:minor`, `:major`, and prerelease `:rc` / `:test`). Each bumps the version, creates a `chore(release): vX` commit + tag, and pushes with `--follow-tags`. The tag push triggers CI to build Win/macOS artifacts and publish a GitHub Release with AI-generated notes.
+Releases: `npm run release:patch` (also `:minor`, `:major`, and prerelease `:rc` / `:test`). Each bumps the version, creates a `chore(release): vX` commit + tag, and pushes with `--follow-tags`. The tag push triggers CI to build Win/macOS artifacts and publish a GitHub Release with AI-generated notes. The notes pipeline lives in `scripts/release-notes/` (deterministic conventional-commit gate → grounded generation → LLM judge via free GitHub Models; spec: `docs/superpowers/specs/2026-06-12-release-notes-quality-design.md`) — dependency-free Node, tested via `scripts/**/*.test.mjs`.
 
 ## CI / verification gotchas (important)
 
