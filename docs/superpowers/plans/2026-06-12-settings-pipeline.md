@@ -1136,7 +1136,7 @@ PR 2 needs **both** PR 1 (schema) and PR #52 (`refactor/useappmodel-watch-extrac
 the extracted-hooks `useAppModel`) in its base. The `useAppModel` edits in Tasks 7–8
 quote the **PR #52 shape** of the file (~700 lines, `useWatchEngine()` etc.).
 
-- [ ] **Step 1: Create the branch from the right base**
+- [x] **Step 1: Create the branch from the right base**
 
 Check merge state: `git log --oneline -5 main` and `gh pr view 52 --json state`.
 
@@ -1147,7 +1147,7 @@ Check merge state: `git log --oneline -5 main` and `gh pr view 52 --json state`.
   (settings-layer files are identical on both sides — expect no conflicts; if the
   merge does conflict, stop and resolve with the #52 side for watch files).
 
-- [ ] **Step 2: Sanity-check the base**
+- [x] **Step 2: Sanity-check the base**
 
 ```bash
 npx tsc --noEmit -p tsconfig.json && npm test
@@ -1175,7 +1175,7 @@ legacy shape** (built from inline `setSetting` arrows), so `SettingsView`/sectio
 - Modify: `src/renderer/shared/hooks/app/index.ts` (barrel)
 - Modify: `src/preload/index.ts` (now add the return types)
 
-- [ ] **Step 1: Rewrite `src/renderer/shared/hooks/app/useSettingsStore.ts`**
+- [x] **Step 1: Rewrite `src/renderer/shared/hooks/app/useSettingsStore.ts`**
 
 Replace the entire file content with:
 
@@ -1333,7 +1333,7 @@ are transient priority-view UI state, not settings). The legacy import drift bug
 (missing `setDebugEnabled` on import) is gone by construction — `applyResponse`
 replaces the whole object. The three hand-written response-apply blocks are now one.
 
-- [ ] **Step 2: Add the preload return types (deferred from PR 1)**
+- [x] **Step 2: Add the preload return types (deferred from PR 1)**
 
 In `src/preload/index.ts`, extend the schema import and type the invoke returns:
 
@@ -1352,7 +1352,7 @@ import type { AppSettings, SettingsSaveData } from "../shared/settingsSchema";
   },
 ```
 
-- [ ] **Step 3: Delete the ceremony layer**
+- [x] **Step 3: Delete the ceremony layer**
 
 ```bash
 git rm src/renderer/shared/hooks/app/useSettingsActions.ts
@@ -1364,7 +1364,7 @@ In `src/renderer/shared/hooks/app/index.ts`, delete the line:
 export * from "./useSettingsActions";
 ```
 
-- [ ] **Step 4: Rewrite `src/renderer/shared/hooks/app/useAppActions.ts`**
+- [x] **Step 4: Rewrite `src/renderer/shared/hooks/app/useAppActions.ts`**
 
 Replace the entire file content with:
 
@@ -1452,7 +1452,7 @@ dropped per spec: the patch merge keeps untouched keys by definition.
 `handleFilterChange` moves here from the deleted `useSettingsActions`; its consumer is
 `inventoryProps.onFilterChange` in `useAppModel`.)
 
-- [ ] **Step 5: Rewire `useAppModel.ts` (PR #52 shape) — store consumption**
+- [x] **Step 5: Rewire `useAppModel.ts` (PR #52 shape) — store consumption**
 
 Replace the store destructure (starts `const {` right after
 `const [view, setView] = useState<View>("inventory");`, ends `} = useSettingsStore();`
@@ -1532,7 +1532,7 @@ to:
     autoSwitchEnabled: autoSwitch,
 ```
 
-- [ ] **Step 6: Rewire `useAppModel.ts` — actions call + priorityProps + settingsProps (interim flat shape)**
+- [x] **Step 6: Rewire `useAppModel.ts` — actions call + priorityProps + settingsProps (interim flat shape)**
 
 Replace the `useAppActions({ ... })` argument list (lines ~249–288 in the #52 shape;
 the call starts `const actions = useAppActions({`) with:
@@ -1665,7 +1665,7 @@ not round; `AlertsSection` already floors its input to an integer via
 `Math.max(1, Number(e.target.value) || 1)`, so no fractional values reach the store.
 This is behavior-equivalent for every reachable input.
 
-- [ ] **Step 7: Typecheck, tests, lint sweep**
+- [x] **Step 7: Typecheck, tests, lint sweep**
 
 ```bash
 npx tsc --noEmit -p tsconfig.json
@@ -1677,7 +1677,7 @@ Expected: all clean. If tsc reports leftover references to deleted symbols
 (`saveAutoClaim`, `handleSetX`, `useSettingsActions`), fix them per the mapping above
 — do not re-introduce wrappers.
 
-- [ ] **Step 8: Format + commit**
+- [x] **Step 8: Format + commit**
 
 ```bash
 npx prettier --write src/renderer/shared/hooks/app/useSettingsStore.ts src/renderer/shared/hooks/app/useAppActions.ts src/renderer/shared/hooks/app/useAppModel.ts src/renderer/shared/hooks/app/index.ts src/preload/index.ts
@@ -1705,7 +1705,7 @@ section reads `props.settings.X` and writes `props.setSetting("X", v)`.
 - Modify: `src/renderer/features/settings/sections/AdvancedSection.tsx`
 - Modify: `src/renderer/App.tsx` (settingsProps.refreshMinMs access)
 
-- [ ] **Step 1: Final `settingsProps` in `useAppModel.ts`**
+- [x] **Step 1: Final `settingsProps` in `useAppModel.ts`**
 
 Replace the interim flat `const settingsProps = { ... };` from Task 7 with:
 
@@ -1746,7 +1746,7 @@ settingsProps; `npx tsc --noEmit` flags them as unused locals if missed). Also r
 the `Language`/`UpdateChannel` type imports added for the interim handlers **if** they
 are now unused (tsc will tell you).
 
-- [ ] **Step 2: New `SettingsView.tsx` props + wiring**
+- [x] **Step 2: New `SettingsView.tsx` props + wiring**
 
 Replace the `SettingsProps` type with:
 
@@ -1881,7 +1881,7 @@ Replace the section wiring inside `<main>` with:
 }
 ```
 
-- [ ] **Step 3: Migrate the seven sections**
+- [x] **Step 3: Migrate the seven sections**
 
 Every section gets the same two imports (path from `sections/`):
 
@@ -2121,7 +2121,7 @@ Changed control (the live-JSON-preview effect and backup textarea stay verbatim)
         }
 ```
 
-- [ ] **Step 4: Fix `App.tsx`**
+- [x] **Step 4: Fix `App.tsx`**
 
 In the `overviewPropsExtended` memo, change the two value lines and the two dependency
 entries:
@@ -2138,7 +2138,7 @@ entries:
 
 (`AppContent.tsx` needs no change — its `settingsProps: ComponentProps<typeof SettingsView>` follows the new type automatically.)
 
-- [ ] **Step 5: Typecheck, tests, lint**
+- [x] **Step 5: Typecheck, tests, lint**
 
 ```bash
 npx tsc --noEmit -p tsconfig.json
@@ -2150,7 +2150,7 @@ Expected: clean. tsc is the rename-driver here: any missed `props.autoClaim`-sty
 reference in a section surfaces as a type error — fix it with the
 `props.settings.X` / `props.setSetting("X", v)` pattern, never by re-adding flat props.
 
-- [ ] **Step 6: Format + commit**
+- [x] **Step 6: Format + commit**
 
 ```bash
 npx prettier --write src/renderer/shared/hooks/app/useAppModel.ts src/renderer/features/settings/SettingsView.tsx src/renderer/features/settings/sections/*.tsx src/renderer/App.tsx
@@ -2166,7 +2166,7 @@ git commit -m "refactor(settings): object+setSetting API through SettingsView an
 
 - Modify: `src/renderer/shared/i18n.tsx` (one type line)
 
-- [ ] **Step 1: Derive `Language` from the schema**
+- [x] **Step 1: Derive `Language` from the schema**
 
 In `src/renderer/shared/i18n.tsx`, replace:
 
@@ -2186,7 +2186,7 @@ export type Language = AppSettings["language"];
 consumer keeps compiling — the type is structurally identical, but the union now has
 exactly one definition: the schema.)
 
-- [ ] **Step 2: Dead-symbol sweep**
+- [x] **Step 2: Dead-symbol sweep**
 
 ```bash
 git grep -nE "useSettingsActions|handleSet(Obey|Auto|Warmup|Update|Demo|Alerts|Enable|Allow|Close|Minimize|Reset|Refresh)" src/
@@ -2200,7 +2200,7 @@ closure + params in `useAppActions.ts` / `usePriorityActions.ts`; sweep 4 return
 nothing (the legacy flag now lives only in `src/shared/settingsSchema.ts` and
 `src/main/`). Any other hit is a missed call site — migrate it.
 
-- [ ] **Step 3: Typecheck, format, commit**
+- [x] **Step 3: Typecheck, format, commit**
 
 ```bash
 npx tsc --noEmit -p tsconfig.json
@@ -2214,7 +2214,7 @@ git commit -m "refactor(settings): derive Language from the settings schema"
 
 ### Task 10: PR 2 verification + manual smoke + PR
 
-- [ ] **Step 1: Full local gate**
+- [x] **Step 1: Full local gate**
 
 ```bash
 npm run lint
@@ -2227,7 +2227,7 @@ npm run build
 
 Expected: all green (remember: CI does not run on PRs — this is the gate).
 
-- [ ] **Step 2: Manual smoke (`npm run dev`)**
+- [x] **Step 2: Manual smoke (`npm run dev`)**
 
 Walk every settings surface once; after each item confirm the UI state AND (for the
 starred items) the persisted value in `settings.json`:
@@ -2244,7 +2244,7 @@ starred items) the persisted value in `settings.json`:
 10. Theme/accent/font (Appearance) — unchanged behavior (out-of-scope hooks).
 11. Restart the app — all of the above survive.
 
-- [ ] **Step 3: Update docs + hand off**
+- [x] **Step 3: Update docs + hand off**
 
 Mark Tasks 6–10 complete in this plan file and record any discovered-but-not-fixed
 oddities under a `## Findings` section at the bottom (same convention as the
@@ -2305,3 +2305,26 @@ fixed inline)
    and `rename` (9 found, dating back weeks, mostly 0 bytes — the legacy code leaked
    them the same way). Cosmetic; a startup cleanup sweep would be a tiny follow-up,
    out of scope here.
+
+5. **PR 2 verification record (Task 10, 2026-06-12).** Gate: lint 0 errors, format
+   clean, renderer tsc 0, node tsc = the 9 pinned, 403/403 tests, build clean. Live
+   UI smoke (dev build `v3.2.0+8a974c3`, real profile, all 11 plan points):
+   Auto-Claim + Auto-Switch toggles flip the file (key `autoSwitch` ✓, neighbors
+   untouched); language DE↔EN flips the whole UI instantly + persists; update
+   channel stable↔preview persists; alerts master-switch disables all dependent
+   rows; **import drift-bug fix proven live** — pasting `{"debugEnabled": true}`
+   into the Advanced textarea + Import made the debug nav tab appear immediately,
+   no reload (legacy required a restart); priority add/remove persists;
+   refresh-pair cross-clamp drags max with min (typing race in the seconds-inputs
+   makes per-keystroke saves interleave with canonical responses — pre-existing UX
+   quirk, values always end consistent); reset-automation restores exactly the 9
+   reset keys while language/theme survive; theme/accent path untouched; after
+   restoring everything the file is **byte-identical** to the pre-smoke snapshot.
+
+6. **PR 2 base note.** PR #52 (watch extraction) was merged into
+   `refactor/usechannels-split` AFTER that branch had already been merged to main
+   via #51 — its commits are therefore NOT in main yet. `refactor/settings-renderer`
+   is based on `refactor/settings-schema` + a merge of
+   `refactor/useappmodel-watch-extraction`, so its PR diff vs `refactor/settings-schema`
+   includes the watch-extraction commits until usechannels-split is re-merged to
+   main. Needs a user decision (merge usechannels-split → main, then rebase).
