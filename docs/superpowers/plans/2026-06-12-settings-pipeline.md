@@ -898,9 +898,16 @@ node program must be checkable. Add one line to the `compilerOptions` of
     "ignoreDeprecations": "6.0",
 ```
 
-Then run `npx tsc --noEmit -p tsconfig.node.json` — expected: exit 0 BEFORE the
-settings.ts rewrite (if pre-existing code errors surface, STOP and report instead of
-fixing unrelated code). This command is now part of every verification block below.
+Then run `npx tsc --noEmit -p tsconfig.node.json`. **Reality (discovered on first
+execution): exit 0 is NOT achievable** — un-gating the node program revealed 9
+pre-existing type errors in unrelated main-process code (pinned list in Findings #2;
+fixing them is the separate CI-gate task, NOT this refactor). The gate for this plan
+is therefore **scoped**: the tsc output must contain ZERO errors referencing
+`src/shared/settingsSchema.ts`, `src/main/core/settings.ts`, or
+`src/preload/index.ts`, and no errors beyond the pinned Findings #2 list. (Before this
+task's rewrite, settings.ts/preload contribute 2 errors via their renderer-i18n
+imports — this task removes both.) Apply the same scoped reading wherever a
+verification block below runs the node tsc.
 
 - [ ] **Step 1: Rewrite `src/main/core/settings.ts`**
 
@@ -2264,6 +2271,20 @@ fixed inline)
    code. Consequence: `settingsSchema.ts` was committed with a latent 31-error
    `satisfies` violation (invariant arrow-property `normalize`) that no gate could
    see — fixed in `8d00fc7` (method signature). Mitigation in this plan: Task 4
-   Step 0 adds `ignoreDeprecations` and every later gate runs both tsc programs.
-   Proper follow-up (out of scope here): add the node typecheck to
-   `package.json`/CI.
+   Step 0 adds `ignoreDeprecations` and every later gate runs both tsc programs
+   (scoped — see Finding #2). Proper follow-up (out of scope here): add the node
+   typecheck to `package.json`/CI.
+
+2. **9 pre-existing type errors in the node program** (Task 4 Step 0, first
+   execution). Un-gating `tsconfig.node.json` revealed errors that accumulated while
+   the program was uncheckable — all in code this refactor does not touch:
+   - `src/main/index.ts(296)` TS2769 — `"minimize"` not assignable in window-event
+     overload
+   - `src/main/twitch/client.ts(83,114)` TS2304 — `HeadersInit` not found;
+     `client.ts(264)` TS2532 — possibly undefined
+   - `src/main/twitch/serviceUtils.ts(647,652,654)` — type-predicate /
+     `BenefitEdge` assignability
+   - `src/main/twitch/tracker.ts(797)`, `src/main/twitch/userPubSub.ts(448)` —
+     ws `RawData` vs `unknown` handler mismatch
+     These are pinned and tolerated by this plan's scoped node-tsc gate; fixing them
+     belongs to the separate CI-typecheck task, not this refactor.
