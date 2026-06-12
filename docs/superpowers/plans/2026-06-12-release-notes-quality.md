@@ -1489,7 +1489,7 @@ git add CLAUDE.md docs/superpowers/specs/2026-06-12-release-notes-quality-design
 git commit -m "docs(release-notes): document pipeline location + corrected spec criteria"
 ```
 
-- [ ] **Step 4: Push and open the PR**
+- [x] **Step 4: Push and open the PR** — [droppilot#57](https://github.com/rxm96/droppilot/pull/57)
 
 ```bash
 git push -u origin feat/release-notes-quality
@@ -1498,7 +1498,7 @@ gh pr create --title "feat(release-notes): grounded release notes generation (ga
 
 Expected: the `verify` CI job (from PR #56, if merged) runs lint/format/typecheck/tests/build on the PR.
 
-- [ ] **Step 5: Record the live-verification plan in the PR body** — after merge, run `npm run release:test` (draft prerelease, invisible to users) and check on the run: gate decision matches the range's commits, prompts contain only evidence texts, the published draft body parses in the in-app changelog format, and no internal-note leak. Delete the draft release + tag afterwards:
+- [x] **Step 5: Record the live-verification plan in the PR body** — after merge, run `npm run release:test` (draft prerelease, invisible to users) and check on the run: gate decision matches the range's commits, prompts contain only evidence texts, the published draft body parses in the in-app changelog format, and no internal-note leak. Delete the draft release + tag afterwards:
 
 ```bash
 gh release delete <tag> --yes && git push --delete origin <tag>
