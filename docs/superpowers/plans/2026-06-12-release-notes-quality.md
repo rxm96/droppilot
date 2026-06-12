@@ -564,6 +564,12 @@ describe("parseGenerationOutput", () => {
     expect(parseGenerationOutput("Sure! Here are some bullets: - a - b", VALID_IDS)).toBeNull();
     expect(parseGenerationOutput('{"notes":"x"}', VALID_IDS)).toBeNull();
   });
+
+  it("garbage items inside a well-formed bullets array are dropped without retry", () => {
+    expect(parseGenerationOutput('{"bullets":[42,"x",null,true]}', VALID_IDS)).toEqual({
+      bullets: [],
+    });
+  });
 });
 
 describe("parseJudgeOutput", () => {
@@ -588,6 +594,16 @@ describe("parseJudgeOutput", () => {
   it("returns null for an unusable response (caller falls back to internal line)", () => {
     expect(parseJudgeOutput("cannot judge", 1)).toBeNull();
     expect(parseJudgeOutput('{"verdicts":"all good"}', 1)).toBeNull();
+  });
+
+  it("duplicate verdicts for one bullet AND-merge (a rejection always wins)", () => {
+    const text = JSON.stringify({
+      verdicts: [
+        { bullet: 1, supported: false, concrete: true },
+        { bullet: 1, supported: true, concrete: true },
+      ],
+    });
+    expect(parseJudgeOutput(text, 1)).toEqual([{ supported: false, concrete: true }]);
   });
 });
 ````
@@ -646,6 +662,7 @@ export function parseGenerationOutput(text, validIds) {
 export function parseJudgeOutput(text, bulletCount) {
   const obj = extractJson(text);
   if (!obj || !Array.isArray(obj.verdicts)) return null;
+  const seen = new Set();
   const verdicts = Array.from({ length: bulletCount }, () => ({
     supported: false,
     concrete: false,
@@ -653,7 +670,19 @@ export function parseJudgeOutput(text, bulletCount) {
   for (const v of obj.verdicts) {
     const idx = Number(v?.bullet) - 1;
     if (!Number.isInteger(idx) || idx < 0 || idx >= bulletCount) continue;
-    verdicts[idx] = { supported: v.supported === true, concrete: v.concrete === true };
+    const supported = v.supported === true;
+    const concrete = v.concrete === true;
+    if (seen.has(idx)) {
+      // Duplicate verdicts for one bullet AND-merge: a rejection always wins,
+      // so an extra permissive verdict can never override a real one.
+      verdicts[idx] = {
+        supported: verdicts[idx].supported && supported,
+        concrete: verdicts[idx].concrete && concrete,
+      };
+    } else {
+      seen.add(idx);
+      verdicts[idx] = { supported, concrete };
+    }
   }
   return verdicts;
 }
