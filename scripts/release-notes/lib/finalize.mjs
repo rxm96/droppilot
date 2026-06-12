@@ -26,6 +26,10 @@ export function violatesBannedPhrases(text) {
   return BANNED_PATTERNS.some((re) => re.test(text));
 }
 
+// GitHub's generateReleaseNotes body for a range without PRs is exactly this
+// one line (verified against the published v3.1.1 release).
+const FULL_CHANGELOG_LINK_RE = /^\*\*Full Changelog\*\*:\s*\S+$/;
+
 export function applyVerdicts(bullets, verdicts) {
   if (!verdicts) return []; // judge unusable → fail closed
   return bullets.filter(
@@ -54,11 +58,15 @@ export function assembleReleaseBody({ bullets, techNotes, commitSubjects, baseTa
     .filter((b) => b.text.length > 0);
   const noteLines = cleaned.length ? cleaned.map((b) => `- ${b.text}`) : [`- ${INTERNAL_NOTE}`];
   let changelog = String(techNotes ?? "").trim();
+  const subjects = commitSubjects ?? [];
   if (!changelog) {
-    const subjects = commitSubjects ?? [];
     changelog = subjects.length
       ? ["## What's Changed", ...subjects.map((s) => `* ${s}`)].join("\n")
       : `Compared against ${baseTag || "the previous release"}.`;
+  } else if (FULL_CHANGELOG_LINK_RE.test(changelog) && subjects.length) {
+    // GitHub's real no-PR body is not empty — it is exactly the bold compare
+    // link. Prepend the commit list so the section isn't bare (v3.1.1 case).
+    changelog = ["## What's Changed", ...subjects.map((s) => `* ${s}`), "", changelog].join("\n");
   }
   return `## What's new for users\n\n${noteLines.join("\n")}\n\n## Full changelog\n\n${changelog}\n`;
 }

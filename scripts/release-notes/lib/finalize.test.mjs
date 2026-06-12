@@ -112,6 +112,19 @@ describe("assembleReleaseBody", () => {
     expect(body).toContain("Compared against the previous release.");
   });
 
+  it("link-only tech notes (GitHub's real no-PR body) get the commit list prepended", () => {
+    const body = assembleReleaseBody({
+      bullets: [],
+      techNotes: "**Full Changelog**: https://github.com/rxm96/droppilot/compare/v3.1.0...v3.1.1",
+      commitSubjects: ["fix(overview): correct Engine panel last_refresh and uptime"],
+      baseTag: "v3.1.0",
+    });
+    expect(body).toContain(
+      "## What's Changed\n* fix(overview): correct Engine panel last_refresh and uptime",
+    );
+    expect(body).toContain("**Full Changelog**: https://github.com/rxm96/droppilot/compare/");
+  });
+
   it("normalizes multiline/empty bullet text locally (defense in depth)", () => {
     const body = assembleReleaseBody({
       bullets: [
