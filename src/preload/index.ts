@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, shell } from "electron";
-import type { SettingsSaveData } from "../shared/settingsSchema";
+import type { AppSettings, SettingsSaveData } from "../shared/settingsSchema";
 
 type ChannelsDiffPayload = {
   game: string;
@@ -91,10 +91,12 @@ const api = {
     },
   },
   settings: {
-    get: () => ipcRenderer.invoke("settings/get"),
-    save: (payload: SettingsSaveData) => ipcRenderer.invoke("settings/save", payload),
-    export: () => ipcRenderer.invoke("settings/export"),
-    import: (payload: SettingsSaveData) => ipcRenderer.invoke("settings/import", payload),
+    get: (): Promise<AppSettings> => ipcRenderer.invoke("settings/get"),
+    save: (payload: SettingsSaveData): Promise<AppSettings> =>
+      ipcRenderer.invoke("settings/save", payload),
+    export: (): Promise<AppSettings> => ipcRenderer.invoke("settings/export"),
+    import: (payload: SettingsSaveData): Promise<AppSettings> =>
+      ipcRenderer.invoke("settings/import", payload),
   },
   stats: {
     get: () => ipcRenderer.invoke("stats/get"),
