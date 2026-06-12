@@ -20,7 +20,7 @@ recurring content failures, all evidenced in shipped releases:
    is semantic, not lexical, so the list can never be complete.
 3. **Fallback leak** — the escape-hatch sentence ("Internal maintenance and
    stability improvements.") is part of the generation prompt, so the model
-   emits it *alongside* real bullets (v3.1.0, v3.1.1) instead of *instead of*
+   emits it _alongside_ real bullets (v3.1.0, v3.1.1) instead of _instead of_
    them.
 
 Additionally, releases without PRs in range (v3.1.1) give the model an empty
@@ -44,15 +44,15 @@ byte-compatible with the `parseReleaseNotes` contract in
 
 ## Decisions (locked during brainstorming)
 
-| Question                  | Decision                                                                                                                                                           |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Primary objective         | **Content quality only** — hallucinations, fluff, fallback leak. German notes, model-cost upgrades, and broader refactors are explicitly out of scope.             |
-| Infrastructure constraint | **GitHub Models, free tier** (`actions/ai-inference`, `models: read`). Multiple calls per release are fine; no new secrets, no paid APIs.                          |
-| Approach                  | **B: deterministic gate + grounded generation + LLM verify** (over prompt-tuning-only and extraction-only alternatives).                                            |
-| Model                     | `openai/gpt-4o` for both generation and judge (better instruction-following than `gpt-4o-mini`, still free via GitHub Models).                                     |
+| Question                     | Decision                                                                                                                                                        |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Primary objective            | **Content quality only** — hallucinations, fluff, fallback leak. German notes, model-cost upgrades, and broader refactors are explicitly out of scope.          |
+| Infrastructure constraint    | **GitHub Models, free tier** (`actions/ai-inference`, `models: read`). Multiple calls per release are fine; no new secrets, no paid APIs.                       |
+| Approach                     | **B: deterministic gate + grounded generation + LLM verify** (over prompt-tuning-only and extraction-only alternatives).                                        |
+| Model                        | `openai/gpt-4o` for both generation and judge (better instruction-following than `gpt-4o-mini`, still free via GitHub Models).                                  |
 | Judge unavailable/unparsable | **Fail closed: publish the internal-maintenance line.** The invariant "no unverified bullet is published" beats availability; the full changelog renders below. |
-| Output format             | Unchanged: `## What's new for users` + `- ` bullets + `## Full changelog`. The in-app changelog parser is a hard contract.                                          |
-| Release blocking          | Never — every failure path degrades to a valid body. Publishing must not fail because of notes.                                                                     |
+| Output format                | Unchanged: `## What's new for users` + `- ` bullets + `## Full changelog`. The in-app changelog parser is a hard contract.                                      |
+| Release blocking             | Never — every failure path degrades to a valid body. Publishing must not fail because of notes.                                                                 |
 
 ## Pipeline (release job)
 
