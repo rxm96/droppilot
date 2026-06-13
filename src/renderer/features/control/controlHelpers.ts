@@ -171,6 +171,28 @@ export const formatDurationMs = (ms: number): string => {
   return `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
 };
 
+/**
+ * Live "Next" line for the two time-bounded engine states. Pure: the caller
+ * (a TimeText leaf) supplies the freshly-ticked remaining ms. Returns "" when
+ * there is no countdown to show, so the caller falls back to the static next.
+ */
+export const narrateEngineCountdown = (
+  decision: WatchEngineDecision,
+  suppressionReason: WatchEngineSuppressionReason | null,
+  remainingMs: number,
+  t: Translator,
+): string => {
+  if (remainingMs <= 0) return "";
+  const time = formatDurationMs(remainingMs);
+  if (decision === "suppressed" && suppressionReason === "stall-stop") {
+    return t("control.watchEngineNext.suppressedCountdown", { time });
+  }
+  if (decision === "cooldown") {
+    return t("control.watchEngineNext.cooldownCountdown", { time });
+  }
+  return "";
+};
+
 /** Blocking reason helpers (preserved from ControlView). */
 export const formatBlockingReason = (reason: string | undefined, t: Translator): string => {
   if (!reason) return t("inventory.blockReason.unknown");

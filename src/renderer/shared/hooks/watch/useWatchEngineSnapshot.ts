@@ -55,10 +55,6 @@ export function useWatchEngineSnapshot({
         : suppressionReason === "manual-stop"
           ? MANUAL_STOP_SUPPRESSION_HOLD_MS
           : 0;
-    const suppressionHoldRemainingMs =
-      holdMs && typeof suppressionAt === "number" && Number.isFinite(suppressionAt)
-        ? Math.max(0, suppressionAt + holdMs - now)
-        : 0;
     const activeCooldowns = Object.entries(stalledGameCooldownUntil)
       .map(([rawGame, until]) => ({ game: rawGame.trim(), until }))
       .filter(
@@ -80,7 +76,7 @@ export function useWatchEngineSnapshot({
       stallTracker && watching
         ? {
             recoveryCount: stallTracker.recoveryCount,
-            sinceProgressMs: Math.max(0, now - stallTracker.lastProgressAt),
+            sinceProgressAt: stallTracker.lastProgressAt,
           }
         : null;
     const hasPredictiveProgress = Boolean(
@@ -118,7 +114,10 @@ export function useWatchEngineSnapshot({
               game: suppressionGame,
               reason: suppressionReason,
               sinceAt: suppressionAt,
-              holdRemainingMs: suppressionHoldRemainingMs,
+              holdUntil:
+                holdMs && typeof suppressionAt === "number" && Number.isFinite(suppressionAt)
+                  ? suppressionAt + holdMs
+                  : null,
             }
           : null,
       activeCooldowns,

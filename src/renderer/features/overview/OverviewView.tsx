@@ -1,4 +1,4 @@
-import type { ErrorInfo, InventoryState } from "@renderer/shared/types";
+import type { ClaimStatus, ErrorInfo, InventoryState } from "@renderer/shared/types";
 import { HeroPanel } from "./HeroPanel";
 import { QueuePanel } from "./QueuePanel";
 import { ActivityPanel } from "./ActivityPanel";
@@ -40,7 +40,7 @@ type OverviewProps = {
   onPause?: () => void;
   onSwitchTarget?: () => void;
   onClaimNow?: () => void | Promise<void>;
-  claimStatus?: { kind: "success" | "error"; message?: string; code?: string } | null;
+  claimStatus?: ClaimStatus | null;
   refreshMinMs?: number;
   refreshMaxMs?: number;
 };

@@ -4,9 +4,10 @@ import { Button } from "@renderer/shared/components/ui/button";
 import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { Check, Pause, RotateCw } from "@renderer/shared/lib/icons";
 import { formatRemainingFromEta } from "./formatters";
+import { narrateClaim } from "./claimNarration";
 import { useI18n } from "@renderer/shared/i18n";
-import { cn } from "@renderer/shared/lib/utils";
 import { TimeText } from "@renderer/shared/components/TimeText";
+import type { ClaimStatus } from "@renderer/shared/types";
 
 export type HeroPanelProps = {
   activeGame?: string;
@@ -30,7 +31,7 @@ export type HeroPanelProps = {
   /** Navigate to Priorities (Phase 5 wiring). When null/undefined, switch button stays disabled. */
   onSwitchTarget?: () => void;
   onClaimNow?: () => void | Promise<void>;
-  claimStatus?: { kind: "success" | "error"; message?: string; code?: string } | null;
+  claimStatus?: ClaimStatus | null;
 };
 
 export function HeroPanel({
@@ -198,19 +199,21 @@ export function HeroPanel({
           </Button>
         </div>
         {claimStatus && (
-          <div
-            className={cn(
-              "mt-2 font-mono text-[10px]",
-              claimStatus.kind === "success"
-                ? "text-[color:var(--dp-signal-ok)]"
-                : "text-[color:var(--dp-signal-err)]",
-            )}
-          >
-            {claimStatus.kind === "success" && claimStatus.message
-              ? claimStatus.message
-              : claimStatus.kind === "error"
-                ? (claimStatus.message ?? t("hero.claimFeedback.errorFallback"))
-                : null}
+          <div className="mt-2 font-mono text-[10px]">
+            <TimeText
+              active={claimStatus.kind === "error" && typeof claimStatus.nextRetryAt === "number"}
+              render={(now) => {
+                const narration = narrateClaim(claimStatus, now, t);
+                if (!narration) return null;
+                const toneClass =
+                  narration.tone === "ok"
+                    ? "text-[color:var(--dp-signal-ok)]"
+                    : narration.tone === "warn"
+                      ? "text-[color:var(--dp-signal-warn)]"
+                      : "text-[color:var(--dp-signal-err)]";
+                return <span className={toneClass}>{narration.text}</span>;
+              }}
+            />
           </div>
         )}
       </div>

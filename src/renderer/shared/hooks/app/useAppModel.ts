@@ -41,7 +41,7 @@ import type { FilterKey, View } from "@renderer/shared/types";
 import { isVerboseLoggingEnabled } from "@renderer/shared/utils/logger";
 
 export function useAppModel() {
-  const { auth, startLogin, logout } = useAuth();
+  const { auth, startLogin, logout, markExpired } = useAuth();
   const { theme, setTheme } = useTheme();
   const { accent, setAccent } = useAccent();
   const { fontPair, setFontPair } = useFontPair();
@@ -315,7 +315,7 @@ export function useAppModel() {
     setAutoSelectEnabled,
     fetchInventory,
     isLinked,
-    logout,
+    markExpired,
     onManualStartWatching: (channel) => {
       setManualWatchOverride({ at: Date.now(), game: channel.game });
     },

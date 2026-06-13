@@ -8,7 +8,7 @@ type Params = {
   setAutoSelectEnabled: (next: boolean) => void;
   fetchInventory: (opts?: { forceLoading?: boolean }) => Promise<void>;
   isLinked: boolean;
-  logout: () => Promise<void>;
+  markExpired: () => Promise<void>;
   onManualStartWatching?: (channel: ChannelEntry) => void;
 };
 
@@ -50,7 +50,7 @@ export function useWatchingActions({
   setAutoSelectEnabled,
   fetchInventory,
   isLinked,
-  logout,
+  markExpired,
   onManualStartWatching,
 }: Params) {
   const authErrorRef = useRef<AuthErrorTracker>({ count: 0, lastAt: 0 });
@@ -119,7 +119,7 @@ export function useWatchingActions({
           count: nextTracker.count,
         });
         if (fatalRevalidate || shouldLogout) {
-          void logout();
+          void markExpired();
           return;
         }
         logWarn("auth: transient error, keeping session", {
@@ -129,7 +129,7 @@ export function useWatchingActions({
         });
       })();
     },
-    [isLinked, stopWatching, logout],
+    [isLinked, stopWatching, markExpired],
   );
 
   const handleFetchInventory = useCallback(() => {

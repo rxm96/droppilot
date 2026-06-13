@@ -84,6 +84,8 @@ const translations: Translations = {
     "session.loginBrowser": "Login with browser",
     "session.logout": "Logout",
     "session.login": "Login...",
+    "session.expired.title": "Session expired — engine paused.",
+    "session.expired.relogin": "Re-login",
 
     "nav.title": "Navigation",
 
@@ -310,6 +312,9 @@ const translations: Translations = {
     "control.watchEngineNext.idleNoChannels":
       "The engine will retarget to the next priority game after stall handling.",
     "control.watchEngineNext.idleReady": "Auto-select can pick one of the eligible live channels.",
+    "control.watchEngineNext.suppressedCountdown": "Resuming in {time} after the stall hold.",
+    "control.watchEngineNext.cooldownCountdown":
+      "Cooldown ends in {time}, then auto-select retries.",
     "control.watchEngineNext.idleNoWatchableDrops":
       "The engine waits for inventory/channel changes or moves to another target.",
     "control.watchEngineSuppression.manualStop": "manual stop",
@@ -897,6 +902,7 @@ const translations: Translations = {
     "hero.title.claimNowReady": "Claim all available drops",
     "hero.button.claiming": "claiming…",
     "hero.claimFeedback.errorFallback": "Claim failed",
+    "hero.claim.retryIn": "retry in {time}",
 
     // queue.* — new namespace, QueuePanel
     "queue.header": "queue · next up",
@@ -1123,6 +1129,8 @@ const translations: Translations = {
     "session.loginBrowser": "Login mit Browser",
     "session.logout": "Logout",
     "session.login": "Login...",
+    "session.expired.title": "Sitzung abgelaufen — Engine pausiert.",
+    "session.expired.relogin": "Neu anmelden",
 
     "nav.title": "Navigation",
 
@@ -1354,6 +1362,9 @@ const translations: Translations = {
       "Nach Stall-Handling retargetet die Engine auf das nächste Prioritäts-Game.",
     "control.watchEngineNext.idleReady":
       "Auto-Select kann einen der berechtigten Live-Streams starten.",
+    "control.watchEngineNext.suppressedCountdown": "Fährt in {time} fort, nach dem Stall-Hold.",
+    "control.watchEngineNext.cooldownCountdown":
+      "Cooldown endet in {time}, dann versucht Auto-Select erneut.",
     "control.watchEngineNext.idleNoWatchableDrops":
       "Die Engine wartet auf Inventory/Channel-Aenderungen oder wechselt auf ein anderes Ziel.",
     "control.watchEngineSuppression.manualStop": "manueller Stop",
@@ -1932,6 +1943,7 @@ const translations: Translations = {
     "hero.title.claimNowReady": "Alle verfügbaren Drops claimen",
     "hero.button.claiming": "claime…",
     "hero.claimFeedback.errorFallback": "Claim fehlgeschlagen",
+    "hero.claim.retryIn": "neuer Versuch in {time}",
 
     // queue.* — new namespace, QueuePanel
     "queue.header": "queue · als nächstes",

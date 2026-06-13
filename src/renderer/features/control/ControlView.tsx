@@ -29,13 +29,16 @@ type WatchEngineSnapshot = {
     game: string;
     reason: WatchEngineSuppressionReason;
     sinceAt: number | null;
-    holdRemainingMs: number;
+    holdUntil: number | null;
   } | null;
   activeCooldowns: Array<{ game: string; until: number; remainingMs: number }>;
   allowlistActive: boolean;
   allowlistedLiveChannels: number;
   totalLiveChannels: number;
-  noProgressTracker: { recoveryCount: number; sinceProgressMs: number } | null;
+  noProgressTracker: {
+    recoveryCount: number;
+    sinceProgressAt: number;
+  } | null;
 };
 
 type ControlProps = {

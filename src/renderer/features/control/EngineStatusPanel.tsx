@@ -4,11 +4,13 @@ import { ChevronDown } from "@renderer/shared/lib/icons";
 import { cn } from "@renderer/shared/lib/utils";
 import { useI18n } from "@renderer/shared/i18n";
 import type { ChannelTrackerStatus } from "@renderer/shared/types";
+import { TimeText } from "@renderer/shared/components/TimeText";
 import {
   formatDurationMs,
   mapWatchEngineDecisionDetails,
   mapWatchEngineDecisionLabel,
   mapWatchEngineSuppressionReasonLabel,
+  narrateEngineCountdown,
   watchEngineTone,
   type WatchEngineDecision,
   type WatchEngineSuppressionReason,
@@ -22,13 +24,16 @@ export type EngineStatusPanelProps = {
     game: string;
     reason: WatchEngineSuppressionReason;
     sinceAt: number | null;
-    holdRemainingMs: number;
+    holdUntil: number | null;
   } | null;
   activeCooldowns: Array<{ game: string; until: number; remainingMs: number }>;
   allowlistActive: boolean;
   allowlistedLiveChannels: number;
   totalLiveChannels: number;
-  noProgressTracker: { recoveryCount: number; sinceProgressMs: number } | null;
+  noProgressTracker: {
+    recoveryCount: number;
+    sinceProgressAt: number;
+  } | null;
   trackerStatus?: ChannelTrackerStatus | null;
 };
 
@@ -62,22 +67,6 @@ export function EngineStatusPanel(props: EngineStatusPanelProps) {
       : props.activeTargetGame) ||
     t("control.noTarget");
 
-  const suppressionText = props.suppression
-    ? `${props.suppression.game} (${mapWatchEngineSuppressionReasonLabel(props.suppression.reason, t)})${
-        props.suppression.holdRemainingMs > 0
-          ? `, ${t("control.watchEngineHold", { time: formatDurationMs(props.suppression.holdRemainingMs) })}`
-          : ""
-      }`
-    : t("control.watchEngineNoSuppression");
-
-  const cooldownText =
-    props.activeCooldowns.length > 0
-      ? props.activeCooldowns
-          .slice(0, 3)
-          .map((c) => `${c.game} (${formatDurationMs(c.remainingMs)})`)
-          .join(" | ")
-      : t("control.watchEngineNoCooldowns");
-
   const allowlistText = props.allowlistActive
     ? t("control.watchEngineAllowlistOn")
     : t("control.watchEngineAllowlistOff");
@@ -86,13 +75,6 @@ export function EngineStatusPanel(props: EngineStatusPanelProps) {
     eligible: props.allowlistedLiveChannels,
     total: props.totalLiveChannels,
   });
-
-  const noProgressText = props.noProgressTracker
-    ? t("control.watchEngineNoProgressValue", {
-        attempts: props.noProgressTracker.recoveryCount,
-        time: formatDurationMs(props.noProgressTracker.sinceProgressMs),
-      })
-    : null;
 
   const trackerTone: "warn" | undefined = props.trackerStatus?.fallbackActive ? "warn" : undefined;
   const trackerText = (() => {
@@ -160,7 +142,26 @@ export function EngineStatusPanel(props: EngineStatusPanelProps) {
             <span className="text-[color:var(--dp-text-dimmer)] w-12 flex-shrink-0">
               {t("control.engineStatus.next")}
             </span>
-            <span className="text-[color:var(--dp-text-dim)] flex-1">{details.next}</span>
+            <span className="text-[color:var(--dp-text-dim)] flex-1">
+              <TimeText
+                active={
+                  tone === "hold" &&
+                  (props.decision === "cooldown" || suppressionReason === "stall-stop")
+                }
+                render={(now) => {
+                  const remainingMs =
+                    props.decision === "suppressed" && props.suppression?.holdUntil
+                      ? Math.max(0, props.suppression.holdUntil - now)
+                      : props.decision === "cooldown" && props.activeCooldowns[0]
+                        ? Math.max(0, props.activeCooldowns[0].until - now)
+                        : 0;
+                  return (
+                    narrateEngineCountdown(props.decision, suppressionReason, remainingMs, t) ||
+                    details.next
+                  );
+                }}
+              />
+            </span>
           </div>
         </div>
       </div>
@@ -171,18 +172,74 @@ export function EngineStatusPanel(props: EngineStatusPanelProps) {
           className="border-t border-[color:var(--dp-border-soft)] px-5 py-4 grid gap-2"
         >
           <DetailRow label={t("control.engineStatus.detail.target")} value={targetText} />
-          <DetailRow label={t("control.engineStatus.detail.suppression")} value={suppressionText} />
-          <DetailRow label={t("control.engineStatus.detail.cooldowns")} value={cooldownText} />
+          <DetailRow
+            label={t("control.engineStatus.detail.suppression")}
+            value={
+              props.suppression ? (
+                <TimeText
+                  active={props.suppression.holdUntil !== null}
+                  render={(now) => {
+                    const holdRemainingMs =
+                      props.suppression?.holdUntil != null
+                        ? Math.max(0, props.suppression.holdUntil - now)
+                        : 0;
+                    return `${props.suppression!.game} (${mapWatchEngineSuppressionReasonLabel(
+                      props.suppression!.reason,
+                      t,
+                    )})${
+                      holdRemainingMs > 0
+                        ? `, ${t("control.watchEngineHold", {
+                            time: formatDurationMs(holdRemainingMs),
+                          })}`
+                        : ""
+                    }`;
+                  }}
+                />
+              ) : (
+                t("control.watchEngineNoSuppression")
+              )
+            }
+          />
+          <DetailRow
+            label={t("control.engineStatus.detail.cooldowns")}
+            value={
+              props.activeCooldowns.length > 0 ? (
+                <TimeText
+                  active
+                  render={(now) =>
+                    props.activeCooldowns
+                      .slice(0, 3)
+                      .map((c) => `${c.game} (${formatDurationMs(Math.max(0, c.until - now))})`)
+                      .join(" | ")
+                  }
+                />
+              ) : (
+                t("control.watchEngineNoCooldowns")
+              )
+            }
+          />
           <DetailRow
             label={t("control.engineStatus.detail.allowlist")}
             value={allowlistText}
             sub={channelsText}
           />
           <DetailRow label={t("control.tracker.label")} value={trackerText} tone={trackerTone} />
-          {noProgressText && (
+          {props.noProgressTracker && (
             <DetailRow
               label={t("control.engineStatus.detail.noProgress")}
-              value={noProgressText}
+              value={
+                <TimeText
+                  active
+                  render={(now) =>
+                    t("control.watchEngineNoProgressValue", {
+                      attempts: props.noProgressTracker!.recoveryCount,
+                      time: formatDurationMs(
+                        Math.max(0, now - props.noProgressTracker!.sinceProgressAt),
+                      ),
+                    })
+                  }
+                />
+              }
               tone="warn"
             />
           )}
@@ -199,7 +256,7 @@ function DetailRow({
   tone,
 }: {
   label: string;
-  value: string;
+  value: React.ReactNode;
   sub?: string;
   tone?: "warn";
 }) {

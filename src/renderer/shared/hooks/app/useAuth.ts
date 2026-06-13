@@ -21,6 +21,7 @@ type AuthHook = {
   auth: AuthState;
   startLogin: () => Promise<void>;
   logout: () => Promise<void>;
+  markExpired: () => Promise<void>;
 };
 
 export function useAuth(): AuthHook {
@@ -61,9 +62,26 @@ export function useAuth(): AuthHook {
     setAuth({ status: "idle" });
   };
 
+  const markExpired = async () => {
+    // Clear the dead token server-side, but keep the dashboard mounted by moving
+    // to a distinct "expired" state instead of "idle". Best-effort cleanup: even
+    // if the backend logout rejects, still surface "expired" so the UI never gets
+    // stuck on this auto-triggered error path. Never stomps an in-flight re-login
+    // (pending) or an already-expired state.
+    try {
+      await window.electronAPI.auth.logout();
+    } catch {
+      // ignore — fall through to the state change below
+    }
+    setAuth((prev) =>
+      prev.status === "pending" || prev.status === "expired" ? prev : { status: "expired" },
+    );
+  };
+
   return {
     auth,
     startLogin,
     logout,
+    markExpired,
   };
 }

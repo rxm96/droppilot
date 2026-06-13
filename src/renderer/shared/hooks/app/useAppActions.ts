@@ -47,7 +47,7 @@ type Params = {
   setAutoSelectEnabled: (next: boolean) => void;
   fetchInventory: (opts?: { forceLoading?: boolean }) => Promise<void>;
   isLinked: boolean;
-  logout: () => Promise<void>;
+  markExpired: () => Promise<void>;
   onManualStartWatching?: (channel: ChannelEntry) => void;
   setUpdateStatus: Dispatch<SetStateAction<AppUpdateStatus>>;
   setFilter: (next: FilterKey) => void;
@@ -93,7 +93,7 @@ export function useAppActions({
   setAutoSelectEnabled,
   fetchInventory,
   isLinked,
-  logout,
+  markExpired,
   onManualStartWatching,
   setUpdateStatus,
   setFilter,
@@ -113,7 +113,7 @@ export function useAppActions({
     setAutoSelectEnabled,
     fetchInventory,
     isLinked,
-    logout,
+    markExpired,
     onManualStartWatching,
   });
 
