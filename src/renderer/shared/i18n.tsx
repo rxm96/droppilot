@@ -1865,7 +1865,8 @@ const translations: Translations = {
     "settings.row.webhookUrl.label": "Webhook-URL",
     "settings.row.webhookUrl.description": "Discord-Webhook-URL einfügen (nur https).",
     "settings.row.webhookUrl.placeholder": "https://discord.com/api/webhooks/…",
-    "settings.row.webhookTest.description": "Sende eine Testnachricht zur Überprüfung des Webhooks.",
+    "settings.row.webhookTest.description":
+      "Sende eine Testnachricht zur Überprüfung des Webhooks.",
     "settings.action.webhookTest": "Test senden",
     "settings.webhook.testOk": "Gesendet ✓",
     "settings.webhook.testFailed": "Fehlgeschlagen: {error}",

@@ -56,6 +56,20 @@ type SettingsProps = {
   setAlertsAutoSwitch: (val: boolean) => void;
   alertsNewDrops: boolean;
   setAlertsNewDrops: (val: boolean) => void;
+  webhookEnabled: boolean;
+  setWebhookEnabled: (val: boolean) => void;
+  webhookUrl: string;
+  setWebhookUrl: (val: string) => void;
+  webhookDropClaimed: boolean;
+  setWebhookDropClaimed: (val: boolean) => void;
+  webhookWatchError: boolean;
+  setWebhookWatchError: (val: boolean) => void;
+  webhookDropEndingSoon: boolean;
+  setWebhookDropEndingSoon: (val: boolean) => void;
+  webhookAutoSwitch: boolean;
+  setWebhookAutoSwitch: (val: boolean) => void;
+  webhookNewDrops: boolean;
+  setWebhookNewDrops: (val: boolean) => void;
   enableBadgesEmotes: boolean;
   setEnableBadgesEmotes: (val: boolean) => void;
   allowUnlinkedGames: boolean;
@@ -212,6 +226,20 @@ export function SettingsView(props: SettingsProps) {
               setAlertsAutoSwitch={props.setAlertsAutoSwitch}
               alertsNewDrops={props.alertsNewDrops}
               setAlertsNewDrops={props.setAlertsNewDrops}
+              webhookEnabled={props.webhookEnabled}
+              setWebhookEnabled={props.setWebhookEnabled}
+              webhookUrl={props.webhookUrl}
+              setWebhookUrl={props.setWebhookUrl}
+              webhookDropClaimed={props.webhookDropClaimed}
+              setWebhookDropClaimed={props.setWebhookDropClaimed}
+              webhookWatchError={props.webhookWatchError}
+              setWebhookWatchError={props.setWebhookWatchError}
+              webhookDropEndingSoon={props.webhookDropEndingSoon}
+              setWebhookDropEndingSoon={props.setWebhookDropEndingSoon}
+              webhookAutoSwitch={props.webhookAutoSwitch}
+              setWebhookAutoSwitch={props.setWebhookAutoSwitch}
+              webhookNewDrops={props.webhookNewDrops}
+              setWebhookNewDrops={props.setWebhookNewDrops}
             />
           )}
           {active === "account" && (

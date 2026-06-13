@@ -3,8 +3,10 @@ import type { Language } from "@renderer/shared/i18n";
 import { translate } from "@renderer/shared/i18n";
 import { recordActivity } from "@renderer/shared/utils/activityFeed";
 import type { ActivityEvent } from "@renderer/shared/utils/activityFeed";
+import type { AlertEventType } from "@renderer/shared/domain/alerts/alertRouting";
 
 type NotifyFn = (payload: {
+  type?: AlertEventType;
   key: string;
   title: string;
   body?: string;
@@ -14,12 +16,11 @@ type NotifyFn = (payload: {
 
 type Params = {
   language: Language;
-  alertsDropClaimed: boolean;
   notify: NotifyFn;
   bumpStats: (delta: { claims?: number; lastDropTitle?: string; lastGame?: string }) => void;
 };
 
-export function useDropClaimAlerts({ language, alertsDropClaimed, notify, bumpStats }: Params) {
+export function useDropClaimAlerts({ language, notify, bumpStats }: Params) {
   const handleDropClaimed = useCallback(
     ({ title, game }: { title: string; game: string }) => {
       bumpStats({ claims: 1, lastDropTitle: title, lastGame: game });
@@ -27,15 +28,15 @@ export function useDropClaimAlerts({ language, alertsDropClaimed, notify, bumpSt
         Extract<ActivityEvent, { kind: "drop-claimed" }>,
         "id"
       >);
-      if (!alertsDropClaimed) return;
       notify({
+        type: "drop-claimed",
         key: `drop-claimed:${title}:${game}`,
         title: translate(language, "alerts.title.dropClaimed"),
         body: translate(language, "alerts.body.dropClaimed", { title, game }),
         dedupeMs: 60_000,
       });
     },
-    [alertsDropClaimed, bumpStats, language, notify],
+    [bumpStats, language, notify],
   );
 
   const handleTestAlert = useCallback(() => {
