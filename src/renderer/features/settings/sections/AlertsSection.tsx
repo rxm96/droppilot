@@ -44,6 +44,7 @@ export function AlertsSection(props: AlertsSectionProps) {
   const { t } = useI18n();
   const disabledByMaster = !props.alertsEnabled;
   const [webhookTestStatus, setWebhookTestStatus] = React.useState<string | null>(null);
+  const [webhookTestSending, setWebhookTestSending] = React.useState(false);
   const handleWebhookTest = async () => {
     if (!props.webhookUrl) {
       setWebhookTestStatus(t("settings.webhook.testNoUrl"));
@@ -55,12 +56,17 @@ export function AlertsSection(props: AlertsSectionProps) {
       body: t("alerts.body.test"),
       timestampIso: new Date().toISOString(),
     });
-    const res = await window.electronAPI.webhook.send(props.webhookUrl, body);
-    setWebhookTestStatus(
-      res.ok
-        ? t("settings.webhook.testOk")
-        : t("settings.webhook.testFailed", { error: res.error ?? `http-${res.status}` }),
-    );
+    setWebhookTestSending(true);
+    try {
+      const res = await window.electronAPI.webhook.send(props.webhookUrl, body);
+      setWebhookTestStatus(
+        res.ok
+          ? t("settings.webhook.testOk")
+          : t("settings.webhook.testFailed", { error: res.error ?? `http-${res.status}` }),
+      );
+    } finally {
+      setWebhookTestSending(false);
+    }
   };
   return (
     <div className="flex flex-col">
@@ -217,7 +223,7 @@ export function AlertsSection(props: AlertsSectionProps) {
               variant="dp-secondary"
               size="dp-md"
               onClick={() => void handleWebhookTest()}
-              disabled={!props.webhookEnabled || !props.webhookUrl}
+              disabled={!props.webhookEnabled || !props.webhookUrl || webhookTestSending}
             >
               {t("settings.action.webhookTest")}
             </Button>
