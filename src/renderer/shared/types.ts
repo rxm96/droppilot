@@ -2,6 +2,7 @@ export type AuthState =
   | { status: "idle" }
   | { status: "pending" }
   | { status: "ok" }
+  | { status: "expired" }
   | { status: "error"; message: string };
 
 export type ProfileState =

@@ -21,6 +21,7 @@ type AuthHook = {
   auth: AuthState;
   startLogin: () => Promise<void>;
   logout: () => Promise<void>;
+  markExpired: () => Promise<void>;
 };
 
 export function useAuth(): AuthHook {
@@ -61,9 +62,20 @@ export function useAuth(): AuthHook {
     setAuth({ status: "idle" });
   };
 
+  const markExpired = async () => {
+    // Clear the dead token server-side, but keep the dashboard mounted by moving
+    // to a distinct "expired" state instead of "idle". Never stomps an in-flight
+    // re-login (pending) or an already-expired state.
+    await window.electronAPI.auth.logout();
+    setAuth((prev) =>
+      prev.status === "pending" || prev.status === "expired" ? prev : { status: "expired" },
+    );
+  };
+
   return {
     auth,
     startLogin,
     logout,
+    markExpired,
   };
 }
