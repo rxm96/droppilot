@@ -30,6 +30,13 @@ type SettingsData = {
   alertsWatchError?: boolean;
   alertsAutoSwitch?: boolean;
   alertsNewDrops?: boolean;
+  webhookEnabled?: boolean;
+  webhookUrl?: string;
+  webhookDropClaimed?: boolean;
+  webhookWatchError?: boolean;
+  webhookDropEndingSoon?: boolean;
+  webhookAutoSwitch?: boolean;
+  webhookNewDrops?: boolean;
   enableBadgesEmotes?: boolean;
   allowUnlinkedGames?: boolean;
   closeToTray?: boolean;
@@ -58,6 +65,13 @@ type SettingsHook = {
   alertsWatchError: boolean;
   alertsAutoSwitch: boolean;
   alertsNewDrops: boolean;
+  webhookEnabled: boolean;
+  webhookUrl: string;
+  webhookDropClaimed: boolean;
+  webhookWatchError: boolean;
+  webhookDropEndingSoon: boolean;
+  webhookAutoSwitch: boolean;
+  webhookNewDrops: boolean;
   enableBadgesEmotes: boolean;
   allowUnlinkedGames: boolean;
   closeToTray: boolean;
@@ -82,6 +96,13 @@ type SettingsHook = {
   saveAlertsWatchError: (val: boolean) => Promise<void>;
   saveAlertsAutoSwitch: (val: boolean) => Promise<void>;
   saveAlertsNewDrops: (val: boolean) => Promise<void>;
+  saveWebhookEnabled: (val: boolean) => Promise<void>;
+  saveWebhookUrl: (val: string) => Promise<void>;
+  saveWebhookDropClaimed: (val: boolean) => Promise<void>;
+  saveWebhookWatchError: (val: boolean) => Promise<void>;
+  saveWebhookDropEndingSoon: (val: boolean) => Promise<void>;
+  saveWebhookAutoSwitch: (val: boolean) => Promise<void>;
+  saveWebhookNewDrops: (val: boolean) => Promise<void>;
   saveEnableBadgesEmotes: (val: boolean) => Promise<void>;
   saveAllowUnlinkedGames: (val: boolean) => Promise<void>;
   saveCloseToTray: (val: boolean) => Promise<void>;
@@ -143,6 +164,13 @@ export function useSettingsStore(): SettingsHook {
   const [alertsWatchError, setAlertsWatchError] = useState<boolean>(true);
   const [alertsAutoSwitch, setAlertsAutoSwitch] = useState<boolean>(true);
   const [alertsNewDrops, setAlertsNewDrops] = useState<boolean>(true);
+  const [webhookEnabled, setWebhookEnabled] = useState<boolean>(false);
+  const [webhookUrl, setWebhookUrl] = useState<string>("");
+  const [webhookDropClaimed, setWebhookDropClaimed] = useState<boolean>(true);
+  const [webhookWatchError, setWebhookWatchError] = useState<boolean>(true);
+  const [webhookDropEndingSoon, setWebhookDropEndingSoon] = useState<boolean>(false);
+  const [webhookAutoSwitch, setWebhookAutoSwitch] = useState<boolean>(false);
+  const [webhookNewDrops, setWebhookNewDrops] = useState<boolean>(false);
   const [enableBadgesEmotes, setEnableBadgesEmotes] = useState<boolean>(false);
   const [allowUnlinkedGames, setAllowUnlinkedGames] = useState<boolean>(false);
   const [closeToTray, setCloseToTray] = useState<boolean>(true);
@@ -182,6 +210,13 @@ export function useSettingsStore(): SettingsHook {
       setAlertsWatchError(res.alertsWatchError !== false);
       setAlertsAutoSwitch(res.alertsAutoSwitch !== false);
       setAlertsNewDrops(res.alertsNewDrops !== false);
+      setWebhookEnabled(res.webhookEnabled === true);
+      setWebhookUrl(typeof res.webhookUrl === "string" ? res.webhookUrl : "");
+      setWebhookDropClaimed(res.webhookDropClaimed !== false);
+      setWebhookWatchError(res.webhookWatchError !== false);
+      setWebhookDropEndingSoon(res.webhookDropEndingSoon === true);
+      setWebhookAutoSwitch(res.webhookAutoSwitch === true);
+      setWebhookNewDrops(res.webhookNewDrops === true);
       setEnableBadgesEmotes(res.enableBadgesEmotes === true);
       setAllowUnlinkedGames(res.allowUnlinkedGames === true);
       setCloseToTray(typeof res.closeToTray === "boolean" ? res.closeToTray : true);
@@ -226,6 +261,13 @@ export function useSettingsStore(): SettingsHook {
       setAlertsWatchError(saved.alertsWatchError !== false);
       setAlertsAutoSwitch(saved.alertsAutoSwitch !== false);
       setAlertsNewDrops(saved.alertsNewDrops !== false);
+      setWebhookEnabled(saved.webhookEnabled === true);
+      setWebhookUrl(typeof saved.webhookUrl === "string" ? saved.webhookUrl : "");
+      setWebhookDropClaimed(saved.webhookDropClaimed !== false);
+      setWebhookWatchError(saved.webhookWatchError !== false);
+      setWebhookDropEndingSoon(saved.webhookDropEndingSoon === true);
+      setWebhookAutoSwitch(saved.webhookAutoSwitch === true);
+      setWebhookNewDrops(saved.webhookNewDrops === true);
       setEnableBadgesEmotes(saved.enableBadgesEmotes === true);
       setAllowUnlinkedGames(saved.allowUnlinkedGames === true);
       setCloseToTray(typeof saved.closeToTray === "boolean" ? saved.closeToTray : true);
@@ -339,6 +381,42 @@ export function useSettingsStore(): SettingsHook {
     await persist({ alertsNewDrops: val });
   };
 
+  const saveWebhookEnabled = async (val: boolean) => {
+    setWebhookEnabled(val);
+    await persist({ webhookEnabled: val });
+  };
+
+  const saveWebhookUrl = async (val: string) => {
+    const trimmed = val.trim();
+    setWebhookUrl(trimmed);
+    await persist({ webhookUrl: trimmed });
+  };
+
+  const saveWebhookDropClaimed = async (val: boolean) => {
+    setWebhookDropClaimed(val);
+    await persist({ webhookDropClaimed: val });
+  };
+
+  const saveWebhookWatchError = async (val: boolean) => {
+    setWebhookWatchError(val);
+    await persist({ webhookWatchError: val });
+  };
+
+  const saveWebhookDropEndingSoon = async (val: boolean) => {
+    setWebhookDropEndingSoon(val);
+    await persist({ webhookDropEndingSoon: val });
+  };
+
+  const saveWebhookAutoSwitch = async (val: boolean) => {
+    setWebhookAutoSwitch(val);
+    await persist({ webhookAutoSwitch: val });
+  };
+
+  const saveWebhookNewDrops = async (val: boolean) => {
+    setWebhookNewDrops(val);
+    await persist({ webhookNewDrops: val });
+  };
+
   const saveEnableBadgesEmotes = async (val: boolean) => {
     setEnableBadgesEmotes(val);
     await persist({ enableBadgesEmotes: val });
@@ -431,6 +509,13 @@ export function useSettingsStore(): SettingsHook {
       setAlertsWatchError(saved.alertsWatchError !== false);
       setAlertsAutoSwitch(saved.alertsAutoSwitch !== false);
       setAlertsNewDrops(saved.alertsNewDrops !== false);
+      setWebhookEnabled(saved.webhookEnabled === true);
+      setWebhookUrl(typeof saved.webhookUrl === "string" ? saved.webhookUrl : "");
+      setWebhookDropClaimed(saved.webhookDropClaimed !== false);
+      setWebhookWatchError(saved.webhookWatchError !== false);
+      setWebhookDropEndingSoon(saved.webhookDropEndingSoon === true);
+      setWebhookAutoSwitch(saved.webhookAutoSwitch === true);
+      setWebhookNewDrops(saved.webhookNewDrops === true);
       setEnableBadgesEmotes(saved.enableBadgesEmotes === true);
       setAllowUnlinkedGames(saved.allowUnlinkedGames === true);
       setCloseToTray(typeof saved.closeToTray === "boolean" ? saved.closeToTray : true);
@@ -474,6 +559,13 @@ export function useSettingsStore(): SettingsHook {
     alertsWatchError,
     alertsAutoSwitch,
     alertsNewDrops,
+    webhookEnabled,
+    webhookUrl,
+    webhookDropClaimed,
+    webhookWatchError,
+    webhookDropEndingSoon,
+    webhookAutoSwitch,
+    webhookNewDrops,
     enableBadgesEmotes,
     allowUnlinkedGames,
     closeToTray,
@@ -498,6 +590,13 @@ export function useSettingsStore(): SettingsHook {
     saveAlertsWatchError,
     saveAlertsAutoSwitch,
     saveAlertsNewDrops,
+    saveWebhookEnabled,
+    saveWebhookUrl,
+    saveWebhookDropClaimed,
+    saveWebhookWatchError,
+    saveWebhookDropEndingSoon,
+    saveWebhookAutoSwitch,
+    saveWebhookNewDrops,
     saveEnableBadgesEmotes,
     saveAllowUnlinkedGames,
     saveCloseToTray,

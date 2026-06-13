@@ -29,6 +29,13 @@ type Params = {
   saveAlertsWatchError: (val: boolean) => Promise<void>;
   saveAlertsAutoSwitch: (val: boolean) => Promise<void>;
   saveAlertsNewDrops: (val: boolean) => Promise<void>;
+  saveWebhookEnabled: (val: boolean) => Promise<void>;
+  saveWebhookUrl: (val: string) => Promise<void>;
+  saveWebhookDropClaimed: (val: boolean) => Promise<void>;
+  saveWebhookWatchError: (val: boolean) => Promise<void>;
+  saveWebhookDropEndingSoon: (val: boolean) => Promise<void>;
+  saveWebhookAutoSwitch: (val: boolean) => Promise<void>;
+  saveWebhookNewDrops: (val: boolean) => Promise<void>;
   saveEnableBadgesEmotes: (val: boolean) => Promise<void>;
   saveAllowUnlinkedGames: (val: boolean) => Promise<void>;
   saveCloseToTray: (val: boolean) => Promise<void>;
@@ -68,6 +75,13 @@ export function useAppActions({
   saveAlertsWatchError,
   saveAlertsAutoSwitch,
   saveAlertsNewDrops,
+  saveWebhookEnabled,
+  saveWebhookUrl,
+  saveWebhookDropClaimed,
+  saveWebhookWatchError,
+  saveWebhookDropEndingSoon,
+  saveWebhookAutoSwitch,
+  saveWebhookNewDrops,
   saveEnableBadgesEmotes,
   saveAllowUnlinkedGames,
   saveCloseToTray,
@@ -121,6 +135,13 @@ export function useAppActions({
     saveAlertsWatchError,
     saveAlertsAutoSwitch,
     saveAlertsNewDrops,
+    saveWebhookEnabled,
+    saveWebhookUrl,
+    saveWebhookDropClaimed,
+    saveWebhookWatchError,
+    saveWebhookDropEndingSoon,
+    saveWebhookAutoSwitch,
+    saveWebhookNewDrops,
     saveEnableBadgesEmotes,
     saveAllowUnlinkedGames,
     saveCloseToTray,

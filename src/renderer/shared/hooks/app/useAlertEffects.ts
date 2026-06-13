@@ -10,8 +10,10 @@ import type {
 import type { ActiveDropInfo } from "@renderer/shared/hooks/inventory";
 import type { WatchStats } from "@renderer/shared/hooks/watch";
 import { resolveErrorMessage } from "@renderer/shared/utils/errors";
+import type { AlertEventType } from "@renderer/shared/domain/alerts/alertRouting";
 
 type NotifyFn = (payload: {
+  type?: AlertEventType;
   key: string;
   title: string;
   body?: string;
@@ -27,10 +29,6 @@ type InventoryChanges = {
 type Params = {
   language: Language;
   notify: NotifyFn;
-  alertsNewDrops: boolean;
-  alertsWatchError: boolean;
-  alertsAutoSwitch: boolean;
-  alertsDropEndingSoon: boolean;
   alertsDropEndingMinutes: number;
   inventory: InventoryState;
   inventoryItems: InventoryItem[];
@@ -44,10 +42,6 @@ type Params = {
 export function useAlertEffects({
   language,
   notify,
-  alertsNewDrops,
-  alertsWatchError,
-  alertsAutoSwitch,
-  alertsDropEndingSoon,
   alertsDropEndingMinutes,
   inventory,
   inventoryItems,
@@ -68,7 +62,6 @@ export function useAlertEffects({
   }, [autoSwitch]);
 
   useEffect(() => {
-    if (!alertsNewDrops) return;
     if (inventory.status !== "ready") return;
     if (!inventoryAlertReadyRef.current) {
       inventoryAlertReadyRef.current = true;
@@ -85,6 +78,7 @@ export function useAlertEffects({
       return extra > 0 ? `${main} +${extra}` : main;
     })();
     notify({
+      type: "new-drops",
       key: `new-drops:${games.join("|")}:${addedItems.length}`,
       title: translate(language, "alerts.title.newDrops"),
       body: translate(language, "alerts.body.newDrops", {
@@ -93,37 +87,36 @@ export function useAlertEffects({
       }),
       dedupeMs: 30_000,
     });
-  }, [alertsNewDrops, inventory.status, inventoryChanges.added, inventoryItems, language, notify]);
+  }, [inventory.status, inventoryChanges.added, inventoryItems, language, notify]);
 
   useEffect(() => {
-    if (!alertsWatchError) return;
     if (!watchStats.lastError) return;
     const t = (key: string, vars?: Record<string, string | number>) =>
       translate(language, key, vars);
     const message = resolveErrorMessage(t, watchStats.lastError);
     notify({
+      type: "watch-error",
       key: `watch-error:${watchStats.lastError.code ?? message}`,
       title: translate(language, "alerts.title.watchError"),
       body: translate(language, "alerts.body.watchError", { message }),
       dedupeMs: 10 * 60_000,
     });
-  }, [alertsWatchError, language, notify, watchStats.lastError]);
+  }, [language, notify, watchStats.lastError]);
 
   useEffect(() => {
-    if (!alertsAutoSwitch) return;
     if (!autoSwitchInfo) return;
     const from = autoSwitchInfo.from?.name ?? translate(language, "alerts.misc.unknownChannel");
     const to = autoSwitchInfo.to?.name ?? translate(language, "alerts.misc.unknownChannel");
     notify({
+      type: "auto-switch",
       key: `auto-switch:${autoSwitchInfo.at}`,
       title: translate(language, "alerts.title.autoSwitch"),
       body: translate(language, "alerts.body.autoSwitch", { from, to }),
       dedupeMs: 30_000,
     });
-  }, [alertsAutoSwitch, autoSwitchInfo, language, notify]);
+  }, [autoSwitchInfo, language, notify]);
 
   useEffect(() => {
-    if (!alertsDropEndingSoon) return;
     if (!watching) return;
     if (!activeDropInfo) return;
     const threshold = Math.max(1, Math.min(60, Math.round(alertsDropEndingMinutes || 1)));
@@ -131,6 +124,7 @@ export function useAlertEffects({
     if (activeDropInfo.remainingMinutes > threshold) return;
     const minutes = Math.max(1, Math.round(activeDropInfo.remainingMinutes));
     notify({
+      type: "drop-ending-soon",
       key: `drop-ending:${activeDropInfo.id}`,
       title: translate(language, "alerts.title.dropEndingSoon"),
       body: translate(language, "alerts.body.dropEndingSoon", {
@@ -139,7 +133,7 @@ export function useAlertEffects({
       }),
       dedupeMs: 24 * 60 * 60 * 1000,
     });
-  }, [activeDropInfo, alertsDropEndingMinutes, alertsDropEndingSoon, language, notify, watching]);
+  }, [activeDropInfo, alertsDropEndingMinutes, language, notify, watching]);
 
   return { autoSwitchInfo };
 }

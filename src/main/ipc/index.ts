@@ -16,6 +16,7 @@ import type { ChannelTracker, ChannelTrackerDiffEvent } from "../twitch/tracker"
 import type { UserPubSub, UserPubSubEvent } from "../twitch/userPubSub";
 import { allowsPrereleaseBuilds } from "../../shared/updateChannels";
 import { loadReleaseHistory, type ReleaseCache } from "../../shared/releaseHistory";
+import { sendWebhook } from "../integrations/webhook";
 
 function extractReleaseNoteText(entry: unknown): string {
   if (typeof entry === "string") return entry;
@@ -523,5 +524,10 @@ export function registerIpcHandlers(deps: {
     } catch (err) {
       return { ok: false, message: err instanceof Error ? err.message : String(err) };
     }
+  });
+
+  ipcMain.handle("webhook/send", async (_event, url: string, body: unknown) => {
+    if (typeof url !== "string" || !url) return { ok: false, status: 0, error: "Missing url" };
+    return sendWebhook(url, body);
   });
 }
