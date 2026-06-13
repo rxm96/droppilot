@@ -144,7 +144,10 @@ export function EngineStatusPanel(props: EngineStatusPanelProps) {
             </span>
             <span className="text-[color:var(--dp-text-dim)] flex-1">
               <TimeText
-                active={tone === "hold"}
+                active={
+                  tone === "hold" &&
+                  (props.decision === "cooldown" || suppressionReason === "stall-stop")
+                }
                 render={(now) => {
                   const remainingMs =
                     props.decision === "suppressed" && props.suppression?.holdUntil

@@ -7,6 +7,7 @@ import { formatRemainingFromEta } from "./formatters";
 import { narrateClaim } from "./claimNarration";
 import { useI18n } from "@renderer/shared/i18n";
 import { TimeText } from "@renderer/shared/components/TimeText";
+import type { ClaimStatus } from "@renderer/shared/types";
 
 export type HeroPanelProps = {
   activeGame?: string;
@@ -30,7 +31,7 @@ export type HeroPanelProps = {
   /** Navigate to Priorities (Phase 5 wiring). When null/undefined, switch button stays disabled. */
   onSwitchTarget?: () => void;
   onClaimNow?: () => void | Promise<void>;
-  claimStatus?: import("@renderer/shared/types").ClaimStatus | null;
+  claimStatus?: ClaimStatus | null;
 };
 
 export function HeroPanel({
