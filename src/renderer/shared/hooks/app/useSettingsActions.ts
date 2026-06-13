@@ -20,6 +20,13 @@ type Params = {
   saveAlertsWatchError: (val: boolean) => Promise<void>;
   saveAlertsAutoSwitch: (val: boolean) => Promise<void>;
   saveAlertsNewDrops: (val: boolean) => Promise<void>;
+  saveWebhookEnabled: (val: boolean) => Promise<void>;
+  saveWebhookUrl: (val: string) => Promise<void>;
+  saveWebhookDropClaimed: (val: boolean) => Promise<void>;
+  saveWebhookWatchError: (val: boolean) => Promise<void>;
+  saveWebhookDropEndingSoon: (val: boolean) => Promise<void>;
+  saveWebhookAutoSwitch: (val: boolean) => Promise<void>;
+  saveWebhookNewDrops: (val: boolean) => Promise<void>;
   saveEnableBadgesEmotes: (val: boolean) => Promise<void>;
   saveAllowUnlinkedGames: (val: boolean) => Promise<void>;
   saveCloseToTray: (val: boolean) => Promise<void>;
@@ -46,6 +53,13 @@ export function useSettingsActions({
   saveAlertsWatchError,
   saveAlertsAutoSwitch,
   saveAlertsNewDrops,
+  saveWebhookEnabled,
+  saveWebhookUrl,
+  saveWebhookDropClaimed,
+  saveWebhookWatchError,
+  saveWebhookDropEndingSoon,
+  saveWebhookAutoSwitch,
+  saveWebhookNewDrops,
   saveEnableBadgesEmotes,
   saveAllowUnlinkedGames,
   saveCloseToTray,
@@ -167,6 +181,55 @@ export function useSettingsActions({
     [saveAlertsNewDrops],
   );
 
+  const handleSetWebhookEnabled = useCallback(
+    (val: boolean) => {
+      void saveWebhookEnabled(val);
+    },
+    [saveWebhookEnabled],
+  );
+
+  const handleSetWebhookUrl = useCallback(
+    (val: string) => {
+      void saveWebhookUrl(val);
+    },
+    [saveWebhookUrl],
+  );
+
+  const handleSetWebhookDropClaimed = useCallback(
+    (val: boolean) => {
+      void saveWebhookDropClaimed(val);
+    },
+    [saveWebhookDropClaimed],
+  );
+
+  const handleSetWebhookWatchError = useCallback(
+    (val: boolean) => {
+      void saveWebhookWatchError(val);
+    },
+    [saveWebhookWatchError],
+  );
+
+  const handleSetWebhookDropEndingSoon = useCallback(
+    (val: boolean) => {
+      void saveWebhookDropEndingSoon(val);
+    },
+    [saveWebhookDropEndingSoon],
+  );
+
+  const handleSetWebhookAutoSwitch = useCallback(
+    (val: boolean) => {
+      void saveWebhookAutoSwitch(val);
+    },
+    [saveWebhookAutoSwitch],
+  );
+
+  const handleSetWebhookNewDrops = useCallback(
+    (val: boolean) => {
+      void saveWebhookNewDrops(val);
+    },
+    [saveWebhookNewDrops],
+  );
+
   const handleSetEnableBadgesEmotes = useCallback(
     (val: boolean) => {
       void saveEnableBadgesEmotes(val);
@@ -224,6 +287,13 @@ export function useSettingsActions({
     handleSetAlertsWatchError,
     handleSetAlertsAutoSwitch,
     handleSetAlertsNewDrops,
+    handleSetWebhookEnabled,
+    handleSetWebhookUrl,
+    handleSetWebhookDropClaimed,
+    handleSetWebhookWatchError,
+    handleSetWebhookDropEndingSoon,
+    handleSetWebhookAutoSwitch,
+    handleSetWebhookNewDrops,
     handleSetEnableBadgesEmotes,
     handleSetAllowUnlinkedGames,
     handleSetCloseToTray,
