@@ -143,6 +143,14 @@ const api = {
       return () => ipcRenderer.removeListener("main-log", listener);
     },
   },
+  webhook: {
+    send: (url: string, body: unknown) =>
+      ipcRenderer.invoke("webhook/send", url, body) as Promise<{
+        ok: boolean;
+        status: number;
+        error?: string;
+      }>,
+  },
 };
 
 contextBridge.exposeInMainWorld("electronAPI", api);
