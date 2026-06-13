@@ -30,6 +30,14 @@ describe("buildGenerationPrompt", () => {
   it("demands pure JSON with the bullets/evidence shape", () => {
     expect(prompt).toContain('{"bullets":[{"text":"...","evidence":["E1"]}]}');
   });
+
+  it("forbids inventing audio/speech from figurative words like 'voice'/'narrate'", () => {
+    // Regression: the app is silent; "Engine Voice"/"narrate" must never become
+    // "hear audio updates"/"spoken alerts". Guardrail lives in product facts + rules.
+    expect(prompt).toContain("DropPilot is silent");
+    expect(prompt).toMatch(/never write that users hear/i);
+    expect(prompt).toMatch(/figurative word.*sensory modality|sensory modality.*figurative/i);
+  });
 });
 
 describe("buildJudgePrompt", () => {
@@ -64,6 +72,16 @@ describe("buildJudgePrompt", () => {
     const unitsById = new Map(CANDIDATES.map((u) => [u.id, u.text]));
     const prompt = buildJudgePrompt([{ text: "x", evidence: ["E1"] }], unitsById);
     expect(prompt).not.toMatch(/internal maintenance/i);
+  });
+
+  it("instructs the judge to reject invented audio/speech modalities", () => {
+    // Regression companion to the generation guardrail: even if a bullet slips
+    // through generation, the judge must drop "hear"/"spoken"/audio claims that
+    // figurative evidence ("voice"/"narrate") does not literally support.
+    const unitsById = new Map(CANDIDATES.map((u) => [u.id, u.text]));
+    const prompt = buildJudgePrompt([{ text: "x", evidence: ["E1"] }], unitsById);
+    expect(prompt).toMatch(/sensory modality/i);
+    expect(prompt).toMatch(/do NOT support audio or speech claims/i);
   });
 });
 

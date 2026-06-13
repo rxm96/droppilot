@@ -9,6 +9,7 @@ export function buildGenerationPrompt(candidates) {
 Product facts you must respect:
 - DropPilot runs in the background; it has no in-app video playback.
 - Never imply that users watch streams inside the app.
+- DropPilot is silent: it has no audio, sound, speech, or voice output. Words like "voice", "narrate", or "announce" in the changes always describe on-screen text or status — never literal sound. Never write that users hear, listen to, or are read/spoken to.
 
 Below are the changes in this release that could be user-visible. Each line has an id.
 
@@ -20,6 +21,7 @@ Write 0 to 6 release-note bullets describing what users will notice. Rules:
 - If no change produces something a user would notice, return an empty "bullets" array. Zero bullets is a correct, common answer.
 - Each bullet must name the concrete feature, setting, panel, or behavior that changed. No generic quality claims (nothing like "improvements", "more stable", "better performance" without a concrete subject).
 - Plain language; describe outcomes, not implementation. Never mention file paths, commits, pull requests, refactoring, dependencies, CI, or version numbers.
+- Never claim a capability or output the cited changes do not literally state. In particular, do not turn a figurative word (e.g. "voice", "narrate") into a new sensory modality such as sound or speech; describe the literal on-screen result instead.
 
 Respond with ONLY this JSON shape (no markdown fences, no prose):
 {"bullets":[{"text":"...","evidence":["E1"]}]}`;
@@ -41,6 +43,7 @@ export function buildJudgePrompt(bullets, unitsById) {
   return `You review draft release-note bullets for DropPilot, a Twitch-Drops automation desktop app. For each bullet you get the changelog entries cited as its evidence. Judge strictly:
 
 - "supported": the bullet's claim follows from its cited entries alone. If the entries do not clearly state what the bullet claims, or you are unsure, answer false.
+- A bullet is NOT supported if it introduces a capability or sensory modality (audio, sound, speech, voice output, "hear", "spoken", "read aloud") that its cited entries do not literally name. Figurative words like "voice" or "narrate" in the evidence describe on-screen text and do NOT support audio or speech claims.
 - "concrete": the bullet names a specific feature, setting, panel, or behavior. Generic quality claims ("improvements", "more stable", "better performance", "enhanced stability") are not concrete.
 
 ${blocks}
