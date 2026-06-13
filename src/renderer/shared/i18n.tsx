@@ -310,6 +310,9 @@ const translations: Translations = {
     "control.watchEngineNext.idleNoChannels":
       "The engine will retarget to the next priority game after stall handling.",
     "control.watchEngineNext.idleReady": "Auto-select can pick one of the eligible live channels.",
+    "control.watchEngineNext.suppressedCountdown": "Resuming in {time} after the stall hold.",
+    "control.watchEngineNext.cooldownCountdown":
+      "Cooldown ends in {time}, then auto-select retries.",
     "control.watchEngineNext.idleNoWatchableDrops":
       "The engine waits for inventory/channel changes or moves to another target.",
     "control.watchEngineSuppression.manualStop": "manual stop",
@@ -1355,6 +1358,9 @@ const translations: Translations = {
       "Nach Stall-Handling retargetet die Engine auf das nächste Prioritäts-Game.",
     "control.watchEngineNext.idleReady":
       "Auto-Select kann einen der berechtigten Live-Streams starten.",
+    "control.watchEngineNext.suppressedCountdown": "Fährt in {time} fort, nach dem Stall-Hold.",
+    "control.watchEngineNext.cooldownCountdown":
+      "Cooldown endet in {time}, dann versucht Auto-Select erneut.",
     "control.watchEngineNext.idleNoWatchableDrops":
       "Die Engine wartet auf Inventory/Channel-Aenderungen oder wechselt auf ein anderes Ziel.",
     "control.watchEngineSuppression.manualStop": "manueller Stop",
