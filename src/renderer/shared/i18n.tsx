@@ -897,6 +897,7 @@ const translations: Translations = {
     "hero.title.claimNowReady": "Claim all available drops",
     "hero.button.claiming": "claiming…",
     "hero.claimFeedback.errorFallback": "Claim failed",
+    "hero.claim.retryIn": "retry in {time}",
 
     // queue.* — new namespace, QueuePanel
     "queue.header": "queue · next up",
@@ -1932,6 +1933,7 @@ const translations: Translations = {
     "hero.title.claimNowReady": "Alle verfügbaren Drops claimen",
     "hero.button.claiming": "claime…",
     "hero.claimFeedback.errorFallback": "Claim fehlgeschlagen",
+    "hero.claim.retryIn": "neuer Versuch in {time}",
 
     // queue.* — new namespace, QueuePanel
     "queue.header": "queue · als nächstes",
