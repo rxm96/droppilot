@@ -29,7 +29,6 @@ type WatchEngineSnapshot = {
     game: string;
     reason: WatchEngineSuppressionReason;
     sinceAt: number | null;
-    holdRemainingMs: number;
     holdUntil: number | null;
   } | null;
   activeCooldowns: Array<{ game: string; until: number; remainingMs: number }>;
@@ -38,7 +37,6 @@ type WatchEngineSnapshot = {
   totalLiveChannels: number;
   noProgressTracker: {
     recoveryCount: number;
-    sinceProgressMs: number;
     sinceProgressAt: number;
   } | null;
 };

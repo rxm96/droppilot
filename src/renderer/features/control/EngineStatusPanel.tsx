@@ -24,7 +24,6 @@ export type EngineStatusPanelProps = {
     game: string;
     reason: WatchEngineSuppressionReason;
     sinceAt: number | null;
-    holdRemainingMs: number;
     holdUntil: number | null;
   } | null;
   activeCooldowns: Array<{ game: string; until: number; remainingMs: number }>;
@@ -33,7 +32,6 @@ export type EngineStatusPanelProps = {
   totalLiveChannels: number;
   noProgressTracker: {
     recoveryCount: number;
-    sinceProgressMs: number;
     sinceProgressAt: number;
   } | null;
   trackerStatus?: ChannelTrackerStatus | null;
