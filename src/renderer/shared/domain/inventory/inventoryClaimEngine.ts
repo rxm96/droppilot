@@ -181,6 +181,8 @@ export class InventoryClaimEngine {
           code: errInfo.code,
           title: drop.title,
           at: Date.now(),
+          nextRetryAt: now + getClaimRetryDelay(attempts),
+          attempts,
         });
       }
     }

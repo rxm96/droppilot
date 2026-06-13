@@ -224,4 +224,8 @@ export type ClaimStatus = {
   code?: string;
   title?: string;
   at: number;
+  /** Absolute ms; present on an error the engine scheduled a retry for (transient). */
+  nextRetryAt?: number;
+  /** Retry attempt count for the failing drop (1-based). */
+  attempts?: number;
 };
