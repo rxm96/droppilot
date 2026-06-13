@@ -928,7 +928,6 @@ const translations: Translations = {
     "attention.claimsReady": "{count} claims ready",
     "attention.watchError": "watch error",
     "attention.noChannels": "no channels",
-    "attention.trackerLabel": "tracker {state}",
 
     // inventory.filter.* — InventoryFilterStrip chips (new keys only; all/upcoming/notLinked/expired already defined above)
     "inventory.filter.aria": "Inventory filter",
@@ -1953,7 +1952,6 @@ const translations: Translations = {
     "attention.claimsReady": "{count} claims bereit",
     "attention.watchError": "watch-fehler",
     "attention.noChannels": "keine channels",
-    "attention.trackerLabel": "tracker {state}",
 
     // inventory.filter.* — InventoryFilterStrip chips (new keys only; all/upcoming/notLinked/expired already defined above)
     "inventory.filter.aria": "Inventar-Filter",

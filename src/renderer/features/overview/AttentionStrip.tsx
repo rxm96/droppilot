@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Pill } from "@renderer/shared/components/ui/pill";
-import type { ChannelTrackerStatus, ErrorInfo } from "@renderer/shared/types";
+import type { ErrorInfo } from "@renderer/shared/types";
 import { useI18n } from "@renderer/shared/i18n";
 
 export type AttentionStripProps = {
@@ -8,10 +8,9 @@ export type AttentionStripProps = {
   watchError: ErrorInfo | null | undefined;
   activeGame: string;
   channelsCount: number;
-  trackerStatus: ChannelTrackerStatus | null | undefined;
 };
 
-// Memoized: its props (counts, game name, error/tracker refs) are all stable
+// Memoized: its props (counts, game name, error ref) are all stable
 // across the per-second watch tick, so it bails out of the Overview's 1Hz
 // re-render instead of rebuilding its pills every second while watching.
 export const AttentionStrip = React.memo(function AttentionStrip({
@@ -19,7 +18,6 @@ export const AttentionStrip = React.memo(function AttentionStrip({
   watchError,
   activeGame,
   channelsCount,
-  trackerStatus,
 }: AttentionStripProps) {
   const { t } = useI18n();
   const pills: React.ReactNode[] = [];
@@ -50,18 +48,6 @@ export const AttentionStrip = React.memo(function AttentionStrip({
       </Pill>,
     );
   }
-  if (
-    trackerStatus?.connectionState &&
-    trackerStatus.connectionState !== "connected" &&
-    trackerStatus.connectionState !== "connecting"
-  ) {
-    pills.push(
-      <Pill key="tracker" tone="err" dot>
-        {t("attention.trackerLabel", { state: trackerStatus.connectionState })}
-      </Pill>,
-    );
-  }
-
   if (pills.length === 0) return null;
 
   return <div className="flex flex-wrap gap-2 mb-4">{pills}</div>;

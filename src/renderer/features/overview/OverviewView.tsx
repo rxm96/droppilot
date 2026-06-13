@@ -1,4 +1,4 @@
-import type { ChannelTrackerStatus, ErrorInfo, InventoryState } from "@renderer/shared/types";
+import type { ErrorInfo, InventoryState } from "@renderer/shared/types";
 import { HeroPanel } from "./HeroPanel";
 import { QueuePanel } from "./QueuePanel";
 import { ActivityPanel } from "./ActivityPanel";
@@ -36,7 +36,6 @@ type OverviewProps = {
   lastWatchOk?: number | null;
   watchingSince?: number | null;
   inventoryFetchedAt?: number | null;
-  trackerStatus?: ChannelTrackerStatus | null;
   watchError?: ErrorInfo | null;
   onPause?: () => void;
   onSwitchTarget?: () => void;
@@ -61,7 +60,6 @@ export function OverviewView({
   watchDecision,
   lastWatchOk,
   watchingSince,
-  trackerStatus,
   watchError,
   onPause,
   onSwitchTarget,
@@ -87,7 +85,6 @@ export function OverviewView({
           watchError={watchError}
           activeGame={activeGame}
           channelsCount={channelsCount}
-          trackerStatus={trackerStatus}
         />
         <HeroPanel
           activeGame={activeGame}

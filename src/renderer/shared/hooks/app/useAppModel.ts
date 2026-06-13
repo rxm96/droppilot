@@ -592,7 +592,6 @@ export function useAppModel() {
     lastWatchOk: watchStats.lastOk,
     watchingSince,
     inventoryFetchedAt,
-    trackerStatus,
     watchError: watchStats.lastError,
   };
   const inventoryProps = {
