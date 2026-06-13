@@ -387,8 +387,9 @@ export function useSettingsStore(): SettingsHook {
   };
 
   const saveWebhookUrl = async (val: string) => {
-    setWebhookUrl(val);
-    await persist({ webhookUrl: val });
+    const trimmed = val.trim();
+    setWebhookUrl(trimmed);
+    await persist({ webhookUrl: trimmed });
   };
 
   const saveWebhookDropClaimed = async (val: boolean) => {
