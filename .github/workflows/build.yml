@@ -261,9 +261,13 @@ jobs:
           body_path: rn-work/release_body.md
           draft: ${{ steps.release_visibility.outputs.draft }}
           prerelease: ${{ steps.release_visibility.outputs.prerelease }}
+          # Keep the release lean. Windows installer + its updater feed
+          # (latest.yml) and blockmap for differential downloads — auto-update is
+          # Windows-only. Plus the macOS .dmg for manual install. Deliberately
+          # excludes the dead macOS auto-update artifacts (*-mac.zip,
+          # *.dmg.blockmap, latest-mac.yml) and electron-builder's builder-debug.yml.
           files: |
             artifacts/*.exe
-            artifacts/*.blockmap
+            artifacts/*.exe.blockmap
             artifacts/*.dmg
-            artifacts/*.zip
-            artifacts/*.yml
+            artifacts/latest.yml
