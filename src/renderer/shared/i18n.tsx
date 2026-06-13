@@ -84,6 +84,8 @@ const translations: Translations = {
     "session.loginBrowser": "Login with browser",
     "session.logout": "Logout",
     "session.login": "Login...",
+    "session.expired.title": "Session expired — engine paused.",
+    "session.expired.relogin": "Re-login",
 
     "nav.title": "Navigation",
 
@@ -1127,6 +1129,8 @@ const translations: Translations = {
     "session.loginBrowser": "Login mit Browser",
     "session.logout": "Logout",
     "session.login": "Login...",
+    "session.expired.title": "Sitzung abgelaufen — Engine pausiert.",
+    "session.expired.relogin": "Neu anmelden",
 
     "nav.title": "Navigation",
 

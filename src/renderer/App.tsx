@@ -9,6 +9,7 @@ import { I18nProvider, useI18n } from "@renderer/shared/i18n";
 import { DevPrimitivesView } from "@renderer/features/dev-primitives";
 import { formatRelative } from "@renderer/features/overview/formatters";
 import { TimeText } from "@renderer/shared/components/TimeText";
+import { SessionExpiredBanner } from "./features/control/SessionExpiredBanner";
 
 function App() {
   const model = useAppModel();
@@ -184,6 +185,7 @@ function AppShell({ model }: { model: Model }) {
         items={navItems}
         right={sessionRight}
       />
+      <SessionExpiredBanner auth={navProps.auth} onRelogin={navProps.startLogin} />
       {/* min-h-0 is critical: flex children default to min-height:auto which
           would prevent the inner content from shrinking below its intrinsic
           height, so overflow-y-auto would never engage. */}
