@@ -197,6 +197,7 @@ export function AlertsSection(props: AlertsSectionProps) {
         />
         <SettingRow
           divided
+          stacked
           disabled={!props.webhookEnabled}
           label={t("settings.row.webhookUrl.label")}
           description={t("settings.row.webhookUrl.description")}
@@ -209,7 +210,7 @@ export function AlertsSection(props: AlertsSectionProps) {
               placeholder={t("settings.row.webhookUrl.placeholder")}
               disabled={!props.webhookEnabled}
               aria-label={t("settings.row.webhookUrl.label")}
-              className="w-72"
+              className="w-full"
             />
           }
         />
