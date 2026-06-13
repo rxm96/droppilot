@@ -81,6 +81,7 @@ export function useWatchEngineSnapshot({
         ? {
             recoveryCount: stallTracker.recoveryCount,
             sinceProgressMs: Math.max(0, now - stallTracker.lastProgressAt),
+            sinceProgressAt: stallTracker.lastProgressAt,
           }
         : null;
     const hasPredictiveProgress = Boolean(
@@ -119,6 +120,10 @@ export function useWatchEngineSnapshot({
               reason: suppressionReason,
               sinceAt: suppressionAt,
               holdRemainingMs: suppressionHoldRemainingMs,
+              holdUntil:
+                holdMs && typeof suppressionAt === "number" && Number.isFinite(suppressionAt)
+                  ? suppressionAt + holdMs
+                  : null,
             }
           : null,
       activeCooldowns,
