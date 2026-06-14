@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 140" width="320" height="140" role="img" aria-label="DropPilot">
+  <g transform="translate(126.4,14) scale(2.8)">
+    <path d="M12 2C12 2 5 9 5 14a7 7 0 1 0 14 0C19 9 12 2 12 2Z" fill="#7c5fe6" />
+    <path d="M12 9L15.5 18.5L12 16L8.5 18.5Z" fill="#ffffff" />
+  </g>
+  <text x="160" y="120" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="40" font-weight="700" letter-spacing="-1">
+    <tspan fill="#1a1c1f">Drop</tspan><tspan fill="#7c5fe6">Pilot</tspan>
+  </text>
+</svg>
