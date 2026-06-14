@@ -9,7 +9,6 @@
 <p>
 <a href="https://github.com/rxm96/droppilot/actions/workflows/build.yml"><img src="https://github.com/rxm96/droppilot/actions/workflows/build.yml/badge.svg" alt="Build" /></a>
 <a href="https://github.com/rxm96/droppilot/releases/latest"><img src="https://img.shields.io/github/v/release/rxm96/droppilot?sort=semver" alt="Latest release" /></a>
-<a href="https://github.com/rxm96/droppilot/releases"><img src="https://img.shields.io/github/downloads/rxm96/droppilot/total?color=brightgreen" alt="Total downloads" /></a>
 <img src="https://img.shields.io/badge/platforms-Windows%20%7C%20macOS-blue" alt="Platforms" />
 <a href="LICENSE"><img src="https://img.shields.io/github/license/rxm96/droppilot" alt="License: MIT" /></a>
 </p>
