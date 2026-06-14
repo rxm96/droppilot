@@ -50,9 +50,9 @@ staying transparent about what it's doing.
 - **Auto-claim** (optional) — claims completed drops and keeps an activity audit.
 - **Warmup mode** (optional) — briefly watches a stream to discover drops when no
   priority game is currently active.
-- **Engine transparency** — a live engine-status rail (Standby → Scanning →
-  Watching → Recovering → Hold), a claim-retry countdown, and a session-expired
-  banner with one-click re-login instead of a silent logout.
+- **Stays transparent** — a live status readout (scanning, watching,
+  recovering…), claim-retry countdowns, and a one-click prompt to sign back in
+  when your Twitch session expires.
 - **Alerts** — desktop notifications for new drops, auto-claim, auto-switch,
   "drop ending soon," and watch errors.
 - **Discord / webhook notifications** — push those same alerts to a Discord
