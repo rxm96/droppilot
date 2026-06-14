@@ -1,8 +1,8 @@
 /**
- * Pure conversion/clamp helpers for the "Channels refresh interval" field.
+ * Pure conversion/clamp helpers for the "Inventory refresh interval" field.
  *
  * The field edits `refreshMinMs`/`refreshMaxMs` in MINUTES, because the engine
- * enforces a hard 60-minute floor on the channel-refresh cadence in three
+ * enforces a hard 60-minute floor on the inventory-refresh cadence in three
  * independent layers (the renderer settings store, the inventory scheduler in
  * `useInventoryRefresh`, and the persisted-settings `clampRefreshIntervals`).
  * The field used to edit in seconds with a 5-second floor, so any sub-hour value

@@ -66,7 +66,7 @@ export function formatUptime(sinceMs: number, now: number = Date.now()): string 
 }
 
 /**
- * Channel-refresh interval window (min/max in ms) → a compact minutes label for
+ * Inventory-refresh interval window (min/max in ms) → a compact minutes label for
  * the EnginePanel "cadence" row, e.g. "60–70 min" (or "60 min" when min === max).
  * `unit` is the already-translated minutes abbreviation, keeping this pure.
  */

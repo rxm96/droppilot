@@ -9,7 +9,7 @@ export type EnginePanelProps = {
   watchingSince?: number | null;
   /** Watch-ping cadence in seconds — the engine credits one watch-minute per ping. */
   watchCycleSeconds?: number;
-  /** Channel-refresh interval window (ms); rendered as a minutes range. */
+  /** Inventory-refresh interval window (ms); rendered as a minutes range. */
   refreshMinMs?: number;
   refreshMaxMs?: number;
 };
