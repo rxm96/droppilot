@@ -109,12 +109,8 @@ export function OverviewView({
         <EnginePanel
           lastWatchOk={lastWatchOk}
           watchingSince={watchingSince}
-          cycleSeconds={
-            typeof refreshMinMs === "number" ? Math.round(refreshMinMs / 1000) : undefined
-          }
-          cadenceSeconds={
-            typeof refreshMaxMs === "number" ? Math.round(refreshMaxMs / 1000) : undefined
-          }
+          refreshMinMs={refreshMinMs}
+          refreshMaxMs={refreshMaxMs}
         />
       </div>
     </div>

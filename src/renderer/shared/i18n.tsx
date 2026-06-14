@@ -755,10 +755,9 @@ const translations: Translations = {
 
     // Inline labels / connectors / aria
     "settings.unit.to": "to",
-    "settings.unit.sec": "sec",
     "settings.unit.min": "min",
-    "settings.aria.minIntervalSeconds": "Minimum interval seconds",
-    "settings.aria.maxIntervalSeconds": "Maximum interval seconds",
+    "settings.aria.minIntervalMinutes": "Minimum interval minutes",
+    "settings.aria.maxIntervalMinutes": "Maximum interval minutes",
     "settings.aria.endingSoonMinutes": "Ending-soon minutes",
     "settings.aria.theme": "Theme",
     "settings.aria.language": "Language",
@@ -940,6 +939,8 @@ const translations: Translations = {
     "engine.row.lastRefresh": "last_refresh",
     "engine.row.cadence": "cadence",
     "engine.row.uptime": "uptime",
+    "engine.unit.minutes": "min",
+    "engine.unit.seconds": "s",
 
     // attention.* — new namespace, AttentionStrip
     "attention.claimReady": "{count} claim ready",
@@ -1798,10 +1799,9 @@ const translations: Translations = {
     "settings.button.import": "importieren",
 
     "settings.unit.to": "bis",
-    "settings.unit.sec": "sek",
     "settings.unit.min": "min",
-    "settings.aria.minIntervalSeconds": "Minimum-Intervall in Sekunden",
-    "settings.aria.maxIntervalSeconds": "Maximum-Intervall in Sekunden",
+    "settings.aria.minIntervalMinutes": "Minimum-Intervall in Minuten",
+    "settings.aria.maxIntervalMinutes": "Maximum-Intervall in Minuten",
     "settings.aria.endingSoonMinutes": "Endet-bald-Minuten",
     "settings.aria.theme": "Theme",
     "settings.aria.language": "Sprache",
@@ -1983,6 +1983,8 @@ const translations: Translations = {
     "engine.row.lastRefresh": "last_refresh",
     "engine.row.cadence": "cadence",
     "engine.row.uptime": "uptime",
+    "engine.unit.minutes": "min",
+    "engine.unit.seconds": "s",
 
     // attention.* — new namespace, AttentionStrip
     "attention.claimReady": "{count} claim bereit",

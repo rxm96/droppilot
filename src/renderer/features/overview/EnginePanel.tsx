@@ -1,5 +1,5 @@
 import * as React from "react";
-import { formatRelative, formatUptime } from "./formatters";
+import { formatRefreshCadence, formatRelative, formatUptime } from "./formatters";
 import { useI18n } from "@renderer/shared/i18n";
 import { TimeText } from "@renderer/shared/components/TimeText";
 
@@ -7,8 +7,11 @@ export type EnginePanelProps = {
   lastWatchOk?: number | null;
   /** Timestamp the engine started actively watching, or null when stopped. */
   watchingSince?: number | null;
-  cycleSeconds?: number;
-  cadenceSeconds?: number;
+  /** Watch-ping cadence in seconds — the engine credits one watch-minute per ping. */
+  watchCycleSeconds?: number;
+  /** Channel-refresh interval window (ms); rendered as a minutes range. */
+  refreshMinMs?: number;
+  refreshMaxMs?: number;
 };
 
 // Memoized: props are stable across the per-second watch tick. The two
@@ -17,19 +20,30 @@ export type EnginePanelProps = {
 export const EnginePanel = React.memo(function EnginePanel({
   lastWatchOk,
   watchingSince,
-  cycleSeconds = 30,
-  cadenceSeconds = 30,
+  // ~60s: the engine sends one watch-ping per minute (WATCH_INTERVAL_MS ≈ 59s + jitter).
+  watchCycleSeconds = 60,
+  refreshMinMs,
+  refreshMaxMs,
 }: EnginePanelProps) {
   const { t } = useI18n();
 
+  const cadence =
+    typeof refreshMinMs === "number" && typeof refreshMaxMs === "number"
+      ? formatRefreshCadence(refreshMinMs, refreshMaxMs, t("engine.unit.minutes"))
+      : "--";
+
   const rows: Array<{ id: string; label: string; value: React.ReactNode; tone?: "ok" }> = [
-    { id: "watchCycle", label: t("engine.row.watchCycle"), value: `${cycleSeconds}s` },
+    {
+      id: "watchCycle",
+      label: t("engine.row.watchCycle"),
+      value: `~${watchCycleSeconds}${t("engine.unit.seconds")}`,
+    },
     {
       id: "lastRefresh",
       label: t("engine.row.lastRefresh"),
       value: <TimeText render={(now) => formatRelative(lastWatchOk, now)} />,
     },
-    { id: "cadence", label: t("engine.row.cadence"), value: `${cadenceSeconds}s` },
+    { id: "cadence", label: t("engine.row.cadence"), value: cadence },
     {
       id: "uptime",
       label: t("engine.row.uptime"),

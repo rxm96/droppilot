@@ -5,6 +5,12 @@ import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { SettingRow } from "../SettingRow";
 import { SettingsToggle } from "../SettingsToggle";
 import { useI18n } from "@renderer/shared/i18n";
+import {
+  MIN_REFRESH_MINUTES,
+  msToMinutes,
+  refreshFromMaxMinutes,
+  refreshFromMinMinutes,
+} from "./refreshIntervalField";
 
 export type EngineSectionProps = {
   autoStart?: boolean;
@@ -111,35 +117,27 @@ export function EngineSection(props: EngineSectionProps) {
           description={t("settings.row.refreshInterval.description")}
           control={
             <div className="flex items-center gap-2">
-              <Input
-                tone="dp"
-                type="number"
-                min={5}
-                value={Math.round(props.refreshMinMs / 1000)}
-                onChange={(e) => {
-                  const min = Math.max(5, Number(e.target.value) || 0) * 1000;
-                  props.setRefreshIntervals(min, Math.max(min, props.refreshMaxMs));
+              <MinutesField
+                valueMs={props.refreshMinMs}
+                ariaLabel={t("settings.aria.minIntervalMinutes")}
+                onCommit={(minutes) => {
+                  const { minMs, maxMs } = refreshFromMinMinutes(minutes, props.refreshMaxMs);
+                  props.setRefreshIntervals(minMs, maxMs);
                 }}
-                aria-label={t("settings.aria.minIntervalSeconds")}
-                className="w-20"
               />
               <span className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
                 {t("settings.unit.to")}
               </span>
-              <Input
-                tone="dp"
-                type="number"
-                min={5}
-                value={Math.round(props.refreshMaxMs / 1000)}
-                onChange={(e) => {
-                  const max = Math.max(5, Number(e.target.value) || 0) * 1000;
-                  props.setRefreshIntervals(Math.min(max, props.refreshMinMs), max);
+              <MinutesField
+                valueMs={props.refreshMaxMs}
+                ariaLabel={t("settings.aria.maxIntervalMinutes")}
+                onCommit={(minutes) => {
+                  const { minMs, maxMs } = refreshFromMaxMinutes(minutes, props.refreshMinMs);
+                  props.setRefreshIntervals(minMs, maxMs);
                 }}
-                aria-label={t("settings.aria.maxIntervalSeconds")}
-                className="w-20"
               />
               <span className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
-                {t("settings.unit.sec")}
+                {t("settings.unit.min")}
               </span>
             </div>
           }
@@ -159,5 +157,43 @@ export function EngineSection(props: EngineSectionProps) {
         />
       </div>
     </div>
+  );
+}
+
+type MinutesFieldProps = {
+  /** The persisted value in milliseconds; displayed in whole minutes. */
+  valueMs: number;
+  ariaLabel: string;
+  /** Receives the typed minutes (un-clamped); the caller applies the floor. */
+  onCommit: (minutes: number) => void;
+};
+
+/**
+ * Number input that edits a millisecond value in minutes. While focused it holds
+ * a local draft so typing is never clamped mid-entry — e.g. the leading "1" of
+ * "120" must not snap to the 60-minute floor before you finish. The floor and
+ * cross-field clamp are applied by `onCommit`, fired on blur or Enter.
+ */
+function MinutesField({ valueMs, ariaLabel, onCommit }: MinutesFieldProps) {
+  const [draft, setDraft] = React.useState<string | null>(null);
+  const commit = () => {
+    if (draft === null) return;
+    onCommit(Number(draft));
+    setDraft(null);
+  };
+  return (
+    <Input
+      tone="dp"
+      type="number"
+      min={MIN_REFRESH_MINUTES}
+      value={draft ?? String(msToMinutes(valueMs))}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+      }}
+      aria-label={ariaLabel}
+      className="w-20"
+    />
   );
 }
