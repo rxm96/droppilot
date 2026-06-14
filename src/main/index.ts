@@ -15,6 +15,26 @@ import { loadStats, saveStats, bumpStats, resetStats } from "./core/stats";
 
 const isDev = !app.isPackaged;
 
+// Single-instance guard: only one DropPilot process may run at a time. A second
+// launch (double-clicking the exe while it's already in the tray, or auto-start
+// firing alongside a manual launch) fails to acquire the lock and exits before
+// doing any startup work. Electron forwards that launch to the first process via
+// the "second-instance" event, which we use to surface the running window.
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    const [win] = BrowserWindow.getAllWindows();
+    if (!win) return;
+    if (win.isMinimized()) win.restore();
+    // Default close-to-tray hides the window rather than destroying it, so a
+    // running instance often has a hidden-but-alive window to reveal.
+    if (!win.isVisible()) win.show();
+    win.focus();
+  });
+}
+
 /**
  * Behavior flags read on every close/minimize event. Seeded from settings
  * at startup; refreshed whenever the IPC layer saves new settings (see
@@ -458,6 +478,9 @@ function setupAutoUpdater() {
 }
 
 app.whenReady().then(async () => {
+  // Losing instance: the lock guard above already called app.quit(); bail before
+  // creating a window or starting any Twitch/IPC services.
+  if (!gotSingleInstanceLock) return;
   const startHidden = process.argv.includes("--start-in-tray");
   // Read settings before creating the window so we can restore bounds + seed
   // behavior flags before any close/minimize event can fire.
