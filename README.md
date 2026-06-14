@@ -1,12 +1,45 @@
-# DropPilot
+<div align="center">
 
-> **Download:** Grab the latest Windows installer from
-> [GitHub Releases](https://github.com/rxm96/droppilot/releases).
+<img src="icons/icon.png" width="120" alt="DropPilot" />
 
-DropPilot is a desktop app that automates Twitch Drops — quietly, in the
-background, while staying transparent about what it's doing. It tracks your drop
+<h1>DropPilot</h1>
+
+<p><strong>Automate Twitch Drops — quietly in the background, transparent about what it's doing.</strong></p>
+
+<p>
+<a href="https://github.com/rxm96/droppilot/actions/workflows/build.yml"><img src="https://github.com/rxm96/droppilot/actions/workflows/build.yml/badge.svg" alt="Build" /></a>
+<a href="https://github.com/rxm96/droppilot/releases/latest"><img src="https://img.shields.io/github/v/release/rxm96/droppilot?sort=semver" alt="Latest release" /></a>
+<a href="https://github.com/rxm96/droppilot/releases"><img src="https://img.shields.io/github/downloads/rxm96/droppilot/total?color=brightgreen" alt="Total downloads" /></a>
+<img src="https://img.shields.io/badge/platforms-Windows%20%7C%20macOS-blue" alt="Platforms" />
+<a href="LICENSE"><img src="https://img.shields.io/github/license/rxm96/droppilot" alt="License: MIT" /></a>
+</p>
+
+<p><a href="https://github.com/rxm96/droppilot/releases/latest"><strong>⬇&nbsp; Download the latest Windows installer</strong></a></p>
+
+</div>
+
+---
+
+DropPilot is a desktop app that automates Twitch Drops. It tracks your drop
 inventory, picks and watches an eligible stream, switches when that stream goes
-down, and (optionally) claims drops for you.
+down, and (optionally) claims drops for you — all in the background, while
+staying transparent about what it's doing.
+
+[![Overview](docs/screenshots/overview.png)](docs/screenshots/overview.png)
+
+## Contents
+
+- [Features](#features)
+- [Screenshots](#screenshots)
+- [Quick start](#quick-start)
+- [How it works](#how-it-works)
+- [Releases & updates](#releases--updates)
+- [Configuration & data](#configuration--data)
+- [Debug tools](#debug-tools)
+- [Troubleshooting](#troubleshooting)
+- [Tech stack](#tech-stack)
+- [Acknowledgements](#acknowledgements)
+- [License](#license)
 
 ## Features
 
@@ -18,24 +51,25 @@ down, and (optionally) claims drops for you.
 - **Auto-claim** (optional) — claims completed drops and keeps an activity audit.
 - **Warmup mode** (optional) — briefly watches a stream to discover drops when no
   priority game is currently active.
-- **Alerts** — new drops, auto-claim, drop ending soon, watch errors.
+- **Engine transparency** — a live engine-status rail (Standby → Scanning →
+  Watching → Recovering → Hold), a claim-retry countdown, and a session-expired
+  banner with one-click re-login instead of a silent logout.
+- **Alerts** — desktop notifications for new drops, auto-claim, auto-switch,
+  "drop ending soon," and watch errors.
+- **Discord / webhook notifications** — push those same alerts to a Discord
+  webhook (or any compatible endpoint), independent of desktop notifications.
+  HTTPS-only with an SSRF guard, plus a one-click test send.
 - **Browser-based login** — no credentials are stored by the app.
 - **Demo mode** — explore the full UI without a live Twitch account.
 - **Debug tools** — live logs, a state snapshot, and perf/CPU sampling (off by default).
 
 ## Screenshots
 
-> Dark theme with demo data.
+> Dark theme with demo data. (Overview is shown above.)
 
-| Overview | Stats |
-| --- | --- |
-| [![Overview](docs/screenshots/overview.png)](docs/screenshots/overview.png) | [![Stats](docs/screenshots/stats.png)](docs/screenshots/stats.png) |
-| **Inventory** | **Control** |
-| [![Inventory](docs/screenshots/inventory.png)](docs/screenshots/inventory.png) | [![Control](docs/screenshots/control.png)](docs/screenshots/control.png) |
-
-## Tech stack
-
-Electron 40 · React 19 · Vite 7 · TypeScript · Tailwind CSS v4 · Vitest
+| Stats | Inventory | Control |
+| --- | --- | --- |
+| [![Stats](docs/screenshots/stats.png)](docs/screenshots/stats.png) | [![Inventory](docs/screenshots/inventory.png)](docs/screenshots/inventory.png) | [![Control](docs/screenshots/control.png)](docs/screenshots/control.png) |
 
 ## Quick start
 
@@ -78,10 +112,11 @@ in [`docs/watch-flow.puml`](docs/watch-flow.puml).
 
 ## Releases & updates
 
-Releases are published to GitHub Releases (Windows `.exe` + macOS artifacts) and
+Releases are published to GitHub Releases (Windows `.exe` + a macOS `.dmg`) and
 built by CI when a `v*` tag is pushed. The app auto-updates on Windows and offers
 two channels — **stable** and **preview** — selectable in Settings → Updates, which
-also shows the in-app release history. See `CONTRIBUTING.md` for how to cut a release.
+also shows the in-app release history. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for
+how to cut a release.
 
 ## Configuration & data
 
@@ -100,6 +135,10 @@ CPU snapshots appear in the Debug snapshot.
 - **App feels slow** → disable the Debug tab and restart.
 - **Need verbose logs** → enable Debug tools in Settings.
 
+## Tech stack
+
+Electron 42 · React 19 · Vite 7 · TypeScript · Tailwind CSS v4 · Vitest
+
 ## Acknowledgements
 
 DropPilot's drop-mining approach is heavily informed by
@@ -114,5 +153,4 @@ reproduced in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## License
 
-MIT
-
+MIT — see [`LICENSE`](LICENSE).
