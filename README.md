@@ -42,25 +42,29 @@ staying transparent about what it's doing.
 
 ## Features
 
-- **Live inventory** — drop progress, claim status, and per-drop ETA in real time.
-- **Target + priority** — build a priority list of games; the app focuses on the
-  most important actionable game and rotates through the list.
-- **Auto-watch** — auto-selects a stream, auto-switches when the current one
-  disappears, and recovers from stalls (no watch-time progress) on its own.
-- **Auto-claim** (optional) — claims completed drops and keeps an activity audit.
-- **Warmup mode** (optional) — briefly watches a stream to discover drops when no
-  priority game is currently active.
+- **Live inventory** — every drop's progress, claim status, and time remaining,
+  all in real time.
+- **Priority list** — rank the games you care about; DropPilot works down the
+  list, focusing on the highest one it can actually make progress on right now.
+- **Hands-off watching** — it picks an eligible stream, switches automatically
+  when one goes offline, and recovers on its own when progress stalls — no
+  babysitting.
+- **Auto-claim** (optional) — claims finished drops for you and keeps a record
+  of everything it's done.
 - **Stays transparent** — a live status readout (scanning, watching,
   recovering…), claim-retry countdowns, and a one-click prompt to sign back in
   when your Twitch session expires.
-- **Alerts** — desktop notifications for new drops, auto-claim, auto-switch,
-  "drop ending soon," and watch errors.
-- **Discord / webhook notifications** — push those same alerts to a Discord
-  webhook (or any compatible endpoint), independent of desktop notifications.
-  HTTPS-only with an SSRF guard, plus a one-click test send.
-- **Browser-based login** — no credentials are stored by the app.
-- **Demo mode** — explore the full UI without a live Twitch account.
-- **Debug tools** — live logs, a state snapshot, and perf/CPU sampling (off by default).
+- **Alerts** — desktop notifications for new drops, auto-claims, stream
+  switches, drops about to end, and watch errors.
+- **Discord / webhook notifications** — get those same alerts in Discord (or any
+  compatible webhook), separate from desktop notifications, with a one-click
+  test send.
+- **Browser-based login** — sign in through Twitch's own page; DropPilot never
+  stores your credentials.
+- **Demo mode** — explore the whole interface with sample data, no Twitch
+  account needed.
+- **Debug tools** (off by default) — live logs, a state snapshot, and
+  performance/CPU sampling for when you need to dig in.
 
 ## Screenshots
 
