@@ -1,8 +1,9 @@
 <div align="center">
 
-<img src="icons/icon.png" width="120" alt="DropPilot" />
-
-<h1>DropPilot</h1>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/brand/banner-dark.svg" />
+  <img src="docs/brand/banner-light.svg" width="360" alt="DropPilot" />
+</picture>
 
 <p><strong>Automate Twitch Drops — quietly in the background, transparent about what it's doing.</strong></p>
 
@@ -13,7 +14,9 @@
 <a href="LICENSE"><img src="https://img.shields.io/github/license/rxm96/droppilot" alt="License: MIT" /></a>
 </p>
 
-<p><a href="https://github.com/rxm96/droppilot/releases/latest"><strong>⬇&nbsp; Download the latest Windows installer</strong></a></p>
+<p>
+<a href="https://github.com/rxm96/droppilot/releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87%20Download%20for%20Windows-7c5fe6?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows" /></a>
+</p>
 
 </div>
 
@@ -42,29 +45,29 @@ staying transparent about what it's doing.
 
 ## Features
 
-- **Live inventory** — every drop's progress, claim status, and time remaining,
-  all in real time.
-- **Priority list** — rank the games you care about; DropPilot works down the
-  list, focusing on the highest one it can actually make progress on right now.
-- **Hands-off watching** — it picks an eligible stream, switches automatically
-  when one goes offline, and recovers on its own when progress stalls — no
-  babysitting.
-- **Auto-claim** (optional) — claims finished drops for you and keeps a record
-  of everything it's done.
-- **Stays transparent** — a live status readout (scanning, watching,
-  recovering…), claim-retry countdowns, and a one-click prompt to sign back in
-  when your Twitch session expires.
-- **Alerts** — desktop notifications for new drops, auto-claims, stream
-  switches, drops about to end, and watch errors.
-- **Discord / webhook notifications** — get those same alerts in Discord (or any
-  compatible webhook), separate from desktop notifications, with a one-click
-  test send.
-- **Browser-based login** — sign in through Twitch's own page; DropPilot never
-  stores your credentials.
-- **Demo mode** — explore the whole interface with sample data, no Twitch
-  account needed.
-- **Debug tools** (off by default) — live logs, a state snapshot, and
-  performance/CPU sampling for when you need to dig in.
+<table>
+<tr>
+<td width="50%"><img src="docs/brand/feat-inventory.svg" width="20" /> <strong>Live inventory</strong><br />Every drop's progress, claim status and time left, in real time.</td>
+<td width="50%"><img src="docs/brand/feat-priority.svg" width="20" /> <strong>Priority list</strong><br />Rank your games; DropPilot works the highest one it can progress right now.</td>
+</tr>
+<tr>
+<td><img src="docs/brand/feat-watching.svg" width="20" /> <strong>Hands-off watching</strong><br />Picks an eligible stream, switches when one goes offline, and recovers when progress stalls.</td>
+<td><img src="docs/brand/feat-autoclaim.svg" width="20" /> <strong>Auto-claim</strong><br />Optionally claims finished drops for you and keeps a record of everything it's done.</td>
+</tr>
+<tr>
+<td><img src="docs/brand/feat-alerts.svg" width="20" /> <strong>Desktop alerts</strong><br />New drops, auto-claims, stream switches, drops about to end, and watch errors.</td>
+<td><img src="docs/brand/feat-discord.svg" width="20" /> <strong>Discord / webhook</strong><br />The same alerts in Discord (or any compatible webhook), with a one-click test send.</td>
+</tr>
+<tr>
+<td><img src="docs/brand/feat-login.svg" width="20" /> <strong>Browser-based login</strong><br />Sign in through Twitch's own page; DropPilot never stores your credentials.</td>
+<td><img src="docs/brand/feat-demo.svg" width="20" /> <strong>Demo mode</strong><br />Explore the whole interface with sample data — no Twitch account needed.</td>
+</tr>
+</table>
+
+DropPilot also stays out of your way while it works: a live status readout
+(scanning, watching, recovering…), claim-retry countdowns, and a one-click prompt
+to sign back in when your Twitch session expires. A **Debug** tab (off by
+default) adds live logs and a state snapshot for when you need to dig in.
 
 ## Screenshots
 
