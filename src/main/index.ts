@@ -216,6 +216,7 @@ function createWindow(
     minWidth: 1100,
     minHeight: 760,
     title: "DropPilot",
+    icon: resolveWindowIcon(),
     show: !startHidden,
     autoHideMenuBar: !isMac,
     // Windows: hide the OS title bar entirely; the renderer Titlebar draws
@@ -326,20 +327,31 @@ function createWindow(
   return win;
 }
 
-function resolveTrayIcon() {
-  // Package icons along with extraResources; fall back to repo icons in dev
-  const prodIcon = join(process.resourcesPath, "icons", "icon.png");
+function resolveIconPath(filename: string) {
+  // Packaged: icons ship via extraResources. Dev: fall back to repo icons.
   if (app.isPackaged) {
-    return nativeImage.createFromPath(prodIcon);
+    return join(process.resourcesPath, "icons", filename);
   }
   const devCandidates = [
-    join(process.cwd(), "icons", "icon.png"),
-    join(app.getAppPath(), "icons", "icon.png"),
-    join(app.getAppPath(), "..", "icons", "icon.png"),
-    join(app.getAppPath(), "..", "..", "icons", "icon.png"),
+    join(process.cwd(), "icons", filename),
+    join(app.getAppPath(), "icons", filename),
+    join(app.getAppPath(), "..", "icons", filename),
+    join(app.getAppPath(), "..", "..", "icons", filename),
   ];
-  const devIcon = devCandidates.find((candidate) => existsSync(candidate)) ?? devCandidates[0];
-  return nativeImage.createFromPath(devIcon);
+  return devCandidates.find((candidate) => existsSync(candidate)) ?? devCandidates[0];
+}
+
+// Windows: a window icon picks the right small size from the optical .ico, so
+// the taskbar stays crisp. Other platforms use the square PNG.
+function resolveWindowIcon() {
+  return resolveIconPath(process.platform === "win32" ? "icon.ico" : "icon.png");
+}
+
+function resolveTrayIcon() {
+  // Windows: a dedicated small multi-size .ico stays crisp in the tray (a
+  // downscaled 1024px PNG looks pixelated). Other platforms scale the PNG.
+  const file = process.platform === "win32" ? "tray.ico" : "icon.png";
+  return nativeImage.createFromPath(resolveIconPath(file));
 }
 
 function createTray(win: BrowserWindow) {
