@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="DropPilot">
+  <rect width="1024" height="1024" rx="230" fill="#0e1014" />
+  <g transform="translate(82.4,100.3) scale(35.8)">
+    <path d="M12 2C12 2 5 9 5 14a7 7 0 1 0 14 0C19 9 12 2 12 2Z" fill="#a78bfa" />
+    <path d="M12 9L15.5 18.5L12 16L8.5 18.5Z" fill="#ffffff" />
+  </g>
+</svg>
