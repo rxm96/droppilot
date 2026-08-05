@@ -65,6 +65,7 @@ export interface InventoryItem {
 }
 
 const DIRECTORY_PAGE_GAME_HASHES = [
+  "86bcceb4e8b1a51256ff8eed8bd8aae4acacf80d737efe904f84f3aeadf8cafd",
   "76cb069d835b8a02914c08dc42c421d0dafda8af5b113a3f19141824b901402f",
   "98a996c3c3ebb1ba4fd65d6671c6028d7ee8d615cb540b0731b3db2a911d3649",
 ];
@@ -547,7 +548,7 @@ export class TwitchService {
     // 1) Inventory (in-progress campaigns).
     const inventoryPayload = createPersistedQuery(
       "Inventory",
-      "d86775d0ef16a63a33ad52e80eaff963b2d5b72fada7c991504a57496e1d8e4b",
+      "8337eb8541b314040b0edde0c09c5c7a2783ba1960aa9edfbf3bac16d0fec404",
       { fetchRewardCampaigns: true },
     );
     const inv = await this.gqlRequest<InventoryResponse>(inventoryPayload, "Inventory");
@@ -591,7 +592,7 @@ export class TwitchService {
       // 2) ViewerDropsDashboard (available campaigns) — merge/overwrite by id
       const campaignsPayloadBase = {
         operationName: "ViewerDropsDashboard",
-        sha: "5a4da2ab3d5b47c9f9ce864e727b2cb346af1e3ea8b897fe8f704a97ff017619",
+        sha: "d9cae7761dafab85908c85e6683cb4201b449e66ac3bb5e894f15ff12aeafaa7",
       };
       const maxCampaignPages = 20;
       let nextCursor: string | null | undefined;
