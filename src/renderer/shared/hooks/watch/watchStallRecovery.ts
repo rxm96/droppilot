@@ -36,6 +36,24 @@ export type StallRecoveryAction =
 /** "Watching with no farmable drop" grace-period marker (was noFarmableDropRef). */
 export type NoFarmableMarker = { key: string; sinceAt: number };
 
+/**
+ * Recovery-branch upkeep for the no-farmable grace marker.
+ *
+ * `useStallRecovery` enters the no-progress recovery branch whenever an
+ * `activeDropInfo` is present. Clearing the no-farmable grace there is only safe
+ * when the target is genuinely watchable again (`canWatchTarget`). While the
+ * target stays unwatchable, a *transient* `activeDropInfo` blip (e.g. an
+ * upcoming/unlinked drop surfacing for a tick) must NOT reset the grace —
+ * otherwise an oscillating active-drop signal keeps restarting the
+ * `NO_FARMABLE_DROP_GRACE_MS` window and `decideWatchingNoFarmable`'s give-up
+ * path never fires, wedging the engine in "watching, but target currently not
+ * watchable".
+ */
+export const reconcileNoFarmableOnActiveDrop = (
+  marker: NoFarmableMarker | null,
+  canWatchTarget: boolean,
+): NoFarmableMarker | null => (canWatchTarget ? null : marker);
+
 export type IdleNoFarmableInput = {
   allowWatching: boolean;
   autoSelectEnabled: boolean;

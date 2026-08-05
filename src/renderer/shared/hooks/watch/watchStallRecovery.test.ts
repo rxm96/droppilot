@@ -9,6 +9,7 @@ import {
   NO_FARMABLE_DROP_GRACE_MS,
   NO_FARMABLE_GAME_COOLDOWN_MS,
   pickStallRecoveryChannel,
+  reconcileNoFarmableOnActiveDrop,
   shouldProbeNoProgressConfirmation,
   STALL_CONFIRMATION_PROBE_COOLDOWN_MS,
   STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS,
@@ -592,6 +593,49 @@ describe("decideWatchingNoFarmable", () => {
       "stop-watching",
       "dispatch-stall-stop",
     ]);
+  });
+});
+
+describe("reconcileNoFarmableOnActiveDrop (no-farmable wedge)", () => {
+  it("preserves the grace marker when an active drop blips in while the target stays unwatchable", () => {
+    const marker = { key: "Rust", sinceAt: 1 };
+    // canWatchTarget=false: a transient activeDropInfo must NOT reset the grace.
+    expect(reconcileNoFarmableOnActiveDrop(marker, false)).toBe(marker);
+  });
+
+  it("clears the marker once the target is genuinely watchable again", () => {
+    expect(reconcileNoFarmableOnActiveDrop({ key: "Rust", sinceAt: 1 }, true)).toBeNull();
+  });
+
+  it("stays null when there is no marker to preserve", () => {
+    expect(reconcileNoFarmableOnActiveDrop(null, false)).toBeNull();
+  });
+
+  it("still escalates after the grace period despite a transient active-drop blip", () => {
+    const start = 100_000;
+    // tick 1 — no active drop, target unwatchable: seed the grace marker.
+    const seeded = decideWatchingNoFarmable({
+      ...watchingBase,
+      now: start,
+      noFarmable: null,
+    }).noFarmable;
+    expect(seeded).toEqual({ key: "Rust", sinceAt: start });
+
+    // tick 2 — an active drop blips in while still unwatchable; the executor
+    // reconciles the marker here. With the fix it must be preserved, otherwise
+    // the 30s grace never completes and the engine wedges in
+    // "watching, but target not watchable".
+    const afterBlip = reconcileNoFarmableOnActiveDrop(seeded, false);
+    expect(afterBlip).toEqual({ key: "Rust", sinceAt: start });
+
+    // tick 3 — active drop gone, grace window elapsed: give-up must fire.
+    const result = decideWatchingNoFarmable({
+      ...watchingBase,
+      now: start + NO_FARMABLE_DROP_GRACE_MS + 1,
+      noFarmable: afterBlip,
+    });
+    expect(result.actions.map((a) => a.kind)).toContain("stop-watching");
+    expect(result.resetStallTracking).toBe(true);
   });
 });
 

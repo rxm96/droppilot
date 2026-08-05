@@ -11,6 +11,7 @@ import {
   decideIdleNoFarmable,
   decideNoProgressRecovery,
   decideWatchingNoFarmable,
+  reconcileNoFarmableOnActiveDrop,
   type NoFarmableMarker,
   type StallRecoveryAction,
   type WatchConfirmationProbe,
@@ -227,7 +228,14 @@ export function useStallRecovery({
       runActions(decision.actions);
       return;
     }
-    noFarmableDropRef.current = null;
+    // Keep the no-farmable grace alive across a transient activeDropInfo blip
+    // while the target is still unwatchable; only clear it once the target is
+    // genuinely watchable again. Prevents an oscillating active-drop signal from
+    // resetting the grace forever (engine wedged in "watching, not watchable").
+    noFarmableDropRef.current = reconcileNoFarmableOnActiveDrop(
+      noFarmableDropRef.current,
+      canWatchTarget,
+    );
     if (!activeDropInfo) {
       watchStallTrackerRef.current = null;
       watchConfirmationProbeRef.current = null;
