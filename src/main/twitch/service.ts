@@ -592,7 +592,7 @@ export class TwitchService {
       // 2) ViewerDropsDashboard (available campaigns) — merge/overwrite by id
       const campaignsPayloadBase = {
         operationName: "ViewerDropsDashboard",
-        sha: "d9cae7761dafab85908c85e6683cb4201b449e66ac3bb5e894f15ff12aeafaa7",
+        sha: "c16bb890cc8ce7647a96ee69cd313d423a378a3dedadf630a1017cde18975feb",
       };
       const maxCampaignPages = 20;
       let nextCursor: string | null | undefined;
@@ -772,7 +772,7 @@ export class TwitchService {
       const payload = chunk.map((id) =>
         createPersistedQuery(
           "DropsHighlightService_AvailableDrops",
-          "9a62a09bce5b53e26e64a671e530bc599cb6aab1e5ba3cbd5d85966d3940716f",
+          "782dad0f032942260171d2d80a654f88bdd0c5a9dddc392e9bc92218a0f42d20",
           { channelID: String(id) },
         ),
       );
