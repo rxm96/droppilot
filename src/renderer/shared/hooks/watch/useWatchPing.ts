@@ -9,8 +9,25 @@ import {
 import { logInfo, logWarn } from "@renderer/shared/utils/logger";
 import { TWITCH_ERROR_CODES } from "../../../../shared/errorCodes";
 
-export const WATCH_INTERVAL_MS = 59_000;
-const WATCH_JITTER_MS = 8_000;
+// Twitch credits drop minutes from HLS segment requests, which must happen every
+// ~20s (see TwitchService.sendWatchPing). Jitter is symmetric (±) so that, on
+// average, WATCH_PINGS_PER_MINUTE pings take exactly one minute.
+export const WATCH_INTERVAL_MS = 20_000;
+const WATCH_JITTER_MS = 2_000;
+export const WATCH_PINGS_PER_MINUTE = 3;
+
+/**
+ * Stats count watched minutes, not pings: a minute is credited after every
+ * WATCH_PINGS_PER_MINUTE successful pings.
+ */
+export const countWatchPing = (
+  okPingsSinceCredit: number,
+): { creditMinute: boolean; okPingsSinceCredit: number } => {
+  const next = okPingsSinceCredit + 1;
+  return next >= WATCH_PINGS_PER_MINUTE
+    ? { creditMinute: true, okPingsSinceCredit: 0 }
+    : { creditMinute: false, okPingsSinceCredit: next };
+};
 
 export type WatchStats = {
   lastOk: number;
@@ -30,8 +47,8 @@ type Params = {
  * effect's dependency. Keying off this primitive (instead of the `watching`
  * object) ensures the ping loop only restarts when the channel/stream actually
  * changes — NOT when an unrelated render produces a fresh-but-equal `watching`
- * reference. A spurious restart would re-run the immediate ping and credit an
- * extra watch minute, inflating stats far beyond the real ~1/min cadence.
+ * reference. A spurious restart would re-run the immediate ping and reset the
+ * minute-credit counter, skewing stats away from the real ~1/min cadence.
  *
  * Game is intentionally excluded: the ping targets a channel/stream, and the
  * loop reads the latest game at ping time, so a game switch on the same stream
@@ -68,6 +85,14 @@ export function useWatchPing({ watching, bumpStats, forwardAuthError, demoMode }
   useEffect(() => {
     if (!watchKey) return;
     let cancelled = false;
+    let okPingsSinceCredit = 0;
+    const creditWatchMinute = (game: string | undefined) => {
+      const next = countWatchPing(okPingsSinceCredit);
+      okPingsSinceCredit = next.okPingsSinceCredit;
+      if (next.creditMinute && game) {
+        void bumpStatsRef.current({ minutes: 1, lastGame: game });
+      }
+    };
     const ping = async () => {
       if (cancelled) return;
       const current = watchingRef.current;
@@ -79,9 +104,7 @@ export function useWatchPing({ watching, bumpStats, forwardAuthError, demoMode }
             login: current.login ?? current.name,
             streamId: current.streamId,
           });
-          if (current.game) {
-            void bumpStatsRef.current({ minutes: 1, lastGame: current.game });
-          }
+          creditWatchMinute(current.game);
           if (!cancelled) {
             setWatchStats(() => ({
               lastOk: Date.now(),
@@ -124,9 +147,7 @@ export function useWatchPing({ watching, bumpStats, forwardAuthError, demoMode }
           streamId: current.streamId,
         });
         if (cancelled) return;
-        if (current.game) {
-          void bumpStatsRef.current({ minutes: 1, lastGame: current.game });
-        }
+        creditWatchMinute(current.game);
         if (!cancelled) {
           setWatchStats(() => ({
             lastOk: Date.now(),
@@ -149,7 +170,8 @@ export function useWatchPing({ watching, bumpStats, forwardAuthError, demoMode }
         }
       }
     };
-    const withJitter = () => WATCH_INTERVAL_MS + Math.floor(Math.random() * WATCH_JITTER_MS);
+    const withJitter = () =>
+      WATCH_INTERVAL_MS + Math.round((Math.random() * 2 - 1) * WATCH_JITTER_MS);
     let timeout: number | undefined;
     const run = async () => {
       await ping();

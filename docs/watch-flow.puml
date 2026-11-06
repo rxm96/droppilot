@@ -33,10 +33,11 @@ Channels --> App: prioritized channels + auto-switch decision
 App -> Channels: setWatchingFromChannel(...)
 
 == Watch Ping Loop ==
-loop every ~59s (+ jitter)
+loop every ~20s (± jitter)
   Ping -> Twitch: watch(channelId, login, streamId)
+  note right: HEAD on each HLS segment of the media playlist
   Twitch --> Ping: ok / error
-  Ping --> App: watchStats + bumpStats(minutes)
+  Ping --> App: watchStats + bumpStats(1 minute per 3 ok pings)
 end
 
 == Stall Detection ==

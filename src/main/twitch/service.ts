@@ -1,5 +1,5 @@
-import { gzipSync } from "node:zlib";
 import type { SessionData } from "../core/storage";
+import { TWITCH_WEB_USER_AGENT } from "../config";
 import { TwitchClient, TwitchAuthError, type RevalidateResult, type TwitchUser } from "./client";
 import { buildPriorityPlan, type PriorityPlan } from "./channels";
 import { TwitchServiceError } from "./errors";
@@ -41,8 +41,13 @@ import {
   type DropCampaignDetailsResponse,
   type DropCurrentSessionResponse,
   type InventoryResponse,
-  type VideoPlayerStreamInfoOverlayChannelResponse,
 } from "./serviceUtils";
+import {
+  buildUsherPlaylistUrl,
+  extractPlaylistError,
+  extractSegmentUrls,
+  pickLowestQualityVariantUrl,
+} from "./watchPlaylist";
 
 export interface InventoryItem {
   id: string;
@@ -75,6 +80,14 @@ const DIRECTORY_PAGE_GAME_HASHES = [
   "98a996c3c3ebb1ba4fd65d6671c6028d7ee8d615cb540b0731b3db2a911d3649",
 ];
 
+const PLAYBACK_ACCESS_TOKEN_HASH =
+  "ed230aa1e33e07eebb8928504583da78a5173989fadfb1ac94be06a04f3cdbe9";
+const WATCH_FETCH_TIMEOUT_MS = 10_000;
+
+type PlaybackAccessTokenResponse = {
+  data?: { streamPlaybackAccessToken?: { value?: string; signature?: string } | null };
+};
+
 export type ChannelInfo = {
   id: string; // broadcaster id
   displayName: string;
@@ -96,6 +109,8 @@ export class TwitchService {
   private client: TwitchClient;
   private debug = (...args: unknown[]) => console.log("[TwitchService]", ...args);
   private loggedCampaignDiagnostics = new Set<string>();
+  /** Media playlist URL of the stream being watched, reused across watch pings. */
+  private watchPlaylist: { login: string; url: string } | null = null;
 
   constructor(sessionProvider: () => Promise<SessionData | null>) {
     this.client = new TwitchClient(sessionProvider);
@@ -311,137 +326,135 @@ export class TwitchService {
     return `${validate.userId}#${campaignId}#${dropId}`;
   }
 
-  private async fetchStreamInfo(login: string): Promise<{
-    broadcastId?: string;
-    channelId?: string;
-    streamId?: string;
-    gameName?: string;
-    gameId?: string;
-  } | null> {
-    const body = {
-      operationName: "VideoPlayerStreamInfoOverlayChannel",
-      extensions: {
-        persistedQuery: {
-          version: 1,
-          sha256Hash: "198492e0857f6aedead9665c81c5a06d67b25b58034649687124083ff288597d",
-        },
-      },
-      variables: { channel: login },
-    };
-    const res = await this.gqlRequest<VideoPlayerStreamInfoOverlayChannelResponse>(
-      body,
-      "VideoPlayerStreamInfoOverlayChannel",
-    );
-    const user = res?.data?.user;
-    const stream = user?.stream ?? null;
-    if (!stream) return null;
-    // The current game is under broadcastSettings (this is the exact path TDM
-    // reads from the same query/hash); stream.game is a fallback just in case.
-    const game = user?.broadcastSettings?.game ?? stream.game ?? null;
-    const gameName = game?.name ?? game?.displayName ?? undefined;
-    const gameId = game?.id != null ? String(game.id) : undefined;
-    return {
-      broadcastId: stream.id ?? stream.stream?.id,
-      channelId: user?.id,
-      streamId: stream.id,
-      gameName,
-      gameId,
-    };
-  }
-
+  /**
+   * Simulates watching `login` so Twitch credits drop minutes. Call every ~20s.
+   *
+   * Twitch stopped crediting the `minute-watched` spade event (sent via the
+   * `sendSpadeEvents` GQL mutation): it still answers 204, but progress stays
+   * frozen. What counts now is requesting the stream's HLS segments like a real
+   * player. We resolve the lowest-quality media playlist once per stream
+   * (PlaybackAccessToken -> usher), then on each ping fetch that playlist and send
+   * a HEAD request per listed segment. Same method as TwitchDropsMiner since 2026-10.
+   */
   async sendWatchPing(payload: { channelId: string; login: string; streamId?: string }) {
-    const login = payload.login?.trim();
+    const login = payload.login?.trim().toLowerCase();
     if (!login) {
       throw new TwitchServiceError(TWITCH_ERROR_CODES.WATCH_MISSING_LOGIN, "Watch login missing");
     }
 
-    const streamInfo = await this.fetchStreamInfo(login);
-    if (!streamInfo) {
-      throw new TwitchServiceError(TWITCH_ERROR_CODES.WATCH_OFFLINE, "Watch stream offline");
-    }
-
-    const validate = await this.client.getValidateInfo();
-    const broadcastId = streamInfo.broadcastId ?? payload.streamId ?? streamInfo.streamId;
-    const channelId = streamInfo.channelId ?? payload.channelId;
-
-    if (!broadcastId || !channelId) {
+    // A cached playlist URL dies when the stream restarts or the token expires:
+    // on failure, resolve a fresh one once before giving up.
+    const segments =
+      (await this.fetchWatchSegments(login, false)) ?? (await this.fetchWatchSegments(login, true));
+    if (!segments || segments.length === 0) {
       throw new TwitchServiceError(
-        TWITCH_ERROR_CODES.WATCH_MISSING_IDS,
-        "Watch identifiers missing",
+        TWITCH_ERROR_CODES.WATCH_PING_FAILED,
+        "Watch ping failed (no stream segments)",
       );
     }
 
-    // Twitch no longer credits minute-watched via a plain POST to the spade
-    // beacon URL — that endpoint still answers 204 but the watch is NOT counted
-    // (which is why progress sat frozen and the engine kept false-stalling). The
-    // web client + TwitchDropsMiner now send it as the `SendEvents` GraphQL
-    // mutation (sendSpadeEvents), which rides our authenticated + integrity-
-    // checked GQL channel. The event array is gzipped, then base64-encoded
-    // ("GZIP_B64") — exactly TDM's Stream._gql_payload.
-    const userIdNum = Number(validate.userId);
-    const eventPayload = [
-      {
-        event: "minute-watched",
-        properties: {
-          broadcast_id: String(broadcastId),
-          channel_id: String(channelId),
-          channel: login,
-          client_time: new Date().toISOString(),
-          game: streamInfo.gameName ?? "",
-          game_id: streamInfo.gameId ?? "",
-          hidden: false,
-          is_live: true,
-          live: true,
-          logged_in: true,
-          minutes_logged: 1,
-          muted: false,
-          user_id: Number.isFinite(userIdNum) ? userIdNum : validate.userId,
-        },
-      },
-    ];
-    const g64 = gzipSync(Buffer.from(JSON.stringify(eventPayload), "utf8")).toString("base64");
-    const body = {
-      query:
-        "\n mutation SendEvents($input: SendSpadeEventsInput!) {\n sendSpadeEvents(input: $input) {\n statusCode\n}\n}\n",
-      variables: {
-        input: { data: g64, repository: "twilight", encoding: "GZIP_B64" },
-      },
-    };
-
-    this.debug("Watch ping (SendEvents) start", {
-      login,
-      channelId: String(channelId),
-      broadcastId: String(broadcastId),
-      streamId: payload.streamId ?? streamInfo.streamId,
-      game: streamInfo.gameName ?? "",
-      userId: validate.userId,
-    });
-
-    const res = await this.gqlRequest<{
-      data?: { sendSpadeEvents?: { statusCode?: number } };
-    }>(body, "SendEvents");
-    const statusCode = res?.data?.sendSpadeEvents?.statusCode;
-    if (statusCode === 204 || statusCode === 200) {
-      this.debug("Watch ping ok", {
-        login,
-        channelId: String(channelId),
-        broadcastId: String(broadcastId),
-        statusCode,
+    for (const url of segments) {
+      const res = await fetch(url, {
+        method: "HEAD",
+        headers: { "User-Agent": TWITCH_WEB_USER_AGENT },
+        signal: AbortSignal.timeout(WATCH_FETCH_TIMEOUT_MS),
       });
-      return { ok: true };
+      if (!res.ok) {
+        this.watchPlaylist = null;
+        this.debug("Watch ping failed (segment HEAD)", { login, status: res.status });
+        throw new TwitchServiceError(
+          TWITCH_ERROR_CODES.WATCH_PING_FAILED,
+          `Watch ping failed (segment HEAD status=${res.status})`,
+        );
+      }
     }
 
-    this.debug("Watch ping failed", {
+    this.debug("Watch ping ok", {
       login,
-      channelId: String(channelId),
-      broadcastId: String(broadcastId),
-      statusCode,
-      response: res,
+      channelId: String(payload.channelId ?? ""),
+      segments: segments.length,
     });
+    return { ok: true };
+  }
+
+  /**
+   * Segment URLs from the media playlist of `login`. Returns null when a cached
+   * playlist URL no longer works (caller retries with `forceResolve`); throws
+   * when a freshly resolved one fails too.
+   */
+  private async fetchWatchSegments(login: string, forceResolve: boolean): Promise<string[] | null> {
+    const cached =
+      !forceResolve && this.watchPlaylist?.login === login ? this.watchPlaylist.url : null;
+    const url = cached ?? (await this.resolveWatchPlaylistUrl(login));
+    this.watchPlaylist = { login, url };
+
+    const res = await fetch(url, {
+      headers: { "User-Agent": TWITCH_WEB_USER_AGENT },
+      signal: AbortSignal.timeout(WATCH_FETCH_TIMEOUT_MS),
+    });
+    const body = await res.text();
+    const error = extractPlaylistError(body) ?? (res.ok ? null : `HTTP ${res.status}`);
+    if (!error) return extractSegmentUrls(body);
+
+    this.watchPlaylist = null;
+    this.debug("Watch playlist failed", { login, status: res.status, error, cached: !!cached });
+    if (cached) return null;
     throw new TwitchServiceError(
       TWITCH_ERROR_CODES.WATCH_PING_FAILED,
-      `Watch ping failed (sendSpadeEvents statusCode=${statusCode ?? "unknown"})`,
+      `Watch ping failed (media playlist: ${error})`,
     );
+  }
+
+  /** PlaybackAccessToken -> usher master playlist -> lowest-quality media playlist URL. */
+  private async resolveWatchPlaylistUrl(login: string): Promise<string> {
+    const tokenRes = await this.gqlRequest<PlaybackAccessTokenResponse>(
+      createPersistedQuery("PlaybackAccessToken", PLAYBACK_ACCESS_TOKEN_HASH, {
+        isLive: true,
+        isVod: false,
+        login,
+        platform: "web",
+        playerType: "site",
+        vodID: "",
+      }),
+      "PlaybackAccessToken",
+    );
+    const token = tokenRes?.data?.streamPlaybackAccessToken;
+    if (!token?.value || !token?.signature) {
+      throw new TwitchServiceError(
+        TWITCH_ERROR_CODES.WATCH_MISSING_IDS,
+        "Watch playback token missing",
+      );
+    }
+
+    const usherUrl = buildUsherPlaylistUrl(login, {
+      value: token.value,
+      signature: token.signature,
+    });
+    const res = await fetch(usherUrl, {
+      headers: { "User-Agent": TWITCH_WEB_USER_AGENT },
+      signal: AbortSignal.timeout(WATCH_FETCH_TIMEOUT_MS),
+    });
+    const body = await res.text();
+    const error = extractPlaylistError(body) ?? (res.ok ? null : `HTTP ${res.status}`);
+    if (error) {
+      this.debug("Watch usher failed", { login, status: res.status, error });
+      // usher answers 404 ("Can not find channel") when the channel is not live.
+      if (res.status === 404) {
+        throw new TwitchServiceError(TWITCH_ERROR_CODES.WATCH_OFFLINE, "Watch stream offline");
+      }
+      throw new TwitchServiceError(
+        TWITCH_ERROR_CODES.WATCH_PING_FAILED,
+        `Watch ping failed (usher: ${error})`,
+      );
+    }
+    const url = pickLowestQualityVariantUrl(body);
+    if (!url) {
+      throw new TwitchServiceError(
+        TWITCH_ERROR_CODES.WATCH_PING_FAILED,
+        "Watch ping failed (no playlist variants)",
+      );
+    }
+    return url;
   }
 
   /**
