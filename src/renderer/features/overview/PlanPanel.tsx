@@ -1,40 +1,13 @@
 import { cn } from "@renderer/shared/lib/utils";
 import { useI18n } from "@renderer/shared/i18n";
+import { DropStatusPill } from "@renderer/shared/components/DropStatusPill";
 import { formatBlockingReason } from "./engineVoice";
-import type { PlanClock, PlanTable, PlanTableDropRow, PlanTableStatus } from "./planTable";
+import { PlanClockText } from "./PlanClockText";
+import type { PlanTable, PlanTableDropRow } from "./planTable";
 
 export type PlanPanelProps = {
   table: PlanTable;
   onOpenGames: () => void;
-};
-
-function Clock({ value }: { value: PlanClock }) {
-  return (
-    <>
-      {value.clock}
-      {value.dayOffset > 0 && (
-        <sup className="ml-0.5 text-[9px] text-[color:var(--dp-text-dimmer)]">
-          +{value.dayOffset}d
-        </sup>
-      )}
-    </>
-  );
-}
-
-const PILL_CLASS: Record<PlanTableStatus, string> = {
-  watching: "bg-[color:var(--dp-accent-soft)] text-[color:var(--dp-accent)]",
-  next: "border border-[color:var(--dp-border)] text-[color:var(--dp-text-dim)]",
-  queued: "border border-[color:var(--dp-border)] text-[color:var(--dp-text-dim)]",
-  "needs-link": "bg-[color:var(--dp-warn-soft)] text-[color:var(--dp-signal-warn)]",
-  blocked: "border border-[color:var(--dp-border)] text-[color:var(--dp-text-dimmer)]",
-};
-
-const PILL_KEY: Record<PlanTableStatus, string> = {
-  watching: "overview.status.watching",
-  next: "overview.status.next",
-  queued: "overview.status.queued",
-  "needs-link": "overview.status.needsLink",
-  blocked: "overview.status.blocked",
 };
 
 function DropRow({ row }: { row: PlanTableDropRow }) {
@@ -64,7 +37,7 @@ function DropRow({ row }: { row: PlanTableDropRow }) {
               : "text-[color:var(--dp-text-dim)]",
         )}
       >
-        {row.ready ? <Clock value={row.ready} /> : "—"}
+        {row.ready ? <PlanClockText value={row.ready} /> : "—"}
       </td>
       <td className="py-3 pr-3">
         <div
@@ -98,15 +71,10 @@ function DropRow({ row }: { row: PlanTableDropRow }) {
         {row.watched} / {row.required}
       </td>
       <td className="px-[22px] py-3 text-right">
-        <span
+        <DropStatusPill
+          status={row.status}
           title={row.blockedReason ? formatBlockingReason(row.blockedReason, t) : undefined}
-          className={cn(
-            "whitespace-nowrap rounded-[var(--dp-radius-xs)] px-2 py-[3px] font-mono text-[10px]",
-            PILL_CLASS[row.status],
-          )}
-        >
-          {t(PILL_KEY[row.status])}
-        </span>
+        />
       </td>
     </tr>
   );
@@ -129,7 +97,7 @@ export function PlanPanel({ table, onOpenGames }: PlanPanelProps) {
             <>
               {t("overview.plan.doneBy")}{" "}
               <span className="text-[color:var(--dp-text)]">
-                <Clock value={table.doneAt} />
+                <PlanClockText value={table.doneAt} />
               </span>
               {" · "}
             </>

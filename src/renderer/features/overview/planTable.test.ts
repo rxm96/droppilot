@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { FarmPlan, FarmPlanDropRow } from "@renderer/shared/domain/farmPlan";
 import type { InventoryItem } from "@renderer/shared/types";
-import { buildPlanTable, formatPlanClock } from "./planTable";
+import { buildPlanTable, formatPlanClock, planDropNote, planRowStatus } from "./planTable";
 
 const now = new Date(2026, 10, 6, 14, 14, 0).getTime();
 const at = (h: number, m: number, day = 6) => new Date(2026, 10, day, h, m, 0).getTime();
@@ -149,5 +149,41 @@ describe("buildPlanTable", () => {
       hiddenCount: 0,
       doneAt: null,
     });
+  });
+});
+
+describe("planRowStatus", () => {
+  it("maps a blocked row with account_not_linked to needs-link", () => {
+    const blocked = row({ readyAt: null, status: "blocked", blockedReason: "account_not_linked" });
+    expect(planRowStatus(blocked, item({}))).toBe("needs-link");
+    const unlinked = row({
+      readyAt: null,
+      status: "blocked",
+      blockedReason: "preconditions_not_met",
+    });
+    expect(planRowStatus(unlinked, item({ linked: false }))).toBe("needs-link");
+    expect(planRowStatus(unlinked, item({}))).toBe("blocked");
+  });
+
+  it("keeps timed rows' plan status", () => {
+    expect(planRowStatus(row({ status: "watching" }), item({ linked: false }))).toBe("watching");
+    expect(planRowStatus(row({ status: "next" }), undefined)).toBe("next");
+    expect(planRowStatus(row({ status: "queued" }), undefined)).toBe("queued");
+  });
+});
+
+describe("planDropNote", () => {
+  const soon = item({ endsAt: new Date(at(20, 0)).toISOString() });
+
+  it("ends-first beats ends-soon", () => {
+    expect(planDropNote(row({ wontFinishInTime: true }), soon, now)).toEqual({
+      kind: "ends-first",
+    });
+    expect(planDropNote(row({}), soon, now)).toEqual({ kind: "ends-soon", endsIn: "5h" });
+    expect(planDropNote(row({}), item({}), now)).toBeNull();
+  });
+
+  it("null for blocked rows", () => {
+    expect(planDropNote(row({ readyAt: null, status: "blocked" }), soon, now)).toBeNull();
   });
 });

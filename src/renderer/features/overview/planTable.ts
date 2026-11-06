@@ -1,14 +1,20 @@
 // Pure view-model for the overview's "plan · today" table. Turns the
 // buildFarmPlan output into display rows. No React imports.
 
-import type { FarmPlan } from "@renderer/shared/domain/farmPlan";
+import type { DropStatus } from "@renderer/shared/domain/dropStatus";
+import type { FarmPlan, FarmPlanDropRow } from "@renderer/shared/domain/farmPlan";
 import { sameGameName } from "@renderer/shared/domain/gameName";
 import type { InventoryItem } from "@renderer/shared/types";
 import { formatEndsIn, formatReadyAt } from "./formatters";
 
 export type PlanClock = { clock: string; dayOffset: number };
 
-export type PlanTableStatus = "watching" | "next" | "queued" | "needs-link" | "blocked";
+export type PlanTableStatus = Extract<
+  DropStatus,
+  "watching" | "next" | "queued" | "needs-link" | "blocked"
+>;
+
+export type PlanDropNote = { kind: "ends-first" } | { kind: "ends-soon"; endsIn: string } | null;
 
 export type PlanTableDropRow = {
   kind: "drop";
@@ -21,7 +27,7 @@ export type PlanTableDropRow = {
   status: PlanTableStatus;
   /** Raw blocking hint, only on "blocked" rows. */
   blockedReason?: string;
-  note: { kind: "ends-first" } | { kind: "ends-soon"; endsIn: string } | null;
+  note: PlanDropNote;
 };
 
 export type PlanTableSwitchRow = {
@@ -48,6 +54,35 @@ export function formatPlanClock(ts: number, now: number): PlanClock {
   const clock = formatReadyAt(ts, now)?.clock ?? "—";
   const dayOffset = Math.max(0, Math.round((startOfDay(ts) - startOfDay(now)) / DAY_MS));
   return { clock, dayOffset };
+}
+
+/**
+ * A plan row's pill. Blocked rows that wait for an account link say so; the
+ * drops view uses the same rule, so both screens show the same word.
+ */
+export function planRowStatus(
+  row: FarmPlanDropRow,
+  item: InventoryItem | undefined,
+): PlanTableStatus {
+  if (row.status !== "blocked") return row.status;
+  return row.blockedReason === "account_not_linked" || item?.linked === false
+    ? "needs-link"
+    : "blocked";
+}
+
+/** Campaign-end note for a timed plan row: ends before the drop, or within a day. */
+export function planDropNote(
+  row: FarmPlanDropRow,
+  item: InventoryItem | undefined,
+  now: number,
+): PlanDropNote {
+  if (row.readyAt === null) return null;
+  if (row.wontFinishInTime) return { kind: "ends-first" };
+  const endsAt = item?.endsAt ? Date.parse(item.endsAt) : Number.NaN;
+  const untilEnd = endsAt - now;
+  return Number.isFinite(untilEnd) && untilEnd > 0 && untilEnd < DAY_MS
+    ? { kind: "ends-soon", endsIn: formatEndsIn(item?.endsAt, now) ?? "" }
+    : null;
 }
 
 export function buildPlanTable(
@@ -87,19 +122,7 @@ export function buildPlanTable(
     shownDrops += 1;
     const item = itemById.get(row.dropId);
     const live = input.activeDrop?.id === row.dropId ? input.activeDrop.earnedMinutes : null;
-    const needsLink =
-      row.status === "blocked" &&
-      (row.blockedReason === "account_not_linked" || item?.linked === false);
-    const endsAt = item?.endsAt ? Date.parse(item.endsAt) : Number.NaN;
-    const untilEnd = endsAt - input.now;
-    const note: PlanTableDropRow["note"] =
-      row.readyAt === null
-        ? null
-        : row.wontFinishInTime
-          ? { kind: "ends-first" }
-          : Number.isFinite(untilEnd) && untilEnd > 0 && untilEnd < DAY_MS
-            ? { kind: "ends-soon", endsIn: formatEndsIn(item?.endsAt, input.now) ?? "" }
-            : null;
+    const status = planRowStatus(row, item);
     rows.push({
       kind: "drop",
       key: row.dropId,
@@ -108,11 +131,9 @@ export function buildPlanTable(
       game: row.game,
       watched: Math.max(0, Math.floor(live ?? row.earnedMinutes)),
       required: row.requiredMinutes,
-      status: needsLink ? "needs-link" : row.status,
-      ...(row.status === "blocked" && !needsLink && row.blockedReason
-        ? { blockedReason: row.blockedReason }
-        : {}),
-      note,
+      status,
+      ...(status === "blocked" && row.blockedReason ? { blockedReason: row.blockedReason } : {}),
+      note: planDropNote(row, item, input.now),
     });
   }
   while (rows.length > 0 && rows[rows.length - 1].kind === "switch") rows.pop();

@@ -167,7 +167,7 @@ export function ChannelPicker({
                   </span>
                   {isCurrent && (
                     <span className="flex-none rounded-[var(--dp-radius-xs)] bg-[color:var(--dp-accent-soft)] px-2 py-[3px] font-mono text-[10px] text-[color:var(--dp-accent)]">
-                      {t("overview.status.watching")}
+                      {t("dropStatus.watching")}
                     </span>
                   )}
                 </button>
