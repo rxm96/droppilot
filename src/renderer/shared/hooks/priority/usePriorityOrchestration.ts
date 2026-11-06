@@ -28,6 +28,20 @@ export const isGameActionable = (
   });
 };
 
+/**
+ * Stable partition: games that already have watch progress come before games whose drops
+ * are all fresh (0 minutes). Since linked fresh campaigns are watch targets too, this keeps
+ * auto-selection finishing what it started instead of hopping to whichever new campaign
+ * happens to come first in inventory order. Only used for games the user did NOT rank.
+ */
+export const preferStartedGames = (games: string[], startedGames: Set<string>): string[] => [
+  ...games.filter((game) => startedGames.has(game)),
+  ...games.filter((game) => !startedGames.has(game)),
+];
+
+const isStartedDrop = (item: InventoryItem): boolean =>
+  item.status === "progress" && canEarnDrop(item, { category: "in-progress" });
+
 export const computeFallbackOrder = (
   withCategories: WithCategory[],
   opts?: { allowUpcoming?: boolean },
@@ -35,14 +49,17 @@ export const computeFallbackOrder = (
   const allowUpcoming = opts?.allowUpcoming === true;
   const seen = new Set<string>();
   const order: string[] = [];
+  const startedGames = new Set<string>();
   for (const { item, category } of withCategories) {
     if (!isActionableInventoryItem(item, category, allowUpcoming)) continue;
     const game = item.game;
-    if (!game || seen.has(game)) continue;
+    if (!game) continue;
+    if (category === "in-progress") startedGames.add(game);
+    if (seen.has(game)) continue;
     seen.add(game);
     order.push(game);
   }
-  return order;
+  return preferStartedGames(order, startedGames);
 };
 
 export const normalizePriorityGames = (priorityGames: string[]): string[] => {
@@ -57,7 +74,10 @@ export const normalizePriorityGames = (priorityGames: string[]): string[] => {
   return order;
 };
 
-const buildLivePriorityPlan = (items: InventoryItem[], priorityGames: string[]): PriorityPlan => {
+export const buildLivePriorityPlan = (
+  items: InventoryItem[],
+  priorityGames: string[],
+): PriorityPlan => {
   const activeItems = items.filter((i) => i.status !== "claimed");
   const availableGames = Array.from(new Set(activeItems.map((i) => i.game)));
   const order: string[] = [];
@@ -67,11 +87,9 @@ const buildLivePriorityPlan = (items: InventoryItem[], priorityGames: string[]):
       order.push(g);
     }
   }
-  for (const g of availableGames) {
-    if (!order.includes(g)) {
-      order.push(g);
-    }
-  }
+  const unranked = availableGames.filter((g) => !order.includes(g));
+  const startedGames = new Set(activeItems.filter(isStartedDrop).map((i) => i.game));
+  order.push(...preferStartedGames(unranked, startedGames));
 
   const missingPriority = priorityGames.filter((g) => !availableGames.includes(g));
 

@@ -48,6 +48,27 @@ const getRequiredMinutes = (item: InventoryItem): number =>
 const getEarnedMinutes = (item: InventoryItem): number =>
   Math.max(0, Number(item.earnedMinutes) || 0);
 
+/**
+ * Whether a not-yet-started ("upcoming": locked, 0 earned minutes) drop may be auto-watched.
+ * A drop whose campaign is account-connected (`linked === true`) is always startable — that is
+ * how a fresh campaign gets its first watch minutes. Any other upcoming drop needs the explicit
+ * "Allow unlinked campaigns" opt-in (`allowUnlinkedUpcoming`).
+ *
+ * Campaigns that haven't started, expired campaigns and chained drops are NOT handled here:
+ * they carry hard watching blockers (`campaign_not_started`, `campaign_expired`,
+ * `missing_prerequisite_drops:*`, `preconditions_not_met`) or `blocked`, which `canEarnDrop`
+ * rejects before consulting this.
+ */
+export const isUpcomingDropStartable = (
+  item: InventoryItem,
+  allowUnlinkedUpcoming = false,
+): boolean => allowUnlinkedUpcoming || item.linked === true;
+
+/**
+ * Whether watching can still earn minutes toward this drop.
+ * `allowUpcoming` is the unlinked opt-in (callers pass `allowUnlinkedGames`); linked upcoming
+ * drops are earnable without it — see `isUpcomingDropStartable`.
+ */
 export const canEarnDrop = (
   item: InventoryItem,
   opts?: { category?: string; allowUpcoming?: boolean },
@@ -71,7 +92,7 @@ export const canEarnDrop = (
   if (hasHardWatchingBlockers(item)) return false;
 
   if (category === "in-progress") return true;
-  if (category === "upcoming") return allowUpcoming;
+  if (category === "upcoming") return isUpcomingDropStartable(item, allowUpcoming);
   return false;
 };
 

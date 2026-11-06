@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { InventoryItem } from "@renderer/shared/types";
-import { canClaimDrop, canEarnDrop } from "./inventoryRules";
+import { canClaimDrop, canEarnDrop, isUpcomingDropStartable } from "./inventoryRules";
 
 const makeItem = (overrides: Partial<InventoryItem> = {}): InventoryItem => ({
   id: "drop-1",
@@ -62,6 +62,65 @@ describe("canEarnDrop", () => {
         { category: "upcoming", allowUpcoming: true },
       ),
     ).toBe(true);
+  });
+});
+
+describe("fresh linked campaigns", () => {
+  // A DropCampaignDetails drop of an active, account-connected campaign: no `self`, so
+  // status "locked" with 0 earned minutes — category "upcoming".
+  const fresh = (overrides: Partial<InventoryItem> = {}) =>
+    makeItem({
+      status: "locked",
+      earnedMinutes: 0,
+      dropInstanceId: undefined,
+      linked: true,
+      campaignStatus: "ACTIVE",
+      blockingReasonHints: [],
+      ...overrides,
+    });
+
+  it("treats only linked upcoming drops as startable without the unlinked opt-in", () => {
+    expect(isUpcomingDropStartable(fresh())).toBe(true);
+    expect(isUpcomingDropStartable(fresh({ linked: false }))).toBe(false);
+    expect(isUpcomingDropStartable(fresh({ linked: undefined }))).toBe(false);
+    expect(isUpcomingDropStartable(fresh({ linked: false }), true)).toBe(true);
+  });
+
+  it("makes an active, linked, unblocked 0-minute drop earnable with default settings", () => {
+    expect(canEarnDrop(fresh(), { category: "upcoming" })).toBe(true);
+    expect(canEarnDrop(fresh(), { category: "upcoming", allowUpcoming: false })).toBe(true);
+    // category derived from status ("locked" → "upcoming")
+    expect(canEarnDrop(fresh())).toBe(true);
+  });
+
+  it("keeps unlinked fresh drops behind the unlinked opt-in", () => {
+    const unlinked = fresh({ linked: false, blockingReasonHints: ["account_not_linked"] });
+    expect(canEarnDrop(unlinked, { category: "upcoming" })).toBe(false);
+    expect(canEarnDrop(unlinked, { category: "upcoming", allowUpcoming: true })).toBe(true);
+  });
+
+  it("keeps not-started, expired and chained linked drops excluded", () => {
+    const blockedCases: Array<Partial<InventoryItem>> = [
+      { blocked: true, blockingReasonHints: ["campaign_not_started"] },
+      { blocked: true, blockingReasonHints: ["campaign_expired"] },
+      { blocked: true, blockingReasonHints: ["missing_prerequisite_drops:drop-0"] },
+      { blocked: true, blockingReasonHints: ["preconditions_not_met"] },
+      // hard hint alone (e.g. a patched item that lost `blocked`) is still enough
+      { blockingReasonHints: ["campaign_not_started"] },
+      { blockingReasonHints: ["missing_prerequisite_drops:drop-0"] },
+    ];
+    for (const overrides of blockedCases) {
+      expect(canEarnDrop(fresh(overrides), { category: "upcoming" })).toBe(false);
+      expect(canEarnDrop(fresh(overrides), { category: "upcoming", allowUpcoming: true })).toBe(
+        false,
+      );
+    }
+  });
+
+  it("does not turn non-watchable linked drops earnable", () => {
+    expect(canEarnDrop(fresh({ requiredMinutes: 0 }), { category: "upcoming" })).toBe(false);
+    expect(canEarnDrop(fresh(), { category: "not-linked" })).toBe(false);
+    expect(canEarnDrop(fresh(), { category: "expired" })).toBe(false);
   });
 });
 

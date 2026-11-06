@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { InventoryItem } from "@renderer/shared/types";
 import {
+  buildLivePriorityPlan,
   computeBestActionableGame,
   computeFallbackOrder,
   computeNextActiveTargetGame,
@@ -299,5 +300,95 @@ describe("priority orchestration helpers", () => {
       { item: makeItem({ id: "b1", game: "B", status: "locked" }), category: "upcoming" },
     ];
     expect(computeFallbackOrder(withCategories, { allowUpcoming: true })).toEqual(["A", "B"]);
+  });
+});
+
+describe("fresh linked campaigns (default settings, no unlinked opt-in)", () => {
+  // Active, account-connected campaign the user never watched: locked, 0 minutes, no blockers.
+  const fresh = (id: string, game: string, overrides: Partial<InventoryItem> = {}) =>
+    makeItem({ id, game, status: "locked", earnedMinutes: 0, linked: true, ...overrides });
+  const started = (id: string, game: string) =>
+    makeItem({ id, game, status: "progress", earnedMinutes: 20, linked: true });
+
+  it("treats a linked fresh game as actionable, an unlinked one not", () => {
+    const withCategories: WithCategory[] = [
+      { item: fresh("a1", "A"), category: "upcoming" },
+      { item: fresh("b1", "B", { linked: false }), category: "upcoming" },
+    ];
+    expect(isGameActionable("A", withCategories)).toBe(true);
+    expect(isGameActionable("B", withCategories)).toBe(false);
+  });
+
+  it("keeps chained and not-started linked drops non-actionable", () => {
+    const withCategories: WithCategory[] = [
+      {
+        item: fresh("a2", "A", {
+          blocked: true,
+          blockingReasonHints: ["missing_prerequisite_drops:a1"],
+        }),
+        category: "upcoming",
+      },
+      {
+        item: fresh("b1", "B", { blocked: true, blockingReasonHints: ["campaign_not_started"] }),
+        category: "upcoming",
+      },
+    ];
+    expect(isGameActionable("A", withCategories)).toBe(false);
+    expect(isGameActionable("B", withCategories)).toBe(false);
+  });
+
+  it("strict mode starts a listed fresh game but never an unlisted one", () => {
+    const withCategories: WithCategory[] = [
+      { item: fresh("u1", "Unlisted"), category: "upcoming" },
+      { item: fresh("l1", "Listed"), category: "upcoming" },
+    ];
+    expect(computeBestActionableGame(["Listed"], ["Unlisted"], withCategories, true)).toBe(
+      "Listed",
+    );
+    expect(computeBestActionableGame(["Other"], ["Unlisted"], withCategories, true)).toBe("");
+  });
+
+  it("strict mode does not preempt a watched game for a higher-ranked fresh one", () => {
+    const withCategories: WithCategory[] = [
+      { item: fresh("a1", "A"), category: "upcoming" },
+      { item: started("b1", "B"), category: "in-progress" },
+    ];
+    const best = computeBestActionableGame(["A", "B"], [], withCategories, true);
+    expect(best).toBe("A");
+    expect(
+      computeNextActiveTargetGame({
+        inventoryStatus: "ready",
+        activeTargetGame: "B",
+        bestActionableGame: best,
+        obeyPriority: true,
+        withCategories,
+        watchingGame: "B",
+      }),
+    ).toBe("B");
+  });
+
+  it("ranks unlisted games with progress ahead of fresh ones, keeping the user's ranking", () => {
+    const items = [
+      fresh("f1", "Fresh"),
+      started("s1", "Started"),
+      fresh("p1", "Ranked"),
+      fresh("z1", "Fresh2"),
+    ];
+    expect(buildLivePriorityPlan(items, ["Ranked"]).order).toEqual([
+      "Ranked",
+      "Started",
+      "Fresh",
+      "Fresh2",
+    ]);
+    const withCategories: WithCategory[] = [
+      { item: items[0], category: "upcoming" },
+      { item: items[1], category: "in-progress" },
+      { item: items[3], category: "upcoming" },
+    ];
+    const fallback = computeFallbackOrder(withCategories);
+    expect(fallback).toEqual(["Started", "Fresh", "Fresh2"]);
+    expect(computeBestActionableGame(["Fresh", "Started"], fallback, withCategories, false)).toBe(
+      "Fresh",
+    );
   });
 });
