@@ -1,56 +1,27 @@
 import * as React from "react";
-import type { DropSortKey, SortDirection } from "./inventoryFilters";
-
-export type SortState = { key: DropSortKey; direction: SortDirection } | null;
 
 export type InventoryViewState = {
   search: string;
   setSearch: (next: string) => void;
-  sort: SortState;
-  toggleSort: (key: DropSortKey) => void;
-  page: number;
-  setPage: (next: number) => void;
-  resetPage: () => void;
   selectedDropId: string | null;
   selectDrop: (id: string | null) => void;
+  expiredOpen: boolean;
+  toggleExpired: () => void;
 };
 
-export const DEFAULT_SORT: SortState = { key: "status", direction: "asc" };
-
+/** Local UI state of the drops view: search, the drawer's drop, the expired section. */
 export function useInventoryViewState(): InventoryViewState {
-  const [search, setSearchRaw] = React.useState<string>("");
-  const [sort, setSort] = React.useState<SortState>(DEFAULT_SORT);
-  const [page, setPage] = React.useState<number>(1);
+  const [search, setSearch] = React.useState<string>("");
   const [selectedDropId, setSelectedDropId] = React.useState<string | null>(null);
-
-  const setSearch = React.useCallback((next: string) => {
-    setSearchRaw(next);
-    setPage(1);
-  }, []);
-
-  const toggleSort = React.useCallback((key: DropSortKey) => {
-    setSort((current) => {
-      if (!current || current.key !== key) return { key, direction: "asc" };
-      if (current.direction === "asc") return { key, direction: "desc" };
-      return DEFAULT_SORT;
-    });
-  }, []);
-
-  const resetPage = React.useCallback(() => setPage(1), []);
-
-  const selectDrop = React.useCallback((id: string | null) => {
-    setSelectedDropId(id);
-  }, []);
+  const [expiredOpen, setExpiredOpen] = React.useState(false);
+  const toggleExpired = React.useCallback(() => setExpiredOpen((open) => !open), []);
 
   return {
     search,
     setSearch,
-    sort,
-    toggleSort,
-    page,
-    setPage,
-    resetPage,
     selectedDropId,
-    selectDrop,
+    selectDrop: setSelectedDropId,
+    expiredOpen,
+    toggleExpired,
   };
 }

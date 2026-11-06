@@ -71,15 +71,8 @@ export type InventoryState =
   | { status: "ready"; items: InventoryItem[] }
   | { status: "error"; message: string; code?: string; items?: InventoryItem[] };
 
-export type FilterKey =
-  | "all"
-  | "priority-games"
-  | "in-progress"
-  | "upcoming"
-  | "finished"
-  | "not-linked"
-  | "expired"
-  | "excluded";
+/** The drops view's filter: every drop is in exactly one bucket (see classifyDrop). */
+export type FilterKey = "all" | "farming" | "needs-you" | "claimed" | "not-farmed";
 
 export type View = "overview" | "stats" | "inventory" | "priorities" | "settings" | "debug";
 

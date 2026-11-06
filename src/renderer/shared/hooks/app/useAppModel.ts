@@ -140,7 +140,6 @@ export function useAppModel() {
     (next: string) => setViewState(resolveView(next, { debugEnabled })),
     [debugEnabled],
   );
-  const [gameFilter, setGameFilter] = useState<string>("all");
   // The overview's "switch channel" popover; channels stay tracked while open.
   const [channelPickerOpen, setChannelPickerOpen] = useState(false);
   // Channel the user picked in that popover. "your pick" shows only while this
@@ -233,7 +232,6 @@ export function useAppModel() {
     inventory,
     inventoryItems,
     campaigns,
-    campaignsLoading,
     inventoryRefreshing,
     inventoryChanges,
     inventoryFetchedAt,
@@ -691,13 +689,21 @@ export function useAppModel() {
       withCategories,
     ],
   );
+  // The watched drop with its live minutes (plan table + drops view). Whole
+  // minutes only, so the drops view's memo does not rebuild every second.
+  const planActiveEarnedMinute =
+    watching && activeDropInfo ? Math.floor(activeDropInfo.virtualEarned) : null;
+  const planActiveDrop = useMemo(
+    () =>
+      planActiveDropId !== null && planActiveEarnedMinute !== null
+        ? { id: planActiveDropId, earnedMinutes: planActiveEarnedMinute }
+        : null,
+    [planActiveDropId, planActiveEarnedMinute],
+  );
   const planTable = buildPlanTable(farmPlan, {
     items: inventoryItems,
     gameOrder: rankedGames,
-    activeDrop:
-      watching && activeDropInfo
-        ? { id: activeDropInfo.id, earnedMinutes: activeDropInfo.virtualEarned }
-        : null,
+    activeDrop: planActiveDrop,
     now: Date.now(),
     limit: 8,
   });
@@ -818,16 +824,14 @@ export function useAppModel() {
     inventory,
     filter,
     onFilterChange: actions.handleFilterChange,
-    gameFilter,
-    onGameFilterChange: setGameFilter,
-    uniqueGames,
     refreshing: inventoryRefreshing,
     onRefresh: actions.handleFetchInventory,
     campaigns,
-    campaignsLoading,
     isLinked: isLinkedOrDemo,
-    allowUnlinkedGames,
-    priorityGames,
+    farmPlan,
+    rankedGames,
+    activeDrop: planActiveDrop,
+    watchingChannel: watching?.name ?? null,
     onAddPriorityGame: actions.addGameByName,
     onOpenAccountLink: openAccountLink,
   };

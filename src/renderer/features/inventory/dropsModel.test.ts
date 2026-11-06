@@ -350,4 +350,18 @@ describe("buildDropsView", () => {
     });
     expect(view.groups[0].rows.map((r) => r.id)).toEqual(["v1", "v2", "v4", "v5", "v3"]);
   });
+
+  it("sorts rows without a ready time by required minutes, then title and id", () => {
+    const view = buildDropsView({
+      ...base,
+      items: [
+        item({ id: "z2", game: "Zelda", title: "Alpha", requiredMinutes: 60 }),
+        item({ id: "z3", game: "Zelda", title: "Late", requiredMinutes: 120 }),
+        item({ id: "z1", game: "Zelda", title: "Alpha", requiredMinutes: 60 }),
+        item({ id: "z4", game: "Zelda", title: "Early", requiredMinutes: 30 }),
+        item({ id: "z5", game: "Zelda", title: "Beta", requiredMinutes: 60 }),
+      ],
+    });
+    expect(view.groups[0].rows.map((r) => r.id)).toEqual(["z4", "z1", "z2", "z5", "z3"]);
+  });
 });
