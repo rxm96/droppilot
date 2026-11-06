@@ -36,6 +36,12 @@ GitHub Release (which the app's update history shows) is built from that section
   each. Expired campaigns are collected in a folded section at the bottom.
 - Drops use the same status words everywhere: watching, next, queued, needs link, ready to
   claim, claimed and not farmed. "Live" now only ever means a live channel.
+- The games screen shows your order next to the other games that have drops. Each of your
+  games shows how many drops are left, when its campaign ends, and whether it is being farmed
+  right now or needs an account link. Reorder with the up and down buttons or by dragging, and
+  add a game with drops in one click instead of picking it from a list.
+- "Strict priority order" is now a plain choice for when none of your games can be farmed:
+  wait, or farm other games meanwhile.
 
 ### Removed
 
@@ -43,6 +49,8 @@ GitHub Release (which the app's update history shows) is built from that section
   there is something to claim.
 - The drops screen's game picker, column sorting and pages. Search covers drop, game and
   campaign names, and all drops are on one page.
+- The current target, live in queue and top slot numbers on the games screen. The overview
+  shows what is being farmed.
 
 ### Fixed
 
