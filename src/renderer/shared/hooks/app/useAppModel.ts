@@ -858,6 +858,9 @@ export function useAppModel() {
   };
   const settingsProps = {
     isLinked,
+    profile,
+    version: appVersion,
+    onOpenGames: () => setView("priorities"),
     onLogout: logout,
     onLogin: startLogin,
     theme,

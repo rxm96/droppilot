@@ -2,7 +2,6 @@ import * as React from "react";
 import { useI18n } from "@renderer/shared/i18n";
 import { Button } from "@renderer/shared/components/ui/button";
 import { Pill } from "@renderer/shared/components/ui/pill";
-import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { useReleaseHistory } from "@renderer/shared/hooks/app/useReleaseHistory";
 import type { ReleaseEntry } from "../../../../shared/releaseHistory";
 
@@ -71,6 +70,7 @@ function ReleaseCard({
   );
 }
 
+/** The release notes list, opened from "changelog" in account & updates. */
 export function ReleaseHistory() {
   const { t, language } = useI18n();
   const { state, reload } = useReleaseHistory(true);
@@ -97,9 +97,7 @@ export function ReleaseHistory() {
   const fmtDate = (ms: number) => (ms > 0 ? new Date(ms).toLocaleDateString(language) : "");
 
   return (
-    <div className="mt-6">
-      <SectionLabel>{t("settings.subsection.releaseHistory")}</SectionLabel>
-
+    <div className="mt-3">
       {state.status === "loading" || state.status === "idle" ? (
         <p className="mt-3 font-mono text-[11px] text-[color:var(--dp-text-dimmer)]">
           {t("settings.releaseHistory.loading")}

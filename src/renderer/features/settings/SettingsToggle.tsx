@@ -5,6 +5,8 @@ export type SettingsToggleProps = {
   checked: boolean;
   onChange: (next: boolean) => void;
   label?: string;
+  /** Accessible name when there is no visible label next to the switch (e.g. the row label). */
+  ariaLabel?: string;
   disabled?: boolean;
   className?: string;
 };
@@ -13,6 +15,7 @@ export function SettingsToggle({
   checked,
   onChange,
   label,
+  ariaLabel,
   disabled,
   className,
 }: SettingsToggleProps) {
@@ -28,7 +31,7 @@ export function SettingsToggle({
         type="button"
         role="switch"
         aria-checked={checked}
-        aria-label={label}
+        aria-label={label ?? ariaLabel}
         disabled={disabled}
         onClick={() => !disabled && onChange(!checked)}
         className={cn(
