@@ -4,7 +4,6 @@ import { useAppActions } from "./useAppActions";
 import { useAppBootstrap } from "./useAppBootstrap";
 import { useAuth } from "./useAuth";
 import {
-  useCampaignWarmup,
   useDropClaimAlerts,
   useInventory,
   useInventoryRefresh,
@@ -55,7 +54,6 @@ export function useAppModel() {
     autoClaim,
     autoSelect,
     autoSwitchEnabled,
-    warmupEnabled,
     updateChannel,
     refreshMinMs,
     refreshMaxMs,
@@ -87,7 +85,6 @@ export function useAppModel() {
     saveAutoClaim,
     saveAutoSelect,
     saveAutoSwitchEnabled,
-    saveWarmupEnabled,
     saveUpdateChannel,
     saveRefreshIntervals,
     saveDemoMode,
@@ -146,7 +143,6 @@ export function useAppModel() {
   const isLinked = auth.status === "ok";
   const isLinkedOrDemo = isLinked || demoMode;
   const allowWatching = isLinkedOrDemo;
-  const allowWarmup = allowWatching && warmupEnabled;
   const effectiveAuthStatus = demoMode ? "ok" : auth.status;
   const isMac = useMemo(
     () => typeof navigator !== "undefined" && /mac/i.test(navigator.platform),
@@ -249,19 +245,6 @@ export function useAppModel() {
   const stallCheckHeartbeat = watchStats.nextAt;
 
   useDropProgressPoll({ watching, demoMode, pollDropProgressOnce, pollDropProgressIfStale });
-  const warmupState = useCampaignWarmup({
-    allowWatching: allowWarmup,
-    demoMode,
-    inventoryStatus: inventory.status,
-    inventoryFetchedAt,
-    withCategories,
-    priorityGames,
-    allowUnlinkedGames,
-    watching,
-    fetchInventory,
-    forwardAuthError,
-  });
-
   const { profile, appVersion, updateStatus, setUpdateStatus, trackerStatus, userPubSubStatus } =
     useAppBootstrap({
       authStatus: auth.status,
@@ -286,7 +269,6 @@ export function useAppModel() {
     saveAutoClaim,
     saveAutoSelect,
     saveAutoSwitchEnabled,
-    saveWarmupEnabled,
     saveUpdateChannel,
     saveDemoMode,
     saveAlertsEnabled,
@@ -550,7 +532,6 @@ export function useAppModel() {
     autoClaim,
     autoSelectEnabled,
     autoSwitchEnabled,
-    warmupEnabled,
     obeyPriority,
     allowWatching,
     refreshMinMs,
@@ -563,7 +544,6 @@ export function useAppModel() {
     cpu: debugCpu,
     trackerStatus,
     userPubSubStatus,
-    warmup: warmupState,
   });
   const watchEngineSnapshot = useWatchEngineSnapshot({
     watchEngineState,
@@ -677,8 +657,6 @@ export function useAppModel() {
     setAutoSelect: actions.handleSetAutoSelect,
     autoSwitchEnabled,
     setAutoSwitchEnabled: actions.handleSetAutoSwitchEnabled,
-    warmupEnabled,
-    setWarmupEnabled: actions.handleSetWarmupEnabled,
     updateChannel,
     setUpdateChannel: actions.handleSetUpdateChannel,
     demoMode,
@@ -799,8 +777,6 @@ export function useAppModel() {
     lastWatchOk: watchStats.lastOk || undefined,
     targetProgress,
     activeDropProgress,
-    warmupActive: warmupState.active,
-    warmupGame: warmupState.game,
     onClaimNow: claimNowAll,
     claimStatus,
   };

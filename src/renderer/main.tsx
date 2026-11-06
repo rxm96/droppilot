@@ -12,6 +12,13 @@ initAccent();
 // after the app renders. No-op for the default pair (pro-console).
 initFontPair();
 
+// The removed warmup mode cached per-campaign attempts here; drop the stale key.
+try {
+  window.localStorage.removeItem("droppilot:warmup-campaign-attempts");
+} catch {
+  /* storage unavailable — nothing to clean up */
+}
+
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <App />

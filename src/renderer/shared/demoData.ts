@@ -209,7 +209,7 @@ const demoChannelsByGame: Record<string, ChannelEntry[]> = {
       "VALORANT",
       "spikerush",
       "SpikeRushTV",
-      "Warmup into custom lobbies",
+      "Aim drills into custom lobbies",
       7200,
       "#ec4899",
     ),

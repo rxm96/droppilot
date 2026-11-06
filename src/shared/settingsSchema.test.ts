@@ -93,7 +93,6 @@ describe("SETTINGS_SCHEMA descriptors", () => {
       autoClaim: true,
       autoSelect: true,
       autoSwitch: true,
-      warmupEnabled: true,
       updateChannel: "stable",
       refreshMinMs: 3_600_000,
       refreshMaxMs: 4_200_000,
@@ -131,7 +130,6 @@ describe("SETTINGS_SCHEMA descriptors", () => {
       "autoClaim",
       "autoSelect",
       "autoSwitch",
-      "warmupEnabled",
       "refreshMinMs",
       "refreshMaxMs",
       "demoMode",
@@ -142,7 +140,6 @@ describe("SETTINGS_SCHEMA descriptors", () => {
       autoClaim: true,
       autoSelect: true,
       autoSwitch: true,
-      warmupEnabled: true,
       refreshMinMs: 3_600_000,
       refreshMaxMs: 4_200_000,
       demoMode: false,
@@ -161,7 +158,6 @@ describe("SETTINGS_SCHEMA descriptors", () => {
       "autoClaim",
       "autoSelect",
       "autoSwitch",
-      "warmupEnabled",
       "updateChannel",
       "refreshMinMs",
       "refreshMaxMs",
@@ -250,6 +246,13 @@ describe("normalizeSettings (load path: fallback = default)", () => {
     const result = normalizeSettings({ futureFlag: true, autoClaim: false });
     expect("futureFlag" in result).toBe(false);
     expect(result.autoClaim).toBe(false);
+  });
+
+  it("silently drops the removed warmupEnabled setting from old settings files", () => {
+    const result = normalizeSettings({ warmupEnabled: false, autoClaim: false });
+    expect("warmupEnabled" in result).toBe(false);
+    expect(result).toEqual({ ...SETTINGS_DEFAULTS, autoClaim: false });
+    expect("warmupEnabled" in applySettingsPatch(result, { warmupEnabled: true })).toBe(false);
   });
 
   it("never emits a betaUpdates key", () => {

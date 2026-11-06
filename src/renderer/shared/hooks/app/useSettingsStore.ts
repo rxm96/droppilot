@@ -15,7 +15,6 @@ type SettingsData = {
   autoClaim?: boolean;
   autoSelect?: boolean;
   autoSwitch?: boolean;
-  warmupEnabled?: boolean;
   updateChannel?: UpdateChannel;
   betaUpdates?: boolean;
   refreshMinMs?: number;
@@ -51,7 +50,6 @@ type SettingsHook = {
   autoClaim: boolean;
   autoSelect: boolean;
   autoSwitchEnabled: boolean;
-  warmupEnabled: boolean;
   updateChannel: UpdateChannel;
   refreshMinMs: number;
   refreshMaxMs: number;
@@ -83,7 +81,6 @@ type SettingsHook = {
   saveAutoClaim: (val: boolean) => Promise<void>;
   saveAutoSelect: (val: boolean) => Promise<void>;
   saveAutoSwitchEnabled: (val: boolean) => Promise<void>;
-  saveWarmupEnabled: (val: boolean) => Promise<void>;
   saveUpdateChannel: (val: UpdateChannel) => Promise<void>;
   saveRefreshIntervals: (minMs: number, maxMs: number) => Promise<void>;
   saveDemoMode: (val: boolean) => Promise<void>;
@@ -150,7 +147,6 @@ export function useSettingsStore(): SettingsHook {
   const [autoClaim, setAutoClaim] = useState<boolean>(true);
   const [autoSelect, setAutoSelect] = useState<boolean>(true);
   const [autoSwitchEnabled, setAutoSwitchEnabled] = useState<boolean>(true);
-  const [warmupEnabled, setWarmupEnabled] = useState<boolean>(true);
   const [updateChannel, setUpdateChannel] = useState<UpdateChannel>(DEFAULT_UPDATE_CHANNEL);
   const [refreshMinMs, setRefreshMinMs] = useState<number>(DEFAULT_REFRESH_MIN);
   const [refreshMaxMs, setRefreshMaxMs] = useState<number>(DEFAULT_REFRESH_MAX);
@@ -191,7 +187,6 @@ export function useSettingsStore(): SettingsHook {
       setAutoClaim(res.autoClaim !== false);
       setAutoSelect(res.autoSelect !== false);
       setAutoSwitchEnabled(res.autoSwitch !== false);
-      setWarmupEnabled(res.warmupEnabled !== false);
       setUpdateChannel(normalizeUpdateChannel(res.updateChannel, res.betaUpdates));
       const refresh = normalizeRefreshIntervals(res.refreshMinMs, res.refreshMaxMs);
       setRefreshMinMs(refresh.min);
@@ -242,7 +237,6 @@ export function useSettingsStore(): SettingsHook {
       setAutoClaim(saved.autoClaim !== false);
       setAutoSelect(saved.autoSelect !== false);
       setAutoSwitchEnabled(saved.autoSwitch !== false);
-      setWarmupEnabled(saved.warmupEnabled !== false);
       setUpdateChannel(normalizeUpdateChannel(saved.updateChannel, saved.betaUpdates));
       const refresh = normalizeRefreshIntervals(saved.refreshMinMs, saved.refreshMaxMs);
       setRefreshMinMs(refresh.min);
@@ -311,11 +305,6 @@ export function useSettingsStore(): SettingsHook {
   const saveAutoSwitchEnabled = async (val: boolean) => {
     setAutoSwitchEnabled(val);
     await persist({ autoSwitch: val });
-  };
-
-  const saveWarmupEnabled = async (val: boolean) => {
-    setWarmupEnabled(val);
-    await persist({ warmupEnabled: val });
   };
 
   const saveUpdateChannel = async (val: UpdateChannel) => {
@@ -442,7 +431,6 @@ export function useSettingsStore(): SettingsHook {
       autoClaim: true,
       autoSelect: true,
       autoSwitch: true,
-      warmupEnabled: true,
       refreshMinMs: DEFAULT_REFRESH_MIN,
       refreshMaxMs: DEFAULT_REFRESH_MAX,
       demoMode: false,
@@ -452,7 +440,6 @@ export function useSettingsStore(): SettingsHook {
     setAutoClaim(defaults.autoClaim);
     setAutoSelect(defaults.autoSelect);
     setAutoSwitchEnabled(defaults.autoSwitch);
-    setWarmupEnabled(defaults.warmupEnabled);
     setRefreshMinMs(defaults.refreshMinMs);
     setRefreshMaxMs(defaults.refreshMaxMs);
     setDemoMode(defaults.demoMode);
@@ -491,7 +478,6 @@ export function useSettingsStore(): SettingsHook {
       setAutoClaim(saved.autoClaim !== false);
       setAutoSelect(saved.autoSelect !== false);
       setAutoSwitchEnabled(saved.autoSwitch !== false);
-      setWarmupEnabled(saved.warmupEnabled !== false);
       setUpdateChannel(normalizeUpdateChannel(saved.updateChannel, saved.betaUpdates));
       const refresh = normalizeRefreshIntervals(saved.refreshMinMs, saved.refreshMaxMs);
       setRefreshMinMs(refresh.min);
@@ -545,7 +531,6 @@ export function useSettingsStore(): SettingsHook {
     autoClaim,
     autoSelect,
     autoSwitchEnabled,
-    warmupEnabled,
     updateChannel,
     refreshMinMs,
     refreshMaxMs,
@@ -577,7 +562,6 @@ export function useSettingsStore(): SettingsHook {
     saveAutoClaim,
     saveAutoSelect,
     saveAutoSwitchEnabled,
-    saveWarmupEnabled,
     saveUpdateChannel,
     saveRefreshIntervals,
     saveDemoMode,

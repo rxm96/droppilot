@@ -437,21 +437,6 @@ export function DebugView({ snapshot }: DebugViewProps) {
             )}`
           : snapshotData.channels?.error?.message || "",
       },
-      {
-        key: "warmup",
-        label: t("debug.runtime.warmup"),
-        value: snapshotData.warmup?.active
-          ? snapshotData.warmup.game?.trim() || t("debug.status.live")
-          : t("debug.runtime.none"),
-        meta: snapshotData.warmup?.cooldownUntil
-          ? t("debug.runtime.cooldown", {
-              time: formatRelativeTime(snapshotData.warmup.cooldownUntil),
-            })
-          : snapshotData.warmup?.lastReason?.trim() ||
-            t("debug.runtime.attempts", {
-              count: formatNumber(snapshotData.warmup?.attemptedCount ?? 0),
-            }),
-      },
     ],
     [
       formatNumber,
@@ -468,11 +453,6 @@ export function DebugView({ snapshot }: DebugViewProps) {
       snapshotData.inventoryRefresh?.nextAt,
       snapshotData.priority?.activeTargetGame,
       snapshotData.targetGame,
-      snapshotData.warmup?.active,
-      snapshotData.warmup?.attemptedCount,
-      snapshotData.warmup?.cooldownUntil,
-      snapshotData.warmup?.game,
-      snapshotData.warmup?.lastReason,
       snapshotData.watching?.game,
       snapshotData.watching?.login,
       snapshotData.watching?.name,

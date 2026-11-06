@@ -22,8 +22,6 @@ export type EngineSectionProps = {
   setAutoSelect: (val: boolean) => void;
   autoSwitchEnabled: boolean;
   setAutoSwitchEnabled: (val: boolean) => void;
-  warmupEnabled: boolean;
-  setWarmupEnabled: (val: boolean) => void;
   refreshMinMs: number;
   refreshMaxMs: number;
   setRefreshIntervals: (minMs: number, maxMs: number) => void;
@@ -98,14 +96,6 @@ export function EngineSection(props: EngineSectionProps) {
               checked={props.autoSwitchEnabled}
               onChange={props.setAutoSwitchEnabled}
             />
-          }
-        />
-        <SettingRow
-          divided
-          label={t("settings.warmup")}
-          description={t("settings.warmupHint")}
-          control={
-            <SettingsToggle checked={props.warmupEnabled} onChange={props.setWarmupEnabled} />
           }
         />
       </div>

@@ -79,13 +79,6 @@ export type DebugSnapshot = {
       message?: string;
     } | null;
   };
-  warmup?: {
-    active?: boolean;
-    game?: string;
-    lastReason?: string | null;
-    cooldownUntil?: string | null;
-    attemptedCount?: number;
-  };
   activeDropInfo?: {
     id?: string;
     title?: string;
