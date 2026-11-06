@@ -9,7 +9,7 @@
 
 Keep DropPilot's Pro Console identity (dark, violet `#a78bfa`, mono for data) and fix what makes v4.0.0 hard to use:
 
-1. **Numbers disagree.** Overview hero shows "62 % complete", the queue under it shows 34 % for the same drop, and Control shows 34 % with `eta 23:14:11` (a clock time next to a countdown elsewhere). Root cause: `HeroPanel` falls back to the aggregate `targetProgress` when `activeDropInfo` is missing (`useAppModel.ts` `activeDropProgress`) but still labels it as the drop's own percentage. The demo data hits this fallback.
+1. **Numbers disagree.** Overview hero shows "62 % complete", the queue under it shows 34 % for the same drop, and Control shows 34 % with `eta 23:14:11` (a clock time next to a countdown elsewhere). Root cause (verified while planning phase 1): `useAppModel` computes `activeDropProgress`, but `overviewProps`/`OverviewView` never pass it to `HeroPanel`. So the hero's `activeDropProgress ?? targetProgress` always falls back to the game-wide aggregate, and labels it as the drop's own percentage. This happens with real data too, not just in demo mode.
 2. **Two screens answer one question.** Overview and Control both show "currently watching", with different verbs (`pause` vs `stop`). Settings exists as a tab and as a titlebar gear, and the statusbar repeats overview data.
 3. **No plan.** Users can't see when each drop will be ready or when the game switches; they have to do the math themselves.
 4. **Engine vocabulary.** `watch_cycle`, `cadence`, `tracker disconnected`, `strict priority order`, raw campaign ids (`Campaign camp-v…rant`).
