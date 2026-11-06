@@ -1,3 +1,5 @@
+> Superseded by `2026-11-06-repo-changelog-design.md`: release notes now come from `CHANGELOG.md`.
+
 # Release Notes Quality — Design
 
 **Date:** 2026-06-12

@@ -16,14 +16,14 @@
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
     "inspect:electron": "node scripts/playwright-inspect-electron.cjs",
     "build:icon": "electron scripts/build-icon.mjs",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"scripts/release-notes/**/*.mjs\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"scripts/release-notes/**/*.mjs\"",
-    "release:patch": "npm version patch -m \"chore(release): v%s\" && git push --follow-tags",
-    "release:minor": "npm version minor -m \"chore(release): v%s\" && git push --follow-tags",
-    "release:major": "npm version major -m \"chore(release): v%s\" && git push --follow-tags",
-    "release:test": "npm version prerelease --preid test -m \"chore(release): v%s\" && git push --follow-tags",
-    "release:rc:start": "npm version prepatch --preid rc -m \"chore(release): v%s\" && git push --follow-tags",
-    "release:rc": "npm version prerelease --preid rc -m \"chore(release): v%s\" && git push --follow-tags"
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"scripts/changelog/**/*.mjs\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"scripts/changelog/**/*.mjs\"",
+    "release:patch": "node scripts/changelog/release.mjs patch",
+    "release:minor": "node scripts/changelog/release.mjs minor",
+    "release:major": "node scripts/changelog/release.mjs major",
+    "release:test": "node scripts/changelog/release.mjs test",
+    "release:rc:start": "node scripts/changelog/release.mjs rc:start",
+    "release:rc": "node scripts/changelog/release.mjs rc"
   },
   "build": {
     "appId": "com.droppilot.app",

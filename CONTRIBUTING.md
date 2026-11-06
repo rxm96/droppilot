@@ -76,25 +76,36 @@ npm run test:watch                                         # watch mode
 - **Conventional Commits**: `feat:`, `fix:`, `docs:`, `style:`, `refactor:`,
   `chore(release):`. Keep changes focused.
 - Branch off `main`; `main` is protected (changes land via pull request).
+- **Changelog:** every change users notice adds a short line under `## [Unreleased]` in
+  [`CHANGELOG.md`](CHANGELOG.md), in the same pull request, under `### Added`,
+  `### Changed`, `### Fixed` or `### Removed`. Write what users see, not how the code
+  changed. These lines are the release notes.
 
 ## Releases
 
-Releases are driven by version tags. The release scripts bump the version, create a
-`chore(release): vX` commit + tag, and push with `--follow-tags`:
+Release from an up-to-date `main` with a clean tree. Each script does the whole release
+in one go: bump the version, move `## [Unreleased]` under the new version (stable only),
+commit `chore(release): vX`, tag `vX` and push `main` with the tag:
 
 ```bash
-npm run release:patch   # 3.0.5 -> 3.0.6
-npm run release:minor   # 3.0.x -> 3.1.0
-npm run release:major   # 3.x.x -> 4.0.0
-npm run release:rc      # prerelease on the rc preid
-npm run release:test    # prerelease on the test preid (draft)
+npm run release:patch     # 4.0.0 -> 4.0.1
+npm run release:minor     # 4.0.x -> 4.1.0
+npm run release:major     # 4.x.x -> 5.0.0
+npm run release:rc:start  # 4.0.0 -> 4.0.1-rc.0
+npm run release:rc        # 4.0.1-rc.0 -> 4.0.1-rc.1
+npm run release:test      # prerelease on the test preid (draft)
 ```
 
-Pushing the `v*` tag triggers CI to build Windows + macOS artifacts with
-electron-builder and publish a GitHub Release (notes are generated from the tag
-range). Stable tags publish a normal release; `rc`/`beta`/`alpha` publish a
-pre-release; `test` publishes a draft. Windows clients auto-update per their channel
-(stable/preview) via electron-updater.
+The scripts refuse off `main`, with uncommitted changes, when `main` differs from
+`origin/main`, when the tag exists, or when there are no notes. Stable and rc releases need
+bullets under `Unreleased`; test builds may have none.
+
+Pushing the `v*` tag triggers CI. It first checks that the tag, `package.json` and
+`CHANGELOG.md` agree. Then it builds Windows + macOS artifacts with electron-builder and
+publishes a GitHub Release whose notes are the changelog section (plus GitHub's PR list).
+Stable tags publish a normal release; `rc`/`beta`/`alpha` publish a pre-release; `test`
+publishes a draft. Windows clients auto-update per their channel (stable/preview) via
+electron-updater.
 
 ## Documentation
 
