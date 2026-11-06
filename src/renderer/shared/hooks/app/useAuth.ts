@@ -58,7 +58,7 @@ export function useAuth(): AuthHook {
   };
 
   const logout = async () => {
-    await window.electronAPI.auth.logout();
+    await window.electronAPI.auth.logout({ forgetWebLogin: true });
     setAuth({ status: "idle" });
   };
 

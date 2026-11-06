@@ -164,7 +164,7 @@ describe("InventoryClaimEngine.claimFromPubSubDropClaim", () => {
       onAuthError: vi.fn(),
       setClaimStatus,
       event: makeDropClaimEvent(),
-      claimedItem: makeItem(),
+      claimableItem: makeItem(),
       now: () => now,
     });
 
@@ -174,7 +174,7 @@ describe("InventoryClaimEngine.claimFromPubSubDropClaim", () => {
       onAuthError: vi.fn(),
       setClaimStatus,
       event: makeDropClaimEvent(),
-      claimedItem: makeItem(),
+      claimableItem: makeItem(),
       now: () => now,
     });
 
@@ -184,7 +184,7 @@ describe("InventoryClaimEngine.claimFromPubSubDropClaim", () => {
       onAuthError: vi.fn(),
       setClaimStatus,
       event: makeDropClaimEvent(),
-      claimedItem: makeItem(),
+      claimableItem: makeItem(),
       now: () => now,
     });
 
@@ -192,6 +192,47 @@ describe("InventoryClaimEngine.claimFromPubSubDropClaim", () => {
     expect(setClaimStatus).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "success", message: "Auto-claimed: Drop 1" }),
     );
+  });
+
+  it("reports and marks the drop claimed only after the claim succeeds", async () => {
+    const engine = new InventoryClaimEngine();
+    const onClaimed = vi.fn();
+    const markClaimed = vi.fn();
+    const item = makeItem();
+
+    await engine.claimFromPubSubDropClaim({
+      claimDrop: async () => ({ ok: true }),
+      onAuthError: vi.fn(),
+      setClaimStatus: vi.fn(),
+      onClaimed,
+      markClaimed,
+      event: makeDropClaimEvent(),
+      claimableItem: item,
+      now: () => 1_000_000,
+    });
+
+    expect(onClaimed).toHaveBeenCalledWith({ title: "Drop 1", game: "Game" });
+    expect(markClaimed).toHaveBeenCalledWith(item);
+  });
+
+  it("does not report or mark the drop claimed when the claim fails", async () => {
+    const engine = new InventoryClaimEngine();
+    const onClaimed = vi.fn();
+    const markClaimed = vi.fn();
+
+    await engine.claimFromPubSubDropClaim({
+      claimDrop: async () => ({ ok: false, message: "nope" }),
+      onAuthError: vi.fn(),
+      setClaimStatus: vi.fn(),
+      onClaimed,
+      markClaimed,
+      event: makeDropClaimEvent(),
+      claimableItem: makeItem(),
+      now: () => 1_000_000,
+    });
+
+    expect(onClaimed).not.toHaveBeenCalled();
+    expect(markClaimed).not.toHaveBeenCalled();
   });
 
   it("surfaces auth errors via onAuthError", async () => {
@@ -204,7 +245,7 @@ describe("InventoryClaimEngine.claimFromPubSubDropClaim", () => {
       onAuthError,
       setClaimStatus,
       event: makeDropClaimEvent(),
-      claimedItem: makeItem(),
+      claimableItem: makeItem(),
       now: () => 1_000_000,
     });
 

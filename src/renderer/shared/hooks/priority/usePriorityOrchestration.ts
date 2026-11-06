@@ -1,5 +1,6 @@
 import { buildDemoPriorityPlan } from "@renderer/shared/demoData";
 import { canEarnDrop } from "@renderer/shared/domain/inventory";
+import { normalizeGameName, sameGameName } from "@renderer/shared/domain/gameName";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   InventoryItem,
@@ -23,7 +24,7 @@ export const isGameActionable = (
 ): boolean => {
   const allowUpcoming = opts?.allowUpcoming === true;
   return withCategories.some(({ item, category }) => {
-    if (item.game !== game) return false;
+    if (!sameGameName(item.game, game)) return false;
     return isActionableInventoryItem(item, category, allowUpcoming);
   });
 };
@@ -74,24 +75,41 @@ export const normalizePriorityGames = (priorityGames: string[]): string[] => {
   return order;
 };
 
+/**
+ * Maps the user's typed priority names onto the inventory's spelling (case and
+ * surrounding whitespace ignored), then trims and de-duplicates. Downstream
+ * code — channel lookup included — then sees the canonical Twitch name.
+ */
+export const resolvePriorityGameNames = (
+  priorityGames: string[],
+  inventoryItems: InventoryItem[],
+): string[] => {
+  const knownGames = Array.from(new Set(inventoryItems.map((item) => item.game)));
+  return normalizePriorityGames(
+    priorityGames.map((game) => knownGames.find((known) => sameGameName(known, game)) ?? game),
+  );
+};
+
 export const buildLivePriorityPlan = (
   items: InventoryItem[],
   priorityGames: string[],
 ): PriorityPlan => {
   const activeItems = items.filter((i) => i.status !== "claimed");
   const availableGames = Array.from(new Set(activeItems.map((i) => i.game)));
+  const findAvailable = (game: string) => availableGames.find((g) => sameGameName(g, game));
   const order: string[] = [];
 
   for (const g of priorityGames) {
-    if (availableGames.includes(g) && !order.includes(g)) {
-      order.push(g);
+    const available = findAvailable(g);
+    if (available && !order.includes(available)) {
+      order.push(available);
     }
   }
   const unranked = availableGames.filter((g) => !order.includes(g));
   const startedGames = new Set(activeItems.filter(isStartedDrop).map((i) => i.game));
   order.push(...preferStartedGames(unranked, startedGames));
 
-  const missingPriority = priorityGames.filter((g) => !availableGames.includes(g));
+  const missingPriority = priorityGames.filter((g) => !findAvailable(g));
 
   return {
     order,
@@ -99,6 +117,32 @@ export const buildLivePriorityPlan = (
     missingPriority,
     totalActiveDrops: activeItems.length,
   };
+};
+
+/**
+ * The plan priority ordering reads from. While inventory is ready it is derived
+ * from the current items and list (not the stored plan, which an effect only
+ * refreshes after the render). Otherwise a priority-list edit is detected in a
+ * render that still sees the old ranking, and the one-render preemption window
+ * passes without switching.
+ */
+export const selectEffectivePriorityPlan = ({
+  demoMode,
+  inventoryStatus,
+  inventoryItems,
+  priorityGames,
+  storedPlan,
+}: {
+  demoMode: boolean;
+  inventoryStatus: InventoryState["status"];
+  inventoryItems: InventoryItem[];
+  priorityGames: string[];
+  storedPlan: PriorityPlan | null;
+}): PriorityPlan | null => {
+  if (inventoryStatus !== "ready") return storedPlan;
+  return demoMode
+    ? buildDemoPriorityPlan(inventoryItems, priorityGames)
+    : buildLivePriorityPlan(inventoryItems, priorityGames);
 };
 
 export const computePriorityOrder = ({
@@ -235,20 +279,31 @@ export function usePriorityOrchestration({
 
   const refreshPriorityPlan = demoMode ? refreshDemoPriorityPlan : refreshLivePriorityPlan;
 
-  const effectivePriorityPlan = useMemo(() => {
-    if (!demoMode) return priorityPlan;
-    if (inventoryStatus !== "ready") return priorityPlan;
-    return buildDemoPriorityPlan(inventoryItems, priorityGames);
-  }, [demoMode, inventoryItems, inventoryStatus, priorityGames, priorityPlan]);
+  const effectivePriorityPlan = useMemo(
+    () =>
+      selectEffectivePriorityPlan({
+        demoMode,
+        inventoryStatus,
+        inventoryItems,
+        priorityGames,
+        storedPlan: priorityPlan,
+      }),
+    [demoMode, inventoryItems, inventoryStatus, priorityGames, priorityPlan],
+  );
 
   const fallbackOrder = useMemo(() => {
     return computeFallbackOrder(withCategories, { allowUpcoming: allowUnlinkedGames });
   }, [allowUnlinkedGames, withCategories]);
 
   const strictPriorityGames = useMemo(() => {
-    return normalizePriorityGames(priorityGames);
-  }, [priorityGames]);
-  const priorityListKey = strictPriorityGames.join("|");
+    return resolvePriorityGameNames(priorityGames, inventoryItems);
+  }, [priorityGames, inventoryItems]);
+  // Keyed on the user's list (case-insensitive), not the inventory-resolved
+  // names, so an inventory load that only changes spelling is not a "list edit".
+  const priorityListKey = useMemo(
+    () => normalizePriorityGames(priorityGames).map(normalizeGameName).join("|"),
+    [priorityGames],
+  );
   const lastPriorityListKeyRef = useRef<string>(priorityListKey);
   const priorityListChanged = lastPriorityListKeyRef.current !== priorityListKey;
   const strictPriorityOrderChanged = obeyPriority && priorityListChanged;

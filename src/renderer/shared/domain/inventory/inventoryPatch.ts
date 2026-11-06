@@ -8,6 +8,7 @@ export type InventoryPatchResult = {
   deltaMinutes: number;
   totalMinutes: number;
   claimedItem?: InventoryItem;
+  claimableItem?: InventoryItem;
 };
 
 export const getTotalEarnedMinutes = (items: InventoryItem[]): number =>
@@ -97,6 +98,72 @@ export const applyDropProgressToInventoryItems = (
   };
 };
 
+const findDropClaimTargetIndex = (items: InventoryItem[], payload: UserPubSubEvent): number => {
+  const dropId = payload.dropId?.trim();
+  const dropInstanceId = payload.dropInstanceId?.trim();
+  if (!dropId && !dropInstanceId) return -1;
+  return items.findIndex((item) => {
+    if (dropId && item.id === dropId) return true;
+    if (dropInstanceId && item.dropInstanceId && item.dropInstanceId === dropInstanceId)
+      return true;
+    return false;
+  });
+};
+
+/**
+ * Twitch's "drop-claim" message means the drop is now ready to claim, not that
+ * it was claimed. Mark it claimable (full progress, explicit instance id) and
+ * leave the status alone; only a successful claim flips it to "claimed".
+ */
+export const applyDropClaimableToInventoryItems = (
+  items: InventoryItem[],
+  payload: UserPubSubEvent,
+): InventoryPatchResult => {
+  const unchanged = {
+    changed: false,
+    items,
+    deltaMinutes: 0,
+    totalMinutes: getTotalEarnedMinutes(items),
+  };
+  if (payload.kind !== "drop-claim") return unchanged;
+  const index = findDropClaimTargetIndex(items, payload);
+  if (index < 0) return unchanged;
+
+  const target = items[index];
+  if (target.status === "claimed") return unchanged;
+  const required = Math.max(0, Number(target.requiredMinutes) || 0);
+  const prevEarned = Math.max(0, Number(target.earnedMinutes) || 0);
+  const nextEarned = Math.max(required, prevEarned);
+  const dropInstanceId = payload.dropInstanceId?.trim() || target.dropInstanceId;
+  if (
+    target.status === "progress" &&
+    target.isClaimable === true &&
+    nextEarned === prevEarned &&
+    dropInstanceId === target.dropInstanceId
+  ) {
+    return unchanged;
+  }
+  const nextItem: InventoryItem = {
+    ...target,
+    earnedMinutes: nextEarned,
+    status: "progress",
+    isClaimable: true,
+    dropInstanceId,
+  };
+  const nextItems = [...items];
+  nextItems[index] = nextItem;
+  return {
+    changed: true,
+    items: nextItems,
+    updatedId: nextItem.id,
+    updatedIds: [nextItem.id],
+    deltaMinutes: Math.max(0, nextEarned - prevEarned),
+    totalMinutes: getTotalEarnedMinutes(nextItems),
+    claimableItem: nextItem,
+  };
+};
+
+/** Marks a drop claimed in local state after a claim call succeeded. */
 export const applyDropClaimToInventoryItems = (
   items: InventoryItem[],
   payload: UserPubSubEvent,
@@ -104,17 +171,7 @@ export const applyDropClaimToInventoryItems = (
   if (payload.kind !== "drop-claim") {
     return { changed: false, items, deltaMinutes: 0, totalMinutes: getTotalEarnedMinutes(items) };
   }
-  const dropId = payload.dropId?.trim();
-  const dropInstanceId = payload.dropInstanceId?.trim();
-  if (!dropId && !dropInstanceId) {
-    return { changed: false, items, deltaMinutes: 0, totalMinutes: getTotalEarnedMinutes(items) };
-  }
-  const index = items.findIndex((item) => {
-    if (dropId && item.id === dropId) return true;
-    if (dropInstanceId && item.dropInstanceId && item.dropInstanceId === dropInstanceId)
-      return true;
-    return false;
-  });
+  const index = findDropClaimTargetIndex(items, payload);
   if (index < 0) {
     return { changed: false, items, deltaMinutes: 0, totalMinutes: getTotalEarnedMinutes(items) };
   }

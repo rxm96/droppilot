@@ -13,3 +13,15 @@ export const normalizeUpdateChannel = (
 };
 
 export const allowsPrereleaseBuilds = (channel: UpdateChannel): boolean => channel === "preview";
+
+/**
+ * The version a manual update check should offer, or null. Trusts the
+ * updater's own `isUpdateAvailable` verdict: a merely different version (an
+ * older stable while on an rc, a rejected prerelease) is not an update.
+ */
+export const getAvailableUpdateVersion = (
+  result: { isUpdateAvailable?: boolean; updateInfo?: { version?: string } } | null | undefined,
+): string | null => {
+  const version = result?.updateInfo?.version;
+  return result?.isUpdateAvailable === true && version ? version : null;
+};

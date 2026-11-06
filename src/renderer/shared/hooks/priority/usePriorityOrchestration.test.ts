@@ -8,6 +8,8 @@ import {
   computePriorityOrder,
   isGameActionable,
   normalizePriorityGames,
+  resolvePriorityGameNames,
+  selectEffectivePriorityPlan,
   type WithCategory,
 } from "./usePriorityOrchestration";
 
@@ -390,5 +392,80 @@ describe("fresh linked campaigns (default settings, no unlinked opt-in)", () => 
     expect(computeBestActionableGame(["Fresh", "Started"], fallback, withCategories, false)).toBe(
       "Fresh",
     );
+  });
+});
+
+describe("priority list edits", () => {
+  const items = [
+    makeItem({ id: "a1", game: "A", status: "progress", earnedMinutes: 10 }),
+    makeItem({ id: "b1", game: "B", status: "progress", earnedMinutes: 10 }),
+  ];
+  const withCategories: WithCategory[] = items.map((item) => ({ item, category: "in-progress" }));
+
+  it("switches target in the same render that detects a reorder (non-strict mode)", () => {
+    // The stored plan still reflects the old ranking [A, B]; the user just moved B up.
+    const stalePlan = buildLivePriorityPlan(items, ["A", "B"]);
+    const priorityGames = ["B", "A"];
+    const effective = selectEffectivePriorityPlan({
+      demoMode: false,
+      inventoryStatus: "ready",
+      inventoryItems: items,
+      priorityGames,
+      storedPlan: stalePlan,
+    });
+    const fallbackOrder = computeFallbackOrder(withCategories);
+    const order = computePriorityOrder({
+      obeyPriority: false,
+      effectivePriorityPlan: effective,
+      priorityGames,
+      fallbackOrder,
+      strictPriorityGames: priorityGames,
+    });
+    const best = computeBestActionableGame(order, fallbackOrder, withCategories, false);
+    expect(
+      computeNextActiveTargetGame({
+        inventoryStatus: "ready",
+        activeTargetGame: "A",
+        bestActionableGame: best,
+        obeyPriority: false,
+        withCategories,
+        watchingGame: "A",
+        allowPriorityListPreemption: true,
+      }),
+    ).toBe("B");
+  });
+
+  it("keeps the stored plan while inventory is not ready", () => {
+    const storedPlan = buildLivePriorityPlan(items, ["A", "B"]);
+    expect(
+      selectEffectivePriorityPlan({
+        demoMode: false,
+        inventoryStatus: "loading",
+        inventoryItems: [],
+        priorityGames: ["B", "A"],
+        storedPlan,
+      }),
+    ).toBe(storedPlan);
+  });
+});
+
+describe("priority game name matching", () => {
+  const items = [makeItem({ id: "v1", game: "VALORANT", status: "progress", earnedMinutes: 5 })];
+
+  it("resolves typed names to the inventory spelling and de-duplicates them", () => {
+    expect(resolvePriorityGameNames([" valorant ", "VALORANT", "Other"], items)).toEqual([
+      "VALORANT",
+      "Other",
+    ]);
+  });
+
+  it("ranks a game typed in different case in the live plan", () => {
+    const plan = buildLivePriorityPlan(items, ["valorant"]);
+    expect(plan.order[0]).toBe("VALORANT");
+    expect(plan.missingPriority).toEqual([]);
+  });
+
+  it("treats a game typed in different case as actionable", () => {
+    expect(isGameActionable("valorant", [{ item: items[0], category: "in-progress" }])).toBe(true);
   });
 });

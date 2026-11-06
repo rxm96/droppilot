@@ -59,7 +59,10 @@ const api = {
     login: () => ipcRenderer.invoke("auth/login"),
     revalidate: () => ipcRenderer.invoke("auth/revalidate"),
     session: () => ipcRenderer.invoke("auth/session"),
-    logout: () => ipcRenderer.invoke("auth/logout"),
+    // `forgetWebLogin` also signs the login window out of twitch.tv (explicit
+    // logout / account switch). Omit it when only the token died, so re-login
+    // stays one click.
+    logout: (opts?: { forgetWebLogin?: boolean }) => ipcRenderer.invoke("auth/logout", opts),
   },
   twitch: {
     profile: () => ipcRenderer.invoke("twitch/profile"),
