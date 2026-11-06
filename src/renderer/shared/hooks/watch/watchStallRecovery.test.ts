@@ -327,6 +327,7 @@ const idleBase = {
   activeTargetGame: "Rust",
   channelAllowlist: { ids: ["allowed-1"], logins: [] },
   channels: [channel("other-1")],
+  channelsGame: "Rust",
   channelsLoading: false,
   channelsRefreshing: false,
   noFarmable: null as NoFarmableMarker | null,
@@ -334,6 +335,27 @@ const idleBase = {
 };
 
 describe("decideIdleNoFarmable", () => {
+  it("does not judge a fresh target before its channel snapshot has been fetched", () => {
+    // Startup race: the target just switched to "Rust", the channel fetch is only being
+    // started in the same commit, so the store still holds no snapshot for "Rust" and
+    // `channelsLoading` has not flipped yet. Cooling the game down here would retarget away
+    // from a game whose allowlisted channels may well be live.
+    const marker = { key: "Rust", sinceAt: 1 };
+    for (const channelsGame of ["", "Dota 2"]) {
+      expect(
+        decideIdleNoFarmable({ ...idleBase, channels: [], channelsGame, noFarmable: marker }),
+      ).toEqual({ actions: [], noFarmable: marker });
+    }
+  });
+
+  it("still escalates once the target's own snapshot shows no allowlisted channel", () => {
+    expect(
+      decideIdleNoFarmable({ ...idleBase, channels: [], channelsGame: " Rust " }).actions.map(
+        (a) => a.kind,
+      ),
+    ).toContain("set-cooldown");
+  });
+
   it("does nothing (and clears the marker) when idle evaluation is off", () => {
     expect(decideIdleNoFarmable({ ...idleBase, autoSelectEnabled: false })).toEqual({
       actions: [],
