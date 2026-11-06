@@ -120,3 +120,14 @@ export function npmVersionArgs(kind) {
   }
   return [...args];
 }
+
+/**
+ * The changelog a release of `version` commits. A stable release first moves `Unreleased`
+ * under the version (refusing an empty one), then checks the notes CI will read; a
+ * prerelease leaves the file alone and only checks.
+ */
+export function prepareChangelog(changelog, version, date) {
+  const next = isPrerelease(version) ? changelog : withRelease(changelog, version, date);
+  assertReleasable(next, version);
+  return next;
+}

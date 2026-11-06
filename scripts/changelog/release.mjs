@@ -5,10 +5,10 @@
 // version (npm's semantics), moves `## [Unreleased]` under a stable version, commits
 // `chore(release): v<version>`, tags `v<version>` and pushes both. Nothing stays modified
 // if it stops before the commit.
-import { execFileSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { assertReleasable, isPrerelease, npmVersionArgs, withRelease } from "./rules.mjs";
+import { npmVersionArgs, prepareChangelog } from "./rules.mjs";
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const CHANGELOG = "CHANGELOG.md";
@@ -21,12 +21,9 @@ function git(...args) {
 }
 
 function npm(...args) {
-  // npm is a .cmd shim on Windows, which needs a shell. The arguments are fixed strings.
-  execFileSync(process.platform === "win32" ? "npm.cmd" : "npm", args, {
-    cwd: root,
-    stdio: "ignore",
-    shell: process.platform === "win32",
-  });
+  // npm is a .cmd shim on Windows and needs a shell, so this runs one command line. The
+  // arguments come from npmVersionArgs (fixed strings), never from user input.
+  execSync(["npm", ...args].join(" "), { cwd: root, stdio: "ignore" });
 }
 
 /** Today in local time, as the changelog writes dates. */
@@ -68,9 +65,8 @@ function main(args) {
   try {
     assertTagFree(tag);
     const changelog = read(CHANGELOG);
-    assertReleasable(changelog, version);
-    if (!isPrerelease(version))
-      writeFileSync(root + CHANGELOG, withRelease(changelog, version, today()));
+    const next = prepareChangelog(changelog, version, today());
+    if (next !== changelog) writeFileSync(root + CHANGELOG, next);
   } catch (error) {
     git("checkout", "--", ...VERSIONED_FILES, CHANGELOG);
     throw error;

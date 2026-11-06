@@ -7,6 +7,7 @@ import {
   npmVersionArgs,
   notesFor,
   notesRequired,
+  prepareChangelog,
   releaseBody,
   sectionBody,
   unwrapBullets,
@@ -201,5 +202,30 @@ describe("npmVersionArgs", () => {
 
   it("rejects unknown kinds", () => {
     expect(() => npmVersionArgs("premajor")).toThrow(/patch, minor, major, rc, rc:start or test/);
+  });
+});
+
+describe("prepareChangelog", () => {
+  it("moves Unreleased for a stable release and accepts it", () => {
+    const next = prepareChangelog(CHANGELOG, "14.0.1", "2026-12-02");
+    expect(sectionBody(next, "14.0.1")).toBe("### Fixed\n\n- Unreleased fix");
+    expect(sectionBody(next, "Unreleased")).toBe("");
+  });
+
+  it("refuses a stable release with an empty Unreleased", () => {
+    expect(() => prepareChangelog(EMPTY_UNRELEASED, "4.0.1", "2026-11-07")).toThrow(
+      /nothing under ## \[Unreleased\]/,
+    );
+  });
+
+  it("leaves the changelog alone for prereleases", () => {
+    expect(prepareChangelog(CHANGELOG, "14.0.1-rc.0", "2026-12-02")).toBe(CHANGELOG);
+    expect(prepareChangelog(EMPTY_UNRELEASED, "4.0.1-test.0", "2026-11-07")).toBe(EMPTY_UNRELEASED);
+  });
+
+  it("refuses an rc with an empty Unreleased", () => {
+    expect(() => prepareChangelog(EMPTY_UNRELEASED, "4.0.1-rc.0", "2026-11-07")).toThrow(
+      "CHANGELOG.md has no notes for 4.0.1-rc.0: add lines under ## [Unreleased].",
+    );
   });
 });
