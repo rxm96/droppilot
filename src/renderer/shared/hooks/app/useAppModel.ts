@@ -600,7 +600,6 @@ export function useAppModel() {
     inventory,
     activeGame: displayTargetGame,
     activeDropTitle: activeDropInfo?.title,
-    activeDropRemainingMinutes: activeDropInfo?.remainingMinutes,
     activeDropEta: activeDropInfo?.eta,
     // QueuePanel uses this to render the live-ticking progress on the
     // actively-watched row. virtualEarned is updated every 1s by useTargetDrops

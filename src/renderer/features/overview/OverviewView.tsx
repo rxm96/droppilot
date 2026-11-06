@@ -9,7 +9,6 @@ type OverviewProps = {
   inventory: InventoryState;
   activeGame: string;
   activeDropTitle?: string;
-  activeDropRemainingMinutes?: number;
   activeDropEta?: number | null;
   /** Currently-watched drop snapshot (id + live-ticking earnedMinutes). Passed through to QueuePanel so its active row reflects live progress. */
   activeDrop?: { id: string; earnedMinutes: number } | null;
@@ -50,7 +49,6 @@ export function OverviewView({
   inventory,
   activeGame,
   activeDropTitle,
-  activeDropRemainingMinutes,
   activeDropEta,
   activeDrop,
   activeDropProgress,
@@ -91,7 +89,6 @@ export function OverviewView({
           activeGame={activeGame}
           activeDropTitle={activeDropTitle}
           activeDropEta={activeDropEta}
-          activeDropRemainingMinutes={activeDropRemainingMinutes}
           activeDropProgress={activeDropProgress}
           claimableDrops={claimableDrops}
           channelsCount={channelsCount}

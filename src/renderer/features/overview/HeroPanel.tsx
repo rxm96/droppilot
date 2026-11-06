@@ -3,7 +3,7 @@ import { Stat } from "@renderer/shared/components/ui/stat";
 import { Button } from "@renderer/shared/components/ui/button";
 import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { Check, Pause, RotateCw } from "@renderer/shared/lib/icons";
-import { formatRemainingFromEta, resolveHeroProgress } from "./formatters";
+import { formatReadyAt, resolveHeroProgress } from "./formatters";
 import { narrateClaim } from "./claimNarration";
 import { useI18n } from "@renderer/shared/i18n";
 import { TimeText } from "@renderer/shared/components/TimeText";
@@ -13,7 +13,6 @@ export type HeroPanelProps = {
   activeGame?: string;
   activeDropTitle?: string;
   activeDropEta?: number | null;
-  activeDropRemainingMinutes?: number;
   /**
    * The active drop's own completion %. Drives the "% complete" + bar so they
    * match the card's title + ETA (all about the active drop). Null/undefined
@@ -37,7 +36,6 @@ export function HeroPanel({
   activeGame,
   activeDropTitle,
   activeDropEta,
-  activeDropRemainingMinutes,
   activeDropProgress,
   claimableDrops,
   channelsCount,
@@ -109,19 +107,18 @@ export function HeroPanel({
         >
           <div className="pr-4">
             <Stat
-              label={t("hero.stat.eta")}
-              value={
+              label={t("hero.stat.readyAt")}
+              value={formatReadyAt(activeDropEta, Date.now())?.clock ?? "—"}
+              sub={
                 <TimeText
                   active={hasEta}
-                  render={(now) =>
-                    formatRemainingFromEta(activeDropEta, activeDropRemainingMinutes, now)
-                  }
+                  render={(now) => {
+                    const readyAt = formatReadyAt(activeDropEta, now);
+                    if (progressPct === null) return t("hero.stat.noActiveDrop");
+                    if (!readyAt) return t("hero.stat.percentComplete", { pct: progressPct });
+                    return t("hero.stat.readyIn", { min: readyAt.minutesLeft, pct: progressPct });
+                  }}
                 />
-              }
-              sub={
-                progressPct === null
-                  ? t("hero.stat.noActiveDrop")
-                  : t("hero.stat.percentComplete", { pct: progressPct })
               }
               accent
             />

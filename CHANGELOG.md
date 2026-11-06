@@ -11,6 +11,11 @@ GitHub Release (which the app's update history shows) is built from that section
 
 ## [Unreleased]
 
+### Changed
+
+- The time a drop is ready is now shown as a clock time with the minutes left, the same way on
+  every screen.
+
 ### Fixed
 
 - Drops that became ready to claim are no longer shown as claimed before the claim actually

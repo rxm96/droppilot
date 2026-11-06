@@ -3,6 +3,7 @@ import {
   formatRefreshCadence,
   formatRelative,
   formatUptime,
+  formatReadyAt,
   resolveHeroProgress,
 } from "./formatters";
 
@@ -66,5 +67,22 @@ describe("resolveHeroProgress", () => {
     expect(resolveHeroProgress(33.4)).toBe(33);
     expect(resolveHeroProgress(-5)).toBe(0);
     expect(resolveHeroProgress(140)).toBe(100);
+  });
+});
+
+describe("formatReadyAt", () => {
+  const now = new Date(2026, 10, 6, 14, 14, 0).getTime();
+  it("returns clock time and minutes left", () => {
+    const eta = new Date(2026, 10, 6, 14, 34, 0).getTime();
+    expect(formatReadyAt(eta, now)).toEqual({ clock: "14:34", minutesLeft: 20 });
+  });
+  it("zero-pads and rounds partial minutes up", () => {
+    const eta = new Date(2026, 10, 7, 9, 5, 30).getTime();
+    expect(formatReadyAt(eta, now)?.clock).toBe("09:05");
+    expect(formatReadyAt(now + 61_000, now)?.minutesLeft).toBe(2);
+  });
+  it("returns null when there is no predictable ETA", () => {
+    expect(formatReadyAt(null, now)).toBeNull();
+    expect(formatReadyAt(Number.POSITIVE_INFINITY, now)).toBeNull();
   });
 });

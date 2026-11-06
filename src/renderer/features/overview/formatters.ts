@@ -3,30 +3,6 @@
 
 import { msToMinutes } from "../settings/sections/refreshIntervalField";
 
-export function formatRemainingFromEta(
-  eta: number | null | undefined,
-  fallbackMinutes: number | undefined,
-  now: number = Date.now(),
-): string {
-  const hasEta = typeof eta === "number" && Number.isFinite(eta);
-  if (hasEta) {
-    const remaining = Math.max(0, Math.ceil((eta - now) / 1000));
-    return formatHMS(remaining);
-  }
-  if (typeof fallbackMinutes === "number" && Number.isFinite(fallbackMinutes)) {
-    return formatHMS(Math.max(0, Math.ceil(fallbackMinutes * 60)));
-  }
-  return "--";
-}
-
-export function formatHMS(totalSeconds: number): string {
-  const safe = Math.max(0, Math.floor(totalSeconds));
-  const h = Math.floor(safe / 3600);
-  const m = Math.floor((safe % 3600) / 60);
-  const s = safe % 60;
-  return `${pad(h)}:${pad(m)}:${pad(s)}`;
-}
-
 export function formatHourMinute(totalMinutes: number): string {
   const safe = Math.max(0, Math.round(totalMinutes));
   const h = Math.floor(safe / 60);
@@ -42,6 +18,24 @@ export function formatHourMinute(totalMinutes: number): string {
 export function resolveHeroProgress(activeDropProgress: number | null | undefined): number | null {
   if (typeof activeDropProgress !== "number" || !Number.isFinite(activeDropProgress)) return null;
   return Math.max(0, Math.min(100, Math.round(activeDropProgress)));
+}
+
+/**
+ * A drop's ETA as the local clock time it becomes ready ("14:34") plus the
+ * whole minutes left until then. One format for every screen. Built from
+ * getHours/getMinutes, not toLocaleTimeString, so it never shows seconds and
+ * stays deterministic. Null when there is no predictable ETA.
+ */
+export function formatReadyAt(
+  eta: number | null | undefined,
+  now: number,
+): { clock: string; minutesLeft: number } | null {
+  if (typeof eta !== "number" || !Number.isFinite(eta)) return null;
+  const date = new Date(eta);
+  return {
+    clock: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
+    minutesLeft: Math.max(0, Math.ceil((eta - now) / 60_000)),
+  };
 }
 
 export function formatPercent(n: number): string {

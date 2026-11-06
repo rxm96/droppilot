@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useInterval } from "@renderer/shared/hooks/useInterval";
+import { formatReadyAt } from "@renderer/features/overview/formatters";
 import type {
   ChannelDiff,
   ChannelEntry,
@@ -401,9 +402,8 @@ export function useControlViewState({
     });
   }, [activeDropInfo?.campaignId, activeDropInfo?.id, targetDrops, t]);
 
-  const activeEtaText = liveProgress.activeEta
-    ? new Date(liveProgress.activeEta).toLocaleTimeString()
-    : null;
+  // Same clock-time format as the overview hero ("14:34", no seconds).
+  const activeEtaText = formatReadyAt(liveProgress.activeEta, Date.now())?.clock ?? null;
   const activeChannel =
     watching && channels.length
       ? channels.find((c) => c.id === watching.id || c.login === watching.login)
