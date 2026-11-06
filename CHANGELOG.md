@@ -29,11 +29,20 @@ GitHub Release (which the app's update history shows) is built from that section
   Settings opens from the gear in the top bar.
 - The overview's engine panel uses plain words: next drop check, channels with drops, and how
   long it has been running. The "why / next" explanation opens from the same panel.
+- The drops screen groups drops by game, in the order DropPilot farms them, and shows when
+  each drop will be ready. Each game shows its place in your games list, its campaign and when
+  it ends. Games you have not added get an "add to games" button.
+- The drops filter is now all, farming, needs you, claimed and not farmed, with a count for
+  each. Expired campaigns are collected in a folded section at the bottom.
+- Drops use the same status words everywhere: watching, next, queued, needs link, ready to
+  claim, claimed and not farmed. "Live" now only ever means a live channel.
 
 ### Removed
 
 - The always-visible "claim now" button. Claiming now happens in the "needs you" panel when
   there is something to claim.
+- The drops screen's game picker, column sorting and pages. Search covers drop, game and
+  campaign names, and all drops are on one page.
 
 ### Fixed
 
@@ -49,6 +58,8 @@ GitHub Release (which the app's update history shows) is built from that section
 - Priority games now match regardless of upper/lower case.
 - The overview's progress now shows the drop you are watching, instead of the whole game's
   progress, so it matches the queue below it.
+- The drop details panel now shows the watched and required time, instead of only the
+  words "watched · required".
 
 ## [4.0.0] - 2026-11-06
 
