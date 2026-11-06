@@ -10,7 +10,6 @@ on:
 
 permissions:
   contents: write
-  models: read
 
 jobs:
   # PR gate: same verification steps as the build job, but without the
@@ -63,6 +62,11 @@ jobs:
         with:
           node-version: 20
           cache: npm
+
+      # A tag without changelog notes must not spend a Windows/macOS build.
+      - name: Changelog has notes for this tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: node scripts/changelog/ci.mjs check
 
       - name: Install deps
         run: npm ci
@@ -163,82 +167,10 @@ jobs:
             core.setOutput("tag", tag);
             core.setOutput("is_prerelease", String(isPrereleaseTag));
 
-      - name: Collect evidence and gate
-        id: collect
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.generated_notes.outputs.tag }}
-          BASE_TAG: ${{ steps.generated_notes.outputs.base_tag }}
-          TECH_NOTES: ${{ steps.generated_notes.outputs.notes }}
-        run: node scripts/release-notes/run.mjs collect
-
-      - name: Generate user notes
-        id: gen
-        if: steps.collect.outputs.has_candidates == 'true'
-        continue-on-error: true
-        uses: actions/ai-inference@v2
-        with:
-          model: openai/gpt-4o
-          prompt-file: rn-work/gen-prompt.txt
-          max-completion-tokens: "800"
-          temperature: "0.2"
-
-      - name: Parse generation output
-        id: parse_gen
-        if: steps.collect.outputs.has_candidates == 'true'
-        env:
-          RESPONSE_FILE: ${{ steps.gen.outputs.response-file }}
-          ATTEMPT: "1"
-        run: node scripts/release-notes/run.mjs parse-gen
-
-      - name: Generate user notes (strict retry)
-        id: gen_retry
-        if: steps.collect.outputs.has_candidates == 'true' && steps.parse_gen.outputs.parse_ok == 'false'
-        continue-on-error: true
-        uses: actions/ai-inference@v2
-        with:
-          model: openai/gpt-4o
-          prompt-file: rn-work/gen-prompt-strict.txt
-          max-completion-tokens: "800"
-          temperature: "0"
-
-      - name: Parse retry output
-        id: parse_gen_retry
-        if: steps.collect.outputs.has_candidates == 'true' && steps.parse_gen.outputs.parse_ok == 'false'
-        env:
-          RESPONSE_FILE: ${{ steps.gen_retry.outputs.response-file }}
-          ATTEMPT: "2"
-        run: node scripts/release-notes/run.mjs parse-gen
-
-      - name: Judge bullets
-        id: judge
-        if: steps.parse_gen.outputs.has_bullets == 'true' || steps.parse_gen_retry.outputs.has_bullets == 'true'
-        continue-on-error: true
-        uses: actions/ai-inference@v2
-        with:
-          model: openai/gpt-4o
-          prompt-file: rn-work/judge-prompt.txt
-          max-completion-tokens: "600"
-          temperature: "0"
-
-      - name: Finalize release body
+      - name: Build release body
         env:
           TECH_NOTES: ${{ steps.generated_notes.outputs.notes }}
-          JUDGE_RESPONSE_FILE: ${{ steps.judge.outputs.response-file }}
-        run: node scripts/release-notes/run.mjs finalize
-
-      - name: Upload notes-pipeline debug artifacts
-        if: always()
-        # A debug artifact must never gate the publish, and re-runs must be able
-        # to overwrite the previous attempt's capture (artifact names are shared
-        # across re-run attempts; without overwrite the upload fails the job).
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-notes-debug
-          path: rn-work/
-          if-no-files-found: ignore
-          overwrite: true
+        run: node scripts/changelog/ci.mjs body
 
       - name: Resolve release visibility
         id: release_visibility
