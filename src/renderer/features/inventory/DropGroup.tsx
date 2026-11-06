@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { DropStatus } from "@renderer/shared/domain/dropStatus";
 import { DropStatusPill } from "@renderer/shared/components/DropStatusPill";
+import { GameTile } from "@renderer/shared/components/GameTile";
 import { Button } from "@renderer/shared/components/ui/button";
 import { ExternalLink } from "@renderer/shared/lib/icons";
 import { cn } from "@renderer/shared/lib/utils";
@@ -62,46 +63,6 @@ function noteText(note: DropNote, t: Translator): string | null {
   }
 }
 
-function Tile({
-  url,
-  code,
-  size,
-  faded,
-}: {
-  url?: string;
-  code: string;
-  size: number;
-  faded?: boolean;
-}) {
-  const box = { width: size, height: size };
-  if (url) {
-    return (
-      <img
-        src={url}
-        alt=""
-        loading="lazy"
-        style={box}
-        className={cn(
-          "block flex-none rounded-[var(--dp-radius-sm)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated-2)] object-cover",
-          faded && "opacity-45",
-        )}
-      />
-    );
-  }
-  return (
-    <span
-      aria-hidden="true"
-      style={box}
-      className={cn(
-        "grid flex-none place-items-center rounded-[var(--dp-radius-sm)] bg-[color:var(--dp-bg-elevated-2)] font-mono text-[10px] font-semibold text-[color:var(--dp-text-dim)]",
-        faded && "opacity-45",
-      )}
-    >
-      {code}
-    </span>
-  );
-}
-
 function Row({
   row,
   code,
@@ -136,7 +97,7 @@ function Row({
       )}
     >
       <td className="w-[52px] py-2.5 pl-[18px] pr-0">
-        <Tile url={row.imageUrl} code={code} size={34} faded={FADED.has(row.status)} />
+        <GameTile url={row.imageUrl} code={code} size={34} faded={FADED.has(row.status)} />
       </td>
       <td className="py-2.5 pl-3">
         <div
@@ -216,7 +177,7 @@ export function DropGroup({
       className="overflow-hidden rounded-[var(--dp-radius-xl)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)]"
     >
       <header className="flex flex-wrap items-center gap-3 border-b border-[color:var(--dp-border)] px-[18px] py-3">
-        <Tile url={group.imageUrl} code={group.code} size={30} />
+        <GameTile url={group.imageUrl} code={group.code} size={30} />
         <h2 id={headingId} className="m-0 text-[14px] font-semibold text-[color:var(--dp-text)]">
           {group.game}
         </h2>
