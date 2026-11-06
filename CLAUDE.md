@@ -19,7 +19,19 @@ npm run format:check   # prettier --check (this DOES gate CI)
 npm run typecheck      # tsc on BOTH configs: tsconfig.json (renderer) + tsconfig.node.json (main/preload)
 ```
 
-Releases: `npm run release:patch` (also `:minor`, `:major`, and prerelease `:rc` / `:test`). Each bumps the version, creates a `chore(release): vX` commit + tag, and pushes with `--follow-tags`. The tag push triggers CI to build Win/macOS artifacts and publish a GitHub Release with AI-generated notes. The notes pipeline lives in `scripts/release-notes/` (deterministic conventional-commit gate → grounded generation → LLM judge via free GitHub Models; spec: `docs/superpowers/specs/2026-06-12-release-notes-quality-design.md`) — dependency-free Node, tested via `scripts/**/*.test.mjs`.
+Release notes live in `CHANGELOG.md` (Keep a Changelog, English only). **Every user-facing change adds a short line under `## [Unreleased]` in the same PR**, written for users (what they notice, not how the code changed), under `### Added` / `### Changed` / `### Fixed` / `### Removed`.
+
+Releases: `npm run release:patch` (also `:minor`, `:major`, and prerelease `:rc:start` / `:rc` / `:test`) runs `scripts/changelog/release.mjs`.
+- It refuses unless you are on a clean `main` equal to `origin/main`, the tag is unused, and there are notes. Stable and rc releases need lines under `Unreleased`; test builds may have none.
+- It bumps the version with npm's semantics. A stable release moves `Unreleased` under `## [x.y.z] - date`; prereleases leave the changelog alone.
+- It commits `chore(release): vX`, tags, and pushes `main` and the tag.
+
+The tag push triggers CI:
+- Before packaging, `scripts/changelog/ci.mjs check` verifies that tag, `package.json` and changelog agree.
+- The Windows/macOS artifacts are built.
+- The GitHub Release body is the changelog section plus GitHub's PR list (`ci.mjs body`), in the shape `src/shared/releaseHistory.ts` parses for the in-app update history.
+
+The scripts are dependency-free Node with pure rules in `scripts/changelog/rules.mjs`, tested via `scripts/**/*.test.mjs` (spec: `docs/superpowers/specs/2026-11-06-repo-changelog-design.md`).
 
 ## CI / verification gotchas (important)
 
