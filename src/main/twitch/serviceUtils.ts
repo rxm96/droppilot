@@ -56,6 +56,7 @@ type BenefitEdgesField = BenefitEdge[] | BenefitEdgesConnection;
 
 type CampaignDropSelf = {
   currentMinutesWatched?: number;
+  currentSubs?: NumberField;
   status?: string;
   state?: string;
   dropInstanceID?: string;
@@ -68,6 +69,7 @@ type CampaignDropNode = {
   id: string;
   name: string;
   requiredMinutesWatched?: NumberField;
+  requiredSubs?: NumberField;
   status?: string;
   state?: string;
   self?: CampaignDropSelf;
@@ -307,6 +309,67 @@ export function createPersistedQuery(
   };
 }
 
+export const DROP_CAMPAIGN_DETAILS_HASH =
+  "039277bf98f3130929262cc7c6efd9c141ca3749cb6dca442fc8ead9a53f77c1";
+
+/**
+ * Whether a campaign still needs a DropCampaignDetails lookup. Inventory campaigns
+ * already carry their drops (with progress); ViewerDropsDashboard campaigns carry
+ * none. Expired campaigns can't be farmed anymore, so they are not worth a request.
+ */
+export function needsCampaignDetails(node: CampaignNode | null | undefined): boolean {
+  if (!node?.id) return false;
+  if (Array.isArray(node.timeBasedDrops)) return false;
+  return (node.status ?? "").toUpperCase() !== "EXPIRED";
+}
+
+/**
+ * DropCampaignDetails persisted queries for a batch of campaign ids. `channelLogin`
+ * must be the numeric user id: with the login name Twitch answers `{ user: null }`
+ * for every campaign, which silently disabled enrichment.
+ */
+export function buildCampaignDetailsQueries(campaignIds: string[], userId: string) {
+  return campaignIds.map((dropID) =>
+    createPersistedQuery("DropCampaignDetails", DROP_CAMPAIGN_DETAILS_HASH, {
+      channelLogin: userId,
+      dropID,
+    }),
+  );
+}
+
+/**
+ * Merges DropCampaignDetails responses into `campaignsById` (in place). Responses for
+ * unknown campaigns or without data (`user: null`) are ignored.
+ * Returns how many campaigns received details.
+ */
+export function mergeCampaignDetails(
+  campaignsById: Map<string, CampaignNode>,
+  responses: DropCampaignDetailsResponse | DropCampaignDetailsResponse[] | null | undefined,
+): number {
+  const list = Array.isArray(responses) ? responses : [responses];
+  let merged = 0;
+  for (const res of list) {
+    const node = res?.data?.user?.dropCampaign;
+    if (!node?.id) continue;
+    const base = campaignsById.get(node.id);
+    if (!base) continue;
+    campaignsById.set(node.id, mergePrimaryData(base, node) as CampaignNode);
+    merged += 1;
+  }
+  return merged;
+}
+
+/**
+ * Sub-based drop whose subscription requirement isn't met yet. Watching can't earn it,
+ * and a claim attempt would just fail.
+ */
+export function isUnmetSubscriptionDrop(drop: CampaignDropNode): boolean {
+  const requiredSubs = toFiniteNumber(drop.requiredSubs) ?? 0;
+  if (requiredSubs <= 0) return false;
+  const currentSubs = toFiniteNumber(drop.self?.currentSubs) ?? 0;
+  return currentSubs < requiredSubs;
+}
+
 export function isTruthyFlag(value: unknown): boolean {
   if (value === true) return true;
   if (typeof value === "number") return value === 1;
@@ -372,6 +435,7 @@ export function collectBlockingReasonHints({
   dropInstanceId,
   withinClaimWindow,
   isClaimed,
+  subscriptionRequired = false,
 }: {
   linked: boolean;
   campaignNotStarted: boolean;
@@ -382,6 +446,7 @@ export function collectBlockingReasonHints({
   dropInstanceId?: string;
   withinClaimWindow: boolean;
   isClaimed: boolean;
+  subscriptionRequired?: boolean;
 }): string[] {
   if (isClaimed) return [];
   const reasons: string[] = [];
@@ -393,6 +458,7 @@ export function collectBlockingReasonHints({
   } else if (hasPreconditionsMet === false) {
     reasons.push("preconditions_not_met");
   }
+  if (subscriptionRequired) reasons.push("subscription_required");
   if (progressDone && !dropInstanceId) reasons.push("missing_drop_instance_id");
   if (progressDone && !withinClaimWindow) reasons.push("claim_window_closed");
   return Array.from(new Set(reasons));
@@ -406,6 +472,8 @@ export function unlockGuidanceForReason(reason: string): string {
     return "Kampagne ist vorbei; dieser Drop ist nicht mehr freischaltbar.";
   if (reason === "campaign_allow_disabled")
     return "Twitch markiert die Kampagne als deaktiviert (Eligibility/Region/Account checken).";
+  if (reason === "subscription_required")
+    return "Erfordert ein Abo (Sub); Zuschauen allein schaltet diesen Drop nicht frei.";
   if (reason === "preconditions_not_met")
     return "Drop-Voraussetzungen sind nicht erfuellt; vorherige Schritte zuerst abschliessen.";
   if (reason === "no_watch_progress")

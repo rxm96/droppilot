@@ -39,6 +39,8 @@ export const formatBlockingReason = (reason: string | undefined): string => {
       return "Campaign not eligible";
     case "preconditions_not_met":
       return "Preconditions not met";
+    case "subscription_required":
+      return "Requires a subscription";
     case "missing_drop_instance_id":
       return "Missing drop instance";
     case "claim_window_closed":

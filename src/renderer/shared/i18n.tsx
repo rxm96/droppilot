@@ -157,6 +157,8 @@ const translations: Translations = {
     "inventory.blockReason.campaignExpired": "Campaign has already ended",
     "inventory.blockReason.campaignNotEligible": "Campaign currently not eligible for this account",
     "inventory.blockReason.preconditionsNotMet": "Drop preconditions are not met yet",
+    "inventory.blockReason.subscriptionRequired":
+      "Requires a subscription; watching alone won't unlock it",
     "inventory.blockReason.missingDropInstance": "Claim instance missing (reload inventory)",
     "inventory.blockReason.claimWindowClosed": "Claim window is closed",
     "inventory.blockReason.missingPrerequisites": "Required earlier drops missing: {ids}",
@@ -1192,6 +1194,8 @@ const translations: Translations = {
     "inventory.blockReason.campaignNotEligible":
       "Kampagne ist für diesen Account aktuell nicht freigeschaltet",
     "inventory.blockReason.preconditionsNotMet": "Drop-Voraussetzungen sind noch nicht erfüllt",
+    "inventory.blockReason.subscriptionRequired":
+      "Erfordert ein Abo; Zuschauen allein schaltet den Drop nicht frei",
     "inventory.blockReason.missingDropInstance": "Claim-Instanz fehlt (Inventory neu laden)",
     "inventory.blockReason.claimWindowClosed": "Claim-Fenster ist geschlossen",
     "inventory.blockReason.missingPrerequisites": "Pflicht-Drops fehlen: {ids}",

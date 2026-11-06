@@ -46,6 +46,11 @@ describe("canEarnDrop", () => {
     ).toBe(false);
   });
 
+  it("treats a missing subscription as a hard watching blocker", () => {
+    const item = makeItem({ blockingReasonHints: ["subscription_required"] });
+    expect(canEarnDrop(item, { category: "in-progress" })).toBe(false);
+  });
+
   it("keeps soft blocker upcoming drops earnable when upcoming is enabled", () => {
     expect(
       canEarnDrop(
@@ -61,6 +66,19 @@ describe("canEarnDrop", () => {
 });
 
 describe("canClaimDrop", () => {
+  it("rejects fallback claims for sub drops whose subscription is missing", () => {
+    const item = makeItem({
+      requiredMinutes: 0,
+      earnedMinutes: 0,
+      status: "locked",
+      dropInstanceId: undefined,
+      isClaimable: false,
+      blocked: true,
+      blockingReasonHints: ["subscription_required"],
+    });
+    expect(canClaimDrop(item)).toBe(false);
+  });
+
   it("accepts explicit claimable drops when progress is complete", () => {
     const item = makeItem({
       status: "progress",

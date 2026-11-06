@@ -211,6 +211,8 @@ export const formatBlockingReason = (reason: string | undefined, t: Translator):
       return t("inventory.blockReason.campaignNotEligible");
     case "preconditions_not_met":
       return t("inventory.blockReason.preconditionsNotMet");
+    case "subscription_required":
+      return t("inventory.blockReason.subscriptionRequired");
     case "missing_drop_instance_id":
       return t("inventory.blockReason.missingDropInstance");
     case "claim_window_closed":
