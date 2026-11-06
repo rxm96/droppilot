@@ -32,8 +32,6 @@ type SettingsProps = {
   setAutoSelect: (val: boolean) => void;
   autoSwitchEnabled: boolean;
   setAutoSwitchEnabled: (val: boolean) => void;
-  warmupEnabled: boolean;
-  setWarmupEnabled: (val: boolean) => void;
   updateChannel: UpdateChannel;
   setUpdateChannel: (val: UpdateChannel) => void;
   demoMode: boolean;
@@ -174,8 +172,6 @@ export function SettingsView(props: SettingsProps) {
               setAutoSelect={props.setAutoSelect}
               autoSwitchEnabled={props.autoSwitchEnabled}
               setAutoSwitchEnabled={props.setAutoSwitchEnabled}
-              warmupEnabled={props.warmupEnabled}
-              setWarmupEnabled={props.setWarmupEnabled}
               refreshMinMs={props.refreshMinMs}
               refreshMaxMs={props.refreshMaxMs}
               setRefreshIntervals={props.setRefreshIntervals}
