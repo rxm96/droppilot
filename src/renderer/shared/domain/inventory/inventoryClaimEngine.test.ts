@@ -150,12 +150,105 @@ describe("InventoryClaimEngine.autoClaimFromInventory", () => {
 
     expect(claimDrop).toHaveBeenCalledTimes(1);
   });
+
+  it("does not claim the same drop twice when runs overlap", async () => {
+    // e.g. "Claim now" clicked while the post-fetch auto-claim is still waiting on Twitch
+    const engine = new InventoryClaimEngine();
+    const pending: Array<() => void> = [];
+    const release = () => pending.splice(0).forEach((resolve) => resolve());
+    const claimDrop = vi.fn(
+      () => new Promise<{ ok: true }>((resolve) => pending.push(() => resolve({ ok: true }))),
+    );
+    const onClaimed = vi.fn();
+    const deps = {
+      claimDrop,
+      onAuthError: vi.fn(),
+      onClaimed,
+      setClaimStatus: vi.fn(),
+      now: () => 1_000,
+    };
+
+    const first = engine.autoClaimFromInventory([makeItem()], deps);
+    const second = engine.autoClaimFromInventory([makeItem()], deps);
+    release();
+    await Promise.all([first, second]);
+
+    expect(claimDrop).toHaveBeenCalledTimes(1);
+    expect(onClaimed).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not claim or count a drop again after it was claimed", async () => {
+    // A stale inventory snapshot can still list the drop as unclaimed; Twitch
+    // answers ALREADY_CLAIMED with success, which would count it a second time.
+    const engine = new InventoryClaimEngine();
+    const claimDrop = vi.fn(async () => ({ ok: true }));
+    const onClaimed = vi.fn();
+    const deps = {
+      claimDrop,
+      onAuthError: vi.fn(),
+      onClaimed,
+      setClaimStatus: vi.fn(),
+      now: () => 1_000,
+    };
+
+    await engine.autoClaimFromInventory([makeItem()], deps);
+    await engine.autoClaimFromInventory([makeItem()], deps);
+
+    expect(claimDrop).toHaveBeenCalledTimes(1);
+    expect(onClaimed).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not claim again from a drop-claim event while an auto-claim is in flight", async () => {
+    const engine = new InventoryClaimEngine();
+    let release: () => void = () => {};
+    const claimDrop = vi.fn(
+      () => new Promise<{ ok: true }>((resolve) => (release = () => resolve({ ok: true }))),
+    );
+
+    const auto = engine.autoClaimFromInventory([makeItem()], {
+      claimDrop,
+      onAuthError: vi.fn(),
+      onClaimed: vi.fn(),
+      setClaimStatus: vi.fn(),
+      now: () => 1_000,
+    });
+    const pubSub = engine.claimFromPubSubDropClaim({
+      claimDrop,
+      onAuthError: vi.fn(),
+      setClaimStatus: vi.fn(),
+      event: makeDropClaimEvent(),
+      claimableItem: makeItem(),
+      now: () => 1_000,
+    });
+    release();
+    await Promise.all([auto, pubSub]);
+
+    expect(claimDrop).toHaveBeenCalledTimes(1);
+  });
+
+  it("claims again after reset (e.g. logout)", async () => {
+    const engine = new InventoryClaimEngine();
+    const claimDrop = vi.fn(async () => ({ ok: true }));
+    const deps = {
+      claimDrop,
+      onAuthError: vi.fn(),
+      onClaimed: vi.fn(),
+      setClaimStatus: vi.fn(),
+      now: () => 1_000,
+    };
+
+    await engine.autoClaimFromInventory([makeItem()], deps);
+    engine.reset();
+    await engine.autoClaimFromInventory([makeItem()], deps);
+
+    expect(claimDrop).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe("InventoryClaimEngine.claimFromPubSubDropClaim", () => {
-  it("deduplicates claim attempts within retry window", async () => {
+  it("deduplicates failed claim attempts within retry window", async () => {
     const engine = new InventoryClaimEngine();
-    const claimDrop = vi.fn(async () => ({ ok: true }));
+    const claimDrop = vi.fn(async () => ({ ok: false, message: "try later" }));
     const setClaimStatus = vi.fn<(status: ClaimStatus) => void>();
     let now = 1_000_000;
 
@@ -190,7 +283,7 @@ describe("InventoryClaimEngine.claimFromPubSubDropClaim", () => {
 
     expect(claimDrop).toHaveBeenCalledTimes(2);
     expect(setClaimStatus).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: "success", message: "Auto-claimed: Drop 1" }),
+      expect.objectContaining({ kind: "error", message: "try later" }),
     );
   });
 

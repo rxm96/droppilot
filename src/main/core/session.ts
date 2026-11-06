@@ -1,4 +1,4 @@
-import { loadSession, saveSession, type SessionData } from "./storage";
+import { loadSession, mutateSession, type SessionData } from "./storage";
 import { randomBytes } from "node:crypto";
 
 function hexId(bytes = 16): string {
@@ -17,33 +17,33 @@ export async function ensureSessionIds(): Promise<{
     return { deviceId, sessionId };
   }
   if (!existing.deviceId || !existing.sessionId) {
-    await saveSession({
-      ...existing,
-      deviceId,
-      sessionId,
-    });
+    // Re-read inside the write queue: only fill ids that are still missing.
+    await mutateSession((current) =>
+      current
+        ? {
+            ...current,
+            deviceId: current.deviceId ?? deviceId,
+            sessionId: current.sessionId ?? sessionId,
+          }
+        : null,
+    );
   }
   return { deviceId, sessionId };
 }
 
-export async function updateSession(partial: Partial<SessionData>) {
-  const existing = await loadSession();
-  if (!existing) {
+export function updateSession(partial: Partial<SessionData>): Promise<void> {
+  return mutateSession((existing) => {
+    if (existing) return { ...existing, ...partial };
     const accessToken = typeof partial.accessToken === "string" ? partial.accessToken.trim() : "";
     if (!accessToken) {
-      // Avoid overwriting an unreadable session file with an empty token.
-      return;
+      // Avoid overwriting an unreadable or cleared session with an empty token.
+      return null;
     }
-    const safe: SessionData = {
+    return {
       accessToken,
       expiresAt: typeof partial.expiresAt === "number" ? partial.expiresAt : Date.now(),
       scopes: Array.isArray(partial.scopes) ? partial.scopes : [],
-    };
-    await saveSession({
-      ...safe,
       ...partial,
-    });
-    return;
-  }
-  await saveSession({ ...existing, ...partial });
+    };
+  });
 }

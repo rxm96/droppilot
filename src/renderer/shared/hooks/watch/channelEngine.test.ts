@@ -3,6 +3,7 @@ import type { ChannelEntry, ChannelLiveDiff, WatchingState } from "@renderer/sha
 import {
   applyLiveDiff,
   buildChannelDiff,
+  channelsAfterFetchFailure,
   computeAutoSwitchAction,
   isManualPriorityOverrideActive,
   isFreshCache,
@@ -279,5 +280,36 @@ describe("channelEngine helpers", () => {
         shouldTrackChannels: true,
       }),
     ).toBe(false);
+  });
+});
+
+describe("channelsAfterFetchFailure", () => {
+  const live = [makeChannel({ id: "1" }), makeChannel({ id: "2", login: "beta" })];
+
+  it("keeps the last list for the same game, so a transient error does not stop watching", () => {
+    const next = channelsAfterFetchFailure({
+      prevList: live,
+      fetchedGame: "Game",
+      gameName: "Game",
+    });
+    expect(next).toBe(live);
+    // the autopilot then has nothing to clear
+    const watching: WatchingState = { id: "1", name: "Alpha", game: "Game" };
+    expect(
+      computeAutoSwitchAction({
+        allowWatching: true,
+        watching,
+        channels: next,
+        autoSwitchEnabled: true,
+        forcePrioritySwitch: false,
+        canWatchTarget: true,
+      }),
+    ).toEqual({ action: "none" });
+  });
+
+  it("empties the list when the previous list belongs to another game", () => {
+    expect(
+      channelsAfterFetchFailure({ prevList: live, fetchedGame: "Other", gameName: "Game" }),
+    ).toEqual([]);
   });
 });

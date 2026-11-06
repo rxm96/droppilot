@@ -83,10 +83,29 @@ const getClaimErrorInfo = (err: unknown) =>
 export class InventoryClaimEngine {
   private readonly claimAttemptsById = new Map<string, number>();
   private readonly claimRetryByDropId = new Map<string, ClaimRetryState>();
+  // Shared by auto-claim, "Claim now" and the drop-claim event path, which can
+  // all target the same drop at once. A stale inventory snapshot may still list
+  // a claimed drop; Twitch answers ALREADY_CLAIMED with success, so without
+  // these the same drop would be claimed and counted twice.
+  private readonly inFlightClaimIds = new Set<string>();
+  private readonly claimedIds = new Set<string>();
 
   reset(): void {
     this.claimAttemptsById.clear();
     this.claimRetryByDropId.clear();
+    this.inFlightClaimIds.clear();
+    this.claimedIds.clear();
+  }
+
+  private tryBeginClaim(dropId: string): boolean {
+    if (this.inFlightClaimIds.has(dropId) || this.claimedIds.has(dropId)) return false;
+    this.inFlightClaimIds.add(dropId);
+    return true;
+  }
+
+  private finishClaim(dropId: string, succeeded: boolean): void {
+    this.inFlightClaimIds.delete(dropId);
+    if (succeeded) this.claimedIds.add(dropId);
   }
 
   getAutoClaimCandidates(items: InventoryItem[], now = Date.now()): InventoryItem[] {
@@ -127,8 +146,10 @@ export class InventoryClaimEngine {
       if (retryState && retryState.signature === retrySignature && now < retryState.nextAllowedAt) {
         continue;
       }
+      if (!this.tryBeginClaim(drop.id)) continue;
 
       this.claimAttemptsById.set(drop.id, now);
+      let succeeded = false;
       try {
         const response = await deps.claimDrop({
           dropInstanceId: drop.dropInstanceId,
@@ -136,6 +157,7 @@ export class InventoryClaimEngine {
           campaignId: drop.campaignId,
         });
         throwIfClaimErrorResponse(response);
+        succeeded = true;
 
         deps.onClaimed({ title: drop.title, game: drop.game });
         // Mirror TDM: flip the drop to claimed in local state on success so the
@@ -187,6 +209,8 @@ export class InventoryClaimEngine {
           nextRetryAt: now + getClaimRetryDelay(attempts),
           attempts,
         });
+      } finally {
+        this.finishClaim(drop.id, succeeded);
       }
     }
     if (suppressedClaimErrorLogs > 0) {
@@ -208,6 +232,7 @@ export class InventoryClaimEngine {
 
     const now = deps.now?.() ?? Date.now();
     if (!this.canAttemptClaim(claimId, now)) return;
+    if (!this.tryBeginClaim(claimId)) return;
     this.markClaimAttempt(claimId, now);
 
     const claimPayload: ClaimDropPayload = {
@@ -216,9 +241,11 @@ export class InventoryClaimEngine {
       campaignId: claimableItem?.campaignId,
     };
 
+    let succeeded = false;
     try {
       const response = await deps.claimDrop(claimPayload);
       throwIfClaimErrorResponse(response);
+      succeeded = true;
       if (claimableItem) {
         deps.onClaimed?.({ title: claimableItem.title, game: claimableItem.game });
         deps.markClaimed?.(claimableItem);
@@ -243,6 +270,8 @@ export class InventoryClaimEngine {
         title: claimableItem?.title ?? dropIdFromEvent,
         at: Date.now(),
       });
+    } finally {
+      this.finishClaim(claimId, succeeded);
     }
   }
 }

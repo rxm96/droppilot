@@ -10,6 +10,7 @@ import {
   NO_FARMABLE_GAME_COOLDOWN_MS,
   pickStallRecoveryChannel,
   shouldProbeNoProgressConfirmation,
+  STALL_CHANNEL_SWITCH_GRACE_MS,
   STALL_CONFIRMATION_PROBE_COOLDOWN_MS,
   STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS,
   STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS_NEAR_END,
@@ -936,5 +937,78 @@ describe("decideNoProgressRecovery", () => {
       nearEndProbe: false,
       noProgressWindowMs: STALL_NO_PROGRESS_WINDOW_MS,
     });
+  });
+});
+
+describe("decideNoProgressRecovery channel rotation", () => {
+  // Unrestricted drop so every live channel could farm it.
+  const openDrop = activeDrop({ allowedChannelLogins: undefined });
+  const threeChannels = [channel("w1", "streamer"), channel("c2"), channel("c3")];
+  const watchingC2: WatchingState = { ...watchingRust, id: "c2", channelId: "c2", login: "c2" };
+  const stalledSince = 0;
+  const afterWindow = STALL_NO_PROGRESS_WINDOW_MS + 1;
+
+  it("remembers the stalled and the new channel when it switches", () => {
+    const result = decideNoProgressRecovery({
+      ...noProgressBase,
+      activeDropInfo: openDrop,
+      channels: threeChannels,
+      tracker: {
+        key: trackerKey,
+        lastEarnedMinutes: 10,
+        lastProgressAt: stalledSince,
+        lastActionAt: 0,
+        recoveryCount: 0,
+      },
+      now: afterWindow,
+    });
+    expect(result.actions).toEqual([{ kind: "switch-channel", channel: threeChannels[1] }]);
+    expect(result.tracker).toMatchObject({
+      triedChannelIds: ["w1", "c2"],
+      lastSwitchAt: afterWindow,
+    });
+  });
+
+  it("does not switch back to a channel that already stalled", () => {
+    const now = afterWindow + STALL_CHANNEL_SWITCH_GRACE_MS;
+    const result = decideNoProgressRecovery({
+      ...noProgressBase,
+      watching: watchingC2,
+      activeDropInfo: openDrop,
+      channels: threeChannels,
+      tracker: {
+        key: trackerKey,
+        lastEarnedMinutes: 10,
+        lastProgressAt: stalledSince,
+        lastActionAt: afterWindow,
+        recoveryCount: 1,
+        triedChannelIds: ["w1", "c2"],
+        lastSwitchAt: afterWindow,
+      },
+      now,
+    });
+    expect(result.actions).toEqual([{ kind: "switch-channel", channel: threeChannels[2] }]);
+  });
+
+  it("gives a freshly switched-to channel a grace period before acting again", () => {
+    const result = decideNoProgressRecovery({
+      ...noProgressBase,
+      watching: watchingC2,
+      activeDropInfo: openDrop,
+      channels: threeChannels,
+      tracker: {
+        key: trackerKey,
+        lastEarnedMinutes: 10,
+        lastProgressAt: stalledSince,
+        lastActionAt: afterWindow,
+        recoveryCount: 1,
+        triedChannelIds: ["w1", "c2"],
+        lastSwitchAt: afterWindow,
+      },
+      // past the 60s action cooldown, but well inside the switch grace
+      now: afterWindow + 2 * 60_000,
+    });
+    expect(result.actions).toEqual([]);
+    expect(result.tracker?.recoveryCount).toBe(1);
   });
 });

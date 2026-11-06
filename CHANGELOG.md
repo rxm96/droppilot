@@ -23,6 +23,17 @@ GitHub Release (which the app's update history shows) is built from that section
 - "Check for updates" no longer offers an older or skipped version.
 - Moving a game up the priority list now switches to it right away.
 - Priority games now match regardless of upper/lower case.
+- DropPilot no longer logs you out at random while it is busy talking to Twitch, and a token
+  refresh can no longer be lost.
+- A drop is no longer claimed and counted twice when auto-claim and "Claim now" run at the
+  same time.
+- When Twitch rejects the live drop connection, DropPilot retries with increasing pauses instead
+  of every two seconds.
+- After you stop a game and then edit the priority list, DropPilot no longer rapidly starts and
+  stops that game.
+- When a stream stalls, DropPilot no longer switches back to the channel that just stalled, and
+  gives the new channel a few minutes to start counting.
+- A brief error while refreshing the channel list no longer stops the stream you are watching.
 
 ## [4.0.0] - 2026-11-06
 
