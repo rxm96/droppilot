@@ -4,7 +4,6 @@ import { arrayMove } from "@dnd-kit/sortable";
 type Params = {
   newGame: string;
   setNewGame: (val: string) => void;
-  selectedGame: string;
   priorityGames: string[];
   setAutoSelectEnabled: (next: boolean) => void;
   savePriorityGames: (list: string[]) => Promise<void>;
@@ -24,7 +23,6 @@ export const reorderPriorityGamesByValue = (
 export function usePriorityActions({
   newGame,
   setNewGame,
-  selectedGame,
   priorityGames,
   setAutoSelectEnabled,
   savePriorityGames,
@@ -60,14 +58,6 @@ export function usePriorityActions({
     [priorityGames, savePriorityGames, setAutoSelectEnabled],
   );
 
-  const addGameFromSelect = useCallback(() => {
-    const name = selectedGame.trim();
-    if (!name) return;
-    if (priorityGames.includes(name)) return;
-    setAutoSelectEnabled(true);
-    void savePriorityGames([...priorityGames, name]);
-  }, [priorityGames, savePriorityGames, selectedGame, setAutoSelectEnabled]);
-
   const addGameByName = useCallback(
     (name: string) => {
       const trimmed = name.trim();
@@ -83,7 +73,6 @@ export function usePriorityActions({
     addGame,
     removeGame,
     movePriorityGame,
-    addGameFromSelect,
     addGameByName,
   };
 }

@@ -123,8 +123,6 @@ export function useAppModel() {
     saveCloseToTray,
     saveMinimizeToTray,
     resetAutomation,
-    selectedGame,
-    setSelectedGame,
     newGame,
     setNewGame,
     settingsJson,
@@ -237,7 +235,6 @@ export function useAppModel() {
     inventoryFetchedAt,
     progressAnchorByDropId,
     fetchInventory,
-    uniqueGames,
     claimStatus,
     setClaimStatus,
     withCategories,
@@ -285,7 +282,6 @@ export function useAppModel() {
   const actions = useAppActions({
     newGame,
     setNewGame,
-    selectedGame,
     priorityGames,
     savePriorityGames,
     saveObeyPriority,
@@ -835,17 +831,26 @@ export function useAppModel() {
     onAddPriorityGame: actions.addGameByName,
     onOpenAccountLink: openAccountLink,
   };
+  // Live channels with drops are only known for the game whose channel list
+  // is loaded (the target); the games view shows the count for that game only.
+  const channelsWithDrops = watchEngineSnapshot.allowlistedLiveChannels;
+  const gamesLiveChannels = useMemo(
+    () =>
+      !channelsLoading && channelsGame.trim()
+        ? { game: channelsGame, count: channelsWithDrops }
+        : null,
+    [channelsGame, channelsLoading, channelsWithDrops],
+  );
   const priorityProps = {
-    uniqueGames,
-    activeTargetGame,
-    watchingGame: watching?.game ?? "",
-    selectedGame,
-    setSelectedGame,
+    priorityGames,
+    items: inventoryItems,
+    farmPlan,
+    farmingGame: watching?.game ?? "",
+    liveChannels: gamesLiveChannels,
     newGame,
     setNewGame,
     addGame: actions.addGame,
-    addGameFromSelect: actions.addGameFromSelect,
-    priorityGames,
+    addGameByName: actions.addGameByName,
     removeGame: actions.removeGame,
     movePriorityGame: actions.movePriorityGame,
     obeyPriority,

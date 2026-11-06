@@ -105,8 +105,6 @@ type SettingsHook = {
   saveCloseToTray: (val: boolean) => Promise<void>;
   saveMinimizeToTray: (val: boolean) => Promise<void>;
   resetAutomation: () => Promise<void>;
-  selectedGame: string;
-  setSelectedGame: (val: string) => void;
   newGame: string;
   setNewGame: (val: string) => void;
   settingsJson: string;
@@ -171,7 +169,6 @@ export function useSettingsStore(): SettingsHook {
   const [allowUnlinkedGames, setAllowUnlinkedGames] = useState<boolean>(false);
   const [closeToTray, setCloseToTray] = useState<boolean>(true);
   const [minimizeToTray, setMinimizeToTray] = useState<boolean>(false);
-  const [selectedGame, setSelectedGame] = useState<string>("");
   const [newGame, setNewGame] = useState<string>("");
   const [settingsJson, setSettingsJson] = useState<string>("");
   const [settingsInfo, setSettingsInfo] = useState<string | null>(null);
@@ -586,8 +583,6 @@ export function useSettingsStore(): SettingsHook {
     saveCloseToTray,
     saveMinimizeToTray,
     resetAutomation,
-    selectedGame,
-    setSelectedGame,
     newGame,
     setNewGame,
     settingsJson,

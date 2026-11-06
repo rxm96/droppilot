@@ -826,34 +826,20 @@ const translations: Translations = {
 
     // Tracker (used in EngineStatusPanel, prep for T03)
 
-    "priorities.title": "Priorities",
     "priorities.subtitle": "Set the order for auto-watching and drop targeting.",
     "priorities.count": "{count} games",
-    "priorities.currentTarget": "Current target",
     "priorities.currentTargetWatching": "Watching {game} right now.",
     "priorities.noneSelected": "No priority target",
-    "priorities.queueHealth": "Live in queue",
     "priorities.queueHealthHint": "How many listed games currently have active drops.",
-    "priorities.topSlot": "Top slot",
     "priorities.topSlotHint": "This game gets first claim when priority mode is strict.",
     "priorities.modeStrict": "Strict priority is active.",
     "priorities.modeFlexible": "Flexible mode can fall back when needed.",
     "priorities.addTitle": "Feed the queue",
     "priorities.addHint": "Pull directly from games that already have live drops.",
-    "priorities.addEmpty": "All currently active games are already in the queue.",
-    "priorities.manualTitle": "Manual add",
     "priorities.manualHint": "Use this when you want to preload a game before drops appear.",
     "priorities.ruleTitle": "Priority rule",
-    "priorities.ruleStrictHint":
-      "Higher-priority games stay in control until they are no longer actionable.",
-    "priorities.ruleFlexibleHint":
-      "The engine can fall through to other available games when the queue stalls.",
     "priorities.queueHint": "Drag to reorder. Games at the top are checked first.",
     "priorities.rank": "#{rank}",
-    "priorities.state.watching": "Watching now",
-    "priorities.state.target": "Current target",
-    "priorities.state.live": "Live drops",
-    "priorities.state.idle": "No active drops",
     "priorities.badge.watching": "Watching",
     "priorities.badge.target": "Target",
     "alerts.title.dropClaimed": "Drop claimed",
@@ -997,6 +983,40 @@ const translations: Translations = {
     "drops.empty.noMatch": "No drops match this filter.",
     "drops.empty.none": "No drops in your inventory yet.",
 
+    // games.* — games view (UI polish phase 4)
+    "games.title": "Games",
+    "games.intro":
+      "DropPilot farms your games top to bottom and moves on when one has nothing left or no channel with drops is live.",
+    "games.order.title": "your order",
+    "games.count.one": "{count} game",
+    "games.count.other": "{count} games",
+    "games.order.empty": "No games yet. Add one by name below, or pick a game with drops.",
+    "games.pill.farming": "● farming",
+    "games.meta.dropsLeft.one": "{count} drop left",
+    "games.meta.dropsLeft.other": "{count} drops left",
+    "games.meta.drops.one": "{count} drop",
+    "games.meta.drops.other": "{count} drops",
+    "games.meta.noDrops": "no drops right now",
+    "games.meta.endsIn": "ends in {time}",
+    "games.meta.live": "{count} live",
+    "games.row.moveUp": "Move {game} up",
+    "games.row.moveDown": "Move {game} down",
+    "games.row.remove": "Remove {game}",
+    "games.row.drag": "Drag {game}",
+    "games.add.label": "Add a game by name",
+    "games.add.placeholder": "add any game by name, even without drops yet",
+    "games.add.button": "+ add",
+    "games.add.gameAria": "Add {game} to your games",
+    "games.others.title.wait": "other games with drops · not farmed",
+    "games.others.title.farmOthers": "other games with drops · only farmed meanwhile",
+    "games.others.empty": "every game with drops is in your list.",
+    "games.fallback.legend": "when none of your games can be farmed",
+    "games.fallback.wait.title": "Wait",
+    "games.fallback.wait.desc": "Stay idle until one of your games has drops again.",
+    "games.fallback.farmOthers.title": "Farm other games meanwhile",
+    "games.fallback.farmOthers.desc":
+      "Use the time for any game with drops, and go back to yours once that game is finished.",
+
     // control.engineStatus.* — EngineStatusPanel hardcoded remnants
     "control.engineStatus.why": "why",
     "control.engineStatus.next": "next",
@@ -1006,34 +1026,6 @@ const translations: Translations = {
     // control.channelGrid.* — ChannelGridPanel
 
     // control.campaignsPanel.* — CampaignsPanel
-
-    // priorities.row.*Aria — PriorityRow drag/remove aria
-    "priorities.row.dragAria": "Drag {game}",
-    "priorities.row.removeAria": "Remove {game}",
-
-    // priorities.header.* — PriorityHeader strings
-    "priorities.header.rankedCount.one": "{count} game ranked",
-    "priorities.header.rankedCount.other": "{count} games ranked",
-    "priorities.header.watchingNow": "watching {game}",
-    "priorities.header.modeStrict": "strict mode",
-    "priorities.header.modeFlexible": "flexible mode",
-    "priorities.header.liveTotalSub": "live / total",
-    "priorities.header.position": "position {rank}",
-
-    // priorities.list.* — PriorityList empty state strings
-    "priorities.list.empty": "no games prioritized yet",
-    "priorities.list.emptyHint": "add a game from the panel on the left",
-
-    // priorities.add.* — PriorityAddPanel strings
-    "priorities.add.fromDropsTitle": "add from your drops",
-    "priorities.add.fromDropsHint": "pick a game that currently has live drops",
-    "priorities.add.selectPlaceholder": "select a game…",
-    "priorities.add.addButton": "add",
-    "priorities.add.manualHint": "type any game name, even ones with no live drops yet",
-    "priorities.add.manualPlaceholder": "game name…",
-    "priorities.add.strictLabel": "strict priority order",
-    "priorities.add.fromDropsAria": "Add from drops",
-    "priorities.add.manualAria": "Add game manually",
   },
   de: {
     // overview.* / autopilot.* — merged overview (UI polish phase 2)
@@ -1853,34 +1845,20 @@ const translations: Translations = {
     "settings.account.login": "Konto verbinden",
     "settings.account.loggingIn": "Verbinde…",
 
-    "priorities.title": "Prioritäten",
     "priorities.subtitle": "Lege die Reihenfolge für Auto-Watching und Drop-Ziele fest.",
     "priorities.count": "{count} Games",
-    "priorities.currentTarget": "Aktuelles Ziel",
     "priorities.currentTargetWatching": "{game} wird gerade aktiv geschaut.",
     "priorities.noneSelected": "Kein Priority-Ziel",
-    "priorities.queueHealth": "Live in Queue",
     "priorities.queueHealthHint": "Wie viele gelistete Games gerade aktive Drops haben.",
-    "priorities.topSlot": "Top-Slot",
     "priorities.topSlotHint": "Dieses Game wird zuerst bevorzugt, wenn Priorität strikt ist.",
     "priorities.modeStrict": "Strikte Priorität ist aktiv.",
     "priorities.modeFlexible": "Flexibler Modus kann bei Bedarf auf andere Games fallen.",
     "priorities.addTitle": "Queue füttern",
     "priorities.addHint": "Übernimm direkt Games, die schon aktive Drops haben.",
-    "priorities.addEmpty": "Alle aktuell aktiven Games sind bereits in der Queue.",
-    "priorities.manualTitle": "Manuell hinzufügen",
     "priorities.manualHint": "Nützlich, wenn du ein Game vor dem Drop-Start vorladen willst.",
     "priorities.ruleTitle": "Priority-Regel",
-    "priorities.ruleStrictHint":
-      "Höher priorisierte Games bleiben vorne, bis sie nicht mehr farmbar sind.",
-    "priorities.ruleFlexibleHint":
-      "Die Engine darf auf andere verfügbare Games ausweichen, wenn die Queue stockt.",
     "priorities.queueHint": "Per Drag neu ordnen. Spiele oben in der Liste werden zuerst geprüft.",
     "priorities.rank": "#{rank}",
-    "priorities.state.watching": "Wird geschaut",
-    "priorities.state.target": "Aktuelles Ziel",
-    "priorities.state.live": "Live-Drops",
-    "priorities.state.idle": "Keine aktiven Drops",
     "priorities.badge.watching": "Watching",
     "priorities.badge.target": "Ziel",
     "alerts.title.dropClaimed": "Drop eingesammelt",
@@ -2025,6 +2003,41 @@ const translations: Translations = {
     "drops.empty.noMatch": "Keine Drops für diesen Filter.",
     "drops.empty.none": "Noch keine Drops in deinem Inventar.",
 
+    // games.* — Games-Ansicht (UI polish phase 4)
+    "games.title": "Games",
+    "games.intro":
+      "DropPilot farmt deine Games von oben nach unten und macht weiter, wenn eins nichts mehr hat oder kein Kanal mit Drops live ist.",
+    "games.order.title": "deine Reihenfolge",
+    "games.count.one": "{count} Game",
+    "games.count.other": "{count} Games",
+    "games.order.empty":
+      "Noch keine Games. Füge unten eins per Name hinzu oder wähle ein Game mit Drops.",
+    "games.pill.farming": "● farmt",
+    "games.meta.dropsLeft.one": "{count} Drop übrig",
+    "games.meta.dropsLeft.other": "{count} Drops übrig",
+    "games.meta.drops.one": "{count} Drop",
+    "games.meta.drops.other": "{count} Drops",
+    "games.meta.noDrops": "gerade keine Drops",
+    "games.meta.endsIn": "endet in {time}",
+    "games.meta.live": "{count} live",
+    "games.row.moveUp": "{game} nach oben",
+    "games.row.moveDown": "{game} nach unten",
+    "games.row.remove": "{game} entfernen",
+    "games.row.drag": "{game} ziehen",
+    "games.add.label": "Game per Name hinzufügen",
+    "games.add.placeholder": "beliebiges Game per Name hinzufügen, auch ohne Drops",
+    "games.add.button": "+ hinzufügen",
+    "games.add.gameAria": "{game} zu deinen Games hinzufügen",
+    "games.others.title.wait": "andere Games mit Drops · nicht gefarmt",
+    "games.others.title.farmOthers": "andere Games mit Drops · nur zwischendurch gefarmt",
+    "games.others.empty": "jedes Game mit Drops ist in deiner Liste.",
+    "games.fallback.legend": "wenn keins deiner Games gefarmt werden kann",
+    "games.fallback.wait.title": "Warten",
+    "games.fallback.wait.desc": "Nichts tun, bis eins deiner Games wieder Drops hat.",
+    "games.fallback.farmOthers.title": "Solange andere Games farmen",
+    "games.fallback.farmOthers.desc":
+      "Die Zeit für andere Games mit Drops nutzen und zu deinen zurückkehren, sobald das Game fertig ist.",
+
     // control.engineStatus.* — EngineStatusPanel hardcoded remnants
     "control.engineStatus.why": "warum",
     "control.engineStatus.next": "nächstes",
@@ -2034,34 +2047,6 @@ const translations: Translations = {
     // control.channelGrid.* — ChannelGridPanel
 
     // control.campaignsPanel.* — CampaignsPanel
-
-    // priorities.row.*Aria — PriorityRow drag/remove aria
-    "priorities.row.dragAria": "{game} ziehen",
-    "priorities.row.removeAria": "{game} entfernen",
-
-    // priorities.header.* — PriorityHeader strings
-    "priorities.header.rankedCount.one": "{count} Game eingereiht",
-    "priorities.header.rankedCount.other": "{count} Games eingereiht",
-    "priorities.header.watchingNow": "schaut {game}",
-    "priorities.header.modeStrict": "strikter Modus",
-    "priorities.header.modeFlexible": "flexibler Modus",
-    "priorities.header.liveTotalSub": "live / gesamt",
-    "priorities.header.position": "position {rank}",
-
-    // priorities.list.* — PriorityList empty state strings
-    "priorities.list.empty": "noch keine Games priorisiert",
-    "priorities.list.emptyHint": "füge ein Game über das Panel links hinzu",
-
-    // priorities.add.* — PriorityAddPanel strings
-    "priorities.add.fromDropsTitle": "aus Drops hinzufügen",
-    "priorities.add.fromDropsHint": "wähle ein Game, das gerade aktive Drops hat",
-    "priorities.add.selectPlaceholder": "Game auswählen…",
-    "priorities.add.addButton": "hinzufügen",
-    "priorities.add.manualHint": "beliebigen Game-Namen eingeben, auch ohne aktive Drops",
-    "priorities.add.manualPlaceholder": "Game-Name…",
-    "priorities.add.strictLabel": "strikte Prioritätsreihenfolge",
-    "priorities.add.fromDropsAria": "Von Drops hinzufügen",
-    "priorities.add.manualAria": "Spiel manuell hinzufügen",
   },
 };
 
