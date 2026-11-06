@@ -11,10 +11,29 @@ GitHub Release (which the app's update history shows) is built from that section
 
 ## [Unreleased]
 
+### Added
+
+- A "plan · today" table on the overview shows when each drop will be ready, in the order
+  they get farmed, when the app switches to the next game, and which drops are blocked and why.
+- An autopilot button in the top bar shows whether DropPilot is running or paused, on every
+  screen. Click it to pause or resume.
+- "Switch channel" on the overview lists the live channels for the current game. Pick one to
+  watch it, or press "auto" to let DropPilot choose again.
+- A "needs you" panel on the overview appears only when you have to do something: claim
+  finished drops, link a game account, or sign in again. The drops tab shows how many.
+
 ### Changed
 
-- The overview shows when a drop will be ready as a clock time with the minutes left, and the
-  Control view shows the same clock time without seconds.
+- The overview shows when a drop will be ready as a clock time with the minutes left.
+- The Control screen is merged into the overview. Tabs are now overview, drops, games and stats.
+  Settings opens from the gear in the top bar.
+- The overview's engine panel uses plain words: next drop check, channels with drops, and how
+  long it has been running. The "why / next" explanation opens from the same panel.
+
+### Removed
+
+- The always-visible "claim now" button. Claiming now happens in the "needs you" panel when
+  there is something to claim.
 
 ### Fixed
 
