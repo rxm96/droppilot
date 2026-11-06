@@ -1,10 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildCampaignDetailsQueries,
   buildCampaignSummaries,
+  collectBlockingReasonHints,
+  DROP_CAMPAIGN_DETAILS_HASH,
   extractAllowedChannelFilters,
+  isUnmetSubscriptionDrop,
+  mergeCampaignDetails,
   getCampaignGameName,
   mergePrimaryData,
+  needsCampaignDetails,
   normalizeDropWatchState,
+  type CampaignNode,
+  type DropCampaignDetailsResponse,
 } from "./serviceUtils";
 
 describe("mergePrimaryData", () => {
@@ -376,5 +384,134 @@ describe("buildCampaignSummaries", () => {
     ]);
 
     expect(campaigns[0]?.hasUnclaimedDrops).toBe(false);
+  });
+});
+
+describe("needsCampaignDetails", () => {
+  it("requests details only for dashboard campaigns without drops", () => {
+    expect(needsCampaignDetails({ id: "c1", name: "C1", status: "ACTIVE" })).toBe(true);
+    expect(needsCampaignDetails({ id: "c2", name: "C2", status: "UPCOMING" })).toBe(true);
+    expect(needsCampaignDetails({ id: "c3", name: "C3", timeBasedDrops: [] })).toBe(false);
+  });
+
+  it("skips expired campaigns and nodes without an id", () => {
+    expect(needsCampaignDetails({ id: "c1", name: "C1", status: "expired" })).toBe(false);
+    expect(needsCampaignDetails({ id: "", name: "C1", status: "ACTIVE" })).toBe(false);
+    expect(needsCampaignDetails(undefined)).toBe(false);
+  });
+});
+
+describe("buildCampaignDetailsQueries", () => {
+  it("identifies the user by numeric id, one query per campaign", () => {
+    const queries = buildCampaignDetailsQueries(["c1", "c2"], "123456");
+    expect(queries).toHaveLength(2);
+    expect(queries[0]).toEqual({
+      operationName: "DropCampaignDetails",
+      extensions: { persistedQuery: { version: 1, sha256Hash: DROP_CAMPAIGN_DETAILS_HASH } },
+      variables: { channelLogin: "123456", dropID: "c1" },
+    });
+    expect(queries[1].variables).toEqual({ channelLogin: "123456", dropID: "c2" });
+  });
+});
+
+describe("mergeCampaignDetails", () => {
+  const detailsFor = (node: CampaignNode): DropCampaignDetailsResponse => ({
+    data: { user: { dropCampaign: node } },
+  });
+
+  it("merges drops into known campaigns and counts them", () => {
+    const campaigns = new Map<string, CampaignNode>([
+      ["c1", { id: "c1", name: "C1", status: "ACTIVE", game: { displayName: "Game" } }],
+    ]);
+    const merged = mergeCampaignDetails(campaigns, [
+      detailsFor({
+        id: "c1",
+        name: "C1",
+        timeBasedDrops: [{ id: "d1", name: "Drop", requiredMinutesWatched: 60 }],
+      }),
+    ]);
+    expect(merged).toBe(1);
+    const campaign = campaigns.get("c1");
+    expect(campaign?.status).toBe("ACTIVE");
+    expect(campaign?.game?.displayName).toBe("Game");
+    expect(campaign?.timeBasedDrops?.map((drop) => drop.id)).toEqual(["d1"]);
+  });
+
+  it("ignores empty (user: null) responses and unknown campaigns", () => {
+    const campaigns = new Map<string, CampaignNode>([["c1", { id: "c1", name: "C1" }]]);
+    const merged = mergeCampaignDetails(campaigns, [
+      { data: { user: null as unknown as undefined } },
+      detailsFor({ id: "other", name: "Other", timeBasedDrops: [] }),
+    ]);
+    expect(merged).toBe(0);
+    expect(campaigns.get("c1")?.timeBasedDrops).toBeUndefined();
+    expect(campaigns.has("other")).toBe(false);
+  });
+
+  it("accepts a single, non-batched response", () => {
+    const campaigns = new Map<string, CampaignNode>([["c1", { id: "c1", name: "C1" }]]);
+    expect(mergeCampaignDetails(campaigns, detailsFor({ id: "c1", name: "C1" }))).toBe(1);
+    expect(mergeCampaignDetails(campaigns, undefined)).toBe(0);
+  });
+});
+
+describe("isUnmetSubscriptionDrop", () => {
+  it("flags sub-based drops until the sub requirement is met", () => {
+    expect(
+      isUnmetSubscriptionDrop({
+        id: "d1",
+        name: "Subs",
+        requiredMinutesWatched: 0,
+        requiredSubs: 2,
+      }),
+    ).toBe(true);
+    expect(
+      isUnmetSubscriptionDrop({
+        id: "d1",
+        name: "Subs",
+        requiredMinutesWatched: 0,
+        requiredSubs: 2,
+        self: { currentSubs: 2 },
+      }),
+    ).toBe(false);
+  });
+
+  it("ignores watch-time drops", () => {
+    expect(isUnmetSubscriptionDrop({ id: "d1", name: "Watch", requiredMinutesWatched: 60 })).toBe(
+      false,
+    );
+    expect(
+      isUnmetSubscriptionDrop({
+        id: "d1",
+        name: "Watch",
+        requiredMinutesWatched: 60,
+        requiredSubs: 0,
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("collectBlockingReasonHints", () => {
+  const base = {
+    linked: true,
+    campaignNotStarted: false,
+    campaignExpired: false,
+    missingPrerequisiteDropIds: [],
+    progressDone: false,
+    withinClaimWindow: true,
+    isClaimed: false,
+  };
+
+  it("adds subscription_required for unmet sub drops", () => {
+    expect(collectBlockingReasonHints({ ...base, subscriptionRequired: true })).toEqual([
+      "subscription_required",
+    ]);
+    expect(collectBlockingReasonHints(base)).toEqual([]);
+  });
+
+  it("reports nothing for claimed drops", () => {
+    expect(
+      collectBlockingReasonHints({ ...base, subscriptionRequired: true, isClaimed: true }),
+    ).toEqual([]);
   });
 });

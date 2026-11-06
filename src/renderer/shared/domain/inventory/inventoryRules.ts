@@ -24,6 +24,7 @@ export const isHardWatchingBlockerReason = (reason: string): boolean => {
     case "campaign_not_started":
     case "campaign_expired":
     case "preconditions_not_met":
+    case "subscription_required":
       return true;
     default:
       return false;

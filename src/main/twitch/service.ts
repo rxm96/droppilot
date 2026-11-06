@@ -5,6 +5,7 @@ import { buildPriorityPlan, type PriorityPlan } from "./channels";
 import { TwitchServiceError } from "./errors";
 import { TWITCH_ERROR_CODES } from "../../shared/errorCodes";
 import {
+  buildCampaignDetailsQueries,
   buildCampaignSummaries,
   collectBlockingReasonHints,
   collectLockedReasonHints,
@@ -18,9 +19,12 @@ import {
   hasClaimedBenefit,
   isPersistedQueryNotFound,
   isTruthyFlag,
+  isUnmetSubscriptionDrop,
   isWithinClaimWindow,
+  mergeCampaignDetails,
   getCampaignGameName,
   mergePrimaryData,
+  needsCampaignDetails,
   normalizeDropWatchState,
   parseIsoMs,
   pickRequiredMinutes,
@@ -711,8 +715,6 @@ export class TwitchService {
   }
 
   private async enrichCampaigns(edges: CampaignEdge[]): Promise<CampaignNode[]> {
-    const validate = await this.client.getValidateInfo();
-    // fetch details in chunks to avoid huge payload
     const campaignsById = new Map<string, CampaignNode>();
     for (const edge of edges) {
       if (edge.node?.id) {
@@ -720,42 +722,42 @@ export class TwitchService {
       }
     }
 
+    // Only dashboard-only campaigns lack drops; Inventory campaigns already carry them.
+    const ids = Array.from(campaignsById.values())
+      .filter(needsCampaignDetails)
+      .map((campaign) => campaign.id);
     const chunkSize = 20;
-    const ids = Array.from(campaignsById.keys());
-    this.debug("Enrich campaigns", { total: ids.length, chunkSize });
+    this.debug("Enrich campaigns", {
+      total: campaignsById.size,
+      needDetails: ids.length,
+      chunkSize,
+    });
+    if (ids.length === 0) {
+      return Array.from(campaignsById.values());
+    }
 
+    const validate = await this.client.getValidateInfo();
+    let enriched = 0;
+    // fetch details in chunks to avoid huge payload
     for (let i = 0; i < ids.length; i += chunkSize) {
       const chunk = ids.slice(i, i + chunkSize);
       this.debug("Detail chunk", { idx: i, size: chunk.length });
-      const gqlPayload = chunk.map((cid) =>
-        createPersistedQuery(
-          "DropCampaignDetails",
-          "039277bf98f3130929262cc7c6efd9c141ca3749cb6dca442fc8ead9a53f77c1",
-          {
-            channelLogin: validate.login, // use login as user identifier
-            dropID: cid,
-          },
-        ),
-      );
-
       const responses = await this.gqlRequest<
         DropCampaignDetailsResponse | DropCampaignDetailsResponse[]
-      >(gqlPayload, "DropCampaignDetails");
-      const responseList = Array.isArray(responses) ? responses : [responses];
-      for (const res of responseList) {
-        const node = res?.data?.user?.dropCampaign;
-        if (node?.id && campaignsById.has(node.id)) {
-          const base = campaignsById.get(node.id)!;
-          const merged = mergePrimaryData(base, node) as CampaignNode;
-          campaignsById.set(node.id, merged);
-        }
-      }
+      >(buildCampaignDetailsQueries(chunk, validate.userId), "DropCampaignDetails");
+      enriched += mergeCampaignDetails(campaignsById, responses);
+    }
+    if (enriched === 0) {
+      // Twitch answered without campaign data — the query variables or hash likely drifted.
+      console.warn("[TwitchService] DropCampaignDetails returned no campaign data", {
+        requested: ids.length,
+      });
     }
 
     const merged = Array.from(campaignsById.values());
     this.debug(
       "Enriched campaigns",
-      merged.length,
+      { requested: ids.length, enriched },
       "drop lengths",
       merged.map((c) => c.timeBasedDrops?.length ?? 0),
     );
@@ -913,6 +915,7 @@ export class TwitchService {
           dropInstanceId,
           withinClaimWindow,
           isClaimed,
+          subscriptionRequired: isUnmetSubscriptionDrop(drop),
         });
         const hardBlockingReasonHints = blockingReasonHints.filter(
           (reason) => reason !== "missing_drop_instance_id" && reason !== "account_not_linked",
