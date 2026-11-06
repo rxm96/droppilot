@@ -42,9 +42,14 @@ export function notesFor(changelog, version) {
   return sectionBody(changelog, isPrerelease(version) ? UNRELEASED : version) ?? "";
 }
 
+/** Notes are bullets (`- …`), the only lines the in-app history shows; headings alone are not. */
+export function hasNotes(section) {
+  return /^\s*- \S/m.test(toLf(section));
+}
+
 /** Throws when `version` needs notes and the changelog has none for it. */
 export function assertReleasable(changelog, version) {
-  if (!notesRequired(version) || notesFor(changelog, version)) return;
+  if (!notesRequired(version) || hasNotes(notesFor(changelog, version))) return;
   const heading = isPrerelease(version) ? UNRELEASED : version;
   throw new Error(`CHANGELOG.md has no notes for ${version}: add lines under ## [${heading}].`);
 }
@@ -61,7 +66,7 @@ export function withRelease(changelog, version, date) {
   if (!section) throw new Error(`CHANGELOG.md has no "## [${UNRELEASED}]" heading.`);
   if (locateSection(text, version)) throw new Error(`CHANGELOG.md already has ${version}.`);
   const body = text.slice(section.bodyStart, section.bodyEnd).trim();
-  if (!body)
+  if (!hasNotes(body))
     throw new Error(`There is nothing under ## [${UNRELEASED}] in CHANGELOG.md to release.`);
   const rest = text.slice(section.bodyEnd);
   const next =

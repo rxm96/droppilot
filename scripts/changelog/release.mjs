@@ -77,11 +77,16 @@ function main(args) {
   git("tag", tag);
   console.log(`Release ${current} → ${version}: committed and tagged ${tag}.`);
 
+  // Atomic: main and the tag land together or not at all, so CI never builds a tag
+  // whose commit is not on main.
   try {
-    execFileSync("git", ["push", "origin", "main", tag], { cwd: root, stdio: "inherit" });
+    execFileSync("git", ["push", "--atomic", "origin", "main", tag], {
+      cwd: root,
+      stdio: "inherit",
+    });
   } catch {
     throw new Error(
-      `Release committed and tagged locally, push failed. Finish with: git push origin main ${tag}`,
+      `Release committed and tagged locally, push failed. Finish with: git push --atomic origin main ${tag}`,
     );
   }
   console.log(`Pushed main and ${tag}. CI builds and publishes the release.`);

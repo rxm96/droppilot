@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import {
   TEST_BUILD_NOTE,
   assertReleasable,
+  hasNotes,
   notesFor,
   notesRequired,
   releaseBody,
@@ -36,7 +37,8 @@ function body() {
   const version = releaseVersion();
   const changelog = read("CHANGELOG.md");
   assertReleasable(changelog, version);
-  const notes = notesFor(changelog, version) || (notesRequired(version) ? "" : TEST_BUILD_NOTE);
+  const section = notesFor(changelog, version);
+  const notes = hasNotes(section) || notesRequired(version) ? section : TEST_BUILD_NOTE;
   mkdirSync(root + "rn-work", { recursive: true });
   writeFileSync(root + "rn-work/release_body.md", releaseBody(notes, process.env.TECH_NOTES ?? ""));
   console.log(`Wrote rn-work/release_body.md for ${version}.`);

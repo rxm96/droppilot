@@ -3,6 +3,7 @@ import { parseReleaseNotes } from "../../src/shared/releaseHistory.ts";
 import {
   TEST_BUILD_NOTE,
   assertReleasable,
+  hasNotes,
   isPrerelease,
   npmVersionArgs,
   notesFor,
@@ -227,5 +228,34 @@ describe("prepareChangelog", () => {
     expect(() => prepareChangelog(EMPTY_UNRELEASED, "4.0.1-rc.0", "2026-11-07")).toThrow(
       "CHANGELOG.md has no notes for 4.0.1-rc.0: add lines under ## [Unreleased].",
     );
+  });
+});
+
+describe("notes must contain bullets", () => {
+  const HEADINGS_ONLY = EMPTY_UNRELEASED.replace(
+    "## [Unreleased]\n",
+    "## [Unreleased]\n\n### Fixed\n",
+  );
+  const COMMENT_ONLY = EMPTY_UNRELEASED.replace(
+    "## [Unreleased]\n",
+    "## [Unreleased]\n\n<!-- add lines here -->\n",
+  );
+
+  it("refuses a stable release whose Unreleased has only headings", () => {
+    expect(() => prepareChangelog(HEADINGS_ONLY, "4.0.1", "2026-11-07")).toThrow(
+      /nothing under ## \[Unreleased\]/,
+    );
+  });
+
+  it("refuses an rc whose Unreleased has only a comment", () => {
+    expect(() => prepareChangelog(COMMENT_ONLY, "4.0.1-rc.0", "2026-11-07")).toThrow(
+      "CHANGELOG.md has no notes for 4.0.1-rc.0: add lines under ## [Unreleased].",
+    );
+  });
+
+  it("hasNotes needs at least one '- ' bullet", () => {
+    expect(hasNotes("### Fixed")).toBe(false);
+    expect(hasNotes("<!-- x -->")).toBe(false);
+    expect(hasNotes("### Fixed\n\n- a")).toBe(true);
   });
 });
