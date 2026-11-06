@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { formatRefreshCadence, formatRelative, formatUptime } from "./formatters";
+import {
+  formatRefreshCadence,
+  formatRelative,
+  formatUptime,
+  resolveHeroProgress,
+} from "./formatters";
 
 describe("formatRelative", () => {
   const now = 1_000_000_000_000;
@@ -48,5 +53,18 @@ describe("formatRefreshCadence", () => {
 
   it("rounds each bound to whole minutes", () => {
     expect(formatRefreshCadence(3_630_000, 4_230_000, "min")).toBe("61–71 min");
+  });
+});
+
+describe("resolveHeroProgress", () => {
+  it("returns null when nothing is being watched", () => {
+    expect(resolveHeroProgress(null)).toBeNull();
+    expect(resolveHeroProgress(undefined)).toBeNull();
+    expect(resolveHeroProgress(Number.NaN)).toBeNull();
+  });
+  it("rounds and clamps the active drop's percent", () => {
+    expect(resolveHeroProgress(33.4)).toBe(33);
+    expect(resolveHeroProgress(-5)).toBe(0);
+    expect(resolveHeroProgress(140)).toBe(100);
   });
 });

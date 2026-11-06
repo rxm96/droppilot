@@ -3,7 +3,7 @@ import { Stat } from "@renderer/shared/components/ui/stat";
 import { Button } from "@renderer/shared/components/ui/button";
 import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { Check, Pause, RotateCw } from "@renderer/shared/lib/icons";
-import { formatRemainingFromEta } from "./formatters";
+import { formatRemainingFromEta, resolveHeroProgress } from "./formatters";
 import { narrateClaim } from "./claimNarration";
 import { useI18n } from "@renderer/shared/i18n";
 import { TimeText } from "@renderer/shared/components/TimeText";
@@ -14,11 +14,10 @@ export type HeroPanelProps = {
   activeDropTitle?: string;
   activeDropEta?: number | null;
   activeDropRemainingMinutes?: number;
-  targetProgress: number;
   /**
-   * The active drop's own completion %. When present it drives the "% complete"
-   * + bar so they match the card's title + ETA (all about the active drop).
-   * Falls back to the aggregate targetProgress when nothing is being watched.
+   * The active drop's own completion %. Drives the "% complete" + bar so they
+   * match the card's title + ETA (all about the active drop). Null/undefined
+   * when nothing is being watched: the hero then shows "no active drop".
    */
   activeDropProgress?: number | null;
   claimableDrops: number;
@@ -39,7 +38,6 @@ export function HeroPanel({
   activeDropTitle,
   activeDropEta,
   activeDropRemainingMinutes,
-  targetProgress,
   activeDropProgress,
   claimableDrops,
   channelsCount,
@@ -64,7 +62,7 @@ export function HeroPanel({
     }
   }, [onClaimNow, claiming]);
   const hasEta = typeof activeDropEta === "number" && Number.isFinite(activeDropEta);
-  const progressPct = Math.max(0, Math.min(100, Math.round(activeDropProgress ?? targetProgress)));
+  const progressPct = resolveHeroProgress(activeDropProgress);
   const openDrops = Math.max(0, totalDrops - claimedDrops);
   const hasClaimable = claimableDrops > 0;
   const title = activeDropTitle?.trim() || activeGame || t("hero.noActiveTarget");
@@ -120,14 +118,18 @@ export function HeroPanel({
                   }
                 />
               }
-              sub={t("hero.stat.percentComplete", { pct: progressPct })}
+              sub={
+                progressPct === null
+                  ? t("hero.stat.noActiveDrop")
+                  : t("hero.stat.percentComplete", { pct: progressPct })
+              }
               accent
             />
             <div className="mt-2.5 h-[3px] rounded-[2px] bg-[color:var(--dp-border)] overflow-hidden">
               <div
                 className="h-full rounded-[2px]"
                 style={{
-                  width: `${progressPct}%`,
+                  width: `${progressPct ?? 0}%`,
                   background:
                     "linear-gradient(90deg, var(--dp-accent), color-mix(in srgb, var(--dp-accent) 60%, white))",
                   boxShadow: "0 0 12px var(--dp-accent-glow)",

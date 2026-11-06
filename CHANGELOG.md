@@ -23,6 +23,8 @@ GitHub Release (which the app's update history shows) is built from that section
 - "Check for updates" no longer offers an older or skipped version.
 - Moving a game up the priority list now switches to it right away.
 - Priority games now match regardless of upper/lower case.
+- The overview's progress now shows the drop you are watching, instead of the whole game's
+  progress, so it matches the queue below it.
 
 ## [4.0.0] - 2026-11-06
 

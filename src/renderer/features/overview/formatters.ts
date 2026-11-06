@@ -34,6 +34,16 @@ export function formatHourMinute(totalMinutes: number): string {
   return `${h}h ${pad(m)}m`;
 }
 
+/**
+ * The hero's "% complete" is about the active drop only. With nothing being
+ * watched there is no such number, so return null rather than letting callers
+ * fall back to the game-wide aggregate (which made hero and queue disagree).
+ */
+export function resolveHeroProgress(activeDropProgress: number | null | undefined): number | null {
+  if (typeof activeDropProgress !== "number" || !Number.isFinite(activeDropProgress)) return null;
+  return Math.max(0, Math.min(100, Math.round(activeDropProgress)));
+}
+
 export function formatPercent(n: number): string {
   return `${Math.max(0, Math.min(100, Math.round(n)))}%`;
 }

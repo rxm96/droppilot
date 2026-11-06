@@ -582,6 +582,20 @@ export function useAppModel() {
       (drop.status === "locked" || drop.blocked === true || drop.excluded),
   ).length;
   const statsProps = { stats, resetStats };
+  // The active drop's own live completion %, so the Hero card's "% complete"
+  // matches its title + ETA (which are both about the active drop). Null when
+  // nothing is being watched; the hero then says so instead of showing the
+  // game-wide aggregate.
+  const activeDropProgress =
+    activeDropInfo && activeDropInfo.requiredMinutes > 0
+      ? Math.max(
+          0,
+          Math.min(
+            100,
+            Math.round((activeDropInfo.virtualEarned / activeDropInfo.requiredMinutes) * 100),
+          ),
+        )
+      : null;
   const overviewProps = {
     inventory,
     activeGame: displayTargetGame,
@@ -594,7 +608,7 @@ export function useAppModel() {
     activeDrop: activeDropInfo
       ? { id: activeDropInfo.id, earnedMinutes: activeDropInfo.virtualEarned }
       : null,
-    targetProgress,
+    activeDropProgress,
     totalDrops,
     claimedDrops,
     claimableDrops: heroClaimableDrops,
@@ -750,19 +764,6 @@ export function useAppModel() {
     watchEngineSnapshot,
   };
 
-  // The active drop's own live completion %, so the Hero card's "% complete"
-  // matches its title + ETA (which are both about the active drop). Falls back
-  // to the aggregate targetProgress when nothing is actively being watched.
-  const activeDropProgress =
-    activeDropInfo && activeDropInfo.requiredMinutes > 0
-      ? Math.max(
-          0,
-          Math.min(
-            100,
-            Math.round((activeDropInfo.virtualEarned / activeDropInfo.requiredMinutes) * 100),
-          ),
-        )
-      : null;
   const heroProps = {
     demoMode,
     nextWatchAt: watchStats.nextAt || undefined,

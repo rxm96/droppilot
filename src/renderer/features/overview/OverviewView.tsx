@@ -13,7 +13,8 @@ type OverviewProps = {
   activeDropEta?: number | null;
   /** Currently-watched drop snapshot (id + live-ticking earnedMinutes). Passed through to QueuePanel so its active row reflects live progress. */
   activeDrop?: { id: string; earnedMinutes: number } | null;
-  targetProgress: number;
+  /** Active drop's own % (null when nothing is watched). Drives the hero, never the game aggregate. */
+  activeDropProgress?: number | null;
   totalDrops: number;
   claimedDrops: number;
   claimableDrops: number;
@@ -52,7 +53,7 @@ export function OverviewView({
   activeDropRemainingMinutes,
   activeDropEta,
   activeDrop,
-  targetProgress,
+  activeDropProgress,
   totalDrops,
   claimedDrops,
   claimableDrops,
@@ -91,7 +92,7 @@ export function OverviewView({
           activeDropTitle={activeDropTitle}
           activeDropEta={activeDropEta}
           activeDropRemainingMinutes={activeDropRemainingMinutes}
-          targetProgress={targetProgress}
+          activeDropProgress={activeDropProgress}
           claimableDrops={claimableDrops}
           channelsCount={channelsCount}
           totalDrops={totalDrops}
