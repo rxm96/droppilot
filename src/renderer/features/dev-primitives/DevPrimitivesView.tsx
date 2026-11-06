@@ -48,7 +48,6 @@ export function DevPrimitivesView() {
       <Titlebar
         theme={theme}
         onThemeToggle={toggleTheme}
-        onSettingsClick={() => {}}
         connectionState="connected"
         apiLatencyMs={124}
       />
@@ -57,11 +56,9 @@ export function DevPrimitivesView() {
         onChange={setView}
         items={[
           { key: "overview", label: "overview" },
-          { key: "inventory", label: "inventory" },
-          { key: "control", label: "control" },
-          { key: "priorities", label: "priorities" },
-          { key: "settings", label: "settings" },
-          { key: "debug", label: "debug" },
+          { key: "inventory", label: "drops", badge: 1 },
+          { key: "priorities", label: "games" },
+          { key: "stats", label: "stats" },
         ]}
         right={
           <>
@@ -225,7 +222,7 @@ export function DevPrimitivesView() {
         {/* Feed */}
         <section>
           <SectionLabel>activity feed</SectionLabel>
-          <div className="mt-3 max-w-md rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] px-4">
+          <div className="mt-3 flex max-w-md flex-col gap-3.5 rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] p-4">
             <FeedItem
               tone="ok"
               icon={<Check />}
@@ -251,7 +248,6 @@ export function DevPrimitivesView() {
               icon={<AlertTriangle />}
               msg="No progress · probe recovery"
               meta={<>apex · 2h ago</>}
-              last
             />
           </div>
         </section>

@@ -1,16 +1,7 @@
 import * as React from "react";
 import { Logo } from "@renderer/shared/components/Logo";
 import { Pill } from "@renderer/shared/components/ui/pill";
-import {
-  Sun,
-  Moon,
-  Settings,
-  Minus,
-  Square,
-  X,
-  Download,
-  Sparkles,
-} from "@renderer/shared/lib/icons";
+import { Sun, Moon, Minus, Square, X, Download, Sparkles } from "@renderer/shared/lib/icons";
 import { cn } from "@renderer/shared/lib/utils";
 import { useI18n } from "@renderer/shared/i18n";
 
@@ -30,7 +21,6 @@ export type TitlebarProps = {
   title?: string;
   theme: TitlebarTheme;
   onThemeToggle: () => void;
-  onSettingsClick?: () => void;
 
   /** Current auto-updater state; drives the "update available / ready" chip. */
   updateStatus?: { state: TitlebarUpdateState };
@@ -55,7 +45,6 @@ export function Titlebar({
   title = "droppilot",
   theme,
   onThemeToggle,
-  onSettingsClick,
   updateStatus,
   onDownloadUpdate,
   onInstallUpdate,
@@ -167,7 +156,7 @@ export function Titlebar({
         )}
         {typeof apiLatencyMs === "number" && <Pill tone="dim">api {apiLatencyMs}ms</Pill>}
 
-        {/* Icon actions: theme + settings */}
+        {/* Icon action: theme (settings lives in the nav bar) */}
         <button
           type="button"
           onClick={onThemeToggle}
@@ -181,17 +170,6 @@ export function Titlebar({
             <Sun size={13} strokeWidth={1.7} />
           )}
         </button>
-        {onSettingsClick && (
-          <button
-            type="button"
-            onClick={onSettingsClick}
-            aria-label={t("chrome.window.openSettings")}
-            title={t("chrome.window.openSettings")}
-            className="flex h-[26px] w-[26px] items-center justify-center rounded-[var(--dp-radius-xs)] text-[color:var(--dp-text-dimmer)] transition-colors hover:bg-[color:var(--dp-bg-elevated)] hover:text-[color:var(--dp-text-dim)]"
-          >
-            <Settings size={13} strokeWidth={1.7} />
-          </button>
-        )}
 
         {/* Window controls (Windows / Linux only). macOS uses native traffic lights.
             self-stretch overrides the parent's items-center so this wrapper

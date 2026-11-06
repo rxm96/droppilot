@@ -1,116 +1,32 @@
-import type { ClaimStatus, ErrorInfo, InventoryState } from "@renderer/shared/types";
-import { HeroPanel } from "./HeroPanel";
-import { QueuePanel } from "./QueuePanel";
+import { HeroPanel, type HeroPanelProps } from "./HeroPanel";
+import { NeedsYouPanel, type NeedsYouPanelProps } from "./NeedsYouPanel";
+import { EnginePanel, type EnginePanelProps } from "./EnginePanel";
+import { PlanPanel, type PlanPanelProps } from "./PlanPanel";
 import { ActivityPanel } from "./ActivityPanel";
-import { EnginePanel } from "./EnginePanel";
-import { AttentionStrip } from "./AttentionStrip";
+import type { ChannelPickerProps } from "./ChannelPicker";
 
 type OverviewProps = {
-  inventory: InventoryState;
-  activeGame: string;
-  activeDropTitle?: string;
-  activeDropEta?: number | null;
-  /** Currently-watched drop snapshot (id + live-ticking earnedMinutes). Passed through to QueuePanel so its active row reflects live progress. */
-  activeDrop?: { id: string; earnedMinutes: number } | null;
-  /** Active drop's own % (null when nothing is watched). Drives the hero, never the game aggregate. */
-  activeDropProgress?: number | null;
-  totalDrops: number;
-  claimedDrops: number;
-  claimableDrops: number;
-  blockedDrops: number;
-  channelsCount: number;
-  canWatchTarget: boolean;
-  watchDecision:
-    | "no-target"
-    | "suppressed"
-    | "cooldown"
-    | "watching-progress"
-    | "watching-recover"
-    | "watching-no-farmable"
-    | "watching-no-watchable"
-    | "idle-loading-channels"
-    | "idle-no-channels"
-    | "idle-ready"
-    | "idle-no-watchable-drops";
-  watchSuppressionReason: "manual-stop" | "stall-stop" | null;
-  lastWatchOk?: number | null;
-  watchingSince?: number | null;
-  inventoryFetchedAt?: number | null;
-  watchError?: ErrorInfo | null;
-  onPause?: () => void;
-  onSwitchTarget?: () => void;
-  onClaimNow?: () => void | Promise<void>;
-  claimStatus?: ClaimStatus | null;
-  refreshMinMs?: number;
-  refreshMaxMs?: number;
+  hero: Omit<HeroPanelProps, "picker">;
+  picker: ChannelPickerProps;
+  needsYou: NeedsYouPanelProps;
+  engine: EnginePanelProps;
+  plan: PlanPanelProps;
 };
 
-export function OverviewView({
-  inventory,
-  activeGame,
-  activeDropTitle,
-  activeDropEta,
-  activeDrop,
-  activeDropProgress,
-  totalDrops,
-  claimedDrops,
-  claimableDrops,
-  channelsCount,
-  watchDecision,
-  lastWatchOk,
-  watchingSince,
-  watchError,
-  onPause,
-  onSwitchTarget,
-  onClaimNow,
-  claimStatus,
-  refreshMinMs,
-  refreshMaxMs,
-}: OverviewProps) {
-  const items =
-    inventory.status === "ready"
-      ? inventory.items
-      : inventory.status === "error"
-        ? (inventory.items ?? [])
-        : [];
-
-  const isLive = watchDecision === "watching-progress" || watchDecision === "watching-recover";
-
+/**
+ * The merged overview (Overview + the former Control view): hero with channel
+ * switching, needs-you, engine, plan · today and activity.
+ */
+export function OverviewView({ hero, picker, needsYou, engine, plan }: OverviewProps) {
   return (
-    <div className="grid gap-7" style={{ gridTemplateColumns: "1fr 320px" }}>
-      <div className="flex flex-col gap-6">
-        <AttentionStrip
-          claimableDrops={claimableDrops}
-          watchError={watchError}
-          activeGame={activeGame}
-          channelsCount={channelsCount}
-        />
-        <HeroPanel
-          activeGame={activeGame}
-          activeDropTitle={activeDropTitle}
-          activeDropEta={activeDropEta}
-          activeDropProgress={activeDropProgress}
-          claimableDrops={claimableDrops}
-          channelsCount={channelsCount}
-          totalDrops={totalDrops}
-          claimedDrops={claimedDrops}
-          isLive={isLive}
-          onPause={onPause}
-          onSwitchTarget={onSwitchTarget}
-          onClaimNow={onClaimNow}
-          claimStatus={claimStatus}
-        />
-        <QueuePanel items={items} activeDrop={activeDrop ?? null} targetGame={activeGame} />
+    <div className="mx-auto grid max-w-[1280px] grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)]">
+      <HeroPanel {...hero} picker={picker} />
+      <div className="flex flex-col gap-5">
+        <NeedsYouPanel {...needsYou} />
+        <EnginePanel {...engine} />
       </div>
-      <div className="flex flex-col gap-4">
-        <ActivityPanel />
-        <EnginePanel
-          lastWatchOk={lastWatchOk}
-          watchingSince={watchingSince}
-          refreshMinMs={refreshMinMs}
-          refreshMaxMs={refreshMaxMs}
-        />
-      </div>
+      <PlanPanel {...plan} />
+      <ActivityPanel />
     </div>
   );
 }

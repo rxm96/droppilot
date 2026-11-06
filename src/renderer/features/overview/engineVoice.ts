@@ -1,5 +1,5 @@
-import type { InventoryItem, WatchingState } from "@renderer/shared/types";
-import { DropChannelRestriction } from "@renderer/shared/domain/dropDomain";
+// Engine Voice: the plain-language "why / next" narration of the watch
+// engine decision (moved from the removed Control view, content unchanged).
 
 export type WatchEngineDecision =
   | "no-target"
@@ -70,20 +70,6 @@ export const mapWatchEngineDecisionLabel = (
       return t("control.watchEngineDecision.idleNoWatchableDrops");
     default:
       return decision;
-  }
-};
-
-export const mapWatchEngineSuppressionReasonLabel = (
-  reason: WatchEngineSuppressionReason,
-  t: Translator,
-): string => {
-  switch (reason) {
-    case "manual-stop":
-      return t("control.watchEngineSuppression.manualStop");
-    case "stall-stop":
-      return t("control.watchEngineSuppression.stallStop");
-    default:
-      return reason;
   }
 };
 
@@ -193,7 +179,7 @@ export const narrateEngineCountdown = (
   return "";
 };
 
-/** Blocking reason helpers (preserved from ControlView). */
+/** Plain-language text for a drop blocking hint (plan table tooltips). */
 export const formatBlockingReason = (reason: string | undefined, t: Translator): string => {
   if (!reason) return t("inventory.blockReason.unknown");
   if (reason.startsWith("missing_prerequisite_drops:")) {
@@ -220,34 +206,4 @@ export const formatBlockingReason = (reason: string | undefined, t: Translator):
     default:
       return t("inventory.blockReason.unknown");
   }
-};
-
-export const pickDisplayBlockingReason = (reasons: string[]): string | undefined => {
-  const cleaned = reasons
-    .map((reason) => (typeof reason === "string" ? reason.trim() : ""))
-    .filter(Boolean);
-  return cleaned[0];
-};
-
-/** Whether a drop can progress given the channel currently being watched. */
-export const canDropProgressOnWatchingChannel = (
-  drop: InventoryItem,
-  watching: WatchingState,
-): boolean => {
-  if (!watching) return true;
-  const restriction = DropChannelRestriction.fromInventoryItem(drop);
-  return restriction.allowsWatching(watching);
-};
-
-/** Format a channel-restricted drop's reason text with allowed-login preview. */
-export const formatChannelRestrictionReason = (drop: InventoryItem, t: Translator): string => {
-  const allowedLogins = Array.from(DropChannelRestriction.fromInventoryItem(drop).logins);
-  if (allowedLogins.length > 0) {
-    const preview = allowedLogins
-      .slice(0, 3)
-      .map((login) => `@${login}`)
-      .join(", ");
-    return t("control.dropReason.channelRestrictedChannels", { channels: preview });
-  }
-  return t("control.dropReason.channelRestricted");
 };

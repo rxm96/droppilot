@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { narrateEngineCountdown } from "./controlHelpers";
+import { narrateEngineCountdown } from "./engineVoice";
 
 const DICT: Record<string, string> = {
   "control.watchEngineNext.suppressedCountdown": "Resuming in {time} after the stall hold.",

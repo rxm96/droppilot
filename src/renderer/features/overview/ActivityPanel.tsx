@@ -125,29 +125,35 @@ export function ActivityPanel({ maxItems = 8 }: ActivityPanelProps) {
   const slice = React.useMemo(() => events.slice(0, maxItems), [events, maxItems]);
 
   return (
-    <div className="rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] px-4 py-4">
-      <span className="block font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--dp-text-dim)] mb-3">
+    <section
+      aria-labelledby="activity-title"
+      className="rounded-[var(--dp-radius-xl)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] px-5 py-[18px]"
+    >
+      <h2
+        id="activity-title"
+        className="m-0 mb-3.5 font-mono text-[11px] font-normal text-[color:var(--dp-text-dimmer)]"
+      >
         {t("activity.header")}
-      </span>
+      </h2>
       {slice.length === 0 ? (
-        <div className="py-2 font-mono text-[11px] text-[color:var(--dp-text-dimmer)]">
-          {t("activity.empty")}
-        </div>
+        <div className="text-[13px] text-[color:var(--dp-text-dimmer)]">{t("activity.empty")}</div>
       ) : (
-        slice.map((event, idx) => {
-          const { icon, tone } = visualFor(event.kind);
-          return (
-            <FeedItem
-              key={event.id}
-              tone={tone}
-              icon={icon}
-              msg={renderMessage(event, t)}
-              meta={renderMeta(event, t)}
-              last={idx === slice.length - 1}
-            />
-          );
-        })
+        <ul className="m-0 flex list-none flex-col gap-3.5 p-0">
+          {slice.map((event) => {
+            const { icon, tone } = visualFor(event.kind);
+            return (
+              <li key={event.id}>
+                <FeedItem
+                  tone={tone}
+                  icon={icon}
+                  msg={renderMessage(event, t)}
+                  meta={renderMeta(event, t)}
+                />
+              </li>
+            );
+          })}
+        </ul>
       )}
-    </div>
+    </section>
   );
 }
