@@ -30,6 +30,8 @@ type Params = {
   allowUnlinkedGames: boolean;
   isInCooldown: (game: string, now?: number) => boolean;
   channels: ChannelEntry[];
+  /** Game the `channels` snapshot was fetched for; gates the idle no-farmable check. */
+  channelsGame: string;
   channelsLoading: boolean;
   channelsRefreshing: boolean;
   channelAllowlist: ChannelAllowlist | null;
@@ -67,6 +69,7 @@ export function useStallRecovery({
   allowUnlinkedGames,
   isInCooldown,
   channels,
+  channelsGame,
   channelsLoading,
   channelsRefreshing,
   channelAllowlist,
@@ -197,6 +200,7 @@ export function useStallRecovery({
         activeTargetGame,
         channelAllowlist,
         channels,
+        channelsGame,
         channelsLoading,
         channelsRefreshing,
         noFarmable: noFarmableDropRef.current,
@@ -256,6 +260,7 @@ export function useStallRecovery({
     canWatchTarget,
     channels,
     channelAllowlist,
+    channelsGame,
     channelsLoading,
     channelsRefreshing,
     clearWatching,

@@ -89,6 +89,7 @@ export function useChannels({
     channels: store.channels,
     channelDiff: store.channelDiff,
     channelError: store.channelError,
+    channelsGame: store.fetchedGame,
     channelsLoading: store.channelsLoading,
     channelsRefreshing: store.channelsRefreshing,
     autoSwitch: store.autoSwitch,

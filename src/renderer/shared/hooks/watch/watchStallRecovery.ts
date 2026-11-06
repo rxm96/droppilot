@@ -43,6 +43,8 @@ export type IdleNoFarmableInput = {
   activeTargetGame: string;
   channelAllowlist: ChannelAllowlist | null;
   channels: ChannelEntry[];
+  /** Game the current `channels` snapshot was fetched for (`""` = none yet). */
+  channelsGame: string;
   channelsLoading: boolean;
   channelsRefreshing: boolean;
   noFarmable: NoFarmableMarker | null;
@@ -66,6 +68,7 @@ export const decideIdleNoFarmable = (input: IdleNoFarmableInput): StallRecoveryD
     activeTargetGame,
     channelAllowlist,
     channels,
+    channelsGame,
     channelsLoading,
     channelsRefreshing,
     noFarmable,
@@ -82,6 +85,13 @@ export const decideIdleNoFarmable = (input: IdleNoFarmableInput): StallRecoveryD
   if ((channelsLoading || channelsRefreshing) && channels.length === 0) {
     // Snapshot still loading — keep the marker untouched (matches the old
     // early-return that skipped the `noFarmableDropRef.current = null` reset).
+    return { actions: [], noFarmable };
+  }
+  if (channelsGame.trim() !== targetGame.trim()) {
+    // No snapshot for this target yet: right after a retarget the fetch is only started in
+    // the same commit, so `channelsLoading` hasn't flipped and `channels` is still empty (or
+    // the previous game's). Judging that would cool down a game whose allowlisted channels may
+    // be live. Wait for the target's own snapshot, same as the loading case above.
     return { actions: [], noFarmable };
   }
   const hasAllowlistedChannel = channels.some((channel) =>
