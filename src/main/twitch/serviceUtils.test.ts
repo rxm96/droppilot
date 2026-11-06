@@ -514,4 +514,34 @@ describe("collectBlockingReasonHints", () => {
       collectBlockingReasonHints({ ...base, subscriptionRequired: true, isClaimed: true }),
     ).toEqual([]);
   });
+
+  it("does not block a finished drop after the campaign ended while the claim window is open", () => {
+    expect(
+      collectBlockingReasonHints({
+        ...base,
+        campaignExpired: true,
+        progressDone: true,
+        dropInstanceId: "inst-1",
+        withinClaimWindow: true,
+      }),
+    ).toEqual([]);
+  });
+
+  it("blocks a finished drop once the claim window has closed", () => {
+    expect(
+      collectBlockingReasonHints({
+        ...base,
+        campaignExpired: true,
+        progressDone: true,
+        dropInstanceId: "inst-1",
+        withinClaimWindow: false,
+      }),
+    ).toEqual(["claim_window_closed"]);
+  });
+
+  it("still blocks earning on an unfinished drop of an expired campaign", () => {
+    expect(collectBlockingReasonHints({ ...base, campaignExpired: true })).toEqual([
+      "campaign_expired",
+    ]);
+  });
 });

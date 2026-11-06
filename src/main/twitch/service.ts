@@ -131,6 +131,12 @@ export class TwitchService {
     }
   }
 
+  /** Drop all per-account caches; call whenever the signed-in account changes. */
+  resetUserState(): void {
+    this.client.resetUserState();
+    this.watchPlaylist = null;
+  }
+
   async revalidateSession(): Promise<RevalidateResult> {
     return this.client.revalidateSession();
   }

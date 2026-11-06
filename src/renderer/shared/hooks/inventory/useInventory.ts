@@ -21,6 +21,7 @@ import {
   getElapsedWholeMinutes,
   InventoryClaimEngine,
   InventoryPubSubReconciler,
+  markDropClaimedInInventoryState,
   markUpdatedInventoryChange,
   mergeProgressAnchors,
   reconcileFetchedInventoryItems,
@@ -45,17 +46,6 @@ const NOOP_CLAIM = () => {};
 const NOOP_AUTH = (_message?: string) => {};
 type FetchInventoryOpts = { forceLoading?: boolean };
 
-// Synthetic drop-claim event so a successful auto-claim flows through the same
-// reconciler path the PubSub handler uses — flips the drop to status "claimed"
-// in local state immediately (no waiting for the next inventory reload).
-const buildLocalClaimEvent = (drop: InventoryItem): UserPubSubEvent => ({
-  kind: "drop-claim",
-  at: Date.now(),
-  topic: "auto-claim-local",
-  messageType: "drop-claim",
-  dropId: drop.id,
-  dropInstanceId: drop.dropInstanceId,
-});
 export {
   applyDropClaimToInventoryItems,
   applyDropProgressToInventoryItems,
@@ -84,6 +74,12 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
   const allowUnlinkedBadgeEmotes = opts?.allowUnlinkedBadgeEmotes === true;
   const allowUnlinkedGames = opts?.allowUnlinkedGames === true;
   const [inventory, setInventory] = useState<InventoryState>({ status: "idle" });
+  // Flip a drop to "claimed" locally right after a successful claim call, so the
+  // UI updates without waiting for the next inventory reload.
+  const markClaimed = useCallback(
+    (drop: InventoryItem) => setInventory((prev) => markDropClaimedInInventoryState(prev, drop)),
+    [],
+  );
   const [campaigns, setCampaigns] = useState<CampaignSummary[]>([]);
   const [campaignsLoading, setCampaignsLoading] = useState(false);
   const [inventoryRefreshing, setInventoryRefreshing] = useState(false);
@@ -299,11 +295,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
               onAuthError,
               onClaimed,
               setClaimStatus,
-              markClaimed: (drop) =>
-                setInventory((prev) => {
-                  const result = applyPubSubEventToInventoryState(prev, buildLocalClaimEvent(drop));
-                  return result.patched ? result.nextInventory : prev;
-                }),
+              markClaimed,
             });
           }
         } catch (err) {
@@ -336,7 +328,16 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
         }
       }
     },
-    [inventory, onClaimed, onMinutesEarned, onAuthError, autoClaimEnabled, demoMode, isLinked],
+    [
+      inventory,
+      onClaimed,
+      markClaimed,
+      onMinutesEarned,
+      onAuthError,
+      autoClaimEnabled,
+      demoMode,
+      isLinked,
+    ],
   );
 
   fetchInventoryRef.current = fetchInventory;
@@ -370,8 +371,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
       event: UserPubSubEvent,
     ): {
       patched: boolean;
-      hasUnclaimedInCampaign?: boolean;
-      claimedItem?: InventoryItem;
+      claimableItem?: InventoryItem;
     } => {
       let patchResult: ReturnType<typeof applyPubSubEventToInventoryState> | null = null;
 
@@ -388,9 +388,6 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
       if (result.deltaMinutes > 0) {
         onMinutesEarned(result.deltaMinutes);
       }
-      if (result.claimedItem && autoClaimEnabled) {
-        onClaimed({ title: result.claimedItem.title, game: result.claimedItem.game });
-      }
       const eventAt = resolvePubSubEventAt(event, Date.now());
       const anchorIds = getPatchedAnchorIds(result);
       if (anchorIds.length > 0) {
@@ -402,8 +399,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
       }
       return {
         patched: true,
-        hasUnclaimedInCampaign: result.hasUnclaimedInCampaign,
-        claimedItem: result.claimedItem,
+        claimableItem: result.claimableItem,
       };
     };
 
@@ -444,8 +440,10 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
             claimDrop: (claimPayload) => window.electronAPI.twitch.claimDrop(claimPayload),
             onAuthError,
             setClaimStatus,
+            onClaimed,
+            markClaimed,
             event: payload,
-            claimedItem: result.claimedItem,
+            claimableItem: result.claimableItem,
           });
         }
         // Claim availability and prerequisite unlocks can lag for a few seconds after the event.
@@ -479,7 +477,7 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
       pubSubReconciler.clearScheduledReconcile();
       if (typeof unsubscribe === "function") unsubscribe();
     };
-  }, [demoMode, isLinked, onClaimed, onMinutesEarned, onAuthError, autoClaimEnabled]);
+  }, [demoMode, isLinked, onClaimed, markClaimed, onMinutesEarned, onAuthError, autoClaimEnabled]);
 
   useEffect(() => {
     if (inventoryChanges.added.size === 0 && inventoryChanges.updated.size === 0) return;
@@ -516,13 +514,9 @@ export function useInventory(isLinked: boolean, events?: InventoryEvents, opts?:
       onAuthError,
       onClaimed,
       setClaimStatus,
-      markClaimed: (drop) =>
-        setInventory((prev) => {
-          const result = applyPubSubEventToInventoryState(prev, buildLocalClaimEvent(drop));
-          return result.patched ? result.nextInventory : prev;
-        }),
+      markClaimed,
     });
-  }, [inventory, onAuthError, onClaimed, setClaimStatus]);
+  }, [inventory, onAuthError, onClaimed, markClaimed, setClaimStatus]);
 
   /**
    * Polls the live drop progress (DropCurrentSessionContext GQL) and patches

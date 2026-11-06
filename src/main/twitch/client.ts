@@ -475,6 +475,17 @@ export class TwitchClient {
     }
   }
 
+  /**
+   * Forget everything tied to the signed-in account (validated identity, web
+   * cookies, integrity token). Call on login/logout so a different account is
+   * never served the previous one's user id, login or cookies.
+   */
+  resetUserState(): void {
+    this.validateInfo = undefined;
+    this.cookieHeader = "";
+    this.integrityToken = undefined;
+  }
+
   async getValidateInfo(): Promise<ValidateInfo> {
     if (this.validateInfo) return this.validateInfo;
 

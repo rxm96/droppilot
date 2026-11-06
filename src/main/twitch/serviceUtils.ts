@@ -451,7 +451,9 @@ export function collectBlockingReasonHints({
   const reasons: string[] = [];
   if (!linked) reasons.push("account_not_linked");
   if (campaignNotStarted) reasons.push("campaign_not_started");
-  if (campaignExpired) reasons.push("campaign_expired");
+  // A finished drop stays claimable for 24h after the campaign ends; that limit is
+  // `claim_window_closed` below. Expiry only blocks earning further minutes.
+  if (campaignExpired && !progressDone) reasons.push("campaign_expired");
   if (missingPrerequisiteDropIds.length > 0) {
     reasons.push(`missing_prerequisite_drops:${missingPrerequisiteDropIds.join(",")}`);
   } else if (hasPreconditionsMet === false) {

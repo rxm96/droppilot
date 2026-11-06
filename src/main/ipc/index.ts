@@ -14,7 +14,7 @@ import type { PriorityPlan } from "../twitch/channels";
 import { TwitchServiceError } from "../twitch/errors";
 import type { ChannelTracker, ChannelTrackerDiffEvent } from "../twitch/tracker";
 import type { UserPubSub, UserPubSubEvent } from "../twitch/userPubSub";
-import { allowsPrereleaseBuilds } from "../../shared/updateChannels";
+import { allowsPrereleaseBuilds, getAvailableUpdateVersion } from "../../shared/updateChannels";
 import { loadReleaseHistory, type ReleaseCache } from "../../shared/releaseHistory";
 import { sendWebhook } from "../integrations/webhook";
 
@@ -146,6 +146,8 @@ export function registerIpcHandlers(deps: {
 
   ipcMain.handle("auth/login", async (): Promise<AuthResult> => {
     const result = await auth.login();
+    // The new token may belong to a different account than the cached identity.
+    twitch.resetUserState();
     userPubSub?.notifySessionChanged();
     return result;
   });
@@ -170,8 +172,12 @@ export function registerIpcHandlers(deps: {
     return loadSession();
   });
 
-  ipcMain.handle("auth/logout", async () => {
+  ipcMain.handle("auth/logout", async (_e, opts?: { forgetWebLogin?: boolean }) => {
     await clearSession();
+    twitch.resetUserState();
+    if (opts?.forgetWebLogin === true) {
+      await auth.forgetWebLogin().catch((err) => console.warn("[Auth] forgetWebLogin failed", err));
+    }
     userPubSub?.notifySessionChanged();
     return true;
   });
@@ -446,9 +452,9 @@ export function registerIpcHandlers(deps: {
       const settings = await loadSettings();
       autoUpdater.allowPrerelease = allowsPrereleaseBuilds(settings.updateChannel);
       const result = await autoUpdater.checkForUpdates();
-      const version = result?.updateInfo?.version;
-      const releaseNotes = normalizeReleaseNotes(result?.updateInfo?.releaseNotes);
-      if (version && version !== app.getVersion()) {
+      const version = getAvailableUpdateVersion(result);
+      if (version) {
+        const releaseNotes = normalizeReleaseNotes(result?.updateInfo?.releaseNotes);
         return { ok: true, status: "available", version, releaseNotes };
       }
       return { ok: true, status: "none" };

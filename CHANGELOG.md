@@ -11,6 +11,19 @@ GitHub Release (which the app's update history shows) is built from that section
 
 ## [Unreleased]
 
+### Fixed
+
+- Drops that became ready to claim are no longer shown as claimed before the claim actually
+  went through. If a claim fails, or auto-claim is off, the drop stays available to claim.
+- Finished drops can still be claimed during the 24 hours after their campaign ends.
+- Logging out and back in with a different Twitch account no longer keeps using the previous
+  account. Logging out also signs the login window out of Twitch.
+- A damaged settings or stats file is now restored from its backup instead of being reset to
+  defaults.
+- "Check for updates" no longer offers an older or skipped version.
+- Moving a game up the priority list now switches to it right away.
+- Priority games now match regardless of upper/lower case.
+
 ## [4.0.0] - 2026-11-06
 
 ### Fixed

@@ -2,6 +2,7 @@ import { app } from "electron";
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
 import { DailyMap, normalizeDaily, addToDaily, pruneDaily } from "./statsDaily";
+import { classifyJsonText, type RawJsonRead } from "./jsonText";
 
 export type StatsData = {
   totalMinutes: number;
@@ -54,9 +55,7 @@ async function atomicWrite(file: string, contents: string): Promise<void> {
   await fs.rename(tmp, file);
 }
 
-type RawRead = { status: "ok"; raw: string } | { status: "missing" } | { status: "corrupt" };
-
-async function readRawJson(file: string): Promise<RawRead> {
+async function readRawJson(file: string): Promise<RawJsonRead> {
   let raw: string;
   try {
     raw = await fs.readFile(file, "utf-8");
@@ -64,9 +63,7 @@ async function readRawJson(file: string): Promise<RawRead> {
     if ((err as NodeJS.ErrnoException)?.code === "ENOENT") return { status: "missing" };
     return { status: "corrupt" };
   }
-  // An empty/whitespace file means a previous write was truncated mid-flight.
-  if (!raw.trim()) return { status: "corrupt" };
-  return { status: "ok", raw };
+  return classifyJsonText(raw);
 }
 
 function normalizeClaimsByGame(input: unknown): Record<string, number> {

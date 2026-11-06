@@ -44,7 +44,10 @@ type AutoClaimDeps = ClaimEngineBaseDeps & {
 
 type PubSubClaimDeps = ClaimEngineBaseDeps & {
   event: UserPubSubEvent;
-  claimedItem?: InventoryItem;
+  /** The inventory drop the event made claimable, when it is known locally. */
+  claimableItem?: InventoryItem;
+  onClaimed?: (payload: { title: string; game: string }) => void;
+  markClaimed?: (drop: InventoryItem) => void;
 };
 
 export const isAutoClaimCandidate = (item: InventoryItem, now = Date.now()): boolean => {
@@ -195,12 +198,12 @@ export class InventoryClaimEngine {
   }
 
   async claimFromPubSubDropClaim(deps: PubSubClaimDeps): Promise<void> {
-    const { event, claimedItem } = deps;
+    const { event, claimableItem } = deps;
     if (event.kind !== "drop-claim") return;
 
     const dropInstanceIdFromEvent = event.dropInstanceId?.trim();
     const dropIdFromEvent = event.dropId?.trim();
-    const claimId = dropIdFromEvent || claimedItem?.id || dropInstanceIdFromEvent;
+    const claimId = dropIdFromEvent || claimableItem?.id || dropInstanceIdFromEvent;
     if (!claimId) return;
 
     const now = deps.now?.() ?? Date.now();
@@ -208,18 +211,20 @@ export class InventoryClaimEngine {
     this.markClaimAttempt(claimId, now);
 
     const claimPayload: ClaimDropPayload = {
-      dropInstanceId: dropInstanceIdFromEvent || claimedItem?.dropInstanceId,
-      dropId: dropIdFromEvent || claimedItem?.id,
-      campaignId: claimedItem?.campaignId,
+      dropInstanceId: dropInstanceIdFromEvent || claimableItem?.dropInstanceId,
+      dropId: dropIdFromEvent || claimableItem?.id,
+      campaignId: claimableItem?.campaignId,
     };
 
     try {
       const response = await deps.claimDrop(claimPayload);
       throwIfClaimErrorResponse(response);
-      if (claimedItem) {
+      if (claimableItem) {
+        deps.onClaimed?.({ title: claimableItem.title, game: claimableItem.game });
+        deps.markClaimed?.(claimableItem);
         deps.setClaimStatus({
           kind: "success",
-          message: `Auto-claimed: ${claimedItem.title}`,
+          message: `Auto-claimed: ${claimableItem.title}`,
           at: Date.now(),
         });
       }
@@ -235,7 +240,7 @@ export class InventoryClaimEngine {
         kind: "error",
         message: errInfo.message,
         code: errInfo.code,
-        title: claimedItem?.title ?? dropIdFromEvent,
+        title: claimableItem?.title ?? dropIdFromEvent,
         at: Date.now(),
       });
     }

@@ -1,5 +1,6 @@
 import type { InventoryItem, InventoryState, UserPubSubEvent } from "@renderer/shared/types";
 import {
+  applyDropClaimableToInventoryItems,
   applyDropClaimToInventoryItems,
   applyDropProgressToInventoryItems,
 } from "./inventoryPatch";
@@ -16,20 +17,49 @@ export type InventoryPubSubPatchResult = {
   updatedIds: string[];
   deltaMinutes: number;
   nextTotalMinutes?: number;
-  claimedItem?: InventoryItem;
-  hasUnclaimedInCampaign?: boolean;
+  claimableItem?: InventoryItem;
+};
+
+const getPatchableItems = (inventory: InventoryState): InventoryItem[] | null =>
+  inventory.status === "ready"
+    ? inventory.items
+    : inventory.status === "error" && inventory.items
+      ? inventory.items
+      : null;
+
+// `items` came from a "ready" or "error" inventory (idle/loading have none), so
+// rebuild per-status to keep a valid InventoryState — a spread of idle/loading +
+// items is not.
+const withItems = (inventory: InventoryState, items: InventoryItem[]): InventoryState =>
+  inventory.status === "error" ? { ...inventory, items } : { status: "ready", items };
+
+/**
+ * Flips one drop to "claimed" in local state after a successful claim call, so
+ * the UI updates without waiting for the next inventory fetch. Returns the same
+ * state object when nothing changed.
+ */
+export const markDropClaimedInInventoryState = (
+  inventory: InventoryState,
+  drop: InventoryItem,
+): InventoryState => {
+  const items = getPatchableItems(inventory);
+  if (!items?.length) return inventory;
+  const patch = applyDropClaimToInventoryItems(items, {
+    kind: "drop-claim",
+    at: Date.now(),
+    topic: "claim-local",
+    messageType: "drop-claim",
+    dropId: drop.id,
+    dropInstanceId: drop.dropInstanceId,
+  });
+  return patch.changed ? withItems(inventory, patch.items) : inventory;
 };
 
 export const applyPubSubEventToInventoryState = (
   inventory: InventoryState,
   event: UserPubSubEvent,
 ): InventoryPubSubPatchResult => {
-  const items =
-    inventory.status === "ready"
-      ? inventory.items
-      : inventory.status === "error" && inventory.items
-        ? inventory.items
-        : null;
+  const items = getPatchableItems(inventory);
   if (!items?.length) {
     return {
       patched: false,
@@ -43,7 +73,7 @@ export const applyPubSubEventToInventoryState = (
     event.kind === "drop-progress"
       ? applyDropProgressToInventoryItems(items, event)
       : event.kind === "drop-claim"
-        ? applyDropClaimToInventoryItems(items, event)
+        ? applyDropClaimableToInventoryItems(items, event)
         : null;
   if (!patch || !patch.changed) {
     return {
@@ -54,34 +84,14 @@ export const applyPubSubEventToInventoryState = (
     };
   }
 
-  let hasUnclaimedInCampaign: boolean | undefined;
-  if (event.kind === "drop-claim" && patch.updatedId) {
-    const updated = patch.items.find((item) => item.id === patch.updatedId);
-    const campaignId = updated?.campaignId?.trim();
-    if (campaignId) {
-      hasUnclaimedInCampaign = patch.items.some(
-        (item) => item.campaignId?.trim() === campaignId && item.status !== "claimed",
-      );
-    }
-  }
-
-  // By this point `items` was non-empty, so `inventory` is either "ready" or
-  // "error" (idle/loading returned early above). Reconstruct per-status so the
-  // result stays a valid InventoryState — a spread of idle/loading + items is not.
-  const nextInventory: InventoryState =
-    inventory.status === "error"
-      ? { ...inventory, items: patch.items }
-      : { status: "ready", items: patch.items };
-
   return {
     patched: true,
-    nextInventory,
+    nextInventory: withItems(inventory, patch.items),
     updatedId: patch.updatedId,
     updatedIds: patch.updatedIds ?? [],
     deltaMinutes: patch.deltaMinutes,
     nextTotalMinutes: patch.totalMinutes,
-    claimedItem: patch.claimedItem,
-    hasUnclaimedInCampaign,
+    claimableItem: patch.claimableItem,
   };
 };
 

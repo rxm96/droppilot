@@ -1,4 +1,4 @@
-import { BrowserWindow, shell } from "electron";
+import { BrowserWindow, session, shell } from "electron";
 import {
   TWITCH_CLIENT_ID,
   TWITCH_OAUTH_DEVICE_URL,
@@ -219,6 +219,23 @@ export class AuthController {
     }
 
     throw new Error("Login timed out.");
+  }
+
+  /**
+   * Signs the login window out of twitch.tv by removing its cookies. The popup
+   * uses the default session, so without this the next login opens already
+   * signed in as the previous account.
+   */
+  async forgetWebLogin(): Promise<void> {
+    const cookieSession = session.defaultSession;
+    const cookies = await cookieSession.cookies.get({ domain: "twitch.tv" });
+    await Promise.all(
+      cookies.map((cookie) => {
+        const host = (cookie.domain ?? "twitch.tv").replace(/^\./, "");
+        const url = `${cookie.secure ? "https" : "http"}://${host}${cookie.path ?? "/"}`;
+        return cookieSession.cookies.remove(url, cookie.name).catch(() => undefined);
+      }),
+    );
   }
 
   private async ensureSinglePopupClosed() {

@@ -3,6 +3,7 @@ import type { InventoryItem, InventoryState, UserPubSubEvent } from "@renderer/s
 import {
   applyPubSubEventToInventoryState,
   getPatchedAnchorIds,
+  markDropClaimedInInventoryState,
   markUpdatedInventoryChange,
   mergeProgressAnchors,
   resolvePubSubEventAt,
@@ -44,7 +45,9 @@ describe("applyPubSubEventToInventoryState", () => {
     expect(patched.nextInventory.items[0].earnedMinutes).toBe(25);
   });
 
-  it("detects unclaimed drops remaining in campaign after claim patch", () => {
+  it("marks the drop claimable (not claimed) on a drop-claim event", () => {
+    // Twitch's "drop-claim" message means "ready to claim", not "claimed".
+    // Marking it claimed here would hide it from auto-claim / Claim now forever.
     const inventory: InventoryState = {
       status: "error",
       message: "stale",
@@ -53,16 +56,9 @@ describe("applyPubSubEventToInventoryState", () => {
         makeItem({
           id: "drop-1",
           campaignId: "camp-1",
-          dropInstanceId: "inst-1",
           earnedMinutes: 55,
           status: "progress",
-        }),
-        makeItem({
-          id: "drop-2",
-          campaignId: "camp-1",
-          dropInstanceId: "inst-2",
-          status: "locked",
-          earnedMinutes: 0,
+          isClaimable: false,
         }),
       ],
     };
@@ -77,11 +73,30 @@ describe("applyPubSubEventToInventoryState", () => {
 
     const patched = applyPubSubEventToInventoryState(inventory, event);
     expect(patched.patched).toBe(true);
-    expect(patched.hasUnclaimedInCampaign).toBe(true);
-    expect(patched.claimedItem?.id).toBe("drop-1");
-    expect(patched.nextInventory.status).toBe("error");
+    expect(patched.claimableItem?.id).toBe("drop-1");
     if (patched.nextInventory.status !== "error") throw new Error("expected error inventory");
-    expect(patched.nextInventory.items?.[0].status).toBe("claimed");
+    const item = patched.nextInventory.items?.[0];
+    expect(item?.status).toBe("progress");
+    expect(item?.isClaimable).toBe(true);
+    expect(item?.dropInstanceId).toBe("inst-1");
+    expect(item?.earnedMinutes).toBe(60);
+  });
+
+  it("ignores a drop-claim event for a drop that is already claimed", () => {
+    const inventory: InventoryState = {
+      status: "ready",
+      items: [makeItem({ earnedMinutes: 60, status: "claimed", dropInstanceId: "inst-1" })],
+    };
+    const event: UserPubSubEvent = {
+      kind: "drop-claim",
+      at: Date.now(),
+      topic: "user-drop-events.1",
+      messageType: "drop-claim",
+      dropId: "drop-1",
+      dropInstanceId: "inst-1",
+    };
+
+    expect(applyPubSubEventToInventoryState(inventory, event).patched).toBe(false);
   });
 
   it("returns unchanged for non-patchable events", () => {
@@ -138,5 +153,23 @@ describe("progress anchors and change highlights", () => {
         999,
       ),
     ).toBe(123);
+  });
+});
+
+describe("markDropClaimedInInventoryState", () => {
+  it("flips the drop to claimed after a successful claim", () => {
+    const inventory: InventoryState = {
+      status: "ready",
+      items: [makeItem({ earnedMinutes: 60, isClaimable: true, dropInstanceId: "inst-1" })],
+    };
+
+    const next = markDropClaimedInInventoryState(inventory, makeItem({ id: "drop-1" }));
+    if (next.status !== "ready") throw new Error("expected ready inventory");
+    expect(next.items[0].status).toBe("claimed");
+  });
+
+  it("returns the same state object when the drop is unknown", () => {
+    const inventory: InventoryState = { status: "ready", items: [makeItem()] };
+    expect(markDropClaimedInInventoryState(inventory, makeItem({ id: "other" }))).toBe(inventory);
   });
 });
