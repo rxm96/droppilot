@@ -100,3 +100,23 @@ export function releaseBody(notes, techNotes) {
     (tech ? `\n${tech}\n` : "")
   );
 }
+
+const NPM_VERSION_ARGS = {
+  patch: ["patch"],
+  minor: ["minor"],
+  major: ["major"],
+  rc: ["prerelease", "--preid", "rc"],
+  "rc:start": ["prepatch", "--preid", "rc"],
+  test: ["prerelease", "--preid", "test"],
+};
+
+/** `npm version` arguments for a release kind, matching the release:* npm scripts. */
+export function npmVersionArgs(kind) {
+  const args = NPM_VERSION_ARGS[kind];
+  if (!args) {
+    throw new Error(
+      `Unknown release kind "${kind}": use patch, minor, major, rc, rc:start or test.`,
+    );
+  }
+  return [...args];
+}

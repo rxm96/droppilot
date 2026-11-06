@@ -4,6 +4,7 @@ import {
   TEST_BUILD_NOTE,
   assertReleasable,
   isPrerelease,
+  npmVersionArgs,
   notesFor,
   notesRequired,
   releaseBody,
@@ -185,5 +186,20 @@ describe("releaseBody", () => {
     expect(parseReleaseNotes(releaseBody(TEST_BUILD_NOTE, "")).notes).toEqual([
       "Test build of the release pipeline; no user-facing changes.",
     ]);
+  });
+});
+
+describe("npmVersionArgs", () => {
+  it("maps each release kind to npm version arguments", () => {
+    expect(npmVersionArgs("patch")).toEqual(["patch"]);
+    expect(npmVersionArgs("minor")).toEqual(["minor"]);
+    expect(npmVersionArgs("major")).toEqual(["major"]);
+    expect(npmVersionArgs("rc")).toEqual(["prerelease", "--preid", "rc"]);
+    expect(npmVersionArgs("rc:start")).toEqual(["prepatch", "--preid", "rc"]);
+    expect(npmVersionArgs("test")).toEqual(["prerelease", "--preid", "test"]);
+  });
+
+  it("rejects unknown kinds", () => {
+    expect(() => npmVersionArgs("premajor")).toThrow(/patch, minor, major, rc, rc:start or test/);
   });
 });
