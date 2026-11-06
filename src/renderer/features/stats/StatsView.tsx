@@ -9,10 +9,9 @@ import { computeStreaks } from "./statsDerive";
 
 export type StatsViewProps = {
   stats: StatsState;
-  resetStats: () => void;
 };
 
-export function StatsView({ stats, resetStats }: StatsViewProps) {
+export function StatsView({ stats }: StatsViewProps) {
   const { t } = useI18n();
 
   if (stats.status === "idle" || stats.status === "loading") {
@@ -41,22 +40,22 @@ export function StatsView({ stats, resetStats }: StatsViewProps) {
   const gamesCount = Object.keys(data.claimsByGame).length;
 
   return (
-    <div className="flex flex-col gap-6">
-      <StatsHeader lastReset={data.lastReset} onReset={resetStats} />
+    <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-5">
+      <StatsHeader lastReset={data.lastReset} />
 
       <KpiCards
         totalMinutes={data.totalMinutes}
         totalClaims={data.totalClaims}
         gamesCount={gamesCount}
         currentStreak={current}
+        bestStreak={longest}
       />
 
-      <div className="grid gap-6" style={{ gridTemplateColumns: "1.7fr 1fr" }}>
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)]">
         <WatchTimeTrend daily={data.daily} />
         <TopGamesPanel claimsByGame={data.claimsByGame} />
+        <ActivityHeatmap daily={data.daily} />
       </div>
-
-      <ActivityHeatmap daily={data.daily} longestStreak={longest} />
     </div>
   );
 }

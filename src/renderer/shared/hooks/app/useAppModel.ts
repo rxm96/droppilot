@@ -732,7 +732,7 @@ export function useAppModel() {
     toggleAutopilot,
     dropsNeedingYou,
   };
-  const statsProps = { stats, resetStats };
+  const statsProps = { stats };
   // The active drop's own live completion %, so the hero's percent matches its
   // title + ETA. Null when there is no active drop; the hero then says so
   // instead of showing the game-wide aggregate.
@@ -923,6 +923,7 @@ export function useAppModel() {
     refreshMaxMs,
     setRefreshIntervals: actions.handleSetRefreshIntervals,
     resetAutomation: actions.handleResetAutomation,
+    resetStats,
     language,
     setLanguage: saveLanguage,
     settingsJson,

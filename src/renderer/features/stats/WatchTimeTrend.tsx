@@ -1,9 +1,7 @@
 import * as React from "react";
 import { useI18n } from "@renderer/shared/i18n";
-import { SectionLabel } from "@renderer/shared/components/ui/section-label";
-import { Button } from "@renderer/shared/components/ui/button";
 import { cn } from "@renderer/shared/lib/utils";
-import { buildTrendSeries } from "./statsDerive";
+import { buildWatchChart, formatHoursShort, formatWatchTime } from "./statsDerive";
 
 export type WatchTimeTrendProps = {
   daily: Record<string, { minutes: number; claims: number }>;
@@ -11,99 +9,120 @@ export type WatchTimeTrendProps = {
 
 type Range = 7 | 30 | 90;
 const RANGES: Range[] = [7, 30, 90];
+const CHART_HEIGHT = 180;
 
-// Fixed viewBox; preserveAspectRatio="none" stretches it to the container.
-const W = 600;
-const H = 140;
-
+/** Watch time per day as bars, with a 7d / 30d / 90d range, summary and y-axis ticks. */
 export function WatchTimeTrend({ daily }: WatchTimeTrendProps) {
   const { t, language } = useI18n();
   const [range, setRange] = React.useState<Range>(30);
+  const headingId = React.useId();
+  // Local midnight: day resolution is enough and keeps the memo stable within a day.
+  const today = new Date().setHours(0, 0, 0, 0);
+  const chart = React.useMemo(() => buildWatchChart(daily, range, today), [daily, range, today]);
 
-  const series = React.useMemo(() => buildTrendSeries(daily, range), [daily, range]);
-
-  const max = Math.max(...series.map((s) => s.minutes), 1);
-  const lastIndex = Math.max(series.length - 1, 1);
-
-  const points = series.map((s, i) => {
-    const x = (i / lastIndex) * W;
-    const y = H - (s.minutes / max) * H;
-    return { x, y };
-  });
-
-  const linePath = points.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" ");
-  const areaPath =
-    points.length > 0
-      ? `M ${points[0].x.toFixed(2)} ${H} ` +
-        points.map((p) => `L ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" ") +
-        ` L ${points[points.length - 1].x.toFixed(2)} ${H} Z`
-      : "";
-
-  const gradientId = React.useId();
-
-  const fmtAxis = (key: string) => {
+  const total = formatHoursShort(chart.totalMinutes);
+  const fmtDate = (key: string) => {
     const [y, m, d] = key.split("-").map(Number);
-    return new Date(y, m - 1, d).toLocaleDateString(language);
+    return new Date(y, m - 1, d).toLocaleDateString(language, {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+    });
   };
 
-  const startDate = series.length > 0 ? fmtAxis(series[0].date) : "";
-  const endDate = series.length > 0 ? fmtAxis(series[series.length - 1].date) : "";
-
   return (
-    <div className="rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] px-4 py-4">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <SectionLabel inline>{t("stats.trend.title")}</SectionLabel>
-        <div className="flex items-center gap-1">
+    <section
+      aria-labelledby={headingId}
+      className="flex min-w-0 flex-col gap-3.5 rounded-[var(--dp-radius-xl)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] px-5 py-[18px]"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2
+            id={headingId}
+            className="m-0 font-mono text-[11px] font-normal text-[color:var(--dp-text-dimmer)]"
+          >
+            {t("stats.trend.title")}
+          </h2>
+          <div className="mt-1 font-mono text-[12px] tabular-nums text-[color:var(--dp-text-dim)]">
+            {t("stats.trend.summary", {
+              total,
+              days: range,
+              avg: formatHoursShort(chart.avgMinutes),
+            })}
+          </div>
+        </div>
+        <div
+          role="group"
+          aria-label={t("stats.trend.rangeAria")}
+          className="flex gap-0.5 rounded-[var(--dp-radius-md)] border border-[color:var(--dp-border)] p-[3px]"
+        >
           {RANGES.map((r) => {
             const active = r === range;
             return (
-              <Button
+              <button
                 key={r}
                 type="button"
-                variant="dp-ghost"
-                size="dp-sm"
                 aria-pressed={active}
                 onClick={() => setRange(r)}
                 className={cn(
-                  active && "bg-[color:var(--dp-accent-soft)] text-[color:var(--dp-accent)]",
+                  "min-h-[28px] rounded-[var(--dp-radius-sm)] px-2.5 font-mono text-[11px] transition-colors",
+                  active
+                    ? "bg-[color:var(--dp-bg-elevated-2)] text-[color:var(--dp-text)]"
+                    : "text-[color:var(--dp-text-dimmer)] hover:text-[color:var(--dp-text)]",
                 )}
               >
                 {t(`stats.range.${r}`)}
-              </Button>
+              </button>
             );
           })}
         </div>
       </div>
 
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        preserveAspectRatio="none"
-        className="h-32 w-full"
-        role="img"
-        aria-label={t("stats.trend.title")}
-      >
-        <defs>
-          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--dp-accent)" stopOpacity={0.18} />
-            <stop offset="100%" stopColor="var(--dp-accent)" stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        {areaPath && <path d={areaPath} fill={`url(#${gradientId})`} />}
-        <polyline
-          points={linePath}
-          fill="none"
-          stroke="var(--dp-accent)"
-          strokeWidth={2}
-          strokeLinejoin="round"
-          strokeLinecap="round"
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
-
-      <div className="mt-2 flex items-center justify-between font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
-        <span>{startDate}</span>
-        <span>{endDate}</span>
+      <div className="grid grid-cols-[34px_minmax(0,1fr)] gap-2">
+        <div
+          aria-hidden="true"
+          className="flex flex-col justify-between text-right font-mono text-[10px] tabular-nums text-[color:var(--dp-text-dimmer)]"
+          style={{ height: CHART_HEIGHT }}
+        >
+          {chart.ticks.map((tick, i) => (
+            <span key={i} className="leading-none">
+              {formatHoursShort(tick)}
+            </span>
+          ))}
+        </div>
+        <div
+          role="img"
+          aria-label={t("stats.trend.aria", { days: range, total })}
+          className={cn(
+            "flex items-end border-b border-[color:var(--dp-border)]",
+            range > 30 ? "gap-px" : "gap-[3px]",
+          )}
+          style={{
+            height: CHART_HEIGHT,
+            // Grid lines at the top and halfway.
+            background:
+              "linear-gradient(var(--dp-border-soft), var(--dp-border-soft)) 0 0 / 100% 1px no-repeat, linear-gradient(var(--dp-border-soft), var(--dp-border-soft)) 0 50% / 100% 1px no-repeat",
+          }}
+        >
+          {chart.bars.map((bar) => (
+            <div
+              key={bar.date}
+              title={`${fmtDate(bar.date)} · ${formatWatchTime(bar.minutes)}`}
+              className="min-w-0 flex-1 rounded-t-[2px]"
+              style={{
+                height: `${bar.pct}%`,
+                background: bar.today
+                  ? "var(--dp-accent)"
+                  : "color-mix(in srgb, var(--dp-accent) 55%, transparent)",
+              }}
+            />
+          ))}
+        </div>
       </div>
-    </div>
+      <div className="flex justify-between pl-[42px] font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
+        <span>{t("stats.trend.daysAgo", { days: range - 1 })}</span>
+        <span>{t("stats.trend.today")}</span>
+      </div>
+    </section>
   );
 }

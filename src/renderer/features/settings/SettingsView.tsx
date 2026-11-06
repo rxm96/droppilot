@@ -81,6 +81,7 @@ type SettingsProps = {
   refreshMaxMs: number;
   setRefreshIntervals: (minMs: number, maxMs: number) => void;
   resetAutomation: () => void;
+  resetStats: () => void;
   settingsJson: string;
   setSettingsJson: (val: string) => void;
   exportSettings: () => void;
@@ -257,6 +258,7 @@ export function SettingsView(props: SettingsProps) {
               importSettings={props.importSettings}
               settingsInfo={props.settingsInfo}
               settingsError={props.settingsError}
+              resetStats={props.resetStats}
             />
           )}
         </main>

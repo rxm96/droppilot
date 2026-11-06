@@ -1,154 +1,92 @@
-import { useMemo, useRef, useState } from "react";
-import type { MouseEvent as ReactMouseEvent } from "react";
+import * as React from "react";
 import { useI18n } from "@renderer/shared/i18n";
-import { SectionLabel } from "@renderer/shared/components/ui/section-label";
-import { buildTrendSeries, formatWatchTime } from "./statsDerive";
+import { buildCalendar, formatWatchTime, type CalendarCell } from "./statsDerive";
 
 export type ActivityHeatmapProps = {
   daily: Record<string, { minutes: number; claims: number }>;
-  longestStreak: number;
 };
 
-// 18 weeks of daily cells, GitHub-style (rows = weekdays, columns = weeks).
-const RANGE_DAYS = 126;
+const WEEKS = 26;
 
-/**
- * Bucket minutes into 0-4 intensity levels and return the accent-mix percent
- * used for the cell background. 0 minutes → faint base (handled by caller).
- */
-function intensityPct(minutes: number, max: number): number {
-  if (minutes <= 0) return 0;
-  const ratio = minutes / max;
-  if (ratio <= 0.25) return 25;
-  if (ratio <= 0.5) return 45;
-  if (ratio <= 0.75) return 70;
-  return 100;
-}
-
-type HoverState = {
-  date: string;
-  minutes: number;
-  claims: number;
-  x: number;
-  y: number;
-  flipBelow: boolean;
+const LEVEL_BG: Record<CalendarCell["level"], string> = {
+  0: "var(--dp-bg-elevated-2)",
+  1: "color-mix(in srgb, var(--dp-accent) 30%, transparent)",
+  2: "color-mix(in srgb, var(--dp-accent) 60%, transparent)",
+  3: "var(--dp-accent)",
 };
+const LEVELS: CalendarCell["level"][] = [0, 1, 2, 3];
 
-export function ActivityHeatmap({ daily, longestStreak }: ActivityHeatmapProps) {
+/** Calendar heatmap: 7 rows (Monday first) × the last 26 weeks, with a legend. */
+export function ActivityHeatmap({ daily }: ActivityHeatmapProps) {
   const { t, language } = useI18n();
-  const series = useMemo(() => buildTrendSeries(daily, RANGE_DAYS), [daily]);
-  const max = useMemo(() => Math.max(...series.map((s) => s.minutes), 1), [series]);
-  const gridRef = useRef<HTMLDivElement>(null);
-  const [hover, setHover] = useState<HoverState | null>(null);
+  const headingId = React.useId();
+  // Local midnight: re-buckets once a day, stable in between.
+  const today = new Date().setHours(0, 0, 0, 0);
+  const { weeks } = React.useMemo(() => buildCalendar(daily, WEEKS, today), [daily, today]);
 
-  const handleEnter = (
-    e: ReactMouseEvent<HTMLDivElement>,
-    cell: { date: string; minutes: number },
-  ) => {
-    const grid = gridRef.current;
-    if (!grid) return;
-    const cellRect = e.currentTarget.getBoundingClientRect();
-    const gridRect = grid.getBoundingClientRect();
-    const top = cellRect.top - gridRect.top;
-    setHover({
-      date: cell.date,
-      minutes: cell.minutes,
-      claims: Math.max(0, Number(daily[cell.date]?.claims) || 0),
-      x: cellRect.left - gridRect.left + cellRect.width / 2,
-      y: top,
-      flipBelow: top < 28,
-    });
-  };
-
-  const formatDate = (key: string) => {
-    const [y, m, d] = key.split("-").map(Number);
-    return new Date(y, m - 1, d).toLocaleDateString(language, {
+  const cellTitle = (cell: CalendarCell) => {
+    const [y, m, d] = cell.date.split("-").map(Number);
+    const date = new Date(y, m - 1, d).toLocaleDateString(language, {
+      weekday: "short",
       day: "numeric",
       month: "short",
-      weekday: "short",
     });
+    const claims = cell.claims > 0 ? ` · ${cell.claims} ${t("stats.unit.claims")}` : "";
+    return `${date} · ${formatWatchTime(cell.minutes)}${claims}`;
   };
 
   return (
-    <div className="rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] px-4 py-4">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <SectionLabel inline>{t("stats.heatmap.title")}</SectionLabel>
-        <div className="flex items-baseline gap-1.5 font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
-          <span className="uppercase tracking-[0.12em]">{t("stats.heatmap.longest")}</span>
-          <span
-            className="text-[12px] text-[color:var(--dp-text)]"
-            style={{ fontFeatureSettings: '"tnum"' }}
-          >
-            {longestStreak}
-          </span>
-          <span>{t("stats.unit.days")}</span>
-        </div>
-      </div>
-
-      <div
-        ref={gridRef}
-        className="relative grid gap-[3px]"
-        style={{
-          gridTemplateRows: "repeat(7, 1fr)",
-          gridAutoFlow: "column",
-          gridAutoColumns: "minmax(0, 1fr)",
-        }}
-        onMouseLeave={() => setHover(null)}
-      >
-        {series.map((cell) => {
-          const pct = intensityPct(cell.minutes, max);
-          const isHovered = hover?.date === cell.date;
-          return (
-            <div
-              key={cell.date}
-              onMouseEnter={(e) => handleEnter(e, cell)}
-              className="aspect-square rounded-[2px]"
-              style={{
-                minWidth: 0,
-                position: "relative",
-                background:
-                  pct === 0
-                    ? "var(--dp-bg-app)"
-                    : `color-mix(in srgb, var(--dp-accent) ${pct}%, transparent)`,
-                transform: isHovered ? "scale(1.45)" : "scale(1)",
-                boxShadow: isHovered
-                  ? "0 0 0 1.5px var(--dp-accent), 0 0 16px var(--dp-accent-glow)"
-                  : undefined,
-                zIndex: isHovered ? 10 : 0,
-                transition: "transform 160ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 160ms ease",
-                willChange: "transform",
-              }}
+    <section
+      aria-labelledby={headingId}
+      className="min-w-0 rounded-[var(--dp-radius-xl)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] px-5 py-[18px] lg:col-span-2"
+    >
+      <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3">
+        <h2
+          id={headingId}
+          className="m-0 font-mono text-[11px] font-normal text-[color:var(--dp-text-dimmer)]"
+        >
+          {t("stats.heatmap.title", { weeks: WEEKS })}
+        </h2>
+        <span
+          aria-hidden="true"
+          className="flex items-center gap-1 font-mono text-[11px] text-[color:var(--dp-text-dimmer)]"
+        >
+          {t("stats.heatmap.less")}
+          {LEVELS.map((level) => (
+            <span
+              key={level}
+              className="h-2.5 w-2.5 rounded-[2px]"
+              style={{ background: LEVEL_BG[level] }}
             />
-          );
-        })}
-
-        {hover && (
-          <div
-            className="pointer-events-none absolute z-20 flex -translate-x-1/2 items-baseline gap-1.5 whitespace-nowrap rounded-[var(--dp-radius-sm)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated-2)] px-2 py-1 font-mono text-[11px] text-[color:var(--dp-text)] shadow-[0_8px_24px_rgba(0,0,0,0.45),0_0_0_1px_var(--dp-accent-soft),0_0_20px_var(--dp-accent-glow)]"
-            style={{
-              left: hover.x,
-              top: hover.flipBelow ? hover.y + 22 : hover.y - 10,
-              transform: hover.flipBelow ? "translateX(-50%)" : "translate(-50%, -100%)",
-            }}
-          >
-            <span className="text-[color:var(--dp-text-dim)]">{formatDate(hover.date)}</span>
-            <span className="text-[color:var(--dp-text-dimmer)]">·</span>
-            <span style={{ fontFeatureSettings: '"tnum"' }}>{formatWatchTime(hover.minutes)}</span>
-            {hover.claims > 0 && (
-              <>
-                <span className="text-[color:var(--dp-text-dimmer)]">·</span>
-                <span
-                  className="text-[color:var(--dp-accent)]"
-                  style={{ fontFeatureSettings: '"tnum"' }}
-                >
-                  {hover.claims}
-                </span>
-                <span className="text-[color:var(--dp-text-dimmer)]">{t("stats.unit.claims")}</span>
-              </>
-            )}
-          </div>
+          ))}
+          {t("stats.heatmap.more")}
+        </span>
+      </div>
+      <div
+        role="img"
+        aria-label={t("stats.heatmap.aria", { weeks: WEEKS })}
+        className="grid gap-[3px] overflow-x-auto pb-1"
+        style={{
+          gridTemplateRows: "repeat(7, 12px)",
+          gridAutoFlow: "column",
+          gridAutoColumns: "12px",
+        }}
+      >
+        {weeks.flatMap((week, w) =>
+          week.map((cell, d) =>
+            cell ? (
+              <span
+                key={cell.date}
+                title={cellTitle(cell)}
+                className="rounded-[2px]"
+                style={{ background: LEVEL_BG[cell.level] }}
+              />
+            ) : (
+              <span key={`future-${w}-${d}`} aria-hidden="true" />
+            ),
+          ),
         )}
       </div>
-    </div>
+    </section>
   );
 }

@@ -4,6 +4,7 @@ import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { SettingRow } from "../SettingRow";
 import { SettingsToggle } from "../SettingsToggle";
 import { useI18n } from "@renderer/shared/i18n";
+import { ResetStatsButton } from "../ResetStatsButton";
 
 export type AdvancedSectionProps = {
   debugEnabled: boolean;
@@ -14,6 +15,7 @@ export type AdvancedSectionProps = {
   importSettings: () => void;
   settingsInfo?: string | null;
   settingsError?: string | null;
+  resetStats: () => void;
 };
 
 export function AdvancedSection(props: AdvancedSectionProps) {
@@ -41,6 +43,12 @@ export function AdvancedSection(props: AdvancedSectionProps) {
         label={t("settings.row.debugView.label")}
         description={t("settings.row.debugView.description")}
         control={<SettingsToggle checked={props.debugEnabled} onChange={props.setDebugEnabled} />}
+      />
+      <SettingRow
+        divided
+        label={t("settings.row.resetStats.label")}
+        description={t("settings.row.resetStats.description")}
+        control={<ResetStatsButton onReset={props.resetStats} />}
       />
 
       <div className="mt-6">
