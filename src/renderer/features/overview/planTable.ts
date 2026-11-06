@@ -4,7 +4,7 @@
 import type { FarmPlan } from "@renderer/shared/domain/farmPlan";
 import { sameGameName } from "@renderer/shared/domain/gameName";
 import type { InventoryItem } from "@renderer/shared/types";
-import { formatReadyAt } from "./formatters";
+import { formatEndsIn, formatReadyAt } from "./formatters";
 
 export type PlanClock = { clock: string; dayOffset: number };
 
@@ -21,7 +21,7 @@ export type PlanTableDropRow = {
   status: PlanTableStatus;
   /** Raw blocking hint, only on "blocked" rows. */
   blockedReason?: string;
-  note: { kind: "ends-first" } | { kind: "ends-soon"; hours: number } | null;
+  note: { kind: "ends-first" } | { kind: "ends-soon"; endsIn: string } | null;
 };
 
 export type PlanTableSwitchRow = {
@@ -37,7 +37,6 @@ export type PlanTableRow = PlanTableDropRow | PlanTableSwitchRow;
 export type PlanTable = { rows: PlanTableRow[]; hiddenCount: number; doneAt: PlanClock | null };
 
 const DAY_MS = 86_400_000;
-const HOUR_MS = 3_600_000;
 
 const startOfDay = (ts: number): number => {
   const d = new Date(ts);
@@ -99,7 +98,7 @@ export function buildPlanTable(
         : row.wontFinishInTime
           ? { kind: "ends-first" }
           : Number.isFinite(untilEnd) && untilEnd > 0 && untilEnd < DAY_MS
-            ? { kind: "ends-soon", hours: Math.ceil(untilEnd / HOUR_MS) }
+            ? { kind: "ends-soon", endsIn: formatEndsIn(item?.endsAt, input.now) ?? "" }
             : null;
     rows.push({
       kind: "drop",

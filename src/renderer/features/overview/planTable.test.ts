@@ -122,7 +122,7 @@ describe("buildPlanTable", () => {
   it("notes a campaign that ends within a day, or ends before the drop", () => {
     const rows = buildPlanTable(plan, base).rows;
     expect(rows.find((r) => r.kind === "drop" && r.title === "Legend Skin")).toMatchObject({
-      note: { kind: "ends-soon", hours: 18 },
+      note: { kind: "ends-soon", endsIn: "17h" },
     });
     const late = buildPlanTable(
       { rows: [row({ dropId: "c", wontFinishInTime: true })], doneAt: null },

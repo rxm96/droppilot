@@ -1,7 +1,7 @@
 // Pure view-model helpers for the merged overview (UI polish phase 2).
 // No React imports.
 
-import type { CampaignSummary, InventoryItem } from "@renderer/shared/types";
+import type { CampaignSummary, ChannelEntry, InventoryItem } from "@renderer/shared/types";
 import { sameGameName } from "@renderer/shared/domain/gameName";
 
 /** The autopilot chip's three states. */
@@ -118,4 +118,21 @@ export function channelInitials(name: string): string {
   if (words.length === 0) return "?";
   if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
   return (words[0][0] + words[1][0]).toUpperCase();
+}
+
+/**
+ * The channel "resume" goes back to: the last watched one, while it is still
+ * live (matched by id, or by its lower-cased login). Null otherwise; resume
+ * then lets auto-select pick.
+ */
+export function findResumeChannel(
+  channels: ChannelEntry[],
+  last: { id: string; login: string } | null,
+): ChannelEntry | null {
+  if (!last) return null;
+  return (
+    channels.find(
+      (c) => c.id === last.id || (last.login !== "" && c.login.trim().toLowerCase() === last.login),
+    ) ?? null
+  );
 }

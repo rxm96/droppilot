@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ChannelEntry } from "@renderer/shared/types";
-import { buildChannelPickerRows } from "./channelPicker";
+import { buildChannelPickerRows } from "./channelPickerRows";
 
 const ch = (id: string, displayName: string, viewers: number): ChannelEntry => ({
   id,

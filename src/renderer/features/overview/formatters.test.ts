@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatEndsIn,
   formatRefreshCadence,
   formatRelative,
   formatUptime,
@@ -84,5 +85,20 @@ describe("formatReadyAt", () => {
   it("returns null when there is no predictable ETA", () => {
     expect(formatReadyAt(null, now)).toBeNull();
     expect(formatReadyAt(Number.POSITIVE_INFINITY, now)).toBeNull();
+  });
+});
+
+describe("formatEndsIn", () => {
+  const now = Date.parse("2026-11-06T12:00:00Z");
+  it("uses the largest whole unit, rounded down", () => {
+    expect(formatEndsIn("2026-11-08T13:00:00Z", now)).toBe("2d");
+    expect(formatEndsIn("2026-11-07T06:30:00Z", now)).toBe("18h");
+    expect(formatEndsIn("2026-11-06T12:40:00Z", now)).toBe("40m");
+    expect(formatEndsIn("2026-11-06T12:00:30Z", now)).toBe("1m");
+  });
+  it("returns null for missing, invalid or past end dates", () => {
+    expect(formatEndsIn(undefined, now)).toBeNull();
+    expect(formatEndsIn("not a date", now)).toBeNull();
+    expect(formatEndsIn("2026-11-05T00:00:00Z", now)).toBeNull();
   });
 });

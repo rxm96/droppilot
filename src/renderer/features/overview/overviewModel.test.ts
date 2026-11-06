@@ -3,6 +3,7 @@ import type { CampaignSummary, InventoryItem } from "@renderer/shared/types";
 import {
   buildNeedsYouItems,
   channelInitials,
+  findResumeChannel,
   resolveAutopilotState,
   resolveHeroState,
 } from "./overviewModel";
@@ -160,5 +161,21 @@ describe("channelInitials", () => {
     expect(channelInitials("shroud")).toBe("SH");
     expect(channelInitials("x")).toBe("X");
     expect(channelInitials("")).toBe("?");
+  });
+});
+
+describe("findResumeChannel", () => {
+  const live = [
+    { id: "1", login: "agentzero", displayName: "AgentZero", title: "", viewers: 9, game: "V" },
+    { id: "2", login: "lotuslane", displayName: "LotusLane", title: "", viewers: 5, game: "V" },
+  ];
+  it("finds the last watched channel by id or login while it is still live", () => {
+    expect(findResumeChannel(live, { id: "2", login: "x" })?.id).toBe("2");
+    expect(findResumeChannel(live, { id: "zz", login: "agentzero" })?.id).toBe("1");
+  });
+  it("returns null when it went offline or nothing was watched yet", () => {
+    expect(findResumeChannel(live, { id: "9", login: "gone" })).toBeNull();
+    expect(findResumeChannel(live, null)).toBeNull();
+    expect(findResumeChannel(live, { id: "9", login: "" })).toBeNull();
   });
 });

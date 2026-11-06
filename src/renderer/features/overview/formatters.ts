@@ -38,6 +38,19 @@ export function formatReadyAt(
   };
 }
 
+/**
+ * Time until a campaign ends as one compact unit ("2d", "18h", "40m"),
+ * rounded down (at least 1m). Null when unknown or already over.
+ */
+export function formatEndsIn(endsAt: string | null | undefined, now: number): string | null {
+  const end = endsAt ? Date.parse(endsAt) : Number.NaN;
+  if (!Number.isFinite(end) || end <= now) return null;
+  const minutes = Math.max(1, Math.floor((end - now) / 60_000));
+  if (minutes >= 24 * 60) return `${Math.floor(minutes / (24 * 60))}d`;
+  if (minutes >= 60) return `${Math.floor(minutes / 60)}h`;
+  return `${minutes}m`;
+}
+
 export function formatPercent(n: number): string {
   return `${Math.max(0, Math.min(100, Math.round(n)))}%`;
 }
