@@ -132,9 +132,13 @@ Relevant constants in `watchStallRecovery.ts`:
 | `NO_FARMABLE_GAME_COOLDOWN_MS`                 | `10 * 60_000` | Cooldown for a game with no farmable drop. |
 | `NO_PROGRESS_GAME_COOLDOWN_MS`                 | `30 * 60_000` | Cooldown for a persistently stalled game.  |
 
-The watch ping itself lives in `useWatchPing.ts` (`WATCH_INTERVAL_MS = 59_000`, plus
-up to `WATCH_JITTER_MS = 8_000` jitter); each successful ping is what advances
-watch-time, so "no progress" is measured against it.
+The watch ping itself lives in `useWatchPing.ts` (`WATCH_INTERVAL_MS = 20_000`,
+± `WATCH_JITTER_MS = 2_000` jitter); each successful ping is what advances
+watch-time, so "no progress" is measured against it. Stats credit one minute per
+`WATCH_PINGS_PER_MINUTE = 3` successful pings. In the main process
+(`TwitchService.sendWatchPing`) a ping fetches the stream's lowest-quality HLS
+media playlist and sends a HEAD request per segment; Twitch no longer credits the
+old `minute-watched` spade event.
 
 ## Observability
 

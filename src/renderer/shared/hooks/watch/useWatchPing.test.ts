@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { WatchingState } from "@renderer/shared/types";
-import { buildWatchPingKey } from "./useWatchPing";
+import { buildWatchPingKey, countWatchPing, WATCH_PINGS_PER_MINUTE } from "./useWatchPing";
 
 const makeWatching = (overrides: Partial<NonNullable<WatchingState>> = {}): WatchingState => ({
   id: "chan-1",
@@ -54,5 +54,27 @@ describe("buildWatchPingKey", () => {
       name: "ninelogin",
     });
     expect(buildWatchPingKey(viaFallback)).toBe(buildWatchPingKey(viaCanonical));
+  });
+});
+
+describe("countWatchPing", () => {
+  it("credits one stats minute per WATCH_PINGS_PER_MINUTE successful pings", () => {
+    let okPings = 0;
+    let minutes = 0;
+    for (let i = 0; i < WATCH_PINGS_PER_MINUTE * 4; i++) {
+      const next = countWatchPing(okPings);
+      okPings = next.okPingsSinceCredit;
+      if (next.creditMinute) minutes++;
+    }
+    expect(minutes).toBe(4);
+    expect(okPings).toBe(0);
+  });
+
+  it("does not credit a minute before enough pings succeeded", () => {
+    expect(countWatchPing(0)).toEqual({ creditMinute: false, okPingsSinceCredit: 1 });
+    expect(countWatchPing(WATCH_PINGS_PER_MINUTE - 1)).toEqual({
+      creditMinute: true,
+      okPingsSinceCredit: 0,
+    });
   });
 });

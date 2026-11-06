@@ -20,8 +20,8 @@ export type EnginePanelProps = {
 export const EnginePanel = React.memo(function EnginePanel({
   lastWatchOk,
   watchingSince,
-  // ~60s: the engine sends one watch-ping per minute (WATCH_INTERVAL_MS ≈ 59s + jitter).
-  watchCycleSeconds = 60,
+  // ~20s: the engine sends a watch-ping every WATCH_INTERVAL_MS (20s ± jitter).
+  watchCycleSeconds = 20,
   refreshMinMs,
   refreshMaxMs,
 }: EnginePanelProps) {
