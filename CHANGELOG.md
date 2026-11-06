@@ -42,6 +42,16 @@ GitHub Release (which the app's update history shows) is built from that section
   add a game with drops in one click instead of picking it from a list.
 - "Strict priority order" is now a plain choice for when none of your games can be farmed:
   wait, or farm other games meanwhile.
+- The stats screen shows watch time per day as bars, for the last 7, 30 or 90 days, with the
+  total and the daily average. Your best streak sits next to the current one, and the activity
+  calendar shows the last 26 weeks, one row per weekday.
+- "Reset stats" moved from the stats screen to Settings, under advanced. It still asks before
+  deleting anything.
+- Settings is one page with an index on the left (autopilot, notifications, appearance, app,
+  account & updates, advanced) instead of seven tabs. Every option has a plain name and a short
+  description.
+- The option for unlinked campaigns with badge or emote rewards is now under autopilot and says
+  what it does: farm those campaigns without a linked game account.
 
 ### Removed
 
@@ -68,6 +78,7 @@ GitHub Release (which the app's update history shows) is built from that section
   progress, so it matches the queue below it.
 - The drop details panel now shows the watched and required time, instead of only the
   words "watched · required".
+- Exporting or importing settings shows a readable message instead of an internal text key.
 
 ## [4.0.0] - 2026-11-06
 
