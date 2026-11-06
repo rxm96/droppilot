@@ -38,7 +38,13 @@ export type FarmPlanRow = FarmPlanDropRow | FarmPlanSwitchRow;
 export type FarmPlan = { rows: FarmPlanRow[]; doneAt: number | null };
 export type FarmPlanInput = {
   withCategories: Array<{ item: InventoryItem; category: string }>;
-  /** Output of computePriorityOrder (the user's ranking). */
+  /**
+   * The user's own ranked games, resolved to inventory spelling
+   * (resolvePriorityGameNames(priorityGames)). NOT computePriorityOrder: in
+   * non-strict mode that also contains every unranked game, which would list
+   * blocked rows for games the user never added. Only these games (and the
+   * active target) get blocked rows.
+   */
   gameOrder: string[];
   /** Output of computeFallbackOrder. */
   fallbackOrder: string[];
@@ -68,6 +74,18 @@ const prerequisiteIds = (item: InventoryItem): string[] => {
     : [];
 };
 
+// Mirrors main (service.ts): every hint except these two sets `blocked`.
+const SOFT_HINTS = new Set(["missing_drop_instance_id", "account_not_linked"]);
+
+/** Fully earned or waiting to be claimed: a "needs you"/claim concern, not a plan row. */
+const isFinished = (item: InventoryItem): boolean =>
+  item.isClaimable === true ||
+  (Number(item.requiredMinutes) || 0) <= 0 ||
+  (Number(item.earnedMinutes) || 0) >= (Number(item.requiredMinutes) || 0);
+
+const endsAtMs = (item: InventoryItem): number =>
+  item.endsAt ? Date.parse(item.endsAt) : Number.NaN;
+
 const remainingMs = (item: InventoryItem): number =>
   Math.max(0, (Number(item.requiredMinutes) || 0) - (Number(item.earnedMinutes) || 0)) * MINUTE_MS;
 
@@ -85,7 +103,7 @@ function gameSequence(input: FarmPlanInput): { games: string[]; ranked: string[]
 }
 
 function dropRow(item: InventoryItem, readyAt: number | null): FarmPlanDropRow {
-  const endsAtMs = item.endsAt ? Date.parse(item.endsAt) : Number.NaN;
+  const endsAt = endsAtMs(item);
   return {
     kind: "drop",
     dropId: item.id,
@@ -96,7 +114,7 @@ function dropRow(item: InventoryItem, readyAt: number | null): FarmPlanDropRow {
     requiredMinutes: Number(item.requiredMinutes) || 0,
     readyAt,
     status: readyAt === null ? "blocked" : "queued",
-    wontFinishInTime: readyAt !== null && Number.isFinite(endsAtMs) && readyAt > endsAtMs,
+    wontFinishInTime: readyAt !== null && Number.isFinite(endsAt) && readyAt > endsAt,
   };
 }
 
@@ -112,6 +130,7 @@ export function buildFarmPlan(input: FarmPlanInput): FarmPlan {
       ({ item }) =>
         sameGameName(item.game, game) &&
         item.status !== "claimed" &&
+        !isFinished(item) &&
         !hints(item).includes("campaign_expired"),
     );
     const canEarn = ({ item, category }: Entry) =>
@@ -119,22 +138,37 @@ export function buildFarmPlan(input: FarmPlanInput): FarmPlan {
 
     const readyAt = new Map<string, number>();
     const earnable = entries.filter(canEarn);
+    // The inventory snapshot can be up to an hour old. The active drop's live
+    // eta already includes the minutes watched since then; those minutes also
+    // counted for every other drop of the same game.
+    const activeEntry = earnable.find(({ item }) => item.id === input.activeDrop?.id);
+    const liveEta = activeEntry ? (input.activeDrop?.eta ?? null) : null;
+    const liveDeltaMs =
+      activeEntry && liveEta !== null
+        ? Math.max(0, cursor + remainingMs(activeEntry.item) - liveEta)
+        : 0;
     for (const { item } of earnable) {
-      const live = input.activeDrop?.id === item.id ? input.activeDrop.eta : null;
-      readyAt.set(item.id, live ?? cursor + remainingMs(item));
+      readyAt.set(
+        item.id,
+        item.id === activeEntry?.item.id && liveEta !== null
+          ? liveEta
+          : cursor + Math.max(0, remainingMs(item) - liveDeltaMs),
+      );
     }
 
     // Chained drops unlock during this session once their prerequisites are
-    // ready; resolve them in passes so chains of any depth settle.
+    // ready; resolve them in passes so chains of any depth settle. Main sets
+    // `blocked` because of the prerequisite hint, so recompute it without it.
     let pending = entries.filter((e) => {
-      if (readyAt.has(e.item.id) || e.item.blocked === true) return false;
-      const prereqs = prerequisiteIds(e.item);
-      if (prereqs.length === 0) return false;
-      const withoutPrereqHint = {
+      if (readyAt.has(e.item.id)) return false;
+      if (prerequisiteIds(e.item).length === 0) return false;
+      const rest = hints(e.item).filter((h) => !h.startsWith(PREREQ_PREFIX));
+      const unchained = {
         ...e.item,
-        blockingReasonHints: hints(e.item).filter((h) => !h.startsWith(PREREQ_PREFIX)),
+        blocked: rest.some((h) => !SOFT_HINTS.has(h)),
+        blockingReasonHints: rest,
       };
-      return canEarn({ item: withoutPrereqHint, category: e.category });
+      return canEarn({ item: unchained, category: e.category });
     });
     let progressed = true;
     while (pending.length > 0 && progressed) {
@@ -152,6 +186,7 @@ export function buildFarmPlan(input: FarmPlanInput): FarmPlan {
     const blocked = isRanked ? entries.filter(({ item }) => !readyAt.has(item.id)) : [];
     if (readyAt.size === 0 && blocked.length === 0) continue;
 
+    const itemById = new Map(entries.map(({ item }) => [item.id, item]));
     const timed = entries
       .filter(({ item }) => readyAt.has(item.id))
       .map(({ item }) => dropRow(item, readyAt.get(item.id) as number))
@@ -160,7 +195,14 @@ export function buildFarmPlan(input: FarmPlanInput): FarmPlan {
     if (timed.length > 0) {
       if (hadTimedGame) rows.push({ kind: "switch", game, at: cursor });
       hadTimedGame = true;
-      cursor = Math.max(...timed.map((r) => r.readyAt as number));
+      // A drop whose campaign ends first stops counting at endsAt; the engine
+      // moves on then, so the game ends there rather than at its readyAt.
+      cursor = Math.max(
+        ...timed.map((r) => {
+          const end = endsAtMs(itemById.get(r.dropId) as InventoryItem);
+          return r.wontFinishInTime ? end : (r.readyAt as number);
+        }),
+      );
       doneAt = cursor;
     }
     rows.push(...timed);

@@ -13,8 +13,8 @@ GitHub Release (which the app's update history shows) is built from that section
 
 ### Changed
 
-- The time a drop is ready is now shown as a clock time with the minutes left, the same way on
-  every screen.
+- The overview shows when a drop will be ready as a clock time with the minutes left, and the
+  Control view shows the same clock time without seconds.
 
 ### Fixed
 

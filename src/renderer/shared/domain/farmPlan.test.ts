@@ -90,10 +90,64 @@ describe("buildFarmPlan", () => {
         game: "Valorant",
         status: "locked",
         requiredMinutes: 30,
+        // Main marks every drop with a hard hint as blocked (service.ts), so
+        // real chained drops arrive with blocked: true.
+        blocked: true,
         blockingReasonHints: ["missing_prerequisite_drops:a"],
       }),
     ]);
     expect(drop(result.rows, "b")).toMatchObject({ readyAt: now + 90 * MIN, status: "queued" });
+  });
+
+  it("finished or claimable drops are not listed as blocked", () => {
+    const result = plan([
+      item({ id: "pv", game: "Valorant", earnedMinutes: 40 }),
+      item({ id: "ready", game: "Valorant", earnedMinutes: 60, isClaimable: true }),
+      item({ id: "full", game: "Valorant", earnedMinutes: 60 }),
+    ]);
+    expect(drops(result.rows).map((r) => r.dropId)).toEqual(["pv"]);
+  });
+
+  it("other drops of the active game include the live progress since the last poll", () => {
+    // Snapshot says pv has 20 min left, but its live eta is 10 min away:
+    // 10 min were watched since the poll, and they count for pc too.
+    const result = plan(
+      [
+        item({ id: "pv", game: "Valorant", earnedMinutes: 40 }),
+        item({ id: "pc", game: "Valorant", earnedMinutes: 0, requiredMinutes: 120 }),
+      ],
+      { activeDrop: { id: "pv", eta: now + 10 * MIN } },
+    );
+    expect(drop(result.rows, "pc")?.readyAt).toBe(now + 110 * MIN);
+  });
+
+  it("a campaign that ends early ends its game early", () => {
+    const result = plan(
+      [
+        item({ id: "x", game: "Valorant", endsAt: new Date(now + 30 * MIN).toISOString() }),
+        item({ id: "y", game: "Apex Legends", requiredMinutes: 10 }),
+      ],
+      { gameOrder: ["Valorant", "Apex Legends"] },
+    );
+    expect(result.rows.find((r) => r.kind === "switch")).toMatchObject({ at: now + 30 * MIN });
+    expect(drop(result.rows, "y")?.readyAt).toBe(now + 40 * MIN);
+  });
+
+  it("blocked rows appear only for games the user ranked", () => {
+    const result = plan(
+      [
+        item({ id: "pv", game: "Valorant", earnedMinutes: 40 }),
+        item({
+          id: "icon",
+          game: "Overwatch 2",
+          status: "locked",
+          linked: false,
+          blockingReasonHints: ["account_not_linked"],
+        }),
+      ],
+      { gameOrder: ["Valorant"], fallbackOrder: ["Overwatch 2"], obeyPriority: false },
+    );
+    expect(drop(result.rows, "icon")).toBeUndefined();
   });
 
   it("flags drops that cannot finish before endsAt", () => {
