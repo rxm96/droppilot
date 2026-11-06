@@ -233,6 +233,31 @@ describe("computeTargetDrops", () => {
     expect(result.showNoDropsHint).toBe(false);
   });
 
+  it("allows watching a fresh linked campaign without the unlinked opt-in", () => {
+    const linked = makeItem({ status: "locked", earnedMinutes: 0, linked: true });
+    const unlinked = makeItem({
+      status: "locked",
+      earnedMinutes: 0,
+      linked: false,
+      blockingReasonHints: ["account_not_linked"],
+    });
+    const run = (item: InventoryItem) =>
+      computeTargetDrops({
+        targetGame: "Game",
+        inventoryItems: [item],
+        withCategories: [{ item, category: "upcoming" }],
+        allowWatching: true,
+        allowUnlinkedGames: false,
+        watching: null,
+        inventoryFetchedAt: null,
+        now: 1_000_000,
+      });
+    expect(run(linked).canWatchTarget).toBe(true);
+    expect(run(linked).showNoDropsHint).toBe(false);
+    expect(run(unlinked).canWatchTarget).toBe(false);
+    expect(run(unlinked).showNoDropsHint).toBe(true);
+  });
+
   it("shows an upcoming drop as active while already watching the target game", () => {
     const now = 8_000_000;
     const item = makeItem({ status: "locked", earnedMinutes: 0, requiredMinutes: 60 });

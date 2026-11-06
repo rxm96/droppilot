@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { InventoryDrop, InventoryDropCollection } from "@renderer/shared/domain/dropDomain";
-import { canEarnDrop, hasHardWatchingBlockers } from "@renderer/shared/domain/inventory";
+import {
+  canEarnDrop,
+  hasHardWatchingBlockers,
+  isUpcomingDropStartable,
+} from "@renderer/shared/domain/inventory";
 import type { InventoryItem, WatchingState } from "@renderer/shared/types";
 import { useInterval } from "@renderer/shared/hooks/useInterval";
 import { sameGameName } from "@renderer/shared/domain/gameName";
@@ -226,11 +230,12 @@ export function computeTargetDrops({
     if (drop.raw.blocked === true) return false;
     if (hasHardWatchingBlockers(drop.raw)) return false;
     if (category === "in-progress") return true;
-    if (category === "upcoming") return allowUnlinkedGames;
+    if (category === "upcoming") return isUpcomingDropStartable(drop.raw, allowUnlinkedGames);
     return false;
   });
   const hasWatchableTarget =
-    sortedInProgress.length > 0 || (allowUnlinkedGames && sortedUpcoming.length > 0);
+    sortedInProgress.length > 0 ||
+    sortedUpcoming.some(({ drop }) => isUpcomingDropStartable(drop.raw, allowUnlinkedGames));
   const canWatchTarget = allowWatching && !!targetGame && hasWatchableTarget;
   const showNoDropsHint = !!targetGame && !hasUnclaimedTarget;
 

@@ -23,6 +23,26 @@ re-selects A, you stop it again, forever. The suppression reducer encodes three 
 - keep priority progression moving to the next game,
 - don't loop back to a recently stalled game.
 
+## What counts as a watch target
+
+`canEarnDrop` (`shared/domain/inventory/inventoryRules.ts`) decides whether watching can
+still earn minutes toward a drop; priority orchestration, target drops, the channel
+allowlist and stall-recovery retargeting all go through it.
+
+- **in-progress** drops (watch progress > 0, minutes remaining) are always earnable.
+- **upcoming** drops (locked, 0 minutes — e.g. a campaign never watched before) are earnable
+  when the campaign is account-connected (`linked === true`). Unlinked upcoming drops need
+  the "Allow unlinked campaigns" opt-in (`allowUpcoming` = `allowUnlinkedGames`). See
+  `isUpcomingDropStartable`.
+- Campaigns that haven't started or have expired, and chained drops whose prerequisites
+  aren't claimed yet, are excluded by hard blockers (`campaign_not_started`,
+  `campaign_expired`, `missing_prerequisite_drops:*`, `preconditions_not_met`) regardless
+  of category or settings.
+
+For games the user did **not** rank, games that already have watch progress are ordered
+before games with only fresh drops (`preferStartedGames`), so auto-selection finishes what it
+started before opening a new campaign. The user's ranking always wins over this.
+
 ## Suppression state
 
 `WatchEngineState` (in `watchEngine.ts`):
