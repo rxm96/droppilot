@@ -22,6 +22,7 @@ import {
   isUnmetSubscriptionDrop,
   isWithinClaimWindow,
   mergeCampaignDetails,
+  getCampaignGameName,
   mergePrimaryData,
   needsCampaignDetails,
   normalizeDropWatchState,
@@ -580,7 +581,7 @@ export class TwitchService {
       inProgress.slice(0, 3).map((e) => ({
         id: e?.node?.id,
         name: e?.node?.name,
-        game: e?.node?.game?.displayName,
+        game: getCampaignGameName(e?.node?.game),
         dropCount: e?.node?.timeBasedDrops?.length,
         rawKeys: e ? Object.keys(e) : [],
       })),
@@ -662,7 +663,7 @@ export class TwitchService {
               available.slice(0, 3).map((e) => ({
                 id: e?.node?.id,
                 name: e?.node?.name,
-                game: e?.node?.game?.displayName,
+                game: getCampaignGameName(e?.node?.game),
                 dropCount: e?.node?.timeBasedDrops?.length,
                 rawKeys: e ? Object.keys(e) : [],
               })),
@@ -814,7 +815,7 @@ export class TwitchService {
 
     for (const campaign of detailed) {
       if (!campaign.timeBasedDrops) continue;
-      const game = campaign.game?.displayName ?? "Unknown game";
+      const game = getCampaignGameName(campaign.game) || "Unknown game";
       const linked = isTruthyFlag(campaign.self?.isAccountConnected);
       const campaignStatus = campaign.status;
       const campaignName = campaign.name;
