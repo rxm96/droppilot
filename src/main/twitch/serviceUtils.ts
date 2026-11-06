@@ -114,12 +114,31 @@ type AllowChannelNode = {
   };
 };
 
+// ViewerDropsDashboard / DropCampaignDetails expose `displayName`; the Inventory
+// query only returns `name` (+ `slug`) for the game.
+type CampaignGame = {
+  id?: string;
+  slug?: string;
+  name?: string;
+  displayName?: string;
+  boxArtURL?: string;
+  boxArtUrl?: string;
+};
+
+export function getCampaignGameName(game: CampaignGame | null | undefined): string {
+  for (const candidate of [game?.displayName, game?.name]) {
+    const value = typeof candidate === "string" ? candidate.trim() : "";
+    if (value) return value;
+  }
+  return "";
+}
+
 export type CampaignNode = {
   id: string;
   name: string;
   accountLinkURL?: string;
   accountLinkUrl?: string;
-  game?: { displayName?: string; boxArtURL?: string; boxArtUrl?: string };
+  game?: CampaignGame;
   startAt?: string;
   endAt?: string;
   status?: string;
@@ -829,7 +848,7 @@ export function buildCampaignSummaries(
   const campaigns: CampaignInfo[] = [];
   for (const node of nodes) {
     if (!node?.id || !node?.name) continue;
-    const game = node.game?.displayName?.trim() ?? "";
+    const game = getCampaignGameName(node.game);
     if (!game) continue;
     const startsAt = typeof node.startAt === "string" ? node.startAt : undefined;
     const endsAt = typeof node.endAt === "string" ? node.endAt : undefined;

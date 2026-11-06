@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildCampaignSummaries,
   extractAllowedChannelFilters,
+  getCampaignGameName,
   mergePrimaryData,
   normalizeDropWatchState,
 } from "./serviceUtils";
@@ -263,7 +264,32 @@ describe("normalizeDropWatchState", () => {
   });
 });
 
+describe("getCampaignGameName", () => {
+  it("prefers displayName", () => {
+    expect(getCampaignGameName({ displayName: " Overwatch ", name: "overwatch" })).toBe(
+      "Overwatch",
+    );
+  });
+
+  it("falls back to name (Inventory query shape since the 2026-08 hash rotation)", () => {
+    expect(getCampaignGameName({ name: "ARC Raiders", slug: "arc-raiders" })).toBe("ARC Raiders");
+  });
+
+  it("returns an empty string when no usable name exists", () => {
+    expect(getCampaignGameName(undefined)).toBe("");
+    expect(getCampaignGameName({ displayName: "  ", name: "" })).toBe("");
+  });
+});
+
 describe("buildCampaignSummaries", () => {
+  it("uses game.name when displayName is missing", () => {
+    const campaigns = buildCampaignSummaries([
+      { id: "camp-inv", name: "Campaign", game: { name: "ARC Raiders" } },
+    ]);
+
+    expect(campaigns[0]?.game).toBe("ARC Raiders");
+  });
+
   it("keeps absolute account link urls", () => {
     const campaigns = buildCampaignSummaries([
       {
