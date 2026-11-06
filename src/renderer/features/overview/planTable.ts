@@ -1,0 +1,126 @@
+// Pure view-model for the overview's "plan · today" table. Turns the
+// buildFarmPlan output into display rows. No React imports.
+
+import type { FarmPlan } from "@renderer/shared/domain/farmPlan";
+import { sameGameName } from "@renderer/shared/domain/gameName";
+import type { InventoryItem } from "@renderer/shared/types";
+import { formatReadyAt } from "./formatters";
+
+export type PlanClock = { clock: string; dayOffset: number };
+
+export type PlanTableStatus = "watching" | "next" | "queued" | "needs-link" | "blocked";
+
+export type PlanTableDropRow = {
+  kind: "drop";
+  key: string;
+  ready: PlanClock | null;
+  title: string;
+  game: string;
+  watched: number;
+  required: number;
+  status: PlanTableStatus;
+  /** Raw blocking hint, only on "blocked" rows. */
+  blockedReason?: string;
+  note: { kind: "ends-first" } | { kind: "ends-soon"; hours: number } | null;
+};
+
+export type PlanTableSwitchRow = {
+  kind: "switch";
+  key: string;
+  game: string;
+  /** The game is in the user's own list (else it is farmed meanwhile). */
+  ranked: boolean;
+  at: PlanClock;
+};
+
+export type PlanTableRow = PlanTableDropRow | PlanTableSwitchRow;
+export type PlanTable = { rows: PlanTableRow[]; hiddenCount: number; doneAt: PlanClock | null };
+
+const DAY_MS = 86_400_000;
+const HOUR_MS = 3_600_000;
+
+const startOfDay = (ts: number): number => {
+  const d = new Date(ts);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+};
+
+/** Local clock time plus how many calendar days after `now` it falls. */
+export function formatPlanClock(ts: number, now: number): PlanClock {
+  const clock = formatReadyAt(ts, now)?.clock ?? "—";
+  const dayOffset = Math.max(0, Math.round((startOfDay(ts) - startOfDay(now)) / DAY_MS));
+  return { clock, dayOffset };
+}
+
+export function buildPlanTable(
+  plan: FarmPlan,
+  input: {
+    items: InventoryItem[];
+    /** The user's ranked games (resolvePriorityGameNames). */
+    gameOrder: string[];
+    /** The watched drop with its live minutes; null while paused or idle. */
+    activeDrop: { id: string; earnedMinutes: number } | null;
+    now: number;
+    /** Max drop rows to show; the rest is counted in hiddenCount. */
+    limit: number;
+  },
+): PlanTable {
+  const itemById = new Map(input.items.map((i) => [i.id, i]));
+  const rows: PlanTableRow[] = [];
+  let shownDrops = 0;
+  let hiddenCount = 0;
+
+  for (const row of plan.rows) {
+    if (row.kind === "switch") {
+      if (shownDrops >= input.limit) continue;
+      rows.push({
+        kind: "switch",
+        key: `switch:${row.game}`,
+        game: row.game,
+        ranked: input.gameOrder.some((g) => sameGameName(g, row.game)),
+        at: formatPlanClock(row.at, input.now),
+      });
+      continue;
+    }
+    if (shownDrops >= input.limit) {
+      hiddenCount += 1;
+      continue;
+    }
+    shownDrops += 1;
+    const item = itemById.get(row.dropId);
+    const live = input.activeDrop?.id === row.dropId ? input.activeDrop.earnedMinutes : null;
+    const needsLink =
+      row.status === "blocked" &&
+      (row.blockedReason === "account_not_linked" || item?.linked === false);
+    const endsAt = item?.endsAt ? Date.parse(item.endsAt) : Number.NaN;
+    const untilEnd = endsAt - input.now;
+    const note: PlanTableDropRow["note"] =
+      row.readyAt === null
+        ? null
+        : row.wontFinishInTime
+          ? { kind: "ends-first" }
+          : Number.isFinite(untilEnd) && untilEnd > 0 && untilEnd < DAY_MS
+            ? { kind: "ends-soon", hours: Math.ceil(untilEnd / HOUR_MS) }
+            : null;
+    rows.push({
+      kind: "drop",
+      key: row.dropId,
+      ready: row.readyAt === null ? null : formatPlanClock(row.readyAt, input.now),
+      title: row.title,
+      game: row.game,
+      watched: Math.max(0, Math.floor(live ?? row.earnedMinutes)),
+      required: row.requiredMinutes,
+      status: needsLink ? "needs-link" : row.status,
+      ...(row.status === "blocked" && !needsLink && row.blockedReason
+        ? { blockedReason: row.blockedReason }
+        : {}),
+      note,
+    });
+  }
+  while (rows.length > 0 && rows[rows.length - 1].kind === "switch") rows.pop();
+
+  return {
+    rows,
+    hiddenCount,
+    doneAt: plan.doneAt === null ? null : formatPlanClock(plan.doneAt, input.now),
+  };
+}
