@@ -794,6 +794,7 @@ const translations: Translations = {
     // Account pills
     "settings.account.connected": "twitch · connected",
     "settings.account.notConnected": "twitch · not connected",
+    "settings.account.demo": "demo mode · turn it off under advanced",
     "settings.account.signedOut": "Not signed in",
     "settings.account.logout": "sign out",
     "settings.account.login": "sign in",
@@ -1793,6 +1794,7 @@ const translations: Translations = {
 
     "settings.account.connected": "twitch · verbunden",
     "settings.account.notConnected": "twitch · nicht verbunden",
+    "settings.account.demo": "demo-modus · unter erweitert abschalten",
     "settings.account.signedOut": "Nicht angemeldet",
     "settings.account.logout": "abmelden",
     "settings.account.login": "anmelden",

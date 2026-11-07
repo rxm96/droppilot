@@ -8,12 +8,15 @@ import type { UpdateChannel } from "../../../../shared/updateChannels";
 import { ChoiceButtons } from "../ChoiceButtons";
 import { SettingRow } from "../SettingRow";
 import { SettingsPanel } from "../SettingsPanel";
+import { accountRowState } from "./accountRow";
 import { ReleaseHistory } from "./ReleaseHistory";
 import { updateStatusLine, type UpdateStatus } from "./updateStatusLine";
 
 export type AccountUpdatesSectionProps = {
   id: string;
   isLinked: boolean;
+  /** Demo mode shows the demo profile and no account button (see accountRowState). */
+  demoMode: boolean;
   profile: ProfileState;
   onLogout: () => void;
   onLogin: () => void;
@@ -40,8 +43,8 @@ export function AccountUpdatesSection(props: AccountUpdatesSectionProps) {
   const { t } = useI18n();
   const [changelogOpen, setChangelogOpen] = React.useState(false);
   const changelogId = React.useId();
-  const name =
-    props.isLinked && props.profile.status === "ready" ? props.profile.displayName : null;
+  const account = accountRowState(props);
+  const name = account.name;
   const state = props.updateStatus?.state ?? "idle";
   const line = updateStatusLine(props.updateStatus);
 
@@ -59,14 +62,15 @@ export function AccountUpdatesSection(props: AccountUpdatesSectionProps) {
             {name ?? t("settings.account.signedOut")}
           </div>
           <div className="font-mono text-[11px] text-[color:var(--dp-text-dimmer)]">
-            {t(props.isLinked ? "settings.account.connected" : "settings.account.notConnected")}
+            {t(account.statusKey)}
           </div>
         </div>
-        {props.isLinked ? (
+        {account.action === "logout" && (
           <Button variant="dp-outline" size="dp-md" onClick={props.onLogout}>
             {t("settings.account.logout")}
           </Button>
-        ) : (
+        )}
+        {account.action === "login" && (
           <Button variant="dp-primary" size="dp-md" onClick={props.onLogin}>
             {t("settings.account.login")}
           </Button>

@@ -254,6 +254,7 @@ export function SettingsView(props: SettingsProps) {
         <AccountUpdatesSection
           id={idOf.account}
           isLinked={props.isLinked}
+          demoMode={props.demoMode}
           profile={props.profile}
           onLogout={props.onLogout}
           onLogin={props.onLogin}

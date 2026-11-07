@@ -79,6 +79,8 @@ GitHub Release (which the app's update history shows) is built from that section
 - The drop details panel now shows the watched and required time, instead of only the
   words "watched · required".
 - Exporting or importing settings shows a readable message instead of an internal text key.
+- In demo mode, Settings shows the demo account, as the top bar does, instead of "Not signed
+  in".
 
 ## [4.0.0] - 2026-11-06
 
