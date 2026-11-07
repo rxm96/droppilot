@@ -77,7 +77,7 @@ export function HeroPanel({
   onOpenStream,
   picker,
 }: HeroPanelProps) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const paused = state === "paused";
   const channelName = watching?.name || watching?.login || "";
   const progressPct = resolveHeroProgress(dropProgress);
@@ -224,7 +224,9 @@ export function HeroPanel({
                   `${t("overview.hero.viewers", { count: watchingViewers.toLocaleString() })} · `}
                 <TimeText
                   render={(now) =>
-                    t("overview.hero.lastPing", { time: formatRelative(lastWatchOk, now) })
+                    t("overview.hero.lastPing", {
+                      time: formatRelative(lastWatchOk, now, language),
+                    })
                   }
                 />
               </div>

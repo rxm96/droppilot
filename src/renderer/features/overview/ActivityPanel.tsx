@@ -2,7 +2,7 @@ import * as React from "react";
 import { FeedItem } from "@renderer/shared/components/ui/feed-item";
 import { Check, RotateCw, Plus, AlertTriangle, Play } from "@renderer/shared/lib/icons";
 import { formatRelative } from "./formatters";
-import { useI18n } from "@renderer/shared/i18n";
+import { useI18n, type Language } from "@renderer/shared/i18n";
 import { useActivityFeed, type ActivityEvent } from "@renderer/shared/utils/activityFeed";
 
 export type ActivityPanelProps = {
@@ -67,8 +67,12 @@ function renderMessage(event: ActivityEvent, t: ReturnType<typeof useI18n>["t"])
 }
 
 /** Renders the meta line under the headline (subtitle + relative time). */
-function renderMeta(event: ActivityEvent, t: ReturnType<typeof useI18n>["t"]): React.ReactNode {
-  const time = formatRelative(event.at);
+function renderMeta(
+  event: ActivityEvent,
+  t: ReturnType<typeof useI18n>["t"],
+  language: Language,
+): React.ReactNode {
+  const time = formatRelative(event.at, Date.now(), language);
   switch (event.kind) {
     case "drop-claimed":
       return (
@@ -120,7 +124,7 @@ function renderMeta(event: ActivityEvent, t: ReturnType<typeof useI18n>["t"]): R
 }
 
 export function ActivityPanel({ maxItems = 8 }: ActivityPanelProps) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const events = useActivityFeed();
   const slice = React.useMemo(() => events.slice(0, maxItems), [events, maxItems]);
 
@@ -147,7 +151,7 @@ export function ActivityPanel({ maxItems = 8 }: ActivityPanelProps) {
                   tone={tone}
                   icon={icon}
                   msg={renderMessage(event, t)}
-                  meta={renderMeta(event, t)}
+                  meta={renderMeta(event, t, language)}
                 />
               </li>
             );

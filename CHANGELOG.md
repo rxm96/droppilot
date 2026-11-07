@@ -36,6 +36,8 @@ GitHub Release (which the app's update history shows) is built from that section
   they no longer have a dark track.
 - The demo mode hint and the debug tools section in Settings are now shown in German when
   the app is set to German.
+- In German, the overview shows "letzter Ping vor 13 s" and the activity times in German
+  instead of "13s ago".
 
 ## [4.1.0] - 2026-11-07
 

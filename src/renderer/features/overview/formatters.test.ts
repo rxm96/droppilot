@@ -29,6 +29,14 @@ describe("formatRelative", () => {
     expect(formatRelative(now - 2 * 86_400_000, now)).toBe("2d ago");
   });
 
+  it("formats in German when asked", () => {
+    expect(formatRelative(now - 13_000, now, "de")).toBe("vor 13 s");
+    expect(formatRelative(now - 90_000, now, "de")).toBe("vor 1 Min.");
+    expect(formatRelative(now - 3 * 3_600_000 - 4 * 60_000, now, "de")).toBe("vor 3 Std. 4 Min.");
+    expect(formatRelative(now - 2 * 86_400_000, now, "de")).toBe("vor 2 T.");
+    expect(formatRelative(0, now, "de")).toBe("--");
+  });
+
   it("clamps future timestamps to 0s ago", () => {
     expect(formatRelative(now + 10_000, now)).toBe("0s ago");
   });

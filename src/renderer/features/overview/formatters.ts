@@ -1,6 +1,8 @@
 // Shared formatting helpers for the Phase 2 Overview panels.
 // No React imports — pure functions.
 
+import type { Language } from "@renderer/shared/i18n";
+
 export function formatHourMinute(totalMinutes: number): string {
   const safe = Math.max(0, Math.round(totalMinutes));
   const h = Math.floor(safe / 60);
@@ -53,9 +55,14 @@ export function formatPercent(n: number): string {
   return `${Math.max(0, Math.min(100, Math.round(n)))}%`;
 }
 
+/**
+ * How long ago something happened, compact: "13s ago" / "vor 13 s".
+ * "--" for a missing or idle (<= 0) timestamp.
+ */
 export function formatRelative(
   timestamp: number | null | undefined,
   now: number = Date.now(),
+  language: Language = "en",
 ): string {
   // `timestamp <= 0` covers the idle/never-set sentinel (watchStats.lastOk
   // defaults to 0). Without this guard `now - 0` renders as "~20604d ago"
@@ -63,12 +70,18 @@ export function formatRelative(
   if (typeof timestamp !== "number" || !Number.isFinite(timestamp) || timestamp <= 0) return "--";
   const diff = Math.max(0, now - timestamp);
   const seconds = Math.floor(diff / 1000);
-  if (seconds < 60) return `${seconds}s ago`;
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ${minutes % 60}m ago`;
   const days = Math.floor(hours / 24);
+  if (language === "de") {
+    if (seconds < 60) return `vor ${seconds} s`;
+    if (minutes < 60) return `vor ${minutes} Min.`;
+    if (hours < 24) return `vor ${hours} Std. ${minutes % 60} Min.`;
+    return `vor ${days} T.`;
+  }
+  if (seconds < 60) return `${seconds}s ago`;
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ${minutes % 60}m ago`;
   return `${days}d ago`;
 }
 
