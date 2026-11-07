@@ -77,20 +77,13 @@ function Row({
   const { t } = useI18n();
   const pct = row.required > 0 ? Math.min(100, Math.round((row.watched / row.required) * 100)) : 0;
   const note = noteText(row.note, t);
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      onSelect(row.id);
-    }
-  };
+  // The whole row is a mouse target; keyboard and screen readers use the
+  // title button, which carries the name and the dialog hint.
   return (
     <tr
-      tabIndex={0}
-      aria-haspopup="dialog"
       onClick={() => onSelect(row.id)}
-      onKeyDown={onKeyDown}
       className={cn(
-        "cursor-pointer border-t border-[color:var(--dp-border)] transition-colors first:border-t-0 hover:bg-[color:var(--dp-bg-elevated-2)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[color:var(--dp-accent)]",
+        "cursor-pointer border-t border-[color:var(--dp-border)] transition-colors first:border-t-0 hover:bg-[color:var(--dp-bg-elevated-2)]",
         row.status === "watching" &&
           "bg-[color:var(--dp-accent-soft)] shadow-[inset_2px_0_0_var(--dp-accent)]",
         selected && "bg-[color:var(--dp-bg-elevated-2)]",
@@ -100,16 +93,22 @@ function Row({
         <GameTile url={row.imageUrl} code={code} size={34} faded={FADED.has(row.status)} />
       </td>
       <td className="py-2.5 pl-3">
-        <div
+        <button
+          type="button"
+          aria-haspopup="dialog"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect(row.id);
+          }}
           className={cn(
-            "font-medium",
+            "block max-w-full rounded-[var(--dp-radius-xs)] text-left font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--dp-accent)]",
             QUIET.has(row.status)
               ? "text-[color:var(--dp-text-dim)]"
               : "text-[color:var(--dp-text)]",
           )}
         >
           {row.title}
-        </div>
+        </button>
         {note && (
           <div
             className={cn(

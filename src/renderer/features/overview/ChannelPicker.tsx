@@ -125,7 +125,7 @@ export function ChannelPicker({
             <span className="truncate">{t("overview.picker.header", { game: targetGame })}</span>
             <span className="flex-none">{t("overview.picker.sorted")}</span>
           </div>
-          <label className="mx-0.5 mb-1.5 flex min-h-[34px] items-center gap-2 rounded-[var(--dp-radius-md)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-app)] px-2.5 font-mono text-[12px] text-[color:var(--dp-text-dimmer)]">
+          <label className="mx-0.5 mb-1.5 flex min-h-[34px] items-center gap-2 rounded-[var(--dp-radius-md)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-app)] px-2.5 font-mono text-[12px] text-[color:var(--dp-text-dimmer)] focus-within:border-[color:var(--dp-accent)]">
             <Search size={14} strokeWidth={1.7} aria-hidden="true" />
             <span className="sr-only">{t("overview.picker.filterLabel")}</span>
             <input
