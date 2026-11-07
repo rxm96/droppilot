@@ -23,6 +23,7 @@ const translations: Translations = {
     "overview.hero.kicker.off": "○ signed out",
     "overview.hero.kicker.waiting": "○ waiting",
     "overview.hero.kicker.channelsError": "○ channels unavailable",
+    "overview.hero.kicker.nothingToFarm": "○ nothing to farm",
     "overview.hero.endsIn": "ends in {time}",
     "overview.hero.title.nothing": "Nothing to farm right now",
     "overview.hero.sub.earningAutoClaim": "Watching {channel}. Gets claimed for you automatically.",
@@ -32,6 +33,8 @@ const translations: Translations = {
     "overview.hero.sub.noDrop":
       "Watching {channel}, but none of your drops count here. The autopilot moves on by itself.",
     "overview.hero.sub.noTarget": "No game has drops to farm right now.",
+    "overview.hero.sub.nothingToFarm":
+      "Nothing to farm for {game} right now. Its drops are done, blocked or not started yet.",
     "overview.hero.sub.noChannels":
       "No live channels with drops for {game} right now. The autopilot keeps checking.",
     "overview.hero.sub.starting": "Looking for a channel for {game}…",
@@ -1024,6 +1027,7 @@ const translations: Translations = {
     "overview.hero.kicker.off": "○ abgemeldet",
     "overview.hero.kicker.waiting": "○ wartet",
     "overview.hero.kicker.channelsError": "○ Kanäle nicht verfügbar",
+    "overview.hero.kicker.nothingToFarm": "○ nichts zu farmen",
     "overview.hero.endsIn": "endet in {time}",
     "overview.hero.title.nothing": "Gerade nichts zu farmen",
     "overview.hero.sub.earningAutoClaim": "Schaut {channel}. Wird automatisch für dich eingelöst.",
@@ -1034,6 +1038,8 @@ const translations: Translations = {
     "overview.hero.sub.noDrop":
       "Schaut {channel}, aber keiner deiner Drops zählt hier. Der Autopilot wechselt von selbst.",
     "overview.hero.sub.noTarget": "Gerade hat kein Game Drops zum Farmen.",
+    "overview.hero.sub.nothingToFarm":
+      "Für {game} gibt es gerade nichts zu farmen. Seine Drops sind fertig, blockiert oder noch nicht gestartet.",
     "overview.hero.sub.noChannels":
       "Gerade keine Live-Kanäle mit Drops für {game}. Der Autopilot schaut weiter nach.",
     "overview.hero.sub.starting": "Sucht einen Kanal für {game}…",

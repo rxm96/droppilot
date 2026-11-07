@@ -39,6 +39,7 @@ const KICKER_TONE: Record<HeroState, string> = {
   "watching-no-drop": "text-[color:var(--dp-signal-warn)]",
   off: "text-[color:var(--dp-text-dimmer)]",
   "idle-no-target": "text-[color:var(--dp-text-dimmer)]",
+  "idle-nothing-to-farm": "text-[color:var(--dp-text-dimmer)]",
   "idle-no-channels": "text-[color:var(--dp-text-dimmer)]",
   "idle-channels-error": "text-[color:var(--dp-signal-warn)]",
   "idle-starting": "text-[color:var(--dp-text-dimmer)]",
@@ -50,6 +51,7 @@ const KICKER_KEY: Record<HeroState, string> = {
   "watching-no-drop": "overview.hero.kicker.noDrop",
   off: "overview.hero.kicker.off",
   "idle-no-target": "overview.hero.kicker.waiting",
+  "idle-nothing-to-farm": "overview.hero.kicker.nothingToFarm",
   "idle-no-channels": "overview.hero.kicker.waiting",
   "idle-channels-error": "overview.hero.kicker.channelsError",
   "idle-starting": "overview.hero.kicker.waiting",
@@ -97,6 +99,8 @@ export function HeroPanel({
         return t("overview.hero.sub.noDrop", { channel: channelName });
       case "idle-no-target":
         return t("overview.hero.sub.noTarget");
+      case "idle-nothing-to-farm":
+        return t("overview.hero.sub.nothingToFarm", { game: activeGame });
       case "idle-no-channels":
         return t("overview.hero.sub.noChannels", { game: activeGame });
       case "idle-channels-error":

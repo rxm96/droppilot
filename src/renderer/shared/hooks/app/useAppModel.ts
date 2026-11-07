@@ -765,6 +765,7 @@ export function useAppModel() {
     channelsCount: channels.length,
     channelsLoading,
     channelsFailed: channelError !== null,
+    canWatchTarget,
   });
   const overviewProps = {
     hero: {
@@ -787,6 +788,9 @@ export function useAppModel() {
       onOpenStream: openStream,
     },
     picker: {
+      // Nothing watchable and nothing watched: no channels are fetched, so
+      // the list would only ever be empty.
+      disabled: !canWatchTarget && !watching,
       open: channelPickerOpen,
       onOpenChange: setChannelPickerOpen,
       targetGame: displayTargetGame,

@@ -28,6 +28,7 @@ export type HeroState =
   | "off"
   | "watching-no-drop"
   | "idle-no-target"
+  | "idle-nothing-to-farm"
   | "idle-no-channels"
   | "idle-channels-error"
   | "idle-starting";
@@ -42,11 +43,15 @@ export function resolveHeroState(input: {
   channelsLoading: boolean;
   /** The last channel fetch failed (the list is empty because of the error). */
   channelsFailed: boolean;
+  /** The target game has a drop watching can earn (useTargetDrops). */
+  canWatchTarget: boolean;
 }): HeroState {
   if (input.autopilot === "off") return "off";
   if (input.autopilot === "paused") return "paused";
   if (input.watching) return input.hasActiveDrop ? "earning" : "watching-no-drop";
   if (!input.activeGame.trim()) return "idle-no-target";
+  // Channels are not fetched for a target with nothing watchable.
+  if (!input.canWatchTarget) return "idle-nothing-to-farm";
   if (input.channelsFailed) return "idle-channels-error";
   if (!input.channelsLoading && input.channelsCount === 0) return "idle-no-channels";
   return "idle-starting";

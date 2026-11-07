@@ -48,6 +48,7 @@ describe("resolveHeroState", () => {
     channelsCount: 3,
     channelsLoading: false,
     channelsFailed: false,
+    canWatchTarget: true,
   };
   it("earns while a drop is being watched", () => {
     expect(resolveHeroState({ ...base, watching: true, hasActiveDrop: true })).toBe("earning");
@@ -65,6 +66,15 @@ describe("resolveHeroState", () => {
     expect(resolveHeroState({ ...base, channelsCount: 0, channelsFailed: true })).toBe(
       "idle-channels-error",
     );
+  });
+  it("says there is nothing to farm when the target game has no watchable drop", () => {
+    // Channels are never fetched then, so "no live channels" would be false.
+    expect(resolveHeroState({ ...base, channelsCount: 0, canWatchTarget: false })).toBe(
+      "idle-nothing-to-farm",
+    );
+    expect(
+      resolveHeroState({ ...base, watching: true, hasActiveDrop: true, canWatchTarget: false }),
+    ).toBe("earning");
   });
   it("tells the idle cases apart", () => {
     expect(resolveHeroState({ ...base, activeGame: "" })).toBe("idle-no-target");

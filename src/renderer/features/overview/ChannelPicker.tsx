@@ -10,6 +10,8 @@ import { buildChannelPickerRows } from "./channelPickerRows";
 import { channelInitials } from "./overviewModel";
 
 export type ChannelPickerProps = {
+  /** No channel can be picked (the target has nothing watchable). */
+  disabled: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   targetGame: string;
@@ -32,6 +34,7 @@ export type ChannelPickerProps = {
  * but disabled ("would not count").
  */
 export function ChannelPicker({
+  disabled,
   open,
   onOpenChange,
   targetGame,
@@ -75,6 +78,11 @@ export function ChannelPicker({
     };
   }, [open, close]);
 
+  // Close it when picking stops being possible while it is open.
+  React.useEffect(() => {
+    if (disabled && open) onOpenChange(false);
+  }, [disabled, open, onOpenChange]);
+
   // Leaving the overview while open must not keep the channel list tracked.
   // (onOpenChange is a state setter, so this cleanup only runs on unmount.)
   React.useEffect(() => () => onOpenChange(false), [onOpenChange]);
@@ -97,16 +105,16 @@ export function ChannelPicker({
           setQuery("");
           onOpenChange(!open);
         }}
-        disabled={!targetGame}
+        disabled={disabled || !targetGame}
         aria-expanded={open}
         aria-haspopup="dialog"
-        aria-controls={open ? dialogId : undefined}
+        aria-controls={open && !disabled ? dialogId : undefined}
         className={cn(open && "border-[color:var(--dp-accent)] bg-[color:var(--dp-bg-elevated-2)]")}
       >
         {t("overview.picker.trigger")}
         <ChevronDown size={14} strokeWidth={1.7} />
       </Button>
-      {open && (
+      {open && !disabled && (
         <div
           id={dialogId}
           role="dialog"
