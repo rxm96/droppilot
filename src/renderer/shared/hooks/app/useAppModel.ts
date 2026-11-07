@@ -50,6 +50,7 @@ import { useSettingsStore } from "./useSettingsStore";
 import { useSmartAlerts } from "./useSmartAlerts";
 import { useStats } from "./useStats";
 import { useAccent, useFontPair, useTheme } from "@renderer/shared/theme";
+import { useInterval } from "@renderer/shared/hooks/useInterval";
 import type { ChannelEntry, FilterKey, View } from "@renderer/shared/types";
 import { isVerboseLoggingEnabled } from "@renderer/shared/utils/logger";
 
@@ -643,6 +644,12 @@ export function useAppModel() {
   );
 
   // --- Plan · today ---------------------------------------------------------
+  // The plan and needs-you memos read the clock. While paused, idle or
+  // watching without an ETA nothing else re-runs them for an hour (inventory
+  // refresh), so ready times and expiries would stay anchored to the last
+  // run. Tick once a minute (minute resolution, like the games view).
+  const [nowMinute, setNowMinute] = useState(() => Math.floor(Date.now() / 60_000));
+  useInterval(() => setNowMinute(Math.floor(Date.now() / 60_000)), 60_000);
   const rankedGames = useMemo(
     () => resolvePriorityGameNames(priorityGames, inventoryItems),
     [inventoryItems, priorityGames],
@@ -672,12 +679,13 @@ export function useAppModel() {
             }
           : null,
         allowUpcoming: allowUnlinkedGames,
-        now: Date.now(),
+        now: nowMinute * 60_000,
       }),
     [
       allowUnlinkedGames,
       displayTargetGame,
       fallbackOrder,
+      nowMinute,
       obeyPriority,
       planActiveDropId,
       planActiveEtaMinute,
@@ -713,9 +721,9 @@ export function useAppModel() {
         rankedGames,
         campaigns,
         allowUnlinkedGames,
-        now: Date.now(),
+        now: nowMinute * 60_000,
       }),
-    [allowUnlinkedGames, auth.status, campaigns, inventoryItems, rankedGames],
+    [allowUnlinkedGames, auth.status, campaigns, inventoryItems, nowMinute, rankedGames],
   );
   const dropsNeedingYou = needsYouItems.filter((item) => item.kind !== "session-expired").length;
 

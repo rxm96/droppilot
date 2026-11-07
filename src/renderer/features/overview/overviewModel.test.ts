@@ -138,6 +138,12 @@ describe("buildNeedsYouItems", () => {
     expect(items[0]).toMatchObject({ kind: "link", game: "Rust" });
   });
 
+  it("drops a link prompt once its campaign has ended by the given now", () => {
+    const items = [drop({ linked: false, endsAt: "2026-11-06T12:30:00Z" })];
+    expect(buildNeedsYouItems({ ...base, items })).toHaveLength(1);
+    expect(buildNeedsYouItems({ ...base, items, now: now + 60 * 60_000 })).toEqual([]);
+  });
+
   it("skips claimed, expired and allowed-unlinked drops", () => {
     const linkable = [
       drop({ id: "a", linked: false, status: "claimed" }),

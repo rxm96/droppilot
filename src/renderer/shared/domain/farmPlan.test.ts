@@ -201,6 +201,14 @@ describe("buildFarmPlan", () => {
     expect(ids).toEqual(["pv", "st"]);
   });
 
+  it("ready times follow the given now while nothing is watched", () => {
+    // Paused or idle: no live eta, so readyAt is now + remaining minutes. A
+    // later now (the minute tick) must move it later, not keep the old anchor.
+    const items = [item({ id: "pv", game: "Valorant", earnedMinutes: 40 })];
+    expect(drop(plan(items).rows, "pv")?.readyAt).toBe(now + 20 * MIN);
+    expect(drop(plan(items, { now: now + 60 * MIN }).rows, "pv")?.readyAt).toBe(now + 80 * MIN);
+  });
+
   it("claimed and expired drops are left out", () => {
     const result = plan([
       item({ id: "done", game: "Valorant", status: "claimed", earnedMinutes: 60 }),
