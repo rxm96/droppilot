@@ -9,7 +9,7 @@ export type ActivityHeatmapProps = {
 const WEEKS = 26;
 
 const LEVEL_BG: Record<CalendarCell["level"], string> = {
-  0: "var(--dp-bg-elevated-2)",
+  0: "var(--dp-border)",
   1: "color-mix(in srgb, var(--dp-accent) 30%, transparent)",
   2: "color-mix(in srgb, var(--dp-accent) 60%, transparent)",
   3: "var(--dp-accent)",
