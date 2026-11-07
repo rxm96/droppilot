@@ -72,7 +72,8 @@ export class AuthController {
         for (const c of [...domainCookies, ...urlCookies]) {
           cookieStore.set(c.name, c.value);
         }
-        console.log("[Auth] Collected cookies", Array.from(cookieStore.entries()));
+        // Names only: the values include the web auth-token.
+        console.log("[Auth] Collected cookies", Array.from(cookieStore.keys()));
       } catch (err) {
         console.log("[Auth] Cookie collection error", err);
       }

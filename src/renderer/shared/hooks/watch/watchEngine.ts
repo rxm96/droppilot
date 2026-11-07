@@ -145,6 +145,18 @@ export const shouldForceClearWatchingOnSuppressedTarget = (
 };
 
 /**
+ * Whether the channel autopilot may auto-select a channel of `game`. A
+ * suppressed game is never auto-selected: `shouldForceClearWatchingOnSuppressedTarget`
+ * would clear it right away, and the autopilot would pick it again — a
+ * select/clear loop for the whole hold window (each pick sends a watch ping).
+ */
+export const canAutoSelectGame = (
+  state: WatchEngineState,
+  game: string,
+  canWatchTarget: boolean,
+): boolean => canWatchTarget && !shouldForceClearWatchingOnSuppressedTarget(state, game);
+
+/**
  * Stamp time onto events that carry one, only when the caller didn't provide
  * a finite value. Keeps reducer replays deterministic in tests/logs.
  */

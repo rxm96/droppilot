@@ -15,6 +15,7 @@ import { RENDERER_ERROR_CODES } from "../../../../shared/errorCodes";
 import { buildAllowlistKey, prioritizeChannelsByAllowlist } from "./channelAllowlist";
 import {
   buildChannelDiff,
+  channelsAfterFetchFailure,
   isFreshCache,
   mergeChannelList,
   shouldClearTrackerAfterStaleResponse,
@@ -190,7 +191,7 @@ export function useChannelFetch({
             }),
           );
           setChannelDiff(null);
-          applyChannelsState([]);
+          applyChannelsState(channelsAfterFetchFailure({ prevList, fetchedGame, gameName }));
           logWarn("channels: fetch error", res);
           return;
         }
@@ -200,7 +201,7 @@ export function useChannelFetch({
             message: "Invalid channels response",
           });
           setChannelDiff(null);
-          applyChannelsState([]);
+          applyChannelsState(channelsAfterFetchFailure({ prevList, fetchedGame, gameName }));
           logWarn("channels: invalid response", res);
           return;
         }
@@ -226,7 +227,7 @@ export function useChannelFetch({
           }),
         );
         setChannelDiff(null);
-        applyChannelsState([]);
+        applyChannelsState(channelsAfterFetchFailure({ prevList, fetchedGame, gameName }));
       } finally {
         inFlightGamesRef.current.delete(gameName);
         if (gameName === targetGameRef.current) {

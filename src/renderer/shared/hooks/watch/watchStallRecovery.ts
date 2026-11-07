@@ -10,6 +10,12 @@ import type { CooldownReason } from "./gameCooldowns";
 export const STALL_NO_PROGRESS_WINDOW_MS = 15 * 60_000;
 export const STALL_NO_PROGRESS_WINDOW_NEAR_END_MS = 3 * 60_000;
 export const STALL_RECOVERY_COOLDOWN_MS = 60_000;
+/**
+ * After a channel switch, how long the new channel gets before the next recovery
+ * step (capped at the active no-progress window). The plain action cooldown is
+ * too short: a new channel's first credited minute can take longer than that.
+ */
+export const STALL_CHANNEL_SWITCH_GRACE_MS = 5 * 60_000;
 export const STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS = 2;
 export const STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS_NEAR_END = 1;
 export const STALL_CONFIRMATION_PROBE_COOLDOWN_MS = 60_000;
@@ -178,6 +184,10 @@ export type WatchStallTracker = {
   lastProgressAt: number;
   lastActionAt: number;
   recoveryCount: number;
+  /** Channels already watched during this stall (never switched back to). */
+  triedChannelIds?: string[];
+  /** When recovery last switched channels; starts the new channel's grace period. */
+  lastSwitchAt?: number;
 };
 
 const resolveWatchingId = (watching: WatchingState): string =>
@@ -246,6 +256,8 @@ export const evaluateNoProgressStall = ({
         lastEarnedMinutes: earnedMinutes,
         lastProgressAt: now,
         recoveryCount: 0,
+        triedChannelIds: undefined,
+        lastSwitchAt: undefined,
       },
       shouldRecover: false,
     };
@@ -255,6 +267,10 @@ export const evaluateNoProgressStall = ({
     return { tracker, shouldRecover: false };
   }
   if (now - tracker.lastActionAt < actionCooldownMs) {
+    return { tracker, shouldRecover: false };
+  }
+  const switchGraceMs = Math.min(STALL_CHANNEL_SWITCH_GRACE_MS, noProgressWindowMs);
+  if (tracker.lastSwitchAt !== undefined && now - tracker.lastSwitchAt < switchGraceMs) {
     return { tracker, shouldRecover: false };
   }
 
@@ -303,10 +319,13 @@ export const pickStallRecoveryChannel = ({
   channels,
   watching,
   drop,
+  excludeChannelIds = [],
 }: {
   channels: ChannelEntry[];
   watching: WatchingState;
   drop: StallRecoveryDrop;
+  /** Channels already tried during this stall. */
+  excludeChannelIds?: string[];
 }): ChannelEntry | null => {
   if (!watching) return null;
   const restriction = new DropChannelRestriction({
@@ -315,6 +334,7 @@ export const pickStallRecoveryChannel = ({
   });
   for (const channel of channels) {
     if (isSameAsWatching(channel, watching)) continue;
+    if (excludeChannelIds.includes(channel.id)) continue;
     if (!canFarmDropOnChannel(channel, restriction)) continue;
     return channel;
   }
@@ -443,6 +463,8 @@ export const decideNoProgressRecovery = (
   const allowChannelRecovery = evaluation.tracker.recoveryCount <= maxChannelRecoveryAttempts;
 
   if (allowChannelRecovery) {
+    const watchingId = resolveWatchingId(watching);
+    const triedChannelIds = evaluation.tracker.triedChannelIds ?? (watchingId ? [watchingId] : []);
     const nextChannel = pickStallRecoveryChannel({
       channels,
       watching,
@@ -452,10 +474,19 @@ export const decideNoProgressRecovery = (
         allowedChannelIds: activeDropInfo.allowedChannelIds,
         allowedChannelLogins: activeDropInfo.allowedChannelLogins,
       },
+      excludeChannelIds: triedChannelIds,
     });
     if (nextChannel) {
       actions.push({ kind: "switch-channel", channel: nextChannel });
-      return { actions, tracker: evaluation.tracker, confirmationProbe: probe };
+      return {
+        actions,
+        tracker: {
+          ...evaluation.tracker,
+          triedChannelIds: [...triedChannelIds, nextChannel.id],
+          lastSwitchAt: now,
+        },
+        confirmationProbe: probe,
+      };
     }
     // No alternate channel currently visible: force-refresh state before game-level retarget.
     // This avoids premature target jumps when tracker/inventory snapshots are briefly stale.

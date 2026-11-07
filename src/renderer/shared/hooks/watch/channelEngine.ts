@@ -201,6 +201,21 @@ export const shouldAutoSelectChannel = ({
   return channels.some((channel) => normalized.allowsChannel(channel));
 };
 
+/**
+ * The channel list to show after a failed (non-auth) fetch. A transient error
+ * keeps the last list for the same game: an empty list would make the
+ * autopilot clear a still-live watch session and reset its stall/credit state.
+ */
+export const channelsAfterFetchFailure = ({
+  prevList,
+  fetchedGame,
+  gameName,
+}: {
+  prevList: ChannelEntry[];
+  fetchedGame: string;
+  gameName: string;
+}): ChannelEntry[] => (prevList.length > 0 && fetchedGame === gameName ? prevList : []);
+
 export const computeAutoSwitchAction = ({
   allowWatching,
   watching,
