@@ -47,7 +47,8 @@ export function SettingsToggle({
           className={cn(
             "inline-block h-[14px] w-[14px] rounded-full transition-transform",
             checked
-              ? "translate-x-[18px] bg-[color:var(--dp-ink)]"
+              ? // White knob on the violet track in light mode; dark ink (as in the mockup) in dark mode.
+                "translate-x-[18px] bg-white dark:bg-[color:var(--dp-ink)]"
               : "translate-x-[2px] bg-[color:var(--dp-text-dim)]",
           )}
         />
