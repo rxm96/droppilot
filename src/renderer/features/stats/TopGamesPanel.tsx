@@ -25,7 +25,7 @@ export function TopGamesPanel({ claimsByGame }: TopGamesPanelProps) {
         {t("stats.topGames.title")}
       </h2>
       {rows.length === 0 ? (
-        <p className="m-0 font-mono text-[11px] text-[color:var(--dp-text-dimmer)]">
+        <p className="m-0 text-[13px] text-[color:var(--dp-text-dimmer)]">
           {t("stats.topGames.empty")}
         </p>
       ) : (

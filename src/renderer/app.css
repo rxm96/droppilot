@@ -535,6 +535,7 @@ body {
 }
 
 .update-overlay-eyebrow {
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.16em;
@@ -691,6 +692,7 @@ body {
 
 .update-overlay-notes-title {
   margin: 0 0 8px 0;
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
@@ -792,7 +794,9 @@ body {
 .update-overlay-install {
   margin-top: 2px;
   padding: 11px 30px;
-  font-size: 13.5px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.02em;
   font-weight: 600;
   border-radius: 8px;
   border: none;

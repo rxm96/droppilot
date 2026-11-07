@@ -21,18 +21,18 @@ export function DebugAdvancedPanel(props: DebugAdvancedPanelProps) {
   return (
     <div className="rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] px-5 py-4">
       <SectionLabel>{t("debug.advanced.title")}</SectionLabel>
-      <div className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)] mt-1 mb-4">
+      <div className="mt-1 mb-4 text-[12px] leading-snug text-[color:var(--dp-text-dim)]">
         {t("debug.advanced.subtitle")}
       </div>
 
       <div className="flex flex-col gap-3">
         {/* PubSub simulator */}
         <details className="group" open>
-          <summary className="cursor-pointer select-none rounded-[var(--dp-radius-sm)] bg-[color:var(--dp-bg-elevated-2)] border border-[color:var(--dp-border-soft)] px-3 py-2 font-mono text-[11px] text-[color:var(--dp-text-dim)] hover:text-[color:var(--dp-text)]">
+          <summary className="cursor-pointer select-none rounded-[var(--dp-radius-sm)] bg-[color:var(--dp-bg-elevated-2)] border border-[color:var(--dp-border-soft)] px-3 py-2 text-[12px] font-medium text-[color:var(--dp-text-dim)] hover:text-[color:var(--dp-text)]">
             {t("debug.sim.title")}
           </summary>
           <div className="mt-3 flex flex-col gap-3 px-1">
-            <p className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
+            <p className="m-0 text-[12px] leading-snug text-[color:var(--dp-text-dim)]">
               {t("debug.sim.help")}
             </p>
             <div className="grid gap-2 sm:grid-cols-2">
@@ -83,7 +83,7 @@ export function DebugAdvancedPanel(props: DebugAdvancedPanelProps) {
 
         {/* Snapshot viewer */}
         <details>
-          <summary className="cursor-pointer select-none rounded-[var(--dp-radius-sm)] bg-[color:var(--dp-bg-elevated-2)] border border-[color:var(--dp-border-soft)] px-3 py-2 font-mono text-[11px] text-[color:var(--dp-text-dim)] hover:text-[color:var(--dp-text)] flex items-center justify-between gap-2">
+          <summary className="cursor-pointer select-none rounded-[var(--dp-radius-sm)] bg-[color:var(--dp-bg-elevated-2)] border border-[color:var(--dp-border-soft)] px-3 py-2 text-[12px] font-medium text-[color:var(--dp-text-dim)] hover:text-[color:var(--dp-text)] flex items-center justify-between gap-2">
             <span>{t("debug.snapshot")}</span>
             <Button
               variant="dp-outline"
@@ -99,7 +99,7 @@ export function DebugAdvancedPanel(props: DebugAdvancedPanelProps) {
             </Button>
           </summary>
           <div className="mt-3 px-1">
-            <p className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)] mb-2">
+            <p className="m-0 mb-2 text-[12px] leading-snug text-[color:var(--dp-text-dim)]">
               {t("debug.snapshotHelp")}
             </p>
             <ol

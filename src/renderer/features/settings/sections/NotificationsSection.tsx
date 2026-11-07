@@ -213,10 +213,7 @@ export function NotificationsSection(props: NotificationsSectionProps) {
                 {t("settings.action.webhookTest")}
               </Button>
             </div>
-            <p
-              className="m-0 font-mono text-[11px] text-[color:var(--dp-text-dimmer)]"
-              aria-live="polite"
-            >
+            <p className="m-0 text-[12px] text-[color:var(--dp-text-dimmer)]" aria-live="polite">
               {testStatus ?? t("settings.row.webhookUrl.description")}
             </p>
             <fieldset className="m-0 min-w-0 border-0 p-0">

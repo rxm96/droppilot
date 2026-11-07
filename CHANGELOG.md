@@ -52,6 +52,10 @@ GitHub Release (which the app's update history shows) is built from that section
   description.
 - The option for unlinked campaigns with badge or emote rewards is now under autopilot and says
   what it does: farm those campaigns without a linked game account.
+- Sentences, descriptions and messages are set in the regular typeface across the app,
+  including the debug view and the update window. The monospace font stays for numbers, times,
+  status words, tabs and buttons, and button labels are lowercase everywhere ("sign in",
+  "sign in again", "cancel").
 
 ### Removed
 

@@ -89,12 +89,12 @@ export function AdvancedSection(props: AdvancedSectionProps) {
           className="mt-3 h-[160px] w-full resize-y rounded-[var(--dp-radius-sm)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-app)] px-3 py-2 font-mono text-[11px] text-[color:var(--dp-text)] focus-visible:border-[color:var(--dp-accent)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[color:var(--dp-accent)]"
         />
         {props.settingsInfo && (
-          <div className="mt-2 font-mono text-[11px] text-[color:var(--dp-signal-ok)]">
+          <div className="mt-2 text-[12px] text-[color:var(--dp-signal-ok)]">
             {t(props.settingsInfo)}
           </div>
         )}
         {props.settingsError && (
-          <div className="mt-2 font-mono text-[11px] text-[color:var(--dp-signal-err)]">
+          <div className="mt-2 text-[12px] text-[color:var(--dp-signal-err)]">
             {t(props.settingsError)}
           </div>
         )}

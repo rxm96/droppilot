@@ -16,7 +16,7 @@ export function StatsView({ stats }: StatsViewProps) {
 
   if (stats.status === "idle" || stats.status === "loading") {
     return (
-      <div className="flex min-h-40 items-center justify-center font-mono text-[12px] text-[color:var(--dp-text-dimmer)]">
+      <div className="flex min-h-40 items-center justify-center text-[13px] text-[color:var(--dp-text-dimmer)]">
         {t("stats.loading")}
       </div>
     );
@@ -25,9 +25,7 @@ export function StatsView({ stats }: StatsViewProps) {
   if (stats.status === "error") {
     return (
       <div className="flex min-h-40 flex-col items-center justify-center gap-1 text-center">
-        <span className="font-mono text-[12px] text-[color:var(--dp-signal-err)]">
-          {t("stats.error")}
-        </span>
+        <span className="text-[13px] text-[color:var(--dp-signal-err)]">{t("stats.error")}</span>
         <span className="font-mono text-[11px] text-[color:var(--dp-text-dimmer)]">
           {stats.message}
         </span>
