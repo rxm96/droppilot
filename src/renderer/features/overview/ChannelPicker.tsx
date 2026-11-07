@@ -1,10 +1,11 @@
 import * as React from "react";
 import type { ChannelAllowlist } from "@renderer/shared/domain/dropDomain";
-import type { ChannelEntry } from "@renderer/shared/types";
+import type { ChannelEntry, ErrorInfo } from "@renderer/shared/types";
 import { Button } from "@renderer/shared/components/ui/button";
 import { ChevronDown, Search } from "@renderer/shared/lib/icons";
 import { cn } from "@renderer/shared/lib/utils";
 import { useI18n } from "@renderer/shared/i18n";
+import { resolveErrorMessage } from "@renderer/shared/utils/errors";
 import { buildChannelPickerRows } from "./channelPickerRows";
 import { channelInitials } from "./overviewModel";
 
@@ -14,6 +15,8 @@ export type ChannelPickerProps = {
   targetGame: string;
   channels: ChannelEntry[];
   channelsLoading: boolean;
+  /** The last channel fetch failed; the empty list is not "no live channels". */
+  channelError: ErrorInfo | null;
   channelAllowlist: ChannelAllowlist | null;
   watchingId: string | null;
   /** The watched channel is the user's own pick (enables "auto"). */
@@ -34,6 +37,7 @@ export function ChannelPicker({
   targetGame,
   channels,
   channelsLoading,
+  channelError,
   channelAllowlist,
   watchingId,
   isManualPick,
@@ -127,11 +131,20 @@ export function ChannelPicker({
           <div className="flex max-h-[320px] flex-col gap-px overflow-y-auto">
             {rows.length === 0 ? (
               <div className="px-2.5 py-4 text-center text-[12px] text-[color:var(--dp-text-dimmer)]">
-                {channelsLoading
-                  ? t("overview.picker.loading")
-                  : query.trim()
-                    ? t("overview.picker.noMatch")
-                    : t("overview.picker.empty", { game: targetGame })}
+                {channelsLoading ? (
+                  t("overview.picker.loading")
+                ) : channelError ? (
+                  <>
+                    <span className="block">{t("overview.picker.error")}</span>
+                    <span className="mt-1 block font-mono text-[11px]">
+                      {resolveErrorMessage(t, channelError)}
+                    </span>
+                  </>
+                ) : query.trim() ? (
+                  t("overview.picker.noMatch")
+                ) : (
+                  t("overview.picker.empty", { game: targetGame })
+                )}
               </div>
             ) : (
               rows.map(({ channel, countsDrops, isCurrent }) => (

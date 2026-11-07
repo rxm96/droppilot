@@ -29,6 +29,7 @@ export type HeroState =
   | "watching-no-drop"
   | "idle-no-target"
   | "idle-no-channels"
+  | "idle-channels-error"
   | "idle-starting";
 
 /** What the hero card is about right now. */
@@ -39,11 +40,14 @@ export function resolveHeroState(input: {
   activeGame: string;
   channelsCount: number;
   channelsLoading: boolean;
+  /** The last channel fetch failed (the list is empty because of the error). */
+  channelsFailed: boolean;
 }): HeroState {
   if (input.autopilot === "off") return "off";
   if (input.autopilot === "paused") return "paused";
   if (input.watching) return input.hasActiveDrop ? "earning" : "watching-no-drop";
   if (!input.activeGame.trim()) return "idle-no-target";
+  if (input.channelsFailed) return "idle-channels-error";
   if (!input.channelsLoading && input.channelsCount === 0) return "idle-no-channels";
   return "idle-starting";
 }

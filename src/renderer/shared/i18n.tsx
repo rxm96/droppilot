@@ -22,6 +22,7 @@ const translations: Translations = {
     "overview.hero.kicker.noDrop": "● live · no drop on this channel",
     "overview.hero.kicker.off": "○ signed out",
     "overview.hero.kicker.waiting": "○ waiting",
+    "overview.hero.kicker.channelsError": "○ channels unavailable",
     "overview.hero.endsIn": "ends in {time}",
     "overview.hero.title.nothing": "Nothing to farm right now",
     "overview.hero.sub.earningAutoClaim": "Watching {channel}. Gets claimed for you automatically.",
@@ -34,6 +35,8 @@ const translations: Translations = {
     "overview.hero.sub.noChannels":
       "No live channels with drops for {game} right now. The autopilot keeps checking.",
     "overview.hero.sub.starting": "Looking for a channel for {game}…",
+    "overview.hero.sub.channelsError":
+      "Couldn't load the channels for {game}. The autopilot tries again in a few minutes.",
     "overview.hero.readyIn": "ready in {min} min",
     "overview.hero.readyPaused": "paused",
     "overview.hero.readyUnknown": "no ready time yet",
@@ -55,6 +58,7 @@ const translations: Translations = {
     "overview.picker.loading": "Loading channels…",
     "overview.picker.noMatch": "No channel matches.",
     "overview.picker.empty": "No live channels with drops for {game}.",
+    "overview.picker.error": "Couldn't load the channels. Tries again in a few minutes.",
     "overview.picker.dropsOn": "drops on",
     "overview.picker.dropsOff": "drops off, would not count",
     "overview.picker.footer":
@@ -1019,6 +1023,7 @@ const translations: Translations = {
     "overview.hero.kicker.noDrop": "● live · kein Drop auf diesem Kanal",
     "overview.hero.kicker.off": "○ abgemeldet",
     "overview.hero.kicker.waiting": "○ wartet",
+    "overview.hero.kicker.channelsError": "○ Kanäle nicht verfügbar",
     "overview.hero.endsIn": "endet in {time}",
     "overview.hero.title.nothing": "Gerade nichts zu farmen",
     "overview.hero.sub.earningAutoClaim": "Schaut {channel}. Wird automatisch für dich eingelöst.",
@@ -1032,6 +1037,8 @@ const translations: Translations = {
     "overview.hero.sub.noChannels":
       "Gerade keine Live-Kanäle mit Drops für {game}. Der Autopilot schaut weiter nach.",
     "overview.hero.sub.starting": "Sucht einen Kanal für {game}…",
+    "overview.hero.sub.channelsError":
+      "Die Kanäle für {game} konnten nicht geladen werden. Der Autopilot versucht es in ein paar Minuten erneut.",
     "overview.hero.readyIn": "fertig in {min} Min.",
     "overview.hero.readyPaused": "pausiert",
     "overview.hero.readyUnknown": "noch keine Zeit",
@@ -1053,6 +1060,8 @@ const translations: Translations = {
     "overview.picker.loading": "Kanäle werden geladen…",
     "overview.picker.noMatch": "Kein Kanal passt.",
     "overview.picker.empty": "Keine Live-Kanäle mit Drops für {game}.",
+    "overview.picker.error":
+      "Die Kanäle konnten nicht geladen werden. Neuer Versuch in ein paar Minuten.",
     "overview.picker.dropsOn": "Drops an",
     "overview.picker.dropsOff": "Drops aus, zählt nicht",
     "overview.picker.footer":

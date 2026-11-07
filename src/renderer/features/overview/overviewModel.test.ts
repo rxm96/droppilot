@@ -47,6 +47,7 @@ describe("resolveHeroState", () => {
     activeGame: "Valorant",
     channelsCount: 3,
     channelsLoading: false,
+    channelsFailed: false,
   };
   it("earns while a drop is being watched", () => {
     expect(resolveHeroState({ ...base, watching: true, hasActiveDrop: true })).toBe("earning");
@@ -59,6 +60,11 @@ describe("resolveHeroState", () => {
   });
   it("flags a watched channel that earns no drop", () => {
     expect(resolveHeroState({ ...base, watching: true })).toBe("watching-no-drop");
+  });
+  it("reports a failed channel fetch instead of 'no live channels'", () => {
+    expect(resolveHeroState({ ...base, channelsCount: 0, channelsFailed: true })).toBe(
+      "idle-channels-error",
+    );
   });
   it("tells the idle cases apart", () => {
     expect(resolveHeroState({ ...base, activeGame: "" })).toBe("idle-no-target");

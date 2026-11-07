@@ -40,6 +40,7 @@ const KICKER_TONE: Record<HeroState, string> = {
   off: "text-[color:var(--dp-text-dimmer)]",
   "idle-no-target": "text-[color:var(--dp-text-dimmer)]",
   "idle-no-channels": "text-[color:var(--dp-text-dimmer)]",
+  "idle-channels-error": "text-[color:var(--dp-signal-warn)]",
   "idle-starting": "text-[color:var(--dp-text-dimmer)]",
 };
 
@@ -50,6 +51,7 @@ const KICKER_KEY: Record<HeroState, string> = {
   off: "overview.hero.kicker.off",
   "idle-no-target": "overview.hero.kicker.waiting",
   "idle-no-channels": "overview.hero.kicker.waiting",
+  "idle-channels-error": "overview.hero.kicker.channelsError",
   "idle-starting": "overview.hero.kicker.waiting",
 };
 
@@ -97,6 +99,8 @@ export function HeroPanel({
         return t("overview.hero.sub.noTarget");
       case "idle-no-channels":
         return t("overview.hero.sub.noChannels", { game: activeGame });
+      case "idle-channels-error":
+        return t("overview.hero.sub.channelsError", { game: activeGame });
       case "idle-starting":
         return t("overview.hero.sub.starting", { game: activeGame });
     }

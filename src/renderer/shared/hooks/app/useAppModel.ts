@@ -764,6 +764,7 @@ export function useAppModel() {
     activeGame: displayTargetGame,
     channelsCount: channels.length,
     channelsLoading,
+    channelsFailed: channelError !== null,
   });
   const overviewProps = {
     hero: {
@@ -791,6 +792,7 @@ export function useAppModel() {
       targetGame: displayTargetGame,
       channels,
       channelsLoading,
+      channelError,
       channelAllowlist,
       watchingId: watching?.id ?? null,
       isManualPick,
