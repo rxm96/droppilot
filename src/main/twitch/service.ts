@@ -1,8 +1,8 @@
 import type { SessionData } from "../core/storage";
 import { TWITCH_WEB_USER_AGENT } from "../config";
-import { TwitchClient, TwitchAuthError, type RevalidateResult, type TwitchUser } from "./client";
+import { TwitchClient, type RevalidateResult, type TwitchUser } from "./client";
 import { buildPriorityPlan, type PriorityPlan } from "./channels";
-import { TwitchServiceError } from "./errors";
+import { TwitchAuthError, TwitchServiceError } from "./errors";
 import { TWITCH_ERROR_CODES } from "../../shared/errorCodes";
 import {
   buildCampaignDetailsQueries,

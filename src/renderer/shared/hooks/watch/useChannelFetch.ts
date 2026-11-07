@@ -81,26 +81,26 @@ export function useChannelFetch({
   // Shared tail for both demo and real fetches. Takes the ALREADY-prioritized list,
   // diffs it against the previous list, applies it, and records fetch metadata.
   // (The two branches differ only in how they obtain `list` and their per-branch logging.)
-  const applyFetchedChannels = (
-    prevList: ChannelEntry[],
-    list: ChannelEntry[],
-    gameName: string,
-    now: number,
-  ) => {
-    const diff = buildChannelDiff(prevList, list, now);
-    setChannelDiff(diff);
-    applyChannelsState(mergeChannelList(prevList, list));
-    setFetchedAt(now);
-    setFetchedGame(gameName);
-    if (diff) {
-      logDebug("channels: diff", {
-        game: gameName,
-        added: diff.addedIds.length,
-        removed: diff.removedIds.length,
-        updated: diff.updatedIds.length,
-      });
-    }
-  };
+  // Memoized on stable store setters only, so it never changes identity and does
+  // not re-create fetchChannels (which would re-fire the fetch effects).
+  const applyFetchedChannels = useCallback(
+    (prevList: ChannelEntry[], list: ChannelEntry[], gameName: string, now: number) => {
+      const diff = buildChannelDiff(prevList, list, now);
+      setChannelDiff(diff);
+      applyChannelsState(mergeChannelList(prevList, list));
+      setFetchedAt(now);
+      setFetchedGame(gameName);
+      if (diff) {
+        logDebug("channels: diff", {
+          game: gameName,
+          added: diff.addedIds.length,
+          removed: diff.removedIds.length,
+          updated: diff.updatedIds.length,
+        });
+      }
+    },
+    [applyChannelsState, setChannelDiff, setFetchedAt, setFetchedGame],
+  );
 
   const clearTrackerIfTrackingDisabled = useCallback(
     (
@@ -119,7 +119,7 @@ export function useChannelFetch({
       });
       void window.electronAPI.twitch.trackerClearChannels?.();
     },
-    [],
+    [shouldTrackChannelsRef, targetGameRef],
   );
   const fetchChannels = useCallback(
     async (gameName: string, { force }: { force?: boolean } = {}) => {
@@ -241,15 +241,23 @@ export function useChannelFetch({
     // it preserves the original behavior where fetchChannels is re-created on watching
     // changes, which re-fires the fetch-on-active / allowlist effects. Removing it would
     // change behavior — do not drop it during the Task 8 lint pass.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `watching` is intentional, see NOTE above
     [
       allowWatching,
       applyChannelsState,
+      applyFetchedChannels,
+      channelsRef,
       demoMode,
       fetchedGame,
       isFresh,
       onAuthError,
       channelAllowlist,
       clearTrackerIfTrackingDisabled,
+      setChannelDiff,
+      setChannelError,
+      setChannelsLoading,
+      setChannelsRefreshing,
+      targetGameRef,
       watching,
     ],
   );
@@ -295,7 +303,9 @@ export function useChannelFetch({
     allowWatching,
     applyChannelsState,
     channelAllowlist,
+    channelsRef,
     fetchChannels,
+    setChannelDiff,
     shouldTrackChannels,
     targetGame,
     watching,

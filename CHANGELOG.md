@@ -34,6 +34,8 @@ GitHub Release (which the app's update history shows) is built from that section
 - Drop details showed "ends 0s ago" for campaigns that were still running.
 - Scrollbars match the app's colors and no longer leave a gap under the top bar. In light mode
   they no longer have a dark track.
+- The demo mode hint and the debug tools section in Settings are now shown in German when
+  the app is set to German.
 
 ## [4.1.0] - 2026-11-07
 

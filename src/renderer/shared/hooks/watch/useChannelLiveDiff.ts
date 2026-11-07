@@ -109,9 +109,16 @@ export function useChannelLiveDiff({
   }, [
     allowWatching,
     applyChannelsState,
+    channelsRef,
     demoMode,
+    setChannelDiff,
+    setChannelsLoading,
+    setChannelsRefreshing,
+    setFetchedAt,
+    setFetchedGame,
     shouldTrackChannels,
     channelAllowlist,
+    targetGameRef,
     watching,
   ]);
 }
