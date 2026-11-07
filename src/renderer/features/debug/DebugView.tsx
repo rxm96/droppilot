@@ -3,7 +3,8 @@ import { useInterval } from "@renderer/shared/hooks/useInterval";
 import { useI18n } from "@renderer/shared/i18n";
 import type { ChannelTrackerStatus } from "@renderer/shared/types";
 import { WATCH_INTERVAL_MS } from "@renderer/shared/hooks/watch/useWatchPing";
-import { Pill } from "@renderer/shared/components/ui/pill";
+import { Copy } from "@renderer/shared/lib/icons";
+import { Button } from "@renderer/shared/components/ui/button";
 import {
   LOG_LIMIT,
   clearLogBuffer,
@@ -17,6 +18,9 @@ import { isChannelTrackerStatus } from "@renderer/shared/utils/ipc";
 import {
   LOG_WINDOW_STEP,
   SEARCH_LOG_WINDOW,
+  buildDebugReport,
+  redactSnapshotForReport,
+  summarizeTrackerShards,
   groupStructuredRows,
   parseTimeValue,
   structureLogEntry,
@@ -25,7 +29,7 @@ import {
   type LevelFilter,
   type SummaryTone,
 } from "./debugHelpers";
-import { DebugSummary, type DebugSummaryCard } from "./DebugSummary";
+import { DebugStatusStrip, type DebugStatusCell } from "./DebugStatusStrip";
 import { DebugRuntimePanel, type DebugFact } from "./DebugRuntimePanel";
 import { DebugLogPanel } from "./DebugLogPanel";
 import { DebugAdvancedPanel } from "./DebugAdvancedPanel";
@@ -40,6 +44,7 @@ export function DebugView({ snapshot }: DebugViewProps) {
   const [paused, setPaused] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [reportCopied, setReportCopied] = useState(false);
   const [query, setQuery] = useState("");
   const [simDropId, setSimDropId] = useState("");
   const [simProgress, setSimProgress] = useState("1");
@@ -168,7 +173,8 @@ export function DebugView({ snapshot }: DebugViewProps) {
     const candidate = snapshot["tracker"];
     return isChannelTrackerStatus(candidate) ? candidate : null;
   }, [snapshot]);
-  const trackerShards = trackerStatus?.shards ?? [];
+  const trackerShards = useMemo(() => trackerStatus?.shards ?? [], [trackerStatus]);
+  const trackerSummary = useMemo(() => summarizeTrackerShards(trackerShards), [trackerShards]);
 
   const suggestedDropId = useMemo(() => {
     const candidate = snapshot["activeDropInfo"];
@@ -244,7 +250,7 @@ export function DebugView({ snapshot }: DebugViewProps) {
   const watchAgeMs = snapshotData.watch?.lastOk ? Date.now() - snapshotData.watch.lastOk : null;
   const topPerfEntry = snapshotData.perf?.items?.[0] ?? null;
 
-  const summaryCards = useMemo<DebugSummaryCard[]>(
+  const statusCells = useMemo<DebugStatusCell[]>(
     () => [
       {
         key: "watching",
@@ -257,16 +263,58 @@ export function DebugView({ snapshot }: DebugViewProps) {
         tone: (snapshotData.watching ? "ok" : "idle") satisfies SummaryTone,
       },
       {
+        key: "watch",
+        label: t("debug.summary.watchPing"),
+        value: formatRelativeTime(snapshotData.watch?.lastOk),
+        meta: snapshotData.watch?.error?.message
+          ? snapshotData.watch.error.message
+          : t("debug.summary.nextCheck", {
+              time: formatRelativeTime(snapshotData.watch?.nextAt),
+            }),
+        tone: (snapshotData.watch?.error
+          ? "error"
+          : watchAgeMs === null
+            ? "idle"
+            : watchAgeMs > WATCH_INTERVAL_MS * 2
+              ? "warn"
+              : "ok") satisfies SummaryTone,
+      },
+      {
+        key: "inventory",
+        label: t("debug.summary.inventory"),
+        value:
+          snapshotData.inventory?.status === "ready"
+            ? t("debug.summary.items", {
+                count: formatNumber(snapshotData.inventory?.items ?? 0),
+              })
+            : inventoryStatusLabel(snapshotData.inventory?.status),
+        meta: snapshotData.inventory?.refreshing
+          ? t("debug.runtime.refreshing")
+          : t("debug.summary.lastSeen", {
+              time: formatRelativeTime(snapshotData.inventory?.fetchedAt),
+            }),
+        tone: (snapshotData.inventory?.status === "error"
+          ? "error"
+          : snapshotData.inventory?.refreshing || snapshotData.inventory?.status === "loading"
+            ? "warn"
+            : snapshotData.inventory?.status === "ready"
+              ? "ok"
+              : "idle") satisfies SummaryTone,
+      },
+      {
         key: "tracker",
         label: t("debug.summary.tracker"),
-        value: trackerConnectionLabel(trackerStatus?.connectionState),
-        meta:
-          trackerShards.length > 0
-            ? t("debug.summary.shards", { count: formatNumber(trackerShards.length) })
-            : t("debug.summary.subscriptions", {
-                active: formatNumber(trackerStatus?.subscriptions ?? 0),
-                desired: formatNumber(trackerStatus?.desiredSubscriptions ?? 0),
-              }),
+        value:
+          trackerSummary.total > 0
+            ? t("debug.summary.shardsConnected", {
+                connected: formatNumber(trackerSummary.connected),
+                total: formatNumber(trackerSummary.total),
+              })
+            : trackerConnectionLabel(trackerStatus?.connectionState),
+        meta: t("debug.summary.subscriptions", {
+          active: formatNumber(trackerStatus?.subscriptions ?? 0),
+          desired: formatNumber(trackerStatus?.desiredSubscriptions ?? 0),
+        }),
         tone: (trackerStatus?.state === "error"
           ? "error"
           : trackerStatus?.connectionState === "connecting"
@@ -293,57 +341,18 @@ export function DebugView({ snapshot }: DebugViewProps) {
               : "idle") satisfies SummaryTone,
       },
       {
-        key: "inventory",
-        label: t("debug.summary.inventory"),
-        value:
-          snapshotData.inventory?.status === "ready"
-            ? t("debug.summary.items", {
-                count: formatNumber(snapshotData.inventory?.items ?? 0),
-              })
-            : inventoryStatusLabel(snapshotData.inventory?.status),
-        meta: snapshotData.inventory?.refreshing
-          ? t("debug.runtime.refreshing")
-          : t("debug.summary.lastSeen", {
-              time: formatRelativeTime(snapshotData.inventory?.fetchedAt),
-            }),
-        tone: (snapshotData.inventory?.status === "error"
-          ? "error"
-          : snapshotData.inventory?.refreshing || snapshotData.inventory?.status === "loading"
-            ? "warn"
-            : snapshotData.inventory?.status === "ready"
-              ? "ok"
-              : "idle") satisfies SummaryTone,
-      },
-      {
-        key: "watch",
-        label: t("debug.summary.watchPing"),
-        value: formatRelativeTime(snapshotData.watch?.lastOk),
-        meta: snapshotData.watch?.error?.message
-          ? snapshotData.watch.error.message
-          : t("debug.summary.nextCheck", {
-              time: formatRelativeTime(snapshotData.watch?.nextAt),
-            }),
-        tone: (snapshotData.watch?.error
-          ? "error"
-          : watchAgeMs === null
-            ? "idle"
-            : watchAgeMs > WATCH_INTERVAL_MS * 2
-              ? "warn"
-              : "ok") satisfies SummaryTone,
-      },
-      {
         key: "cpu",
         label: t("debug.summary.cpu"),
         value:
           typeof snapshotData.cpu?.percent === "number"
             ? `${snapshotData.cpu.percent.toFixed(2)}%`
-            : "--",
+            : "—",
         meta: topPerfEntry
           ? t("debug.summary.topComponent", {
               id: topPerfEntry.id,
               time: formatNumber(Math.round(topPerfEntry.avgMs)),
             })
-          : t("debug.summary.componentsTracked", { count: "0" }),
+          : t("debug.summary.noSamples"),
         tone: (typeof snapshotData.cpu?.percent === "number" && snapshotData.cpu.percent >= 35
           ? "warn"
           : snapshotData.cpu?.lastAt
@@ -372,11 +381,11 @@ export function DebugView({ snapshot }: DebugViewProps) {
       t,
       topPerfEntry,
       trackerConnectionLabel,
-      trackerShards.length,
       trackerStatus?.connectionState,
       trackerStatus?.desiredSubscriptions,
       trackerStatus?.state,
       trackerStatus?.subscriptions,
+      trackerSummary,
       watchAgeMs,
     ],
   );
@@ -479,6 +488,24 @@ export function DebugView({ snapshot }: DebugViewProps) {
     }
   };
 
+  const copyReport = async () => {
+    try {
+      const report = buildDebugReport({
+        appVersion: snapshotData.appVersion ?? "",
+        now: Date.now(),
+        snapshotText: JSON.stringify(redactSnapshotForReport(snapshot), null, 2),
+        // The whole buffer: the shown list stops updating while paused.
+        logs: getLogBuffer(),
+      });
+      await navigator.clipboard.writeText(report);
+      setReportCopied(true);
+      pushLog("info", ["debug: report copied"]);
+      window.setTimeout(() => setReportCopied(false), 1400);
+    } catch (err) {
+      pushLog("warn", ["debug: report copy failed", err]);
+    }
+  };
+
   const emitDebugEvent = async (kind: "drop-progress" | "drop-claim" | "notification") => {
     if (kind !== "notification" && simDropId.trim().length === 0) {
       pushLog("warn", ["debug: missing drop id for pubsub simulation"]);
@@ -524,27 +551,27 @@ export function DebugView({ snapshot }: DebugViewProps) {
   };
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="@container flex flex-col gap-4">
       {/* Header */}
-      <div className="flex items-baseline justify-between gap-3 flex-wrap">
-        <div>
-          <h2 className="text-[22px] font-medium tracking-[-0.01em] text-[color:var(--dp-text)] leading-tight">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="m-0 text-[22px] font-semibold text-[color:var(--dp-text)]">
             {t("debug.title")}
-          </h2>
-          <div className="mt-1 text-[13px] text-[color:var(--dp-text-dim)]">
+          </h1>
+          <p className="m-0 mt-1 text-[13px] text-[color:var(--dp-text-dim)]">
             {t("debug.subtitle")}
-          </div>
+          </p>
         </div>
-        <Pill tone="dim">
-          {t("debug.total")}: {formatNumber(logs.length)}
-        </Pill>
+        <Button type="button" variant="dp-outline" size="dp-md" onClick={copyReport}>
+          <Copy size={14} strokeWidth={1.7} aria-hidden="true" />
+          {reportCopied ? t("debug.copied") : t("debug.copyReport")}
+        </Button>
       </div>
 
-      {/* Summary metric grid */}
-      <DebugSummary cards={summaryCards} />
+      <DebugStatusStrip cells={statusCells} />
 
       {/* Investigation: runtime + log */}
-      <div className="grid gap-4" style={{ gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr)" }}>
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-start gap-4">
         <DebugRuntimePanel
           facts={runtimeFacts}
           trackerShards={trackerShards}

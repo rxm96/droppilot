@@ -43,6 +43,8 @@ export type DropsRow = {
   watched: number;
   required: number;
   ready: PlanClock | null;
+  /** The ready time behind `ready` (epoch ms), for "in X"; null when `ready` is. */
+  readyAt: number | null;
 };
 
 export type DropsGroup = {
@@ -245,6 +247,7 @@ export function buildDropsView(input: {
     const switchRow = switchAtByGame.find((s) => sameGameName(s.game, item.game));
     const live = input.activeDrop?.id === item.id ? input.activeDrop.earnedMinutes : null;
     const imageUrl = item.imageUrl?.trim();
+    const readyAt = cls.bucket === "farming" ? (planRow?.readyAt ?? null) : null;
     return {
       id: item.id,
       item,
@@ -260,10 +263,8 @@ export function buildDropsView(input: {
       }),
       watched: Math.max(0, Math.floor(live ?? num(item.earnedMinutes))),
       required: num(item.requiredMinutes),
-      ready:
-        cls.bucket === "farming" && planRow?.readyAt != null
-          ? formatPlanClock(planRow.readyAt, now)
-          : null,
+      ready: readyAt === null ? null : formatPlanClock(readyAt, now),
+      readyAt,
     };
   });
 

@@ -1,2 +1,2 @@
 export { AppContent } from "./AppContent";
-export { UpdateOverlay } from "./UpdateOverlay";
+export { UpdateDialog } from "./UpdateDialog";

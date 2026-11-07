@@ -3,17 +3,25 @@ import type { DropStatus } from "@renderer/shared/domain/dropStatus";
 import { DropStatusPill } from "@renderer/shared/components/DropStatusPill";
 import { GameTile } from "@renderer/shared/components/GameTile";
 import { Button } from "@renderer/shared/components/ui/button";
-import { ExternalLink } from "@renderer/shared/lib/icons";
+import { ChevronDown, ExternalLink } from "@renderer/shared/lib/icons";
 import { cn } from "@renderer/shared/lib/utils";
 import { useI18n } from "@renderer/shared/i18n";
+import type { CampaignSummary } from "@renderer/shared/types";
 import { formatBlockingReason } from "@renderer/features/overview/engineVoice";
 import { PlanClockText } from "@renderer/features/overview/PlanClockText";
 import { formatRank, type DropNote, type DropsGroup, type DropsRow } from "./dropsModel";
+import { DropDetailsRow } from "./DropDetailsRow";
 
 export type DropGroupProps = {
   group: DropsGroup;
-  selectedDropId: string | null;
-  onSelectDrop: (id: string) => void;
+  /** The drop whose details strip is open (one at a time). */
+  openDropId: string | null;
+  onToggleDrop: (id: string) => void;
+  campaigns: CampaignSummary[];
+  /** The user's ranked games (resolvePriorityGameNames). */
+  rankedGames: string[];
+  /** The game of the drop being watched right now; null while nothing is. */
+  farmingGame: string | null;
   /** Group actions (add to games, link account); off in the expired section. */
   actions: boolean;
   onAddPriorityGame: (game: string) => void;
@@ -63,96 +71,118 @@ function noteText(note: DropNote, t: Translator): string | null {
   }
 }
 
-function Row({
-  row,
-  code,
-  selected,
-  onSelect,
-}: {
+type RowProps = Pick<
+  DropGroupProps,
+  "campaigns" | "rankedGames" | "farmingGame" | "onAddPriorityGame" | "onOpenAccountLink"
+> & {
   row: DropsRow;
   code: string;
-  selected: boolean;
-  onSelect: (id: string) => void;
-}) {
+  open: boolean;
+  onToggle: (id: string) => void;
+};
+
+function Row({ row, code, open, onToggle, ...detailsProps }: RowProps) {
   const { t } = useI18n();
+  const detailsId = React.useId();
   const pct = row.required > 0 ? Math.min(100, Math.round((row.watched / row.required) * 100)) : 0;
   const note = noteText(row.note, t);
+  const faded = FADED.has(row.status);
   // The whole row is a mouse target; keyboard and screen readers use the
-  // title button, which carries the name and the dialog hint.
+  // title button, which carries the name and the expanded state.
   return (
-    <tr
-      onClick={() => onSelect(row.id)}
-      className={cn(
-        "cursor-pointer border-t border-[color:var(--dp-border)] transition-colors first:border-t-0 hover:bg-[color:var(--dp-bg-elevated-2)]",
-        row.status === "watching" &&
-          "bg-[color:var(--dp-accent-soft)] shadow-[inset_2px_0_0_var(--dp-accent)]",
-        selected && "bg-[color:var(--dp-bg-elevated-2)]",
-      )}
-    >
-      <td className="w-[52px] py-2.5 pl-[18px] pr-0">
-        <GameTile url={row.imageUrl} code={code} size={34} faded={FADED.has(row.status)} />
-      </td>
-      <td className="py-2.5 pl-3">
-        <button
-          type="button"
-          aria-haspopup="dialog"
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelect(row.id);
-          }}
-          className={cn(
-            "block max-w-full rounded-[var(--dp-radius-xs)] text-left font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--dp-accent)]",
-            QUIET.has(row.status)
-              ? "text-[color:var(--dp-text-dim)]"
-              : "text-[color:var(--dp-text)]",
-          )}
-        >
-          {row.title}
-        </button>
-        {note && (
-          <div
+    <>
+      <tr
+        onClick={() => onToggle(row.id)}
+        className={cn(
+          "cursor-pointer border-t border-[color:var(--dp-border)] transition-colors first:border-t-0 hover:bg-[color:var(--dp-bg-elevated-2)]",
+          row.status === "watching"
+            ? "bg-[color:var(--dp-accent-soft)] shadow-[inset_2px_0_0_var(--dp-accent)]"
+            : open && "bg-[color:var(--dp-bg-elevated-2)]",
+        )}
+      >
+        <td className="w-[52px] py-2.5 pl-[18px] pr-0">
+          <GameTile url={row.imageUrl} code={code} size={34} faded={faded} />
+        </td>
+        <td className="py-2.5 pl-3">
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-controls={detailsId}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggle(row.id);
+            }}
             className={cn(
-              "font-mono text-[11px]",
-              row.note?.kind === "ends-first"
-                ? "text-[color:var(--dp-signal-warn)]"
-                : "text-[color:var(--dp-text-dimmer)]",
+              "block max-w-full rounded-[var(--dp-radius-xs)] text-left font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--dp-accent)]",
+              QUIET.has(row.status)
+                ? "text-[color:var(--dp-text-dim)]"
+                : "text-[color:var(--dp-text)]",
             )}
           >
-            {note}
+            {row.title}
+          </button>
+          {note && (
+            <div
+              className={cn(
+                "font-mono text-[11px]",
+                row.note?.kind === "ends-first"
+                  ? "text-[color:var(--dp-signal-warn)]"
+                  : "text-[color:var(--dp-text-dimmer)]",
+              )}
+            >
+              {note}
+            </div>
+          )}
+        </td>
+        <td className="w-[30%] px-6 py-2.5">
+          <div className="h-1 overflow-hidden rounded-[2px] bg-[color:var(--dp-border)]">
+            <div
+              className="h-full rounded-[2px]"
+              style={{ width: `${pct}%`, background: BAR_COLOR[row.status] }}
+            />
           </div>
-        )}
-      </td>
-      <td className="w-[30%] px-6 py-2.5">
-        <div className="h-1 overflow-hidden rounded-[2px] bg-[color:var(--dp-border)]">
-          <div
-            className="h-full rounded-[2px]"
-            style={{ width: `${pct}%`, background: BAR_COLOR[row.status] }}
-          />
-        </div>
-        <div className="mt-1.5 font-mono text-[11px] tabular-nums text-[color:var(--dp-text-dimmer)]">
-          {t("drops.minutes", { watched: row.watched, required: row.required })}
-        </div>
-      </td>
-      <td className="w-[76px] py-2.5 font-mono tabular-nums text-[color:var(--dp-text-dim)]">
-        {row.ready ? <PlanClockText value={row.ready} /> : "—"}
-      </td>
-      <td className="w-[140px] py-2.5 pr-[18px] text-right">
-        <DropStatusPill
-          status={row.status}
-          title={
-            row.note?.kind === "blocked" ? formatBlockingReason(row.note.reason, t) : undefined
-          }
-        />
-      </td>
-    </tr>
+          <div className="mt-1.5 font-mono text-[11px] tabular-nums text-[color:var(--dp-text-dimmer)]">
+            {t("drops.minutes", { watched: row.watched, required: row.required })}
+          </div>
+        </td>
+        <td className="w-[76px] py-2.5 font-mono tabular-nums text-[color:var(--dp-text-dim)]">
+          {row.ready ? <PlanClockText value={row.ready} /> : "—"}
+        </td>
+        <td className="w-[160px] py-2.5 pr-[18px]">
+          <div className="flex items-center justify-end gap-2.5">
+            <DropStatusPill
+              status={row.status}
+              title={
+                row.note?.kind === "blocked" ? formatBlockingReason(row.note.reason, t) : undefined
+              }
+            />
+            <ChevronDown
+              aria-hidden="true"
+              size={14}
+              strokeWidth={1.7}
+              className={cn(
+                "flex-none text-[color:var(--dp-text-dimmer)] transition-transform",
+                open && "rotate-180",
+              )}
+            />
+          </div>
+        </td>
+      </tr>
+      {open && (
+        <DropDetailsRow id={detailsId} row={row} code={code} faded={faded} {...detailsProps} />
+      )}
+    </>
   );
 }
 
 /** One game: header (tile, name, rank, campaign, ends in, actions) and its drops. */
 export function DropGroup({
   group,
-  selectedDropId,
-  onSelectDrop,
+  openDropId,
+  onToggleDrop,
+  campaigns,
+  rankedGames,
+  farmingGame,
   actions,
   onAddPriorityGame,
   onOpenAccountLink,
@@ -215,8 +245,13 @@ export function DropGroup({
               key={row.id}
               row={row}
               code={group.code}
-              selected={row.id === selectedDropId}
-              onSelect={onSelectDrop}
+              open={row.id === openDropId}
+              onToggle={onToggleDrop}
+              campaigns={campaigns}
+              rankedGames={rankedGames}
+              farmingGame={farmingGame}
+              onAddPriorityGame={onAddPriorityGame}
+              onOpenAccountLink={onOpenAccountLink}
             />
           ))}
         </tbody>

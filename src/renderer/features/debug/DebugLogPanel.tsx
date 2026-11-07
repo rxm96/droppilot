@@ -1,8 +1,7 @@
 import * as React from "react";
 import { useI18n } from "@renderer/shared/i18n";
 import { cn } from "@renderer/shared/lib/utils";
-import { SectionLabel } from "@renderer/shared/components/ui/section-label";
-import { Pill } from "@renderer/shared/components/ui/pill";
+import { ChevronDown } from "@renderer/shared/lib/icons";
 import { Button } from "@renderer/shared/components/ui/button";
 import { Input } from "@renderer/shared/components/ui/input";
 import {
@@ -15,17 +14,10 @@ import {
   type StructuredLogRow,
 } from "./debugHelpers";
 
-const LEVEL_TONE: Record<LogLevel, "dim" | "info" | "warn" | "err"> = {
-  debug: "dim",
-  info: "info",
-  warn: "warn",
-  error: "err",
-};
-
-const LEVEL_TEXT: Record<LogLevel, string> = {
-  debug: "text-[color:var(--dp-text-dim)]",
-  info: "text-[color:var(--dp-text)]",
-  warn: "text-[color:var(--dp-text)]",
+const LEVEL_COLOR: Record<LogLevel, string> = {
+  debug: "text-[color:var(--dp-text-dimmer)]",
+  info: "text-[color:var(--dp-accent)]",
+  warn: "text-[color:var(--dp-signal-warn)]",
   error: "text-[color:var(--dp-signal-err)]",
 };
 
@@ -40,7 +32,7 @@ export function highlightMatches(text: string, term: string): React.ReactNode {
     part.toLowerCase() === source.toLowerCase() ? (
       <mark
         key={`${idx}:${part}`}
-        className="bg-[color:var(--dp-accent-soft)] text-[color:var(--dp-accent)] px-0.5 rounded-[2px]"
+        className="rounded-[2px] bg-[color:var(--dp-accent-soft)] px-0.5 text-[color:var(--dp-accent)]"
       >
         {part}
       </mark>
@@ -50,66 +42,82 @@ export function highlightMatches(text: string, term: string): React.ReactNode {
   );
 }
 
-type LogDetailsProps = { args: unknown[]; label: string; highlightTerm?: string };
-const LogDetails = React.memo(function LogDetails({
-  args,
-  label,
-  highlightTerm = "",
-}: LogDetailsProps) {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const detailsText = React.useMemo(() => (isOpen ? formatArgs(args) : ""), [args, isOpen]);
+type LogArgsProps = { id: string; args: unknown[]; highlightTerm: string };
+const LogArgs = React.memo(function LogArgs({ id, args, highlightTerm }: LogArgsProps) {
+  const text = React.useMemo(() => formatArgs(args), [args]);
   return (
-    <details
-      className="mt-2"
-      onToggle={(e) => setIsOpen((e.currentTarget as HTMLDetailsElement).open)}
+    <pre
+      id={id}
+      className="col-start-4 col-end-7 m-0 mt-1 mb-1 whitespace-pre-wrap break-words rounded-[var(--dp-radius-md)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-app)] px-3 py-2 font-mono text-[11px] leading-normal text-[color:var(--dp-text-dim)]"
     >
-      <summary className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)] cursor-pointer hover:text-[color:var(--dp-text-dim)] select-none">
-        {label}
-      </summary>
-      {isOpen ? (
-        <pre className="mt-1.5 font-mono text-[10px] text-[color:var(--dp-text-dim)] whitespace-pre-wrap break-words bg-[color:var(--dp-bg-elevated-2)] border border-[color:var(--dp-border-soft)] rounded-[var(--dp-radius-sm)] p-2">
-          {highlightMatches(detailsText, highlightTerm)}
-        </pre>
-      ) : null}
-    </details>
+      {highlightMatches(text, highlightTerm)}
+    </pre>
   );
 });
 
-type LogRowProps = { row: StructuredLogRow; detailsLabel: string; highlightTerm?: string };
-const LogRow = React.memo(function LogRow({ row, detailsLabel, highlightTerm = "" }: LogRowProps) {
+type LogRowProps = { row: StructuredLogRow; detailsLabel: string; highlightTerm: string };
+const LogRow = React.memo(function LogRow({ row, detailsLabel, highlightTerm }: LogRowProps) {
+  const [open, setOpen] = React.useState(false);
+  const argsId = React.useId();
+  const hasArgs = row.args.length > 0;
   return (
     <li
       className={cn(
-        "border-l-2 border-[color:var(--dp-border)] pl-3 py-2",
-        row.level === "error" && "border-l-[color:var(--dp-signal-err)]",
+        "grid grid-cols-[76px_44px_96px_minmax(0,1fr)_auto_16px] items-baseline gap-x-2.5 px-4 py-1.5 font-mono text-[11px] hover:bg-[color:var(--dp-bg-elevated-2)]",
+        row.level === "error" && "shadow-[inset_2px_0_0_var(--dp-signal-err)]",
       )}
     >
-      <div className="flex items-center justify-between gap-2 mb-1">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <Pill tone={LEVEL_TONE[row.level]}>{highlightMatches(row.level, highlightTerm)}</Pill>
-          {row.source && <Pill tone="dim">{highlightMatches(row.source, highlightTerm)}</Pill>}
-          {row.repeatCount > 1 && <Pill tone="dim">x{row.repeatCount}</Pill>}
-        </div>
-        <span className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)] flex-shrink-0">
-          {row.timeLabel}
-        </span>
-      </div>
-      <div className={cn("text-[12px] font-medium leading-tight", LEVEL_TEXT[row.level])}>
+      <span className="truncate tabular-nums text-[color:var(--dp-text-dimmer)]">
+        {row.timeLabel}
+      </span>
+      <span className={LEVEL_COLOR[row.level]}>{highlightMatches(row.level, highlightTerm)}</span>
+      <span className="truncate text-[color:var(--dp-text-dimmer)]" title={row.source ?? undefined}>
+        {row.source ? highlightMatches(row.source, highlightTerm) : null}
+      </span>
+      <span className="min-w-0 truncate font-sans text-[13px] text-[color:var(--dp-text)]">
         {highlightMatches(row.headline, highlightTerm)}
-      </div>
+      </span>
+      <span className="tabular-nums text-[color:var(--dp-text-dimmer)]">
+        {row.repeatCount > 1 ? `×${row.repeatCount}` : null}
+      </span>
+      {hasArgs ? (
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={open ? argsId : undefined}
+          aria-label={detailsLabel}
+          title={detailsLabel}
+          onClick={() => setOpen((prev) => !prev)}
+          className="flex h-4 w-4 items-center justify-center self-center rounded-[var(--dp-radius-xs)] text-[color:var(--dp-text-dimmer)] hover:text-[color:var(--dp-text)]"
+        >
+          <ChevronDown
+            size={14}
+            strokeWidth={1.7}
+            aria-hidden="true"
+            className={cn("transition-transform", !open && "-rotate-90")}
+          />
+        </button>
+      ) : (
+        <span aria-hidden="true" />
+      )}
       {row.meta && (
-        <div className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)] mt-0.5">
+        <div className="col-start-4 col-end-7 truncate text-[10px] text-[color:var(--dp-text-dimmer)]">
           {highlightMatches(row.meta, highlightTerm)}
         </div>
       )}
       {row.details && (
-        <div className={cn("font-mono text-[10px] mt-1", LEVEL_TEXT[row.level])}>
+        <div
+          className={cn(
+            "col-start-4 col-end-7 break-words text-[10px]",
+            row.level === "error"
+              ? "text-[color:var(--dp-signal-err)]"
+              : "text-[color:var(--dp-text-dim)]",
+          )}
+        >
           {highlightMatches(row.details, highlightTerm)}
         </div>
       )}
-      {row.args.length > 0 && (
-        <LogDetails args={row.args} label={detailsLabel} highlightTerm={highlightTerm} />
-      )}
+      {hasArgs && open && <LogArgs id={argsId} args={row.args} highlightTerm={highlightTerm} />}
     </li>
   );
 });
@@ -140,71 +148,101 @@ export type DebugLogPanelProps = {
 
 export function DebugLogPanel(props: DebugLogPanelProps) {
   const { t } = useI18n();
+  const titleId = React.useId();
+  const searchId = React.useId();
+  const showJumpToLatest = props.visibleCount > props.logWindowStep && !props.highlightTerm;
+
   return (
-    <div className="rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] px-5 py-4 flex flex-col gap-3 min-w-0">
+    <section
+      aria-labelledby={titleId}
+      className="flex min-w-0 flex-col overflow-hidden rounded-[var(--dp-radius-xl)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)]"
+    >
       {/* Header */}
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div className="min-w-0">
-          <SectionLabel>{t("debug.log")}</SectionLabel>
-          <div className="mt-1 text-[12px] leading-snug text-[color:var(--dp-text-dim)]">
-            {t("debug.logHelp")}
-          </div>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <Pill tone={props.paused ? "warn" : "ok"} dot>
+      <div className="flex flex-wrap items-center gap-2.5 border-b border-[color:var(--dp-border)] px-4 py-3">
+        <h2 id={titleId} className="m-0 text-[13px] font-semibold text-[color:var(--dp-text)]">
+          {t("debug.log")}
+        </h2>
+        <span className="font-mono text-[11px] text-[color:var(--dp-text-dimmer)]">
+          {t("debug.kept", { count: props.formatNumber(props.totalLogs) })}
+        </span>
+        <div className="ml-auto flex flex-wrap gap-1.5">
+          <Button
+            type="button"
+            size="dp-sm"
+            variant="dp-outline"
+            title={props.paused ? t("debug.resume") : t("debug.pause")}
+            onClick={props.onTogglePaused}
+            className={
+              props.paused
+                ? "text-[color:var(--dp-signal-warn)]"
+                : "text-[color:var(--dp-signal-ok)]"
+            }
+          >
+            <span aria-hidden="true">{props.paused ? "❚❚" : "●"}</span>
             {props.paused ? t("debug.status.paused") : t("debug.status.live")}
-          </Pill>
-          <Pill tone="dim">
-            {props.autoScroll ? t("debug.status.autoScrollOn") : t("debug.status.autoScrollOff")}
-          </Pill>
+          </Button>
+          <Button
+            type="button"
+            size="dp-sm"
+            variant={props.autoScroll ? "dp-secondary" : "dp-outline"}
+            aria-pressed={props.autoScroll}
+            onClick={props.onToggleAutoScroll}
+            className={props.autoScroll ? undefined : "text-[color:var(--dp-text-dimmer)]"}
+          >
+            {t("debug.follow")}
+          </Button>
+          <Button type="button" size="dp-sm" variant="dp-outline" onClick={props.onClear}>
+            {t("debug.clear")}
+          </Button>
         </div>
       </div>
 
-      {/* Toolbar */}
-      <div className="flex flex-wrap gap-2">
-        <Button variant="dp-outline" size="dp-sm" onClick={props.onClear}>
-          {t("debug.clear")}
-        </Button>
-        <Button variant="dp-outline" size="dp-sm" onClick={props.onTogglePaused}>
-          {props.paused ? t("debug.resume") : t("debug.pause")}
-        </Button>
-        <Button
-          variant={props.autoScroll ? "dp-secondary" : "dp-outline"}
-          size="dp-sm"
-          onClick={props.onToggleAutoScroll}
+      {/* Toolbar: search + level filter */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-[color:var(--dp-border)] px-4 py-2.5">
+        <label htmlFor={searchId} className="sr-only">
+          {t("debug.search")}
+        </label>
+        <Input
+          id={searchId}
+          tone="dp"
+          type="search"
+          placeholder={t("debug.search")}
+          value={props.query}
+          onChange={(e) => props.setQuery(e.target.value)}
+          className="min-w-[180px] flex-1 bg-[color:var(--dp-bg-app)]"
+        />
+        <div
+          role="group"
+          aria-label={t("debug.levelFilter")}
+          className="flex gap-0.5 rounded-[var(--dp-radius-md)] border border-[color:var(--dp-border)] p-0.5"
         >
-          {t("debug.autoScroll")}
-        </Button>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex-1 min-w-[180px]">
-          <Input
-            tone="dp"
-            type="text"
-            placeholder={t("debug.search")}
-            value={props.query}
-            onChange={(e) => props.setQuery(e.target.value)}
-          />
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {LEVELS.map((level) => (
-            <Button
-              key={level}
-              type="button"
-              size="dp-sm"
-              variant={props.levels[level] ? "dp-secondary" : "dp-outline"}
-              onClick={() => props.setLevels((prev) => ({ ...prev, [level]: !prev[level] }))}
-            >
-              {level} ({props.formatNumber(props.counts[level])})
-            </Button>
-          ))}
+          {LEVELS.map((level) => {
+            const pressed = props.levels[level];
+            return (
+              <button
+                key={level}
+                type="button"
+                aria-pressed={pressed}
+                onClick={() => props.setLevels((prev) => ({ ...prev, [level]: !prev[level] }))}
+                className={cn(
+                  "inline-flex h-7 items-center gap-1.5 rounded-[var(--dp-radius-sm)] px-2.5 font-mono text-[11px] transition-colors",
+                  pressed
+                    ? "bg-[color:var(--dp-bg-elevated-2)] shadow-[inset_0_0_0_1px_var(--dp-border)]"
+                    : "text-[color:var(--dp-text-dimmer)] hover:text-[color:var(--dp-text)]",
+                )}
+              >
+                <span className={pressed ? LEVEL_COLOR[level] : undefined}>{level}</span>
+                <span className="tabular-nums text-[color:var(--dp-text-dimmer)]">
+                  {props.formatNumber(props.counts[level])}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Overview row */}
-      <div className="flex items-center justify-between gap-2 text-[12px] text-[color:var(--dp-text-dimmer)]">
+      {/* Window row */}
+      <div className="flex min-h-[36px] flex-wrap items-center justify-between gap-2 border-b border-[color:var(--dp-border)] px-4 py-1 font-mono text-[11px] text-[color:var(--dp-text-dimmer)]">
         <span>
           {props.hiddenCount > 0
             ? t("debug.logWindow", {
@@ -213,42 +251,40 @@ export function DebugLogPanel(props: DebugLogPanelProps) {
               })
             : t("debug.logWindowAll", { total: props.formatNumber(props.filteredLength) })}
         </span>
-        <div className="flex gap-1.5">
-          {props.hiddenCount > 0 && (
-            <Button
-              type="button"
-              variant="dp-outline"
-              size="dp-sm"
-              onClick={() => props.setVisibleCount((prev) => prev + props.logWindowStep)}
-            >
-              {t("debug.showOlder")}
-            </Button>
-          )}
-          {props.visibleCount > props.logWindowStep && !props.highlightTerm && (
-            <Button
-              type="button"
-              variant="dp-outline"
-              size="dp-sm"
-              onClick={() => props.setVisibleCount(props.logWindowStep)}
-            >
-              {t("debug.jumpToLatest")}
-            </Button>
-          )}
-        </div>
+        {(props.hiddenCount > 0 || showJumpToLatest) && (
+          <div className="flex gap-1.5">
+            {props.hiddenCount > 0 && (
+              <Button
+                type="button"
+                variant="dp-ghost"
+                size="dp-sm"
+                onClick={() => props.setVisibleCount((prev) => prev + props.logWindowStep)}
+              >
+                {t("debug.showOlder")}
+              </Button>
+            )}
+            {showJumpToLatest && (
+              <Button
+                type="button"
+                variant="dp-ghost"
+                size="dp-sm"
+                onClick={() => props.setVisibleCount(props.logWindowStep)}
+              >
+                {t("debug.jumpToLatest")}
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Log frame (scrollable) */}
-      <div
-        ref={props.listRef}
-        className="rounded-[var(--dp-radius-md)] border border-[color:var(--dp-border-soft)] bg-[color:var(--dp-bg-elevated-2)] p-2 overflow-y-auto"
-        style={{ maxHeight: "560px" }}
-      >
+      {/* Log list (scrollable; auto-scroll pins it to the bottom) */}
+      <div ref={props.listRef} className="max-h-[560px] min-h-[320px] overflow-y-auto py-1.5">
         {props.structuredRows.length === 0 ? (
-          <div className="py-8 text-center text-[13px] text-[color:var(--dp-text-dimmer)]">
+          <div className="py-10 text-center text-[13px] text-[color:var(--dp-text-dimmer)]">
             {t("debug.empty")}
           </div>
         ) : (
-          <ul className="flex flex-col gap-0.5">
+          <ul className="m-0 list-none p-0">
             {props.structuredRows.map((row) => (
               <LogRow
                 key={row.id}
@@ -260,6 +296,6 @@ export function DebugLogPanel(props: DebugLogPanelProps) {
           </ul>
         )}
       </div>
-    </div>
+    </section>
   );
 }
