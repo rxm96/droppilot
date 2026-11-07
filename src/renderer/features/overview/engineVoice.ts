@@ -146,7 +146,7 @@ export const mapWatchEngineDecisionDetails = (
 };
 
 /** Format a millisecond duration as compact "Xh YYm" / "Xm YYs". */
-export const formatDurationMs = (ms: number): string => {
+const formatDurationMs = (ms: number): string => {
   const totalSeconds = Math.max(0, Math.round(ms / 1000));
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);

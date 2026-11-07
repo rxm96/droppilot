@@ -1,8 +1,6 @@
 // Shared formatting helpers for the Phase 2 Overview panels.
 // No React imports — pure functions.
 
-import { msToMinutes } from "../settings/sections/refreshIntervalField";
-
 export function formatHourMinute(totalMinutes: number): string {
   const safe = Math.max(0, Math.round(totalMinutes));
   const h = Math.floor(safe / 60);
@@ -80,17 +78,6 @@ export function formatUptime(sinceMs: number, now: number = Date.now()): string 
   const h = Math.floor(totalMinutes / 60);
   const m = totalMinutes % 60;
   return `${h}h ${pad(m)}m`;
-}
-
-/**
- * Inventory-refresh interval window (min/max in ms) → a compact minutes label for
- * the EnginePanel "cadence" row, e.g. "60–70 min" (or "60 min" when min === max).
- * `unit` is the already-translated minutes abbreviation, keeping this pure.
- */
-export function formatRefreshCadence(minMs: number, maxMs: number, unit: string): string {
-  const lo = msToMinutes(minMs);
-  const hi = msToMinutes(maxMs);
-  return lo === hi ? `${lo} ${unit}` : `${lo}–${hi} ${unit}`;
 }
 
 export function padRank(n: number, width: number = 2): string {

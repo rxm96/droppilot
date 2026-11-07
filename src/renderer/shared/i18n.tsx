@@ -161,7 +161,6 @@ const translations: Translations = {
     "chrome.window.openSettings": "Open settings",
 
     "session.title": "Session",
-    "session.connected": "Logged in",
     "session.disconnected": "Not logged in",
     "session.loggingIn": "Login in progress...",
     "session.ready": "Ready to watch & claim",
@@ -1162,7 +1161,6 @@ const translations: Translations = {
     "chrome.window.openSettings": "Einstellungen öffnen",
 
     "session.title": "Session",
-    "session.connected": "Eingeloggt",
     "session.disconnected": "Nicht eingeloggt",
     "session.loggingIn": "Login läuft...",
     "session.ready": "Bereit zum Schauen & Claim",
