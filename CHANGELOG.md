@@ -11,6 +11,11 @@ GitHub Release (which the app's update history shows) is built from that section
 
 ## [Unreleased]
 
+### Fixed
+
+- The demo mode hint and the debug tools section in Settings are now shown in German when
+  the app is set to German.
+
 ## [4.1.0] - 2026-11-07
 
 ### Added

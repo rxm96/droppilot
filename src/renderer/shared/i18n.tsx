@@ -5,7 +5,7 @@ export type Language = "de" | "en";
 
 type Translations = Record<Language, Record<string, string>>;
 
-const translations: Translations = {
+export const translations: Translations = {
   en: {
     // overview.* / autopilot.* — merged overview (UI polish phase 2)
     "nav.drops": "Drops",
@@ -1647,6 +1647,10 @@ const translations: Translations = {
     "settings.allowUnlinkedHint": "Farmt auch, wenn Twitch den Account als nicht verknüpft meldet.",
     "settings.demoModeTitle": "Demo-Modus",
     "settings.demoMode": "Demo-Modus",
+    "settings.demoModeHint": "Nutzt Demo-Daten, um die App ohne aktive Drops zu erkunden.",
+    "settings.debugTitle": "Debug-Tools",
+    "settings.debugToggle": "Debug-Tab aktivieren",
+    "settings.debugHint": "Zeigt den Debug-Tab mit Logs, Snapshots und Performance-Daten.",
     "settings.resetAutomation": "Automation auf Standard zurücksetzen",
     "settings.alerts": "Benachrichtigungen",
     "settings.alertsHint": "Desktop-Alerts für wichtige Events.",
