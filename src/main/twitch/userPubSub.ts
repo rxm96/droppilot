@@ -434,7 +434,8 @@ export class UserPubSub {
       this.clearReconnectTimer();
       this.connectionState = "connected";
       this.state = "ok";
-      this.reconnectAttempts = 0;
+      // reconnectAttempts is reset only once Twitch accepts the LISTEN: a socket
+      // that opens and is then rejected must keep backing off.
       this.lastErrorMessage = undefined;
       this.startPingLoop();
       this.log("ws open — sending LISTEN", {
@@ -574,9 +575,12 @@ export class UserPubSub {
         this.logWarn("LISTEN rejected by Twitch", { error });
         this.markError(`PubSub listen failed: ${error}`);
         this.disconnect("PubSub listen failed", false);
-        this.scheduleReconnect(this.reconnectMinMs);
+        // Exponential backoff: a persistent rejection (revoked token, retired
+        // topic) must not become a validate + handshake loop every ~2s.
+        this.scheduleReconnect();
       } else {
         this.log("LISTEN accepted — now receiving drop-progress / drop-claim events");
+        this.reconnectAttempts = 0;
         this.listening = true;
         this.state = "ok";
         this.lastErrorMessage = undefined;

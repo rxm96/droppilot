@@ -17,6 +17,12 @@ type Params = {
   forcePrioritySwitch?: boolean;
   allowWatching: boolean;
   canWatchTarget: boolean;
+  /**
+   * Whether the autopilot may auto-select/switch for this target. Defaults to
+   * `canWatchTarget`; pass false for a suppressed target whose channels should
+   * stay listed but never be auto-picked (see `canAutoSelectGame`).
+   */
+  canAutoSelectTarget?: boolean;
   trackerMode?: ChannelTrackerMode | null;
   demoMode?: boolean;
   onAuthError?: (message?: string) => void;
@@ -35,6 +41,7 @@ export function useChannels({
   forcePrioritySwitch = false,
   allowWatching,
   canWatchTarget,
+  canAutoSelectTarget = canWatchTarget,
   trackerMode,
   demoMode,
   onAuthError,
@@ -76,7 +83,7 @@ export function useChannels({
     allowWatching,
     autoSelectEnabled,
     autoSwitchEnabled,
-    canWatchTarget,
+    canWatchTarget: canAutoSelectTarget,
     channelAllowlist,
     forcePrioritySwitch,
     manualWatchOverride,

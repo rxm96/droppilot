@@ -41,7 +41,10 @@ export function resolveHeroState(input: {
   activeGame: string;
   channelsCount: number;
   channelsLoading: boolean;
-  /** The last channel fetch failed (the list is empty because of the error). */
+  /**
+   * The last channel fetch failed. A transient error keeps the previous list
+   * (channelsAfterFetchFailure), so this can be true with channels present.
+   */
   channelsFailed: boolean;
   /** The target game has a drop watching can earn (useTargetDrops). */
   canWatchTarget: boolean;

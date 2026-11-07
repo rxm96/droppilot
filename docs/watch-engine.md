@@ -106,6 +106,10 @@ once things stabilize.
 - `selectIsTargetSuppressed(state, activeTargetGame)` — boolean check.
 - `shouldForceClearWatchingOnSuppressedTarget(state, watchingGame)` — safety clear so
   the app never keeps watching a now-suppressed game.
+- `canAutoSelectGame(state, game, canWatchTarget)` — gate for the channel autopilot. After a
+  manual stop the stopped game's channels stay listed (`displayTargetGame`), but the autopilot
+  must not auto-pick them: the safety clear above would undo the pick at once, and a
+  re-enabled auto-select would loop select/clear until the hold expires.
 
 ## Stall recovery flow
 
@@ -114,7 +118,9 @@ When a watched drop makes no progress within the no-progress window, `decideNoPr
 
 1. Detects the no-progress window has elapsed (shorter near the end of a drop).
 2. Tries **channel-level recovery first** — switch to another eligible channel for
-   the same drop.
+   the same drop. Channels already watched during this stall (`triedChannelIds`) are never
+   picked again, and a freshly switched-to channel gets `STALL_CHANNEL_SWITCH_GRACE_MS`
+   (capped at the no-progress window) before the next recovery step.
 3. Limits channel retries; once exhausted (or no channel is viable),
 4. **retargets** to the next priority candidate (next _actionable_ game, else next
    priority entry anyway — so the list keeps moving),
@@ -127,6 +133,7 @@ Relevant constants in `watchStallRecovery.ts`:
 | `STALL_NO_PROGRESS_WINDOW_MS`                  | `15 * 60_000` | No-progress window (normal).               |
 | `STALL_NO_PROGRESS_WINDOW_NEAR_END_MS`         | `3 * 60_000`  | Tighter window near a drop's end.          |
 | `STALL_RECOVERY_COOLDOWN_MS`                   | `60_000`      | Min gap between recovery actions.          |
+| `STALL_CHANNEL_SWITCH_GRACE_MS`                | `5 * 60_000`  | Grace for a new channel after a switch.    |
 | `STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS`          | `2`           | Channel switches before retargeting.       |
 | `STALL_MAX_CHANNEL_RECOVERY_ATTEMPTS_NEAR_END` | `1`           | Same, near a drop's end.                   |
 | `NO_FARMABLE_GAME_COOLDOWN_MS`                 | `10 * 60_000` | Cooldown for a game with no farmable drop. |

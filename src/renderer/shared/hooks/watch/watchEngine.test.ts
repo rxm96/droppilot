@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  canAutoSelectGame,
   MANUAL_STOP_SUPPRESSION_HOLD_MS,
   STALL_STOP_SUPPRESSION_HOLD_MS,
   selectIsTargetSuppressed,
@@ -260,5 +261,31 @@ describe("stampWatchEngineEvent", () => {
   it("keeps an existing finite at on watch/stall_stop", () => {
     const event: WatchEngineEvent = { type: "watch/stall_stop", activeTargetGame: "Rust", at: 7 };
     expect(stampWatchEngineEvent(event, 42)).toBe(event);
+  });
+});
+
+describe("canAutoSelectGame", () => {
+  it("blocks auto-select of a manually stopped game whose channels stay visible", () => {
+    // After a manual stop the channel list keeps showing the stopped game. If a
+    // priority edit re-enables auto-select, auto-selecting it would be undone at
+    // once by the suppression force-clear: a select/clear loop.
+    const stopped = watchEngineReducer(WATCH_ENGINE_INITIAL_STATE, {
+      type: "watch/stop",
+      activeTargetGame: "Rust",
+      at: 1_000,
+    });
+    expect(shouldForceClearWatchingOnSuppressedTarget(stopped, "Rust")).toBe(true);
+    expect(canAutoSelectGame(stopped, "Rust", true)).toBe(false);
+  });
+
+  it("allows auto-select of other games and when nothing is suppressed", () => {
+    const stopped = watchEngineReducer(WATCH_ENGINE_INITIAL_STATE, {
+      type: "watch/stop",
+      activeTargetGame: "Rust",
+      at: 1_000,
+    });
+    expect(canAutoSelectGame(stopped, "Dota 2", true)).toBe(true);
+    expect(canAutoSelectGame(WATCH_ENGINE_INITIAL_STATE, "Rust", true)).toBe(true);
+    expect(canAutoSelectGame(WATCH_ENGINE_INITIAL_STATE, "Rust", false)).toBe(false);
   });
 });
