@@ -11,6 +11,8 @@ GitHub Release (which the app's update history shows) is built from that section
 
 ## [Unreleased]
 
+## [4.2.0] - 2026-11-07
+
 ### Added
 
 - "Copy report" on the debug screen copies the app version, the current state and the recent
