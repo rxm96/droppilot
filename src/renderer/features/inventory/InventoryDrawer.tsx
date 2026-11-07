@@ -145,7 +145,7 @@ export function InventoryDrawer({
           </div>
 
           {blockingLabel && (
-            <div className="mb-5 rounded-[var(--dp-radius-md)] border border-[rgba(248,113,113,0.20)] bg-[rgba(248,113,113,0.08)] px-3 py-2">
+            <div className="mb-5 rounded-[var(--dp-radius-md)] border border-[color-mix(in_srgb,var(--dp-signal-err)_20%,transparent)] bg-[color-mix(in_srgb,var(--dp-signal-err)_8%,transparent)] px-3 py-2">
               <div className="font-mono text-[9px] uppercase tracking-[0.12em] text-[color:var(--dp-signal-err)] mb-1">
                 {t("inventory.drawer.blocked")}
               </div>

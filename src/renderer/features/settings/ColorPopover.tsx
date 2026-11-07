@@ -254,7 +254,7 @@ export function ColorPopover({ color, active, onPick }: ColorPopoverProps) {
           <Check
             size={12}
             strokeWidth={2.4}
-            className="relative z-10 text-[color:var(--dp-bg-app)]"
+            className="relative z-10 text-[color:var(--dp-ink)]"
             aria-hidden="true"
           />
         )}

@@ -40,7 +40,7 @@ export function ResetStatsButton({ onReset }: ResetStatsButtonProps) {
           <AlertDialogCancel>{t("stats.resetCancel")}</AlertDialogCancel>
           <AlertDialogAction
             onClick={onReset}
-            className="bg-[color:var(--dp-signal-err)] text-[#0a0b0d] hover:bg-[color:var(--dp-signal-err)] hover:opacity-90"
+            className="bg-[color:var(--dp-signal-err)] text-[color:var(--dp-ink)] hover:bg-[color:var(--dp-signal-err)] hover:opacity-90"
           >
             {t("stats.resetConfirmAction")}
           </AlertDialogAction>

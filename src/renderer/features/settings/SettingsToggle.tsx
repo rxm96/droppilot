@@ -45,8 +45,10 @@ export function SettingsToggle({
         <span
           aria-hidden="true"
           className={cn(
-            "inline-block h-[14px] w-[14px] rounded-full bg-white transition-transform",
-            checked ? "translate-x-[18px]" : "translate-x-[2px]",
+            "inline-block h-[14px] w-[14px] rounded-full transition-transform",
+            checked
+              ? "translate-x-[18px] bg-[color:var(--dp-ink)]"
+              : "translate-x-[2px] bg-[color:var(--dp-text-dim)]",
           )}
         />
       </button>

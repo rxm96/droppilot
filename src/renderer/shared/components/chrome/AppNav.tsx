@@ -48,7 +48,7 @@ export function AppNav({ view, onChange, items, right, className }: AppNavProps)
             {typeof item.badge === "number" && item.badge > 0 && (
               <span
                 aria-label={item.badgeLabel}
-                className="grid h-4 min-w-4 place-items-center rounded-full bg-[color:var(--dp-signal-warn)] px-[5px] text-[10px] font-semibold text-[color:var(--dp-bg-app)]"
+                className="grid h-4 min-w-4 place-items-center rounded-full bg-[color:var(--dp-signal-warn)] px-[5px] text-[10px] font-semibold text-[color:var(--dp-ink)]"
               >
                 {item.badge}
               </span>

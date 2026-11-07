@@ -797,7 +797,7 @@ body {
   border-radius: 8px;
   border: none;
   background: var(--dp-accent);
-  color: var(--dp-bg-app);
+  color: var(--dp-ink);
   cursor: pointer;
   transition:
     background 0.15s ease,

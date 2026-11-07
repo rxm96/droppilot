@@ -81,6 +81,8 @@ GitHub Release (which the app's update history shows) is built from that section
 - Exporting or importing settings shows a readable message instead of an internal text key.
 - In demo mode, Settings shows the demo account, as the top bar does, instead of "Not signed
   in".
+- In light mode, the count on the drops tab, the knob of the on/off switches and the check on
+  the selected accent color are easy to see again.
 
 ## [4.0.0] - 2026-11-06
 

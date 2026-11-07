@@ -26,7 +26,10 @@ export function SessionExpiredBanner({ auth, onRelogin }: SessionExpiredBannerPr
         <span
           aria-hidden="true"
           className="inline-block h-[6px] w-[6px] flex-shrink-0 rounded-full"
-          style={{ background: "var(--dp-signal-warn)", boxShadow: "0 0 6px rgba(251,191,36,0.5)" }}
+          style={{
+            background: "var(--dp-signal-warn)",
+            boxShadow: "0 0 6px color-mix(in srgb, var(--dp-signal-warn) 50%, transparent)",
+          }}
         />
         <span className="truncate text-[13px] text-[color:var(--dp-text)]">
           {t("session.expired.title")}
