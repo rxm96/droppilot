@@ -11,6 +11,8 @@ GitHub Release (which the app's update history shows) is built from that section
 
 ## [Unreleased]
 
+## [4.1.0] - 2026-11-07
+
 ### Added
 
 - A "plan · today" table on the overview shows when each drop will be ready, in the order
