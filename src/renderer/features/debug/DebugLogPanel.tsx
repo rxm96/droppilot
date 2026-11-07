@@ -146,7 +146,7 @@ export function DebugLogPanel(props: DebugLogPanelProps) {
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <SectionLabel>{t("debug.log")}</SectionLabel>
-          <div className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)] mt-1">
+          <div className="mt-1 text-[12px] leading-snug text-[color:var(--dp-text-dim)]">
             {t("debug.logHelp")}
           </div>
         </div>
@@ -204,7 +204,7 @@ export function DebugLogPanel(props: DebugLogPanelProps) {
       </div>
 
       {/* Overview row */}
-      <div className="flex items-center justify-between gap-2 font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
+      <div className="flex items-center justify-between gap-2 text-[12px] text-[color:var(--dp-text-dimmer)]">
         <span>
           {props.hiddenCount > 0
             ? t("debug.logWindow", {
@@ -244,7 +244,7 @@ export function DebugLogPanel(props: DebugLogPanelProps) {
         style={{ maxHeight: "560px" }}
       >
         {props.structuredRows.length === 0 ? (
-          <div className="font-mono text-[11px] text-[color:var(--dp-text-dimmer)] text-center py-8">
+          <div className="py-8 text-center text-[13px] text-[color:var(--dp-text-dimmer)]">
             {t("debug.empty")}
           </div>
         ) : (

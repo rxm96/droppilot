@@ -10,7 +10,6 @@ import type { UpdateChannel } from "../../../../shared/updateChannels";
 type Params = {
   newGame: string;
   setNewGame: (val: string) => void;
-  selectedGame: string;
   priorityGames: string[];
   savePriorityGames: (list: string[]) => Promise<void>;
   saveObeyPriority: (val: boolean) => Promise<void>;
@@ -55,7 +54,6 @@ type Params = {
 export function useAppActions({
   newGame,
   setNewGame,
-  selectedGame,
   priorityGames,
   savePriorityGames,
   saveObeyPriority,
@@ -99,7 +97,6 @@ export function useAppActions({
   const priorityActions = usePriorityActions({
     newGame,
     setNewGame,
-    selectedGame,
     priorityGames,
     setAutoSelectEnabled,
     savePriorityGames,

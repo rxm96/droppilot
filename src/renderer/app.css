@@ -56,6 +56,8 @@
   --color-dp-signal-warn: var(--dp-signal-warn);
   --color-dp-signal-err: var(--dp-signal-err);
   --color-dp-signal-info: var(--dp-signal-info);
+  --color-dp-warn-soft: var(--dp-warn-soft);
+  --color-dp-ink: var(--dp-ink);
 
   --radius-dp-xs: var(--dp-radius-xs);
   --radius-dp-sm: var(--dp-radius-sm);
@@ -285,9 +287,15 @@
   --dp-signal-warn: #fbbf24;
   --dp-signal-err: #f87171;
   --dp-signal-info: #60a5fa;
+  /* Soft amber wash for "needs you" surfaces */
+  --dp-warn-soft: rgba(251, 191, 36, 0.08);
 
   /* Image overlays */
   --dp-image-overlay: rgba(10, 11, 13, 0.5);
+
+  /* Text on accent / signal fills (primary buttons, badges, swatch checks).
+     Same in both themes: both accent and signal shades are mid-tones. */
+  --dp-ink: #0a0b0d;
 
   /* Radius hierarchy */
   --dp-radius-xs: 3px;
@@ -316,6 +324,7 @@
   --dp-signal-warn: #ca8a04;
   --dp-signal-err: #dc2626;
   --dp-signal-info: #2563eb;
+  --dp-warn-soft: rgba(202, 138, 4, 0.08);
   --dp-image-overlay: rgba(250, 250, 249, 0.55);
 }
 
@@ -526,6 +535,7 @@ body {
 }
 
 .update-overlay-eyebrow {
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.16em;
@@ -682,6 +692,7 @@ body {
 
 .update-overlay-notes-title {
   margin: 0 0 8px 0;
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
@@ -783,12 +794,14 @@ body {
 .update-overlay-install {
   margin-top: 2px;
   padding: 11px 30px;
-  font-size: 13.5px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.02em;
   font-weight: 600;
   border-radius: 8px;
   border: none;
   background: var(--dp-accent);
-  color: var(--dp-bg-app);
+  color: var(--dp-ink);
   cursor: pointer;
   transition:
     background 0.15s ease,

@@ -1,29 +1,38 @@
 import * as React from "react";
+import type { FontPairId } from "@renderer/shared/fontPairs";
 import type { ThemePreference } from "@renderer/shared/theme";
+import type { ProfileState } from "@renderer/shared/types";
 import type { UpdateChannel } from "../../../shared/updateChannels";
-import { SettingsSidebar, type SettingsSectionKey } from "./SettingsSidebar";
-import { useSettingsViewState } from "./useSettingsViewState";
-import { GeneralSection } from "./sections/GeneralSection";
-import { EngineSection } from "./sections/EngineSection";
-import { AppearanceSection } from "./sections/AppearanceSection";
-import { UpdatesSection } from "./sections/UpdatesSection";
-import { AlertsSection } from "./sections/AlertsSection";
-import { AccountSection } from "./sections/AccountSection";
+import { SettingsIndex } from "./SettingsIndex";
+import {
+  pickActiveSection,
+  settingsSections,
+  type SettingsSection,
+  type SettingsSectionKey,
+} from "./settingsSections";
+import { AccountUpdatesSection } from "./sections/AccountUpdatesSection";
 import { AdvancedSection } from "./sections/AdvancedSection";
-import { useI18n } from "@renderer/shared/i18n";
+import { AppearanceSection } from "./sections/AppearanceSection";
+import { AppSection } from "./sections/AppSection";
+import { AutopilotSection } from "./sections/AutopilotSection";
+import { NotificationsSection } from "./sections/NotificationsSection";
+import type { UpdateStatus } from "./sections/updateStatusLine";
 
 type SettingsProps = {
   isLinked: boolean;
+  profile: ProfileState;
   onLogout: () => void;
   onLogin: () => void;
+  version: string;
+  onOpenGames: () => void;
   language: "de" | "en";
   setLanguage: (val: "de" | "en") => void;
   theme: ThemePreference;
   setTheme: (val: ThemePreference) => void;
   accent: string | null;
   setAccent: (val: string | null) => void;
-  fontPair: import("@renderer/shared/fontPairs").FontPairId;
-  setFontPair: (val: import("@renderer/shared/fontPairs").FontPairId) => void;
+  fontPair: FontPairId;
+  setFontPair: (val: FontPairId) => void;
   autoStart: boolean;
   setAutoStart: (val: boolean) => void;
   autoClaim: boolean;
@@ -81,6 +90,7 @@ type SettingsProps = {
   refreshMaxMs: number;
   setRefreshIntervals: (minMs: number, maxMs: number) => void;
   resetAutomation: () => void;
+  resetStats: () => void;
   settingsJson: string;
   setSettingsJson: (val: string) => void;
   exportSettings: () => void;
@@ -92,174 +102,186 @@ type SettingsProps = {
   checkUpdates?: () => void;
   downloadUpdate?: () => void;
   installUpdate?: () => void;
-  updateStatus?: {
-    state:
-      | "idle"
-      | "checking"
-      | "available"
-      | "downloading"
-      | "downloaded"
-      | "none"
-      | "error"
-      | "unsupported";
-    message?: string;
-    version?: string;
-    progress?: number;
+  updateStatus?: UpdateStatus & {
     transferred?: number;
     total?: number;
     bytesPerSecond?: number;
   };
 };
 
+/** A section heading counts as "current" once it is this close to the top (px). */
+const ACTIVE_OFFSET = 96;
+
+function findScrollParent(el: HTMLElement): HTMLElement | null {
+  for (let node = el.parentElement; node; node = node.parentElement) {
+    const { overflowY } = getComputedStyle(node);
+    if (overflowY === "auto" || overflowY === "scroll") return node;
+  }
+  return document.scrollingElement instanceof HTMLElement ? document.scrollingElement : null;
+}
+
+/** One scrolling settings page with a left index of its six sections. */
 export function SettingsView(props: SettingsProps) {
-  const { t } = useI18n();
-  const { active, setActive } = useSettingsViewState("general");
+  const showApp = !!props.showAutoStart;
+  const sections = React.useMemo(() => settingsSections({ showApp }), [showApp]);
+  const idOf = React.useMemo(
+    () =>
+      Object.fromEntries(sections.map((s) => [s.key, s.id])) as Record<SettingsSectionKey, string>,
+    [sections],
+  );
+  const rootRef = React.useRef<HTMLDivElement>(null);
+  const [active, setActive] = React.useState<SettingsSectionKey | null>(sections[0]?.key ?? null);
 
-  const items: { key: SettingsSectionKey; label: string }[] = [
-    { key: "general", label: t("settings.section.general.sidebar") },
-    { key: "engine", label: t("settings.section.engine.sidebar") },
-    { key: "appearance", label: t("settings.section.appearance.sidebar") },
-    ...(props.showUpdateCheck
-      ? [{ key: "updates" as SettingsSectionKey, label: t("settings.section.updates.sidebar") }]
-      : []),
-    { key: "alerts", label: t("settings.section.alerts.sidebar") },
-    { key: "account", label: t("settings.section.account.sidebar") },
-    { key: "advanced", label: t("settings.section.advanced.sidebar") },
-  ];
+  // Highlight the section being read: recompute on scroll of the app's scroll container.
+  React.useEffect(() => {
+    const root = rootRef.current;
+    const scroller = root ? findScrollParent(root) : null;
+    if (!scroller) return;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const containerTop = scroller.getBoundingClientRect().top;
+      const positions = sections.map((s) => ({
+        key: s.key,
+        top:
+          (document.getElementById(s.id)?.getBoundingClientRect().top ?? Infinity) - containerTop,
+      }));
+      const atBottom =
+        scroller.scrollTop > 0 &&
+        scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 2;
+      setActive(pickActiveSection(positions, { offset: ACTIVE_OFFSET, atBottom }));
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    update();
+    scroller.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      scroller.removeEventListener("scroll", onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [sections]);
 
-  const sectionTitle: Record<SettingsSectionKey, string> = {
-    general: t("settings.section.general"),
-    engine: t("settings.section.engine"),
-    appearance: t("settings.section.appearance"),
-    updates: t("settings.section.updates"),
-    alerts: t("settings.section.alerts"),
-    account: t("settings.section.account"),
-    advanced: t("settings.section.advanced"),
-  };
+  const handlePick = React.useCallback((section: SettingsSection) => {
+    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    document
+      .getElementById(section.id)
+      ?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    setActive(section.key);
+  }, []);
 
   return (
-    <div className="flex flex-col gap-5">
-      <div>
-        <h2 className="text-[22px] font-medium tracking-[-0.01em] text-[color:var(--dp-text)] leading-tight">
-          {t("settings.pageTitle")}
-        </h2>
-        <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[color:var(--dp-text-dimmer)] mt-1">
-          {sectionTitle[active]}
-        </div>
-      </div>
+    <div
+      ref={rootRef}
+      className="mx-auto grid w-full max-w-[1080px] grid-cols-1 items-start gap-8 pb-6 md:grid-cols-[180px_minmax(0,1fr)]"
+    >
+      <SettingsIndex sections={sections} active={active} onPick={handlePick} />
 
-      <div className="flex gap-6 items-start">
-        <SettingsSidebar items={items} active={active} onChange={setActive} />
-
-        <main className="flex-1 min-w-0 rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] px-6 py-5">
-          {active === "general" && (
-            <GeneralSection
-              language={props.language}
-              setLanguage={props.setLanguage}
-              demoMode={props.demoMode}
-              setDemoMode={props.setDemoMode}
-              sendTestAlert={props.sendTestAlert}
-            />
-          )}
-          {active === "engine" && (
-            <EngineSection
-              autoStart={props.autoStart}
-              setAutoStart={props.setAutoStart}
-              showAutoStart={props.showAutoStart}
-              autoClaim={props.autoClaim}
-              setAutoClaim={props.setAutoClaim}
-              autoSelect={props.autoSelect}
-              setAutoSelect={props.setAutoSelect}
-              autoSwitchEnabled={props.autoSwitchEnabled}
-              setAutoSwitchEnabled={props.setAutoSwitchEnabled}
-              refreshMinMs={props.refreshMinMs}
-              refreshMaxMs={props.refreshMaxMs}
-              setRefreshIntervals={props.setRefreshIntervals}
-              resetAutomation={props.resetAutomation}
-              closeToTray={props.closeToTray}
-              setCloseToTray={props.setCloseToTray}
-              minimizeToTray={props.minimizeToTray}
-              setMinimizeToTray={props.setMinimizeToTray}
-            />
-          )}
-          {active === "appearance" && (
-            <AppearanceSection
-              theme={props.theme}
-              setTheme={props.setTheme}
-              enableBadgesEmotes={props.enableBadgesEmotes}
-              setEnableBadgesEmotes={props.setEnableBadgesEmotes}
-              accent={props.accent}
-              setAccent={props.setAccent}
-              fontPair={props.fontPair}
-              setFontPair={props.setFontPair}
-            />
-          )}
-          {active === "updates" && props.showUpdateCheck && (
-            <UpdatesSection
-              updateChannel={props.updateChannel}
-              setUpdateChannel={props.setUpdateChannel}
-              updateStatus={props.updateStatus}
-              checkUpdates={props.checkUpdates}
-              downloadUpdate={props.downloadUpdate}
-              installUpdate={props.installUpdate}
-            />
-          )}
-          {active === "alerts" && (
-            <AlertsSection
-              alertsEnabled={props.alertsEnabled}
-              setAlertsEnabled={props.setAlertsEnabled}
-              alertsNotifyWhileFocused={props.alertsNotifyWhileFocused}
-              setAlertsNotifyWhileFocused={props.setAlertsNotifyWhileFocused}
-              alertsDropClaimed={props.alertsDropClaimed}
-              setAlertsDropClaimed={props.setAlertsDropClaimed}
-              alertsDropEndingSoon={props.alertsDropEndingSoon}
-              setAlertsDropEndingSoon={props.setAlertsDropEndingSoon}
-              alertsDropEndingMinutes={props.alertsDropEndingMinutes}
-              setAlertsDropEndingMinutes={props.setAlertsDropEndingMinutes}
-              alertsWatchError={props.alertsWatchError}
-              setAlertsWatchError={props.setAlertsWatchError}
-              alertsAutoSwitch={props.alertsAutoSwitch}
-              setAlertsAutoSwitch={props.setAlertsAutoSwitch}
-              alertsNewDrops={props.alertsNewDrops}
-              setAlertsNewDrops={props.setAlertsNewDrops}
-              webhookEnabled={props.webhookEnabled}
-              setWebhookEnabled={props.setWebhookEnabled}
-              webhookUrl={props.webhookUrl}
-              setWebhookUrl={props.setWebhookUrl}
-              webhookDropClaimed={props.webhookDropClaimed}
-              setWebhookDropClaimed={props.setWebhookDropClaimed}
-              webhookWatchError={props.webhookWatchError}
-              setWebhookWatchError={props.setWebhookWatchError}
-              webhookDropEndingSoon={props.webhookDropEndingSoon}
-              setWebhookDropEndingSoon={props.setWebhookDropEndingSoon}
-              webhookAutoSwitch={props.webhookAutoSwitch}
-              setWebhookAutoSwitch={props.setWebhookAutoSwitch}
-              webhookNewDrops={props.webhookNewDrops}
-              setWebhookNewDrops={props.setWebhookNewDrops}
-            />
-          )}
-          {active === "account" && (
-            <AccountSection
-              isLinked={props.isLinked}
-              onLogout={props.onLogout}
-              onLogin={props.onLogin}
-              allowUnlinkedGames={props.allowUnlinkedGames}
-              setAllowUnlinkedGames={props.setAllowUnlinkedGames}
-            />
-          )}
-          {active === "advanced" && (
-            <AdvancedSection
-              debugEnabled={props.debugEnabled}
-              setDebugEnabled={props.setDebugEnabled}
-              settingsJson={props.settingsJson}
-              setSettingsJson={props.setSettingsJson}
-              exportSettings={props.exportSettings}
-              importSettings={props.importSettings}
-              settingsInfo={props.settingsInfo}
-              settingsError={props.settingsError}
-            />
-          )}
-        </main>
+      <div className="flex min-w-0 flex-col gap-7">
+        <AutopilotSection
+          id={idOf.autopilot}
+          autoClaim={props.autoClaim}
+          setAutoClaim={props.setAutoClaim}
+          autoSelect={props.autoSelect}
+          setAutoSelect={props.setAutoSelect}
+          autoSwitchEnabled={props.autoSwitchEnabled}
+          setAutoSwitchEnabled={props.setAutoSwitchEnabled}
+          refreshMinMs={props.refreshMinMs}
+          refreshMaxMs={props.refreshMaxMs}
+          setRefreshIntervals={props.setRefreshIntervals}
+          allowUnlinkedGames={props.allowUnlinkedGames}
+          setAllowUnlinkedGames={props.setAllowUnlinkedGames}
+          enableBadgesEmotes={props.enableBadgesEmotes}
+          setEnableBadgesEmotes={props.setEnableBadgesEmotes}
+          onOpenGames={props.onOpenGames}
+        />
+        <NotificationsSection
+          id={idOf.notifications}
+          alertsEnabled={props.alertsEnabled}
+          setAlertsEnabled={props.setAlertsEnabled}
+          alertsNotifyWhileFocused={props.alertsNotifyWhileFocused}
+          setAlertsNotifyWhileFocused={props.setAlertsNotifyWhileFocused}
+          alertsDropClaimed={props.alertsDropClaimed}
+          setAlertsDropClaimed={props.setAlertsDropClaimed}
+          alertsDropEndingSoon={props.alertsDropEndingSoon}
+          setAlertsDropEndingSoon={props.setAlertsDropEndingSoon}
+          alertsDropEndingMinutes={props.alertsDropEndingMinutes}
+          setAlertsDropEndingMinutes={props.setAlertsDropEndingMinutes}
+          alertsWatchError={props.alertsWatchError}
+          setAlertsWatchError={props.setAlertsWatchError}
+          alertsAutoSwitch={props.alertsAutoSwitch}
+          setAlertsAutoSwitch={props.setAlertsAutoSwitch}
+          alertsNewDrops={props.alertsNewDrops}
+          setAlertsNewDrops={props.setAlertsNewDrops}
+          sendTestAlert={props.sendTestAlert}
+          webhookEnabled={props.webhookEnabled}
+          setWebhookEnabled={props.setWebhookEnabled}
+          webhookUrl={props.webhookUrl}
+          setWebhookUrl={props.setWebhookUrl}
+          webhookDropClaimed={props.webhookDropClaimed}
+          setWebhookDropClaimed={props.setWebhookDropClaimed}
+          webhookWatchError={props.webhookWatchError}
+          setWebhookWatchError={props.setWebhookWatchError}
+          webhookDropEndingSoon={props.webhookDropEndingSoon}
+          setWebhookDropEndingSoon={props.setWebhookDropEndingSoon}
+          webhookAutoSwitch={props.webhookAutoSwitch}
+          setWebhookAutoSwitch={props.setWebhookAutoSwitch}
+          webhookNewDrops={props.webhookNewDrops}
+          setWebhookNewDrops={props.setWebhookNewDrops}
+        />
+        <AppearanceSection
+          id={idOf.appearance}
+          theme={props.theme}
+          setTheme={props.setTheme}
+          accent={props.accent}
+          setAccent={props.setAccent}
+          fontPair={props.fontPair}
+          setFontPair={props.setFontPair}
+          language={props.language}
+          setLanguage={props.setLanguage}
+        />
+        {showApp && (
+          <AppSection
+            id={idOf.app}
+            autoStart={props.autoStart}
+            setAutoStart={props.setAutoStart}
+            closeToTray={props.closeToTray}
+            setCloseToTray={props.setCloseToTray}
+            minimizeToTray={props.minimizeToTray}
+            setMinimizeToTray={props.setMinimizeToTray}
+          />
+        )}
+        <AccountUpdatesSection
+          id={idOf.account}
+          isLinked={props.isLinked}
+          demoMode={props.demoMode}
+          profile={props.profile}
+          onLogout={props.onLogout}
+          onLogin={props.onLogin}
+          version={props.version}
+          showUpdateCheck={props.showUpdateCheck}
+          updateStatus={props.updateStatus}
+          checkUpdates={props.checkUpdates}
+          downloadUpdate={props.downloadUpdate}
+          installUpdate={props.installUpdate}
+          updateChannel={props.updateChannel}
+          setUpdateChannel={props.setUpdateChannel}
+        />
+        <AdvancedSection
+          id={idOf.advanced}
+          debugEnabled={props.debugEnabled}
+          setDebugEnabled={props.setDebugEnabled}
+          demoMode={props.demoMode}
+          setDemoMode={props.setDemoMode}
+          settingsJson={props.settingsJson}
+          setSettingsJson={props.setSettingsJson}
+          exportSettings={props.exportSettings}
+          importSettings={props.importSettings}
+          settingsInfo={props.settingsInfo}
+          settingsError={props.settingsError}
+          resetAutomation={props.resetAutomation}
+          resetStats={props.resetStats}
+        />
       </div>
     </div>
   );

@@ -1,10 +1,10 @@
 import { useEffect } from "react";
 import type { ChannelAllowlist } from "@renderer/shared/domain/dropDomain";
 import type { ChannelEntry, WatchingState } from "@renderer/shared/types";
-import { normalizeAllowlist } from "./channelAllowlist";
 import {
   computeAutoSwitchAction,
   isManualPriorityOverrideActive,
+  pickAutoSelectChannel,
   shouldAutoSelectChannel,
 } from "./channelEngine";
 import type { ChannelStore } from "./useChannelStore";
@@ -54,10 +54,7 @@ export function useChannelAutopilot({
       })
     )
       return;
-    const normalizedAllowlist = normalizeAllowlist(channelAllowlist);
-    const first = normalizedAllowlist
-      ? channels.find((channel) => normalizedAllowlist.allowsChannel(channel))
-      : channels[0];
+    const first = pickAutoSelectChannel(channels, channelAllowlist);
     if (!first) return;
     setWatchingFromChannel(first);
   }, [

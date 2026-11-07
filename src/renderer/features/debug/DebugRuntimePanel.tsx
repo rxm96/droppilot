@@ -24,7 +24,7 @@ export function DebugRuntimePanel({ facts, trackerShards, formatNumber }: DebugR
       {/* Runtime facts */}
       <div className="rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] px-5 py-4">
         <SectionLabel>{t("debug.runtime.title")}</SectionLabel>
-        <div className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)] mt-1 mb-3">
+        <div className="mt-1 mb-3 text-[12px] leading-snug text-[color:var(--dp-text-dim)]">
           {t("debug.runtime.subtitle")}
         </div>
         <div
@@ -52,10 +52,10 @@ export function DebugRuntimePanel({ facts, trackerShards, formatNumber }: DebugR
       {/* Tracker shards */}
       <div className="rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] px-5 py-4">
         <SectionLabel>{t("debug.trackerShards")}</SectionLabel>
-        <div className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)] mt-1 mb-3">
+        <div className="mt-1 mb-3 text-[12px] leading-snug text-[color:var(--dp-text-dim)]">
           {t("debug.trackerShardsHelp")}
         </div>
-        <div className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)] mb-3">
+        <div className="mb-3 text-[12px] leading-snug text-[color:var(--dp-text-dim)]">
           {t("debug.websocketHelp")}
         </div>
         {trackerShards.length > 0 ? (
@@ -96,7 +96,7 @@ export function DebugRuntimePanel({ facts, trackerShards, formatNumber }: DebugR
             })}
           </ul>
         ) : (
-          <div className="rounded-[var(--dp-radius-md)] border border-dashed border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated-2)] px-3 py-4 font-mono text-[11px] text-[color:var(--dp-text-dimmer)]">
+          <div className="rounded-[var(--dp-radius-md)] border border-dashed border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated-2)] px-3 py-4 text-[12px] text-[color:var(--dp-text-dimmer)]">
             {t("debug.summary.noSignal")}
           </div>
         )}

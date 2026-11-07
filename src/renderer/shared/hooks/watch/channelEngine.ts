@@ -202,6 +202,23 @@ export const shouldAutoSelectChannel = ({
 };
 
 /**
+ * The channel auto-select starts when nothing is watched: the first channel in
+ * list order that the drop allowlist allows (any channel without allowlist).
+ * Shared by useChannelAutopilot and the overview's "auto" button so both pick
+ * the same channel.
+ */
+export const pickAutoSelectChannel = (
+  channels: ChannelEntry[],
+  channelAllowlist?: ChannelAllowlist | null,
+): ChannelEntry | null => {
+  const normalized = normalizeAllowlist(channelAllowlist);
+  const first = normalized
+    ? channels.find((channel) => normalized.allowsChannel(channel))
+    : channels[0];
+  return first ?? null;
+};
+
+/**
  * The channel list to show after a failed (non-auth) fetch. A transient error
  * keeps the last list for the same game: an empty list would make the
  * autopilot clear a still-live watch session and reset its stall/credit state.

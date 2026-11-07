@@ -8,6 +8,7 @@ import {
   isManualPriorityOverrideActive,
   isFreshCache,
   mergeChannelList,
+  pickAutoSelectChannel,
   shouldClearTrackerAfterStaleResponse,
   shouldAutoSelectChannel,
   sortChannelsByViewers,
@@ -280,6 +281,21 @@ describe("channelEngine helpers", () => {
         shouldTrackChannels: true,
       }),
     ).toBe(false);
+  });
+});
+
+describe("pickAutoSelectChannel", () => {
+  const a = makeChannel({ id: "a", login: "alpha", viewers: 50 });
+  const b = makeChannel({ id: "b", login: "beta", viewers: 20 });
+  it("picks the first channel in list order without an allowlist", () => {
+    expect(pickAutoSelectChannel([a, b], null)).toBe(a);
+  });
+  it("picks the first channel the allowlist allows", () => {
+    expect(pickAutoSelectChannel([a, b], { ids: [], logins: ["beta"] })).toBe(b);
+  });
+  it("returns null when nothing qualifies", () => {
+    expect(pickAutoSelectChannel([], null)).toBeNull();
+    expect(pickAutoSelectChannel([a], { ids: ["zzz"], logins: [] })).toBeNull();
   });
 });
 

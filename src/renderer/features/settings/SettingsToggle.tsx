@@ -5,6 +5,8 @@ export type SettingsToggleProps = {
   checked: boolean;
   onChange: (next: boolean) => void;
   label?: string;
+  /** Accessible name when there is no visible label next to the switch (e.g. the row label). */
+  ariaLabel?: string;
   disabled?: boolean;
   className?: string;
 };
@@ -13,6 +15,7 @@ export function SettingsToggle({
   checked,
   onChange,
   label,
+  ariaLabel,
   disabled,
   className,
 }: SettingsToggleProps) {
@@ -28,7 +31,7 @@ export function SettingsToggle({
         type="button"
         role="switch"
         aria-checked={checked}
-        aria-label={label}
+        aria-label={label ?? ariaLabel}
         disabled={disabled}
         onClick={() => !disabled && onChange(!checked)}
         className={cn(
@@ -42,8 +45,11 @@ export function SettingsToggle({
         <span
           aria-hidden="true"
           className={cn(
-            "inline-block h-[14px] w-[14px] rounded-full bg-white transition-transform",
-            checked ? "translate-x-[18px]" : "translate-x-[2px]",
+            "inline-block h-[14px] w-[14px] rounded-full transition-transform",
+            checked
+              ? // White knob on the violet track in light mode; dark ink (as in the mockup) in dark mode.
+                "translate-x-[18px] bg-white dark:bg-[color:var(--dp-ink)]"
+              : "translate-x-[2px] bg-[color:var(--dp-text-dim)]",
           )}
         />
       </button>

@@ -1,117 +1,47 @@
-import type { ClaimStatus, ErrorInfo, InventoryState } from "@renderer/shared/types";
-import { HeroPanel } from "./HeroPanel";
-import { QueuePanel } from "./QueuePanel";
+import { HeroPanel, type HeroPanelProps } from "./HeroPanel";
+import { NeedsYouPanel, type NeedsYouPanelProps } from "./NeedsYouPanel";
+import { EnginePanel, type EnginePanelProps } from "./EnginePanel";
+import { PlanPanel, type PlanPanelProps } from "./PlanPanel";
 import { ActivityPanel } from "./ActivityPanel";
-import { EnginePanel } from "./EnginePanel";
-import { AttentionStrip } from "./AttentionStrip";
+import type { ChannelPickerProps } from "./ChannelPicker";
 
 type OverviewProps = {
-  inventory: InventoryState;
-  activeGame: string;
-  activeDropTitle?: string;
-  activeDropRemainingMinutes?: number;
-  activeDropEta?: number | null;
-  /** Currently-watched drop snapshot (id + live-ticking earnedMinutes). Passed through to QueuePanel so its active row reflects live progress. */
-  activeDrop?: { id: string; earnedMinutes: number } | null;
-  targetProgress: number;
-  totalDrops: number;
-  claimedDrops: number;
-  claimableDrops: number;
-  blockedDrops: number;
-  channelsCount: number;
-  canWatchTarget: boolean;
-  watchDecision:
-    | "no-target"
-    | "suppressed"
-    | "cooldown"
-    | "watching-progress"
-    | "watching-recover"
-    | "watching-no-farmable"
-    | "watching-no-watchable"
-    | "idle-loading-channels"
-    | "idle-no-channels"
-    | "idle-ready"
-    | "idle-no-watchable-drops";
-  watchSuppressionReason: "manual-stop" | "stall-stop" | null;
-  lastWatchOk?: number | null;
-  watchingSince?: number | null;
-  inventoryFetchedAt?: number | null;
-  watchError?: ErrorInfo | null;
-  onPause?: () => void;
-  onSwitchTarget?: () => void;
-  onClaimNow?: () => void | Promise<void>;
-  claimStatus?: ClaimStatus | null;
-  refreshMinMs?: number;
-  refreshMaxMs?: number;
+  hero: Omit<HeroPanelProps, "picker">;
+  picker: ChannelPickerProps;
+  needsYou: NeedsYouPanelProps;
+  engine: EnginePanelProps;
+  plan: PlanPanelProps;
 };
 
-export function OverviewView({
-  inventory,
-  activeGame,
-  activeDropTitle,
-  activeDropRemainingMinutes,
-  activeDropEta,
-  activeDrop,
-  targetProgress,
-  totalDrops,
-  claimedDrops,
-  claimableDrops,
-  channelsCount,
-  watchDecision,
-  lastWatchOk,
-  watchingSince,
-  watchError,
-  onPause,
-  onSwitchTarget,
-  onClaimNow,
-  claimStatus,
-  refreshMinMs,
-  refreshMaxMs,
-}: OverviewProps) {
-  const items =
-    inventory.status === "ready"
-      ? inventory.items
-      : inventory.status === "error"
-        ? (inventory.items ?? [])
-        : [];
-
-  const isLive = watchDecision === "watching-progress" || watchDecision === "watching-recover";
-
+/**
+ * The merged overview (Overview + the former Control view).
+ *
+ * Wide: hero over plan on the left; needs-you, engine and activity stacked on
+ * the right (spanning both rows, so a tall right column never pushes the plan
+ * down). Narrow: one column in reading order — hero, needs-you, plan, engine,
+ * activity — via `contents` + `order` on the right column.
+ */
+export function OverviewView({ hero, picker, needsYou, engine, plan }: OverviewProps) {
   return (
-    <div className="grid gap-7" style={{ gridTemplateColumns: "1fr 320px" }}>
-      <div className="flex flex-col gap-6">
-        <AttentionStrip
-          claimableDrops={claimableDrops}
-          watchError={watchError}
-          activeGame={activeGame}
-          channelsCount={channelsCount}
-        />
-        <HeroPanel
-          activeGame={activeGame}
-          activeDropTitle={activeDropTitle}
-          activeDropEta={activeDropEta}
-          activeDropRemainingMinutes={activeDropRemainingMinutes}
-          targetProgress={targetProgress}
-          claimableDrops={claimableDrops}
-          channelsCount={channelsCount}
-          totalDrops={totalDrops}
-          claimedDrops={claimedDrops}
-          isLive={isLive}
-          onPause={onPause}
-          onSwitchTarget={onSwitchTarget}
-          onClaimNow={onClaimNow}
-          claimStatus={claimStatus}
-        />
-        <QueuePanel items={items} activeDrop={activeDrop ?? null} targetGame={activeGame} />
+    <div className="mx-auto grid max-w-[1280px] grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)] lg:grid-rows-[auto_1fr]">
+      <div className="order-1 min-w-0 lg:col-start-1 lg:row-start-1">
+        <HeroPanel {...hero} picker={picker} />
       </div>
-      <div className="flex flex-col gap-4">
-        <ActivityPanel />
-        <EnginePanel
-          lastWatchOk={lastWatchOk}
-          watchingSince={watchingSince}
-          refreshMinMs={refreshMinMs}
-          refreshMaxMs={refreshMaxMs}
-        />
+      <div className="contents lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:flex lg:flex-col lg:gap-5">
+        {needsYou.items.length > 0 && (
+          <div className="order-2">
+            <NeedsYouPanel {...needsYou} />
+          </div>
+        )}
+        <div className="order-4">
+          <EnginePanel {...engine} />
+        </div>
+        <div className="order-5">
+          <ActivityPanel />
+        </div>
+      </div>
+      <div className="order-3 min-w-0 lg:col-start-1 lg:row-start-2">
+        <PlanPanel {...plan} />
       </div>
     </div>
   );

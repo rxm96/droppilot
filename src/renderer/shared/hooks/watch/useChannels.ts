@@ -1,5 +1,5 @@
 import { type ChannelAllowlist } from "@renderer/shared/domain/dropDomain";
-import type { ChannelEntry, ChannelTrackerMode, View, WatchingState } from "@renderer/shared/types";
+import type { ChannelEntry, ChannelTrackerMode, WatchingState } from "@renderer/shared/types";
 import { useChannelStore } from "./useChannelStore";
 import { useChannelFetch } from "./useChannelFetch";
 import { useChannelLiveDiff } from "./useChannelLiveDiff";
@@ -7,7 +7,8 @@ import { useChannelAutopilot } from "./useChannelAutopilot";
 
 type Params = {
   targetGame: string;
-  view: View;
+  /** The overview's "switch channel" popover is open: keep the list fresh while the user picks. */
+  channelPickerOpen: boolean;
   watching: WatchingState;
   setWatchingFromChannel: (channel: ChannelEntry) => void;
   clearWatching: () => void;
@@ -31,7 +32,7 @@ type Params = {
 
 export function useChannels({
   targetGame,
-  view,
+  channelPickerOpen,
   watching,
   setWatchingFromChannel,
   clearWatching,
@@ -53,7 +54,7 @@ export function useChannels({
   const shouldTrackChannels =
     allowWatching &&
     hasTrackableTarget &&
-    (view === "control" || autoSelectEnabled || !!watching || autoSwitchEnabled);
+    (channelPickerOpen || autoSelectEnabled || !!watching || autoSwitchEnabled);
   const store = useChannelStore({ targetGame, shouldTrackChannels, demoMode });
 
   const fetchChannels = useChannelFetch({

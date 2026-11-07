@@ -9,9 +9,6 @@ import { isPerfEnabled, recordRender } from "@renderer/shared/utils/perfStore";
 // @dnd-kit (priorities), Radix (settings), the stats charts and the
 // diagnostics-only DebugView out of the startup chunk. Overview is the default
 // landing view, so it stays eager for an instant first paint.
-const ControlView = lazy(() =>
-  import("@renderer/features/control").then((m) => ({ default: m.ControlView })),
-);
 const DebugView = lazy(() =>
   import("@renderer/features/debug").then((m) => ({ default: m.DebugView })),
 );
@@ -40,7 +37,6 @@ type AppContentProps = {
   inventoryProps: ComponentProps<typeof InventoryView>;
   priorityProps: ComponentProps<typeof PriorityView>;
   settingsProps: ComponentProps<typeof SettingsView>;
-  controlProps: ComponentProps<typeof ControlView>;
   debugSnapshot: Record<string, unknown>;
   debugEnabled: boolean;
 };
@@ -52,7 +48,6 @@ export function AppContent({
   inventoryProps,
   priorityProps,
   settingsProps,
-  controlProps,
   debugSnapshot,
   debugEnabled,
 }: AppContentProps) {
@@ -79,7 +74,6 @@ export function AppContent({
         {view === "priorities" &&
           renderWithPerf("PriorityView", <PriorityView {...priorityProps} />)}
         {view === "settings" && renderWithPerf("SettingsView", <SettingsView {...settingsProps} />)}
-        {view === "control" && renderWithPerf("ControlView", <ControlView {...controlProps} />)}
         {view === "debug" && renderWithPerf("DebugView", <DebugView snapshot={debugSnapshot} />)}
       </Suspense>
     </main>

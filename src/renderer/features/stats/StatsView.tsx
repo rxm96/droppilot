@@ -9,15 +9,14 @@ import { computeStreaks } from "./statsDerive";
 
 export type StatsViewProps = {
   stats: StatsState;
-  resetStats: () => void;
 };
 
-export function StatsView({ stats, resetStats }: StatsViewProps) {
+export function StatsView({ stats }: StatsViewProps) {
   const { t } = useI18n();
 
   if (stats.status === "idle" || stats.status === "loading") {
     return (
-      <div className="flex min-h-40 items-center justify-center font-mono text-[12px] text-[color:var(--dp-text-dimmer)]">
+      <div className="flex min-h-40 items-center justify-center text-[13px] text-[color:var(--dp-text-dimmer)]">
         {t("stats.loading")}
       </div>
     );
@@ -26,9 +25,7 @@ export function StatsView({ stats, resetStats }: StatsViewProps) {
   if (stats.status === "error") {
     return (
       <div className="flex min-h-40 flex-col items-center justify-center gap-1 text-center">
-        <span className="font-mono text-[12px] text-[color:var(--dp-signal-err)]">
-          {t("stats.error")}
-        </span>
+        <span className="text-[13px] text-[color:var(--dp-signal-err)]">{t("stats.error")}</span>
         <span className="font-mono text-[11px] text-[color:var(--dp-text-dimmer)]">
           {stats.message}
         </span>
@@ -41,22 +38,22 @@ export function StatsView({ stats, resetStats }: StatsViewProps) {
   const gamesCount = Object.keys(data.claimsByGame).length;
 
   return (
-    <div className="flex flex-col gap-6">
-      <StatsHeader lastReset={data.lastReset} onReset={resetStats} />
+    <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-5">
+      <StatsHeader lastReset={data.lastReset} />
 
       <KpiCards
         totalMinutes={data.totalMinutes}
         totalClaims={data.totalClaims}
         gamesCount={gamesCount}
         currentStreak={current}
+        bestStreak={longest}
       />
 
-      <div className="grid gap-6" style={{ gridTemplateColumns: "1.7fr 1fr" }}>
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)]">
         <WatchTimeTrend daily={data.daily} />
         <TopGamesPanel claimsByGame={data.claimsByGame} />
+        <ActivityHeatmap daily={data.daily} />
       </div>
-
-      <ActivityHeatmap daily={data.daily} longestStreak={longest} />
     </div>
   );
 }

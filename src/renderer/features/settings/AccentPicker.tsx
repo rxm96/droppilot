@@ -72,7 +72,7 @@ export function AccentPicker({ accent, setAccent }: AccentPickerProps) {
               <Check
                 size={12}
                 strokeWidth={2.4}
-                className="text-[color:var(--dp-bg-app)]"
+                className="text-[color:var(--dp-ink)]"
                 aria-hidden="true"
               />
             )}

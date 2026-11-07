@@ -2,7 +2,6 @@ import * as React from "react";
 import { useI18n } from "@renderer/shared/i18n";
 import { Button } from "@renderer/shared/components/ui/button";
 import { Pill } from "@renderer/shared/components/ui/pill";
-import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { useReleaseHistory } from "@renderer/shared/hooks/app/useReleaseHistory";
 import type { ReleaseEntry } from "../../../../shared/releaseHistory";
 
@@ -53,7 +52,7 @@ function ReleaseCard({
             onClick={() => setExpanded((v) => !v)}
             aria-expanded={expanded}
             aria-controls={`changelog-${release.tag}`}
-            className="font-mono text-[10px] uppercase tracking-[0.06em] text-[color:var(--dp-text-dimmer)] hover:text-[color:var(--dp-accent)]"
+            className="font-mono text-[11px] text-[color:var(--dp-text-dimmer)] hover:text-[color:var(--dp-accent)]"
           >
             {t("settings.releaseHistory.fullChangelog")} {expanded ? "−" : "+"}
           </button>
@@ -71,6 +70,7 @@ function ReleaseCard({
   );
 }
 
+/** The release notes list, opened from "changelog" in account & updates. */
 export function ReleaseHistory() {
   const { t, language } = useI18n();
   const { state, reload } = useReleaseHistory(true);
@@ -97,16 +97,14 @@ export function ReleaseHistory() {
   const fmtDate = (ms: number) => (ms > 0 ? new Date(ms).toLocaleDateString(language) : "");
 
   return (
-    <div className="mt-6">
-      <SectionLabel>{t("settings.subsection.releaseHistory")}</SectionLabel>
-
+    <div className="mt-3">
       {state.status === "loading" || state.status === "idle" ? (
-        <p className="mt-3 font-mono text-[11px] text-[color:var(--dp-text-dimmer)]">
+        <p className="mt-3 text-[12px] text-[color:var(--dp-text-dimmer)]">
           {t("settings.releaseHistory.loading")}
         </p>
       ) : state.status === "error" ? (
         <div className="mt-3 flex items-center gap-3">
-          <span className="font-mono text-[11px] text-[color:var(--dp-signal-err)]">
+          <span className="text-[12px] text-[color:var(--dp-signal-err)]">
             {t("settings.releaseHistory.error")}
           </span>
           <Button
@@ -121,13 +119,13 @@ export function ReleaseHistory() {
           </Button>
         </div>
       ) : state.releases.length === 0 ? (
-        <p className="mt-3 font-mono text-[11px] text-[color:var(--dp-text-dimmer)]">
+        <p className="mt-3 text-[12px] text-[color:var(--dp-text-dimmer)]">
           {t("settings.releaseHistory.empty")}
         </p>
       ) : (
         <div className="mt-3 flex flex-col gap-2">
           {state.stale && (
-            <p className="font-mono text-[10px] text-[color:var(--dp-signal-warn)]">
+            <p className="m-0 text-[12px] text-[color:var(--dp-signal-warn)]">
               {t("settings.releaseHistory.stale")}
             </p>
           )}

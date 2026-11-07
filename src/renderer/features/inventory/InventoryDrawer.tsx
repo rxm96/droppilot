@@ -1,16 +1,12 @@
 import * as React from "react";
 import type { CampaignSummary, InventoryItem } from "@renderer/shared/types";
-import { Pill } from "@renderer/shared/components/ui/pill";
+import type { DropStatus } from "@renderer/shared/domain/dropStatus";
+import { DropStatusPill } from "@renderer/shared/components/DropStatusPill";
 import { Button } from "@renderer/shared/components/ui/button";
 import { SectionLabel } from "@renderer/shared/components/ui/section-label";
 import { X, ExternalLink, Trophy } from "@renderer/shared/lib/icons";
-import {
-  dropStatusLabel,
-  dropStatusTone,
-  dropTitleFallback,
-  formatBlockingReason,
-  pickDisplayBlockingReason,
-} from "./inventoryFormatters";
+import { formatBlockingReason } from "@renderer/features/overview/engineVoice";
+import { dropTitleFallback, pickDisplayBlockingReason } from "./inventoryFormatters";
 import {
   formatHourMinute,
   formatPercent,
@@ -20,6 +16,10 @@ import { useI18n } from "@renderer/shared/i18n";
 
 export type InventoryDrawerProps = {
   drop: InventoryItem | null;
+  /** The drop's pill in the drops view, so the drawer shows the same word. */
+  status: DropStatus | null;
+  /** Watched minutes as the drops view shows them (live for the watched drop). */
+  watched: number | null;
   campaign: CampaignSummary | null;
   isPriorityGame: boolean;
   onClose: () => void;
@@ -29,6 +29,8 @@ export type InventoryDrawerProps = {
 
 export function InventoryDrawer({
   drop,
+  status,
+  watched,
   campaign,
   isPriorityGame,
   onClose,
@@ -48,13 +50,14 @@ export function InventoryDrawer({
 
   if (!drop) return null;
 
+  const earned = watched ?? drop.earnedMinutes;
   const progressPct =
-    drop.requiredMinutes > 0 ? Math.round((drop.earnedMinutes / drop.requiredMinutes) * 100) : 0;
+    drop.requiredMinutes > 0 ? Math.round((earned / drop.requiredMinutes) * 100) : 0;
   const thumbUrl = drop.imageUrl?.trim() || drop.campaignImageUrl?.trim() || "";
   const accountUnlinked = drop.linked === false;
   const blockingReason = pickDisplayBlockingReason(drop.blockingReasonHints, accountUnlinked);
   const blockingLabel =
-    drop.blocked && blockingReason ? formatBlockingReason(blockingReason) : null;
+    drop.blocked && blockingReason ? formatBlockingReason(blockingReason, t) : null;
   const showAddPriority = Boolean(drop.game?.trim()) && !isPriorityGame;
   const showLinkAction =
     accountUnlinked || (drop.blockingReasonHints ?? []).includes("account_not_linked");
@@ -110,9 +113,7 @@ export function InventoryDrawer({
               <div className="font-mono text-[11px] text-[color:var(--dp-text-dimmer)] mb-2">
                 {drop.game || "—"}
               </div>
-              <Pill tone={dropStatusTone(drop)} dot={drop.status === "progress"}>
-                {dropStatusLabel(drop)}
-              </Pill>
+              {status && <DropStatusPill status={status} />}
             </div>
           </div>
 
@@ -137,14 +138,14 @@ export function InventoryDrawer({
             </div>
             <div className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
               {t("inventory.drawer.watchedRequired", {
-                watched: formatHourMinute(drop.earnedMinutes),
+                watched: formatHourMinute(earned),
                 required: drop.requiredMinutes > 0 ? formatHourMinute(drop.requiredMinutes) : "—",
               })}
             </div>
           </div>
 
           {blockingLabel && (
-            <div className="mb-5 rounded-[var(--dp-radius-md)] border border-[rgba(248,113,113,0.20)] bg-[rgba(248,113,113,0.08)] px-3 py-2">
+            <div className="mb-5 rounded-[var(--dp-radius-md)] border border-[color-mix(in_srgb,var(--dp-signal-err)_20%,transparent)] bg-[color-mix(in_srgb,var(--dp-signal-err)_8%,transparent)] px-3 py-2">
               <div className="font-mono text-[9px] uppercase tracking-[0.12em] text-[color:var(--dp-signal-err)] mb-1">
                 {t("inventory.drawer.blocked")}
               </div>
@@ -179,7 +180,7 @@ export function InventoryDrawer({
                 onClick={() => onOpenAccountLink(campaign?.accountLinkUrl)}
                 title={campaign?.accountLinkUrl}
               >
-                <ExternalLink size={11} strokeWidth={1.8} /> {t("inventory.header.linkAccount")}
+                <ExternalLink size={11} strokeWidth={1.8} /> {t("drops.group.link")}
               </Button>
             )}
             {showAddPriority && drop.game && (

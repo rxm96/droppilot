@@ -531,7 +531,7 @@ export function DebugView({ snapshot }: DebugViewProps) {
           <h2 className="text-[22px] font-medium tracking-[-0.01em] text-[color:var(--dp-text)] leading-tight">
             {t("debug.title")}
           </h2>
-          <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[color:var(--dp-text-dimmer)] mt-1">
+          <div className="mt-1 text-[13px] text-[color:var(--dp-text-dim)]">
             {t("debug.subtitle")}
           </div>
         </div>

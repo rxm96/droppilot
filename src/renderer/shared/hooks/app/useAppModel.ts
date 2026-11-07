@@ -32,12 +32,27 @@ import { useActiveCampaignDebugLog } from "./useActiveCampaignDebugLog";
 import { useActivityFeedWiring } from "./useActivityFeedWiring";
 import { useDebugCpu } from "./useDebugCpu";
 import { useDebugSnapshot } from "./useDebugSnapshot";
-import { usePriorityOrchestration } from "@renderer/shared/hooks/priority";
+import {
+  computeFallbackOrder,
+  resolvePriorityGameNames,
+  usePriorityOrchestration,
+} from "@renderer/shared/hooks/priority";
+import { pickAutoSelectChannel } from "@renderer/shared/hooks/watch/channelEngine";
+import { buildFarmPlan } from "@renderer/shared/domain/farmPlan";
+import { resolveView } from "@renderer/shared/navigation";
+import {
+  buildNeedsYouItems,
+  resolveAutopilotState,
+  findResumeChannel,
+  resolveHeroState,
+} from "@renderer/features/overview/overviewModel";
+import { buildPlanTable } from "@renderer/features/overview/planTable";
 import { useSettingsStore } from "./useSettingsStore";
 import { useSmartAlerts } from "./useSmartAlerts";
 import { useStats } from "./useStats";
 import { useAccent, useFontPair, useTheme } from "@renderer/shared/theme";
-import type { FilterKey, View } from "@renderer/shared/types";
+import { useInterval } from "@renderer/shared/hooks/useInterval";
+import type { ChannelEntry, FilterKey, View } from "@renderer/shared/types";
 import { isVerboseLoggingEnabled } from "@renderer/shared/utils/logger";
 
 export function useAppModel() {
@@ -46,7 +61,7 @@ export function useAppModel() {
   const { accent, setAccent } = useAccent();
   const { fontPair, setFontPair } = useFontPair();
   const [filter, setFilter] = useState<FilterKey>("all");
-  const [view, setView] = useState<View>("inventory");
+  const [view, setViewState] = useState<View>("inventory");
   const {
     priorityGames,
     obeyPriority,
@@ -110,8 +125,6 @@ export function useAppModel() {
     saveCloseToTray,
     saveMinimizeToTray,
     resetAutomation,
-    selectedGame,
-    setSelectedGame,
     newGame,
     setNewGame,
     settingsJson,
@@ -121,7 +134,18 @@ export function useAppModel() {
     settingsInfo,
     settingsError,
   } = useSettingsStore();
-  const [gameFilter, setGameFilter] = useState<string>("all");
+  // Every view change goes through resolveView, so a removed view (control)
+  // or debug-while-disabled can never be rendered.
+  const setView = useCallback(
+    (next: string) => setViewState(resolveView(next, { debugEnabled })),
+    [debugEnabled],
+  );
+  // The overview's "switch channel" popover; channels stay tracked while open.
+  const [channelPickerOpen, setChannelPickerOpen] = useState(false);
+  // Channel the user picked in that popover. "your pick" shows only while this
+  // exact channel is still the one being watched, so it disappears as soon as
+  // the engine switches away (offline, stall recovery, new target game).
+  const [manualPickChannelId, setManualPickChannelId] = useState<string | null>(null);
   const { state: watchEngineState, dispatchEvent: dispatchWatchEngineEvent } = useWatchEngine();
   const [manualWatchOverride, setManualWatchOverride] = useState<{
     at: number;
@@ -208,13 +232,11 @@ export function useAppModel() {
     inventory,
     inventoryItems,
     campaigns,
-    campaignsLoading,
     inventoryRefreshing,
     inventoryChanges,
     inventoryFetchedAt,
     progressAnchorByDropId,
     fetchInventory,
-    uniqueGames,
     claimStatus,
     setClaimStatus,
     withCategories,
@@ -262,7 +284,6 @@ export function useAppModel() {
   const actions = useAppActions({
     newGame,
     setNewGame,
-    selectedGame,
     priorityGames,
     savePriorityGames,
     saveObeyPriority,
@@ -384,17 +405,7 @@ export function useAppModel() {
     clearWatching,
   });
 
-  const {
-    targetDrops,
-    totalDrops,
-    claimedDrops,
-    totalRequiredMinutes,
-    totalEarnedMinutes,
-    targetProgress,
-    activeDropInfo,
-    canWatchTarget,
-    showNoDropsHint,
-  } = useTargetDrops({
+  const { targetDrops, totalDrops, claimedDrops, activeDropInfo, canWatchTarget } = useTargetDrops({
     targetGame: displayTargetGame,
     inventoryItems,
     withCategories,
@@ -436,7 +447,7 @@ export function useAppModel() {
     fetchChannels,
   } = useChannels({
     targetGame: displayTargetGame,
-    view,
+    channelPickerOpen,
     watching,
     setWatchingFromChannel,
     clearWatching,
@@ -565,6 +576,159 @@ export function useAppModel() {
     stallTrackerRef: watchStallTrackerRef,
   });
 
+  // --- Autopilot (nav chip + hero pause/resume) -------------------------
+  const autopilotState = resolveAutopilotState({
+    allowWatching,
+    watching: Boolean(watching),
+    autoSelectEnabled,
+  });
+  const pauseAutopilot = useCallback(() => {
+    setManualPickChannelId(null);
+    handleStopWatchingWithSuppressedTarget();
+  }, [handleStopWatchingWithSuppressedTarget]);
+  // Resume = the removed Control view's "resume": back to the last watched
+  // channel while it is still live (same start path). If it went offline,
+  // hand over to auto-select instead; the manual_start event lifts the
+  // manual-stop hold on the target, as starting that game by hand would.
+  const resumeAutopilot = useCallback(() => {
+    setManualPickChannelId(null);
+    const resumeChannel = findResumeChannel(channels, lastWatchedChannelIdentity);
+    if (resumeChannel) {
+      handleStartWatching(resumeChannel);
+      return;
+    }
+    setAutoSelectEnabled(true);
+    if (activeTargetGame) {
+      dispatchWatchEngineEvent(
+        { type: "watch/manual_start", watchingGame: activeTargetGame },
+        "manual-resume",
+      );
+    }
+  }, [
+    activeTargetGame,
+    channels,
+    dispatchWatchEngineEvent,
+    handleStartWatching,
+    lastWatchedChannelIdentity,
+  ]);
+  const toggleAutopilot = useCallback(() => {
+    if (autopilotState === "running") pauseAutopilot();
+    else if (autopilotState === "paused") resumeAutopilot();
+  }, [autopilotState, pauseAutopilot, resumeAutopilot]);
+
+  // --- Switch channel popover --------------------------------------------
+  const pickChannel = useCallback(
+    (channel: ChannelEntry) => {
+      setManualPickChannelId(channel.id);
+      setChannelPickerOpen(false);
+      handleStartWatching(channel);
+    },
+    [handleStartWatching],
+  );
+  const isManualPick = Boolean(watching && manualPickChannelId === watching.id);
+  // "auto": drop the manual-pick override and move to the channel auto-select
+  // itself would start (pickAutoSelectChannel), without a gap in watching.
+  const returnToAuto = useCallback(() => {
+    setManualPickChannelId(null);
+    setManualWatchOverride(null);
+    setChannelPickerOpen(false);
+    const autoChannel = pickAutoSelectChannel(channels, channelAllowlist);
+    if (autoChannel && autoChannel.id !== watching?.id) setWatchingFromChannel(autoChannel);
+  }, [channelAllowlist, channels, setWatchingFromChannel, watching?.id]);
+  const watchingChannel = watching
+    ? (channels.find(
+        (c) => c.id === watching.id || (Boolean(watching.login) && c.login === watching.login),
+      ) ?? null)
+    : null;
+  const openStream = useCallback(
+    (login: string) => openAccountLink(`https://www.twitch.tv/${encodeURIComponent(login)}`),
+    [openAccountLink],
+  );
+
+  // --- Plan · today ---------------------------------------------------------
+  // The plan and needs-you memos read the clock. While paused, idle or
+  // watching without an ETA nothing else re-runs them for an hour (inventory
+  // refresh), so ready times and expiries would stay anchored to the last
+  // run. Tick once a minute (minute resolution, like the games view).
+  const [nowMinute, setNowMinute] = useState(() => Math.floor(Date.now() / 60_000));
+  useInterval(() => setNowMinute(Math.floor(Date.now() / 60_000)), 60_000);
+  const rankedGames = useMemo(
+    () => resolvePriorityGameNames(priorityGames, inventoryItems),
+    [inventoryItems, priorityGames],
+  );
+  const fallbackOrder = useMemo(
+    () => computeFallbackOrder(withCategories, { allowUpcoming: allowUnlinkedGames }),
+    [allowUnlinkedGames, withCategories],
+  );
+  // While paused or idle nothing is being earned: no "watching" row.
+  const planActiveDropId = watching && activeDropInfo ? activeDropInfo.id : null;
+  // The live ETA moves every second; the table only shows minutes. Floor,
+  // like the hero clock, so both show the same minute.
+  const planActiveEtaMinute =
+    watching && activeDropInfo?.eta != null ? Math.floor(activeDropInfo.eta / 60_000) : null;
+  const farmPlan = useMemo(
+    () =>
+      buildFarmPlan({
+        withCategories,
+        gameOrder: rankedGames,
+        fallbackOrder,
+        obeyPriority,
+        activeTargetGame: displayTargetGame,
+        activeDrop: planActiveDropId
+          ? {
+              id: planActiveDropId,
+              eta: planActiveEtaMinute === null ? null : planActiveEtaMinute * 60_000,
+            }
+          : null,
+        allowUpcoming: allowUnlinkedGames,
+        now: nowMinute * 60_000,
+      }),
+    [
+      allowUnlinkedGames,
+      displayTargetGame,
+      fallbackOrder,
+      nowMinute,
+      obeyPriority,
+      planActiveDropId,
+      planActiveEtaMinute,
+      rankedGames,
+      withCategories,
+    ],
+  );
+  // The watched drop with its live minutes (plan table + drops view). Whole
+  // minutes only, so the drops view's memo does not rebuild every second.
+  const planActiveEarnedMinute =
+    watching && activeDropInfo ? Math.floor(activeDropInfo.virtualEarned) : null;
+  const planActiveDrop = useMemo(
+    () =>
+      planActiveDropId !== null && planActiveEarnedMinute !== null
+        ? { id: planActiveDropId, earnedMinutes: planActiveEarnedMinute }
+        : null,
+    [planActiveDropId, planActiveEarnedMinute],
+  );
+  const planTable = buildPlanTable(farmPlan, {
+    items: inventoryItems,
+    gameOrder: rankedGames,
+    activeDrop: planActiveDrop,
+    now: Date.now(),
+    limit: 8,
+  });
+
+  // --- Needs you ----------------------------------------------------------
+  const needsYouItems = useMemo(
+    () =>
+      buildNeedsYouItems({
+        authExpired: auth.status === "expired",
+        items: inventoryItems,
+        rankedGames,
+        campaigns,
+        allowUnlinkedGames,
+        now: nowMinute * 60_000,
+      }),
+    [allowUnlinkedGames, auth.status, campaigns, inventoryItems, nowMinute, rankedGames],
+  );
+  const dropsNeedingYou = needsYouItems.filter((item) => item.kind !== "session-expired").length;
+
   const navProps = {
     view,
     setView,
@@ -574,70 +738,135 @@ export function useAppModel() {
     logout,
     showDebug: debugEnabled,
     demoMode,
+    autopilotState,
+    toggleAutopilot,
+    dropsNeedingYou,
   };
-  const heroClaimableDrops = targetDrops.filter(
-    (drop) => drop.status !== "claimed" && drop.isClaimable === true,
-  ).length;
-  const heroBlockedDrops = targetDrops.filter(
-    (drop) =>
-      drop.status !== "claimed" &&
-      (drop.status === "locked" || drop.blocked === true || drop.excluded),
-  ).length;
-  const statsProps = { stats, resetStats };
-  const overviewProps = {
-    inventory,
+  const statsProps = { stats };
+  // The active drop's own live completion %, so the hero's percent matches its
+  // title + ETA. Null when there is no active drop; the hero then says so
+  // instead of showing the game-wide aggregate.
+  const activeDropProgress =
+    activeDropInfo && activeDropInfo.requiredMinutes > 0
+      ? Math.max(
+          0,
+          Math.min(
+            100,
+            Math.round((activeDropInfo.virtualEarned / activeDropInfo.requiredMinutes) * 100),
+          ),
+        )
+      : null;
+  const activeDropItem = activeDropInfo
+    ? (inventoryItems.find((item) => item.id === activeDropInfo.id) ?? null)
+    : null;
+  const heroState = resolveHeroState({
+    autopilot: autopilotState,
+    watching: Boolean(watching),
+    hasActiveDrop: Boolean(activeDropInfo),
     activeGame: displayTargetGame,
-    activeDropTitle: activeDropInfo?.title,
-    activeDropRemainingMinutes: activeDropInfo?.remainingMinutes,
-    activeDropEta: activeDropInfo?.eta,
-    // QueuePanel uses this to render the live-ticking progress on the
-    // actively-watched row. virtualEarned is updated every 1s by useTargetDrops
-    // while watching the target game (Phase 12 fix).
-    activeDrop: activeDropInfo
-      ? { id: activeDropInfo.id, earnedMinutes: activeDropInfo.virtualEarned }
-      : null,
-    targetProgress,
-    totalDrops,
-    claimedDrops,
-    claimableDrops: heroClaimableDrops,
-    blockedDrops: heroBlockedDrops,
     channelsCount: channels.length,
+    channelsLoading,
+    channelsFailed: channelError !== null,
     canWatchTarget,
-    watchDecision: watchEngineSnapshot.decision,
-    watchSuppressionReason: watchEngineSnapshot.suppression?.reason ?? null,
+  });
+  const overviewProps = {
+    hero: {
+      state: heroState,
+      activeGame: displayTargetGame,
+      campaignName: activeDropItem?.campaignName,
+      campaignEndsAt: activeDropItem?.endsAt,
+      dropTitle: activeDropInfo?.title,
+      dropEta: watching ? (activeDropInfo?.eta ?? null) : null,
+      dropEarned: activeDropInfo?.virtualEarned ?? null,
+      dropRequired: activeDropInfo?.requiredMinutes ?? null,
+      dropProgress: activeDropProgress,
+      autoClaim,
+      watching,
+      watchingViewers: watchingChannel?.viewers ?? null,
+      isManualPick,
+      lastWatchOk: watchStats.lastOk,
+      claimStatus,
+      onToggleAutopilot: toggleAutopilot,
+      onOpenStream: openStream,
+    },
+    picker: {
+      // Nothing watchable and nothing watched: no channels are fetched, so
+      // the list would only ever be empty.
+      disabled: !canWatchTarget && !watching,
+      open: channelPickerOpen,
+      onOpenChange: setChannelPickerOpen,
+      targetGame: displayTargetGame,
+      channels,
+      channelsLoading,
+      channelError,
+      channelAllowlist,
+      watchingId: watching?.id ?? null,
+      isManualPick,
+      onPick: pickChannel,
+      onBackToAuto: returnToAuto,
+    },
+    needsYou: {
+      items: needsYouItems,
+      onClaimNow: claimNowAll,
+      onRelogin: startLogin,
+      onOpenLink: openAccountLink,
+    },
+    engine: {
+      nextDropCheckAt: inventoryRefresh.nextAt || null,
+      channelsWithDrops: watchEngineSnapshot.allowlistedLiveChannels,
+      watchingSince,
+      decision: watchEngineSnapshot.decision,
+      suppression: watchEngineSnapshot.suppression,
+      activeCooldowns: watchEngineSnapshot.activeCooldowns,
+      watchError: watchStats.lastError,
+    },
+    plan: {
+      table: planTable,
+      onOpenGames: () => setView("priorities"),
+    },
+  };
+  const statusbarProps = {
+    autopilotState,
+    decision: watchEngineSnapshot.decision,
+    claimedDrops,
+    totalDrops,
     lastWatchOk: watchStats.lastOk,
-    watchingSince,
-    inventoryFetchedAt,
-    watchError: watchStats.lastError,
   };
   const inventoryProps = {
     inventory,
     filter,
     onFilterChange: actions.handleFilterChange,
-    gameFilter,
-    onGameFilterChange: setGameFilter,
-    uniqueGames,
     refreshing: inventoryRefreshing,
     onRefresh: actions.handleFetchInventory,
     campaigns,
-    campaignsLoading,
     isLinked: isLinkedOrDemo,
-    allowUnlinkedGames,
-    priorityGames,
+    farmPlan,
+    rankedGames,
+    activeDrop: planActiveDrop,
+    watchingChannel: watching?.name ?? null,
     onAddPriorityGame: actions.addGameByName,
     onOpenAccountLink: openAccountLink,
   };
+  // Live channels with drops are only known for the game whose channel list
+  // is loaded (the target); the games view shows the count for that game only.
+  const channelsWithDrops = watchEngineSnapshot.allowlistedLiveChannels;
+  const gamesLiveChannels = useMemo(
+    () =>
+      !channelsLoading && channelsGame.trim()
+        ? { game: channelsGame, count: channelsWithDrops }
+        : null,
+    [channelsGame, channelsLoading, channelsWithDrops],
+  );
   const priorityProps = {
-    uniqueGames,
-    activeTargetGame,
-    watchingGame: watching?.game ?? "",
-    selectedGame,
-    setSelectedGame,
+    priorityGames,
+    items: inventoryItems,
+    farmPlan,
+    farmingGame: watching?.game ?? "",
+    liveChannels: gamesLiveChannels,
     newGame,
     setNewGame,
     addGame: actions.addGame,
-    addGameFromSelect: actions.addGameFromSelect,
-    priorityGames,
+    addGameByName: actions.addGameByName,
     removeGame: actions.removeGame,
     movePriorityGame: actions.movePriorityGame,
     obeyPriority,
@@ -645,6 +874,9 @@ export function useAppModel() {
   };
   const settingsProps = {
     isLinked,
+    profile,
+    version: appVersion,
+    onOpenGames: () => setView("priorities"),
     onLogout: logout,
     onLogin: startLogin,
     theme,
@@ -710,6 +942,7 @@ export function useAppModel() {
     refreshMaxMs,
     setRefreshIntervals: actions.handleSetRefreshIntervals,
     resetAutomation: actions.handleResetAutomation,
+    resetStats,
     language,
     setLanguage: saveLanguage,
     settingsJson,
@@ -725,66 +958,6 @@ export function useAppModel() {
     downloadUpdate: actions.handleDownloadUpdate,
     installUpdate: actions.handleInstallUpdate,
   };
-  const controlProps = {
-    targetGame: displayTargetGame,
-    targetDrops,
-    totalEarnedMinutes,
-    totalRequiredMinutes,
-    inventoryRefreshing,
-    inventoryFetchedAt,
-    fetchInventory: actions.handleFetchInventory,
-    watching,
-    lastWatchedChannelIdentity,
-    stopWatching: handleStopWatchingWithSuppressedTarget,
-    channels,
-    channelsLoading,
-    channelsRefreshing,
-    channelDiff,
-    channelError,
-    startWatching: handleStartWatching,
-    activeDropInfo,
-    claimStatus,
-    showNoDropsHint,
-    lastWatchOk: watchStats.lastOk,
-    watchError: watchStats.lastError,
-    autoSwitchInfo,
-    trackerStatus,
-    watchEngineSnapshot,
-  };
-
-  // The active drop's own live completion %, so the Hero card's "% complete"
-  // matches its title + ETA (which are both about the active drop). Falls back
-  // to the aggregate targetProgress when nothing is actively being watched.
-  const activeDropProgress =
-    activeDropInfo && activeDropInfo.requiredMinutes > 0
-      ? Math.max(
-          0,
-          Math.min(
-            100,
-            Math.round((activeDropInfo.virtualEarned / activeDropInfo.requiredMinutes) * 100),
-          ),
-        )
-      : null;
-  const heroProps = {
-    demoMode,
-    nextWatchAt: watchStats.nextAt || undefined,
-    watchEngineDecision: watchEngineSnapshot.decision,
-    activeGame: displayTargetGame,
-    dropsTotal: totalDrops,
-    dropsClaimed: claimedDrops,
-    dropsClaimable: heroClaimableDrops,
-    dropsBlocked: heroBlockedDrops,
-    activeDropTitle: activeDropInfo?.title,
-    activeDropRemainingMinutes: activeDropInfo?.remainingMinutes,
-    activeDropEta: activeDropInfo?.eta,
-    inventoryFetchedAt,
-    lastWatchOk: watchStats.lastOk || undefined,
-    targetProgress,
-    activeDropProgress,
-    onClaimNow: claimNowAll,
-    claimStatus,
-  };
-
   const titleBarProps = {
     version: appVersion,
     theme,
@@ -802,16 +975,15 @@ export function useAppModel() {
   return {
     language,
     isMac,
-    heroProps,
     titleBarProps,
     updateOverlayProps,
     navProps,
     overviewProps,
+    statusbarProps,
     statsProps,
     inventoryProps,
     priorityProps,
     settingsProps,
-    controlProps,
     debugSnapshot,
     debugEnabled,
   };

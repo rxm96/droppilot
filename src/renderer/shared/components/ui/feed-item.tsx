@@ -8,8 +8,6 @@ export type FeedItemProps = React.HTMLAttributes<HTMLDivElement> & {
   icon: React.ReactNode;
   msg: React.ReactNode;
   meta?: React.ReactNode;
-  /** Drops the divider that would normally appear under this item. */
-  last?: boolean;
 };
 
 const ICON_TONE: Record<FeedItemTone, string> = {
@@ -21,29 +19,25 @@ const ICON_TONE: Record<FeedItemTone, string> = {
 };
 
 export const FeedItem = React.forwardRef<HTMLDivElement, FeedItemProps>(
-  ({ className, tone = "info", icon, msg, meta, last, ...props }, ref) => (
+  ({ className, tone = "info", icon, msg, meta, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn(
-        "flex items-start gap-2.5 py-2.5",
-        !last && "border-b border-[color:var(--dp-border-soft)]",
-        className,
-      )}
+      className={cn("grid grid-cols-[22px_minmax(0,1fr)] gap-2.5", className)}
       {...props}
     >
       <span
         aria-hidden="true"
         className={cn(
-          "mt-0.5 inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-[var(--dp-radius-xs)] [&>svg]:h-[11px] [&>svg]:w-[11px]",
+          "inline-flex h-[22px] w-[22px] items-center justify-center rounded-[var(--dp-radius-sm)] [&>svg]:h-3 [&>svg]:w-3",
           ICON_TONE[tone],
         )}
       >
         {icon}
       </span>
-      <div className="min-w-0 flex-1">
-        <div className="text-[12px] leading-snug text-[color:var(--dp-text)]">{msg}</div>
+      <div className="min-w-0">
+        <div className="text-[13px] leading-snug text-[color:var(--dp-text)]">{msg}</div>
         {meta != null && (
-          <div className="mt-1 font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
+          <div className="mt-0.5 font-mono text-[11px] text-[color:var(--dp-text-dimmer)]">
             {meta}
           </div>
         )}
