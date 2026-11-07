@@ -57,6 +57,7 @@
   --color-dp-signal-err: var(--dp-signal-err);
   --color-dp-signal-info: var(--dp-signal-info);
   --color-dp-warn-soft: var(--dp-warn-soft);
+  --color-dp-ink: var(--dp-ink);
 
   --radius-dp-xs: var(--dp-radius-xs);
   --radius-dp-sm: var(--dp-radius-sm);
@@ -291,6 +292,10 @@
 
   /* Image overlays */
   --dp-image-overlay: rgba(10, 11, 13, 0.5);
+
+  /* Text on accent / signal fills (primary buttons, badges, swatch checks).
+     Same in both themes: both accent and signal shades are mid-tones. */
+  --dp-ink: #0a0b0d;
 
   /* Radius hierarchy */
   --dp-radius-xs: 3px;
