@@ -112,5 +112,6 @@ export function useChannelAutopilot({
     channelAllowlist,
     clearWatching,
     setWatchingFromChannel,
+    setAutoSwitch,
   ]);
 }

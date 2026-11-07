@@ -9,6 +9,7 @@ import {
 } from "../config";
 import type { SessionData } from "../core/storage";
 import { ensureSessionIds, updateSession } from "../core/session";
+import { TwitchAuthError } from "./errors";
 
 export interface TwitchUser {
   id: string;
@@ -53,16 +54,6 @@ export type RevalidateResult =
       status: "missing_token" | "unauthorized" | "refresh_unavailable" | "refresh_failed" | "error";
       message?: string;
     };
-
-export class TwitchAuthError extends Error {
-  constructor(
-    message: string,
-    public status?: number,
-  ) {
-    super(message);
-    this.name = "TwitchAuthError";
-  }
-}
 
 export class TwitchClient {
   private deviceId: string;

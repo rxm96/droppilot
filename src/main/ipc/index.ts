@@ -11,7 +11,7 @@ import {
 } from "../core/settings";
 import type { StatsData } from "../core/stats";
 import type { PriorityPlan } from "../twitch/channels";
-import { TwitchServiceError } from "../twitch/errors";
+import { toIpcErrorResponse } from "./errorResponse";
 import type { ChannelTracker, ChannelTrackerDiffEvent } from "../twitch/tracker";
 import type { UserPubSub, UserPubSubEvent } from "../twitch/userPubSub";
 import { allowsPrereleaseBuilds, getAvailableUpdateVersion } from "../../shared/updateChannels";
@@ -186,13 +186,7 @@ export function registerIpcHandlers(deps: {
     try {
       return await twitch.getProfile();
     } catch (err) {
-      if (twitch.isAuthError(err)) {
-        return { error: "auth", message: (err as Error).message, status: (err as any).status };
-      }
-      if (err instanceof TwitchServiceError) {
-        return { error: "twitch", code: err.code, message: err.message };
-      }
-      return { error: "unknown", message: err instanceof Error ? err.message : String(err) };
+      return toIpcErrorResponse(err);
     }
   });
 
@@ -200,13 +194,7 @@ export function registerIpcHandlers(deps: {
     try {
       return await twitch.getInventoryBundle();
     } catch (err) {
-      if (twitch.isAuthError(err)) {
-        return { error: "auth", message: (err as Error).message, status: (err as any).status };
-      }
-      if (err instanceof TwitchServiceError) {
-        return { error: "twitch", code: err.code, message: err.message };
-      }
-      return { error: "unknown", message: err instanceof Error ? err.message : String(err) };
+      return toIpcErrorResponse(err);
     }
   });
 
@@ -214,13 +202,7 @@ export function registerIpcHandlers(deps: {
     try {
       return await twitch.getCampaigns();
     } catch (err) {
-      if (twitch.isAuthError(err)) {
-        return { error: "auth", message: (err as Error).message, status: (err as any).status };
-      }
-      if (err instanceof TwitchServiceError) {
-        return { error: "twitch", code: err.code, message: err.message };
-      }
-      return { error: "unknown", message: err instanceof Error ? err.message : String(err) };
+      return toIpcErrorResponse(err);
     }
   });
 
@@ -230,13 +212,7 @@ export function registerIpcHandlers(deps: {
       const plan: PriorityPlan = await twitch.getPriorityPlan(list);
       return plan;
     } catch (err) {
-      if (twitch.isAuthError(err)) {
-        return { error: "auth", message: (err as Error).message, status: (err as any).status };
-      }
-      if (err instanceof TwitchServiceError) {
-        return { error: "twitch", code: err.code, message: err.message };
-      }
-      return { error: "unknown", message: err instanceof Error ? err.message : String(err) };
+      return toIpcErrorResponse(err);
     }
   });
 
@@ -244,13 +220,7 @@ export function registerIpcHandlers(deps: {
     try {
       return await channelTracker.getChannelsForGame(payload.game);
     } catch (err) {
-      if (twitch.isAuthError(err)) {
-        return { error: "auth", message: (err as Error).message, status: (err as any).status };
-      }
-      if (err instanceof TwitchServiceError) {
-        return { error: "twitch", code: err.code, message: err.message };
-      }
-      return { error: "unknown", message: err instanceof Error ? err.message : String(err) };
+      return toIpcErrorResponse(err);
     }
   });
 
@@ -310,13 +280,7 @@ export function registerIpcHandlers(deps: {
       try {
         return await twitch.sendWatchPing(payload);
       } catch (err) {
-        if (twitch.isAuthError(err)) {
-          return { error: "auth", message: (err as Error).message, status: (err as any).status };
-        }
-        if (err instanceof TwitchServiceError) {
-          return { error: "twitch", code: err.code, message: err.message };
-        }
-        return { error: "unknown", message: err instanceof Error ? err.message : String(err) };
+        return toIpcErrorResponse(err);
       }
     },
   );
@@ -326,13 +290,7 @@ export function registerIpcHandlers(deps: {
       const progress = await twitch.fetchDropProgress(payload?.channelId ?? "");
       return { ok: true, progress };
     } catch (err) {
-      if (twitch.isAuthError(err)) {
-        return { error: "auth", message: (err as Error).message, status: (err as any).status };
-      }
-      if (err instanceof TwitchServiceError) {
-        return { error: "twitch", code: err.code, message: err.message };
-      }
-      return { error: "unknown", message: err instanceof Error ? err.message : String(err) };
+      return toIpcErrorResponse(err);
     }
   });
 
@@ -342,13 +300,7 @@ export function registerIpcHandlers(deps: {
       try {
         return await twitch.claimDrop(payload);
       } catch (err) {
-        if (twitch.isAuthError(err)) {
-          return { error: "auth", message: (err as Error).message, status: (err as any).status };
-        }
-        if (err instanceof TwitchServiceError) {
-          return { error: "twitch", code: err.code, message: err.message };
-        }
-        return { error: "unknown", message: err instanceof Error ? err.message : String(err) };
+        return toIpcErrorResponse(err);
       }
     },
   );
