@@ -113,10 +113,17 @@ describe("buildPlanTable", () => {
       "needs-link",
       "blocked",
     ]);
+    expect(rows[rows.length - 1]).toMatchObject({ ready: null });
+  });
+
+  it("puts a blocked row's reason in its note, not only in a tooltip", () => {
+    const rows = buildPlanTable(plan, base).rows.filter((r) => r.kind === "drop");
     expect(rows[rows.length - 1]).toMatchObject({
-      ready: null,
-      blockedReason: "campaign_not_started",
+      status: "blocked",
+      note: { kind: "blocked", reason: "campaign_not_started" },
     });
+    // needs-link already says why in its pill.
+    expect(rows[rows.length - 2]).toMatchObject({ status: "needs-link", note: null });
   });
 
   it("notes a campaign that ends within a day, or ends before the drop", () => {

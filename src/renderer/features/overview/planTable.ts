@@ -16,6 +16,9 @@ export type PlanTableStatus = Extract<
 
 export type PlanDropNote = { kind: "ends-first" } | { kind: "ends-soon"; endsIn: string } | null;
 
+/** A plan table row's note: a campaign-end note, or why a blocked row waits. */
+export type PlanRowNote = PlanDropNote | { kind: "blocked"; reason: string };
+
 export type PlanTableDropRow = {
   kind: "drop";
   key: string;
@@ -25,9 +28,7 @@ export type PlanTableDropRow = {
   watched: number;
   required: number;
   status: PlanTableStatus;
-  /** Raw blocking hint, only on "blocked" rows. */
-  blockedReason?: string;
-  note: PlanDropNote;
+  note: PlanRowNote;
 };
 
 export type PlanTableSwitchRow = {
@@ -132,8 +133,12 @@ export function buildPlanTable(
       watched: Math.max(0, Math.floor(live ?? row.earnedMinutes)),
       required: row.requiredMinutes,
       status,
-      ...(status === "blocked" && row.blockedReason ? { blockedReason: row.blockedReason } : {}),
-      note: planDropNote(row, item, input.now),
+      // Blocked rows show their reason as the note (raw hint; like the drops
+      // view, an unknown reason reads "blocked for an unknown reason").
+      note:
+        status === "blocked"
+          ? { kind: "blocked", reason: row.blockedReason ?? "" }
+          : planDropNote(row, item, input.now),
     });
   }
   while (rows.length > 0 && rows[rows.length - 1].kind === "switch") rows.pop();

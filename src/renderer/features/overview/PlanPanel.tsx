@@ -19,7 +19,9 @@ function DropRow({ row }: { row: PlanTableDropRow }) {
       ? t("overview.plan.note.endsFirst")
       : row.note?.kind === "ends-soon"
         ? t("overview.plan.note.endsSoon", { time: row.note.endsIn })
-        : null;
+        : row.note?.kind === "blocked"
+          ? formatBlockingReason(row.note.reason, t)
+          : null;
   return (
     <tr
       className={cn(
@@ -71,10 +73,7 @@ function DropRow({ row }: { row: PlanTableDropRow }) {
         {row.watched} / {row.required}
       </td>
       <td className="px-[22px] py-3 text-right">
-        <DropStatusPill
-          status={row.status}
-          title={row.blockedReason ? formatBlockingReason(row.blockedReason, t) : undefined}
-        />
+        <DropStatusPill status={row.status} />
       </td>
     </tr>
   );
