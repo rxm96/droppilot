@@ -11,6 +11,30 @@ GitHub Release (which the app's update history shows) is built from that section
 
 ## [Unreleased]
 
+### Added
+
+- "Copy report" on the debug screen copies the app version, the current state and the recent
+  log in one go, ready to paste into a bug report.
+
+### Changed
+
+- Clicking a drop opens its details right in the drops list instead of a side panel. They say
+  why the drop has its status, when it will be ready, when the campaign ends (with the date),
+  and offer only the actions that fit: link account, add to games, or open the campaign on
+  Twitch.
+- Updates download in the background while you keep using the app. The title bar shows the
+  progress. When the update is ready, a window shows what's new and lets you restart now or
+  later. Later installs it the next time DropPilot quits.
+- The debug screen is easier to read: one status strip, a compact table for the live tracker,
+  and a denser event log with level filters.
+
+### Fixed
+
+- The update window showed no release notes.
+- Drop details showed "ends 0s ago" for campaigns that were still running.
+- Scrollbars match the app's colors and no longer leave a gap under the top bar. In light mode
+  they no longer have a dark track.
+
 ## [4.1.0] - 2026-11-07
 
 ### Added

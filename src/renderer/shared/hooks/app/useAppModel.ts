@@ -528,6 +528,7 @@ export function useAppModel() {
     enabled: debugEnabled && view === "debug" && isVerboseLoggingEnabled(),
   });
   const debugSnapshot = useDebugSnapshot({
+    appVersion,
     authStatus: auth.status,
     isLinked,
     demoMode,
@@ -964,19 +965,19 @@ export function useAppModel() {
     setTheme,
     updateStatus,
     onDownloadUpdate: actions.handleDownloadUpdate,
-    onInstallUpdate: actions.handleInstallUpdate,
   };
 
-  const updateOverlayProps = {
+  const updateDialogProps = {
     updateStatus,
-    onInstallUpdate: actions.handleInstallUpdate,
+    currentVersion: appVersion,
+    onInstall: actions.handleInstallUpdate,
   };
 
   return {
     language,
     isMac,
     titleBarProps,
-    updateOverlayProps,
+    updateDialogProps,
     navProps,
     overviewProps,
     statusbarProps,

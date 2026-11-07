@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useI18n } from "@renderer/shared/i18n";
-import { SectionLabel } from "@renderer/shared/components/ui/section-label";
+import { ChevronDown } from "@renderer/shared/lib/icons";
 import { Button } from "@renderer/shared/components/ui/button";
 import { Input } from "@renderer/shared/components/ui/input";
 
@@ -16,106 +16,112 @@ export type DebugAdvancedPanelProps = {
   snapshotLines: string[];
 };
 
+const FIELD_LABEL = "flex flex-col gap-1 font-mono text-[11px] text-[color:var(--dp-text-dimmer)]";
+const HELP = "m-0 mb-2.5 text-[12px] leading-normal text-[color:var(--dp-text-dim)]";
+
+/** Simulator and raw snapshot, collapsed by default: tools for reproducing a bug. */
 export function DebugAdvancedPanel(props: DebugAdvancedPanelProps) {
   const { t } = useI18n();
-  return (
-    <div className="rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] px-5 py-4">
-      <SectionLabel>{t("debug.advanced.title")}</SectionLabel>
-      <div className="mt-1 mb-4 text-[12px] leading-snug text-[color:var(--dp-text-dim)]">
-        {t("debug.advanced.subtitle")}
-      </div>
+  const dropIdId = React.useId();
+  const progressId = React.useId();
+  const noDropId = props.simDropId.trim().length === 0;
 
-      <div className="flex flex-col gap-3">
+  return (
+    <details className="group rounded-[var(--dp-radius-xl)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)]">
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 select-none [&::-webkit-details-marker]:hidden">
+        <ChevronDown
+          size={14}
+          strokeWidth={1.7}
+          aria-hidden="true"
+          className="flex-none -rotate-90 text-[color:var(--dp-text-dimmer)] transition-transform group-open:rotate-0"
+        />
+        <span className="text-[13px] font-semibold text-[color:var(--dp-text)]">
+          {t("debug.advanced.title")}
+        </span>
+        <span className="font-mono text-[11px] text-[color:var(--dp-text-dimmer)]">
+          · {t("debug.advanced.subtitle")}
+        </span>
+      </summary>
+
+      <div className="grid gap-6 px-4 pb-4 pt-1 @min-[720px]:grid-cols-2">
         {/* PubSub simulator */}
-        <details className="group" open>
-          <summary className="cursor-pointer select-none rounded-[var(--dp-radius-sm)] bg-[color:var(--dp-bg-elevated-2)] border border-[color:var(--dp-border-soft)] px-3 py-2 text-[12px] font-medium text-[color:var(--dp-text-dim)] hover:text-[color:var(--dp-text)]">
-            {t("debug.sim.title")}
-          </summary>
-          <div className="mt-3 flex flex-col gap-3 px-1">
-            <p className="m-0 text-[12px] leading-snug text-[color:var(--dp-text-dim)]">
-              {t("debug.sim.help")}
-            </p>
-            <div className="grid gap-2 sm:grid-cols-2">
+        <div className="min-w-0">
+          <p className={HELP}>{t("debug.sim.help")}</p>
+          <div className="flex flex-wrap items-end gap-2">
+            <label htmlFor={dropIdId} className={`${FIELD_LABEL} min-w-[160px] flex-[2]`}>
+              {t("debug.sim.dropId")}
               <Input
+                id={dropIdId}
                 tone="dp"
                 type="text"
-                placeholder={t("debug.sim.dropId")}
                 value={props.simDropId}
                 onChange={(e) => props.setSimDropId(e.target.value)}
+                className="bg-[color:var(--dp-bg-app)]"
               />
+            </label>
+            <label htmlFor={progressId} className={`${FIELD_LABEL} min-w-[96px] flex-1`}>
+              {t("debug.sim.progress")}
               <Input
+                id={progressId}
                 tone="dp"
                 type="number"
                 min={0}
-                placeholder={t("debug.sim.progress")}
                 value={props.simProgress}
                 onChange={(e) => props.setSimProgress(e.target.value)}
+                className="bg-[color:var(--dp-bg-app)]"
               />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="dp-outline"
-                size="dp-sm"
-                disabled={props.simBusy || props.simDropId.trim().length === 0}
-                onClick={() => props.onEmit("drop-progress")}
-              >
-                {t("debug.sim.progressBtn")}
-              </Button>
-              <Button
-                variant="dp-outline"
-                size="dp-sm"
-                disabled={props.simBusy || props.simDropId.trim().length === 0}
-                onClick={() => props.onEmit("drop-claim")}
-              >
-                {t("debug.sim.claimBtn")}
-              </Button>
-              <Button
-                variant="dp-outline"
-                size="dp-sm"
-                disabled={props.simBusy}
-                onClick={() => props.onEmit("notification")}
-              >
-                {t("debug.sim.notificationBtn")}
-              </Button>
-            </div>
+            </label>
           </div>
-        </details>
-
-        {/* Snapshot viewer */}
-        <details>
-          <summary className="cursor-pointer select-none rounded-[var(--dp-radius-sm)] bg-[color:var(--dp-bg-elevated-2)] border border-[color:var(--dp-border-soft)] px-3 py-2 text-[12px] font-medium text-[color:var(--dp-text-dim)] hover:text-[color:var(--dp-text)] flex items-center justify-between gap-2">
-            <span>{t("debug.snapshot")}</span>
+          <div className="mt-2.5 flex flex-wrap gap-2">
             <Button
+              type="button"
               variant="dp-outline"
               size="dp-sm"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                props.onCopy();
-              }}
-              type="button"
+              disabled={props.simBusy || noDropId}
+              onClick={() => props.onEmit("drop-progress")}
             >
-              {props.copied ? t("debug.copied") : t("debug.copy")}
+              {t("debug.sim.progressBtn")}
             </Button>
-          </summary>
-          <div className="mt-3 px-1">
-            <p className="m-0 mb-2 text-[12px] leading-snug text-[color:var(--dp-text-dim)]">
-              {t("debug.snapshotHelp")}
-            </p>
-            <ol
-              className="rounded-[var(--dp-radius-md)] border border-[color:var(--dp-border-soft)] bg-[color:var(--dp-bg-elevated-2)] p-3 font-mono text-[10px] text-[color:var(--dp-text-dim)] overflow-x-auto"
-              style={{ maxHeight: "420px", overflowY: "auto" }}
-              aria-label={t("debug.snapshot")}
+            <Button
+              type="button"
+              variant="dp-outline"
+              size="dp-sm"
+              disabled={props.simBusy || noDropId}
+              onClick={() => props.onEmit("drop-claim")}
             >
-              {props.snapshotLines.map((line, index) => (
-                <li key={`${index}`} className="whitespace-pre">
-                  {line || " "}
-                </li>
-              ))}
-            </ol>
+              {t("debug.sim.claimBtn")}
+            </Button>
+            <Button
+              type="button"
+              variant="dp-outline"
+              size="dp-sm"
+              disabled={props.simBusy}
+              onClick={() => props.onEmit("notification")}
+            >
+              {t("debug.sim.notificationBtn")}
+            </Button>
           </div>
-        </details>
+        </div>
+
+        {/* Snapshot */}
+        <div className="min-w-0">
+          <p className={HELP}>{t("debug.snapshotHelp")}</p>
+          <Button type="button" variant="dp-outline" size="dp-sm" onClick={props.onCopy}>
+            {props.copied ? t("debug.copied") : t("debug.copy")}
+          </Button>
+        </div>
+
+        <ol
+          className="col-span-full m-0 max-h-[420px] list-none overflow-auto rounded-[var(--dp-radius-md)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-app)] p-3 font-mono text-[11px] leading-normal text-[color:var(--dp-text-dim)]"
+          aria-label={t("debug.snapshot")}
+        >
+          {props.snapshotLines.map((line, index) => (
+            <li key={`${index}`} className="whitespace-pre">
+              {line || " "}
+            </li>
+          ))}
+        </ol>
       </div>
-    </div>
+    </details>
   );
 }

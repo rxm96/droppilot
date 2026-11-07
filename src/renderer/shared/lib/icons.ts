@@ -33,7 +33,6 @@ export {
   // Actions
   Pause,
   RotateCw,
-  Download,
   Upload,
   ArrowRight,
   ArrowLeft,
@@ -48,6 +47,5 @@ export {
   Clock,
   Trophy,
   Gift,
-  Sparkles,
   GripVertical,
 } from "lucide-react";

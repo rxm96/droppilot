@@ -33,6 +33,7 @@ export type StructuredLogRow = {
 };
 
 export type DebugSnapshot = {
+  appVersion?: string;
   watching?: {
     name?: string;
     game?: string;
@@ -277,4 +278,102 @@ export const groupStructuredRows = (rows: StructuredLogRow[]) => {
     grouped.push({ ...row });
   }
   return grouped;
+};
+
+// ─── Tracker summary ─────────────────────────────────────────────────────────
+
+export type TrackerSummaryTone = "none" | "ok" | "partial" | "down";
+
+export type TrackerSummary = {
+  connected: number;
+  total: number;
+  tone: TrackerSummaryTone;
+};
+
+/** "x of y shards connected" plus its tone: down when none of them is connected. */
+export const summarizeTrackerShards = (
+  shards: ReadonlyArray<{ connectionState: string }>,
+): TrackerSummary => {
+  const total = shards.length;
+  const connected = shards.filter((shard) => shard.connectionState === "connected").length;
+  const tone: TrackerSummaryTone =
+    total === 0 ? "none" : connected === 0 ? "down" : connected < total ? "partial" : "ok";
+  return { connected, total, tone };
+};
+
+// ─── Bug report ──────────────────────────────────────────────────────────────
+
+export const REPORT_LOG_LIMIT = 200;
+
+const pad2 = (value: number) => String(value).padStart(2, "0");
+
+/** Local 24h clock for a log timestamp, e.g. "04:25:41". */
+export const formatReportTime = (at: number) => {
+  const date = new Date(at);
+  return `${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`;
+};
+
+const indent = (text: string, prefix = "    ") =>
+  text
+    .split("\n")
+    .map((line) => `${prefix}${line}`)
+    .join("\n");
+
+/** One report line per entry: "HH:MM:SS level message", with any extra args below it. */
+export const formatReportLogEntry = (
+  entry: Pick<LogEntry, "at" | "level" | "message" | "args">,
+) => {
+  const primary = typeof entry.args[0] === "string" ? entry.args[0].trim() : null;
+  const rest = primary !== null ? entry.args.slice(1) : entry.args;
+  const message = primary ?? (rest.length > 0 ? "" : entry.message.trim());
+  const line = `${formatReportTime(entry.at)} ${entry.level} ${message}`.trimEnd();
+  return rest.length > 0 ? `${line}\n${indent(formatArgs(rest))}` : line;
+};
+
+export type DebugReportInput = {
+  appVersion: string;
+  now: number;
+  snapshotText: string;
+  logs: ReadonlyArray<Pick<LogEntry, "at" | "level" | "message" | "args">>;
+};
+
+/**
+ * Plain-text report for bug issues: version + timestamp, the state snapshot
+ * and the last REPORT_LOG_LIMIT log entries, oldest first.
+ */
+/**
+ * The snapshot as it goes into a shared report: the signed-in account's login,
+ * name and avatar are replaced, since reports often end up in public issues.
+ */
+export function redactSnapshotForReport(
+  snapshot: Record<string, unknown>,
+): Record<string, unknown> {
+  const profile = snapshot["profile"];
+  if (!profile || typeof profile !== "object" || Array.isArray(profile)) return snapshot;
+  const redacted: Record<string, unknown> = { ...(profile as Record<string, unknown>) };
+  for (const key of ["login", "displayName", "avatar"]) {
+    if (key in redacted) redacted[key] = "[redacted]";
+  }
+  return { ...snapshot, profile: redacted };
+}
+
+export const buildDebugReport = ({ appVersion, now, snapshotText, logs }: DebugReportInput) => {
+  const version = appVersion.trim() ? `v${appVersion.trim().replace(/^v/, "")}` : "unknown version";
+  const recent = logs.slice(-REPORT_LOG_LIMIT);
+  const logHeading =
+    logs.length > recent.length
+      ? `== event log (last ${recent.length} of ${logs.length}) ==`
+      : `== event log (${recent.length}) ==`;
+  const logBody =
+    recent.length > 0 ? recent.map(formatReportLogEntry).join("\n") : "(no log entries)";
+  return [
+    `DropPilot ${version} · debug report · ${new Date(now).toISOString()}`,
+    "",
+    "== state snapshot ==",
+    snapshotText,
+    "",
+    logHeading,
+    logBody,
+    "",
+  ].join("\n");
 };

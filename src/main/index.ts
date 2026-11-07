@@ -4,12 +4,14 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { format } from "node:url";
 import { allowsPrereleaseBuilds } from "../shared/updateChannels";
+import { normalizeReleaseNotes } from "../shared/updateNotes";
 import { AuthController } from "./auth";
 import { loadSession, clearSession } from "./core/storage";
 import { TwitchService } from "./twitch/service";
 import { createChannelTracker, normalizeTrackerMode } from "./twitch/tracker";
 import { UserPubSub } from "./twitch/userPubSub";
 import { registerIpcHandlers } from "./ipc";
+import { downloadedUpdate, markUpdateDownloaded } from "./updateState";
 import { loadSettings, saveSettings, type SettingsData } from "./core/settings";
 import { loadStats, saveStats, bumpStats, resetStats } from "./core/stats";
 
@@ -109,70 +111,6 @@ let tray: Tray | null = null;
 let updateTimer: NodeJS.Timeout | null = null;
 const UPDATE_INTERVAL_MS = 60 * 60 * 1000;
 let lastUpdateNotice: string | null = null;
-
-function extractReleaseNoteText(entry: unknown): string {
-  if (typeof entry === "string") return entry;
-  if (!entry || typeof entry !== "object") return "";
-  const record = entry as Record<string, unknown>;
-  if (typeof record.note === "string") return record.note;
-  if (typeof record.body === "string") return record.body;
-  if (typeof record.releaseNotes === "string") return record.releaseNotes;
-  return "";
-}
-
-function extractUserFacingSection(text: string): string {
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const normalizeLine = (line: string) => line.replace(/[’`]/g, "'").trim();
-  const userHeadingRe = /^(?:#{1,6}\s*)?what'?s new for users\s*$/i;
-  const markdownHeadingRe = /^#{1,6}\s+\S/;
-  const changelogHeadingRe =
-    /^(?:#{1,6}\s*)?(full\s+changelog|what'?s changed|changelog)\b[:\s-]*.*$/i;
-  const isUserHeading = (line: string) => userHeadingRe.test(normalizeLine(line));
-  const isMarkdownHeading = (line: string) => markdownHeadingRe.test(normalizeLine(line));
-  const isChangelogHeading = (line: string) => changelogHeadingRe.test(normalizeLine(line));
-  const start = lines.findIndex((line) => isUserHeading(line));
-  if (start < 0) {
-    const changelogStart = lines.findIndex((line) => isChangelogHeading(line));
-    const fallbackLines = changelogStart >= 0 ? lines.slice(0, changelogStart) : lines;
-    return fallbackLines.join("\n").trim();
-  }
-  let end = lines.length;
-  for (let i = start + 1; i < lines.length; i += 1) {
-    if (isChangelogHeading(lines[i])) {
-      end = i;
-      break;
-    }
-    if (isMarkdownHeading(lines[i]) && !isUserHeading(lines[i])) {
-      end = i;
-      break;
-    }
-  }
-  return lines
-    .slice(start + 1, end)
-    .join("\n")
-    .trim();
-}
-
-function normalizeReleaseNotes(value: unknown): string | undefined {
-  const raw = Array.isArray(value)
-    ? value
-        .map((entry) => extractReleaseNoteText(entry))
-        .filter((entry) => entry.trim().length > 0)
-        .join("\n\n")
-    : extractReleaseNoteText(value);
-  if (!raw) return undefined;
-  const text = raw
-    .replace(/<br\s*\/?\s*>/gi, "\n")
-    .replace(/<\/p>/gi, "\n\n")
-    .replace(/<li>/gi, "- ")
-    .replace(/<\/li>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/\r\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-  const userFacing = extractUserFacingSection(text);
-  return userFacing.length > 0 ? userFacing : undefined;
-}
 
 function withDebugLogsQuery(url: string): string {
   if (!verboseLogsEnabled) return url;
@@ -453,15 +391,19 @@ function setupAutoUpdater() {
     });
   });
   autoUpdater.on("update-downloaded", (info) => {
-    broadcast({
-      status: "downloaded",
-      version: info?.version,
+    const update = {
+      version: info?.version ? String(info.version) : undefined,
       releaseNotes: normalizeReleaseNotes(info?.releaseNotes),
-    });
+    };
+    markUpdateDownloaded(update);
+    broadcast({ status: "downloaded", ...update });
     notify("Update ready", "Restart DropPilot to install the update.");
   });
 
   const check = () => {
+    // A downloaded update waits for a restart; checking again would announce
+    // it as "available" and drop the renderer's "restart to update" state.
+    if (downloadedUpdate()) return;
     void autoUpdater.checkForUpdates();
   };
   void loadSettings()

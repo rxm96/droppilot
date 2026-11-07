@@ -364,8 +364,6 @@ body {
   background-size: 24px 24px;
   color: var(--foreground);
   font-family: var(--font-sans);
-  overflow-y: scroll;
-  scrollbar-gutter: stable both-edges;
 }
 
 .window-shell {
@@ -491,335 +489,39 @@ body {
   white-space: nowrap;
 }
 
-/* --- Update Overlay (design-system aligned) --- */
+/* --- Update dialog (UpdateDialog.tsx) --- */
 
-.update-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background:
-    radial-gradient(130% 110% at 50% -10%, var(--dp-accent-soft), transparent 55%),
-    color-mix(in srgb, var(--dp-bg-app) 86%, transparent);
-  backdrop-filter: blur(8px);
-  animation: overlayFadeIn 0.35s ease both;
+.update-dialog-backdrop {
+  background: rgba(5, 6, 9, 0.62);
 }
 
-.update-overlay-card {
-  position: relative;
-  width: min(420px, 92vw);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 13px;
-  text-align: center;
-  padding: 30px 26px 24px;
-  border-radius: 14px;
-  background: var(--dp-bg-elevated);
-  border: 1px solid var(--dp-border);
-  box-shadow:
-    0 24px 60px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.02);
-  animation: cardEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+:root:not(.dark) .update-dialog-backdrop {
+  background: rgba(10, 11, 13, 0.36);
 }
 
-.update-overlay-card.is-ready {
-  border-color: color-mix(in srgb, var(--dp-accent) 45%, var(--dp-border));
-  box-shadow:
-    0 24px 60px rgba(0, 0, 0, 0.45),
-    0 0 0 1px var(--dp-accent-soft),
-    0 0 40px var(--dp-accent-glow);
-}
-
-.update-overlay-eyebrow {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--dp-accent);
-}
-
-.update-overlay-title {
-  margin: 0;
-  font-size: 19px;
-  font-weight: 600;
-  letter-spacing: -0.3px;
-  color: var(--dp-text);
-}
-
-.update-overlay-card .meta {
-  margin: 0;
-  font-size: 12.5px;
-  color: var(--dp-text-dim);
-}
-
-/* --- Accent Orb --- */
-
-.update-overlay-orb {
-  position: relative;
-  width: 60px;
-  height: 60px;
-  margin: 2px 0;
-  border-radius: 50%;
-}
-
-.update-overlay-orb::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: conic-gradient(
-    from 0deg,
-    var(--dp-accent),
-    var(--dp-accent-hover),
-    color-mix(in srgb, var(--dp-accent) 65%, transparent),
-    var(--dp-accent)
-  );
-  box-shadow: 0 0 26px var(--dp-accent-glow);
-  animation: orbSpin 6s linear infinite;
-}
-
-.update-overlay-orb::after {
-  content: "";
-  position: absolute;
-  inset: 4px;
-  border-radius: 50%;
-  background: var(--dp-bg-elevated);
-}
-
-.update-overlay-orb.downloading {
-  animation: orbBreathe 1.8s ease-in-out infinite;
-}
-
-.update-overlay-orb.downloading::before {
-  animation: orbSpin 3s linear infinite;
-}
-
-.update-overlay-orb.ready {
-  animation: orbBreathe 3.4s ease-in-out infinite;
-}
-
-.update-overlay-orb.ready::before {
-  animation: orbSpin 9s linear infinite;
-  box-shadow: 0 0 40px var(--dp-accent-glow);
-}
-
-.update-overlay-orb.installing {
-  animation: orbBreathe 1.3s ease-in-out infinite;
-}
-
-.update-overlay-orb.installing::before {
-  animation: orbSpin 1.6s linear infinite;
-}
-
-/* Installing state: card glow */
-.update-overlay-card.is-installing {
-  border-color: color-mix(in srgb, var(--dp-accent) 35%, var(--dp-border));
-  box-shadow:
-    0 24px 60px rgba(0, 0, 0, 0.45),
-    0 0 0 1px var(--dp-accent-soft),
-    0 0 32px var(--dp-accent-glow);
-}
-
-/* --- Splash Screen (simulates standalone BrowserWindow) --- */
-
-.update-splash-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: color-mix(in srgb, var(--dp-bg-app) 92%, transparent);
-  backdrop-filter: blur(6px);
-  animation: overlayFadeIn 0.3s ease both;
-}
-
-.update-splash-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 13px;
-  padding: 28px 34px 24px;
-  border-radius: 14px;
-  text-align: center;
-  background: var(--dp-bg-elevated);
-  border: 1px solid var(--dp-border);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
-  animation: cardEnter 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
-  width: 300px;
-}
-
-.update-splash-title {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--dp-text);
-  letter-spacing: -0.3px;
-}
-
-.update-splash-hint {
-  margin: 0;
-  font-size: 12px;
-  color: var(--dp-text-dim);
-}
-
-.update-splash-card .update-overlay-progress {
-  width: 100%;
-}
-
-.update-splash-card .update-overlay-orb {
-  width: 48px;
-  height: 48px;
-}
-
-/* --- Release Notes --- */
-
-.update-overlay-notes {
-  width: 100%;
-  max-height: 168px;
-  overflow: auto;
-  text-align: left;
-  padding: 13px 15px;
-  border-radius: 10px;
-  border: 1px solid var(--dp-border);
-  background: var(--dp-bg-elevated-2);
-}
-
-.update-overlay-notes-title {
-  margin: 0 0 8px 0;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--dp-text-dimmer);
-}
-
-.update-overlay-notes-list {
-  margin: 0;
-  padding: 0 0 0 16px;
-  font-size: 12.5px;
-  line-height: 1.6;
-  color: var(--dp-text-dim);
-}
-
-.update-overlay-notes-list li {
-  padding: 2px 0;
-}
-
-.update-overlay-notes-list li::marker {
-  color: var(--dp-accent);
-}
-
-/* --- Progress --- */
-
-.update-overlay-progress {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.update-overlay-progress .progress-bar {
-  height: 7px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--dp-text) 10%, transparent);
+.update-dialog-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--dp-border);
   overflow: hidden;
-  position: relative;
 }
 
-.update-overlay-progress .progress-bar-fill {
+.update-dialog-bar > span {
   display: block;
+  width: 40%;
   height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--dp-accent), var(--dp-accent-hover));
-  box-shadow: 0 0 12px var(--dp-accent-glow);
-  transition: width 0.3s linear;
-  position: relative;
-}
-
-.update-overlay-progress .progress-bar-fill::after {
-  content: "";
-  position: absolute;
-  inset: 0;
   border-radius: inherit;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.22) 50%,
-    transparent 100%
-  );
-  animation: progressShine 1.8s ease-in-out infinite;
-}
-
-.update-overlay-progress .progress-bar-fill.installing {
-  width: 40% !important;
-  box-shadow: 0 0 14px var(--dp-accent-glow);
-  animation: updateBarIndeterminate 1.3s ease-in-out infinite;
-}
-
-.update-overlay-progress .progress-bar-fill.installing::after {
-  display: none;
-}
-
-.update-overlay-stats {
-  display: flex;
-  justify-content: space-between;
-  padding: 0 2px;
-}
-
-.update-overlay-stats .meta {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  color: var(--dp-text-dimmer);
+  background: var(--dp-accent);
+  animation: updateBarIndeterminate 1.4s ease-in-out infinite;
 }
 
 @keyframes updateBarIndeterminate {
   0% {
-    transform: translateX(-120%);
+    transform: translateX(-100%);
   }
   100% {
-    transform: translateX(320%);
+    transform: translateX(250%);
   }
-}
-
-/* --- Install Button (matches dp-primary) --- */
-
-.update-overlay-install {
-  margin-top: 2px;
-  padding: 11px 30px;
-  font-family: var(--font-mono);
-  font-size: 13px;
-  letter-spacing: 0.02em;
-  font-weight: 600;
-  border-radius: 8px;
-  border: none;
-  background: var(--dp-accent);
-  color: var(--dp-ink);
-  cursor: pointer;
-  transition:
-    background 0.15s ease,
-    transform 0.12s ease;
-}
-
-.update-overlay-install:hover:not(:disabled) {
-  background: var(--dp-accent-hover);
-  transform: translateY(-1px);
-}
-
-.update-overlay-install:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.update-overlay-install:disabled {
-  opacity: 0.55;
-  cursor: default;
 }
 
 /* Scrollbar styling */
@@ -828,19 +530,23 @@ body {
   height: 8px;
 }
 
-*::-webkit-scrollbar-track {
-  background: rgba(14, 18, 30, 0.55);
-  border-radius: 10px;
+/* No visible track: a rounded, tinted track read as a gap under the nav bar
+   (and stayed dark in light mode). The thumb floats inside a transparent
+   2px border, in the palette's dim grey. */
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 *::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--accent), var(--accent-2));
-  border-radius: 10px;
-  border: 2px solid rgba(10, 14, 24, 0.65);
+  background-color: color-mix(in srgb, var(--dp-text-dimmer) 45%, transparent);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+  border-radius: 999px;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #a4dcff, #b59cff);
+  background-color: color-mix(in srgb, var(--dp-text-dimmer) 75%, transparent);
 }
 
 .pill-row {
@@ -2748,53 +2454,6 @@ code {
   }
 }
 
-@keyframes overlayFadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes cardEnter {
-  from {
-    opacity: 0;
-    transform: translateY(12px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes progressShine {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
-}
-
-@keyframes orbSpin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes orbBreathe {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.9;
-  }
-  50% {
-    transform: scale(1.08);
-    opacity: 1;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .skeleton-line,
   .skeleton-chip,
@@ -2824,21 +2483,9 @@ code {
     animation: none;
   }
 
-  .update-overlay-card,
-  .update-overlay-orb,
-  .update-overlay-orb::before,
-  .update-overlay-orb.downloading,
-  .update-overlay-orb.ready,
-  .update-overlay-orb.installing,
-  .update-overlay-progress .progress-bar-fill.installing {
-    animation: none;
-  }
-
-  .update-overlay-progress .progress-bar-fill {
-    transition: none;
-  }
-
-  .update-overlay-progress .progress-bar-fill::after {
+  .update-dialog-bar > span {
+    width: 100%;
+    opacity: 0.6;
     animation: none;
   }
 }

@@ -16,6 +16,7 @@ import { getPerfSnapshot } from "@renderer/shared/utils/perfStore";
 import type { CpuSample } from "./useDebugCpu";
 
 type Params = {
+  appVersion: string;
   authStatus: AuthState["status"];
   isLinked: boolean;
   demoMode: boolean;
@@ -50,6 +51,7 @@ type Params = {
 };
 
 export function useDebugSnapshot({
+  appVersion,
   authStatus,
   isLinked,
   demoMode,
@@ -84,6 +86,7 @@ export function useDebugSnapshot({
 }: Params) {
   return useMemo(
     () => ({
+      appVersion,
       auth: { status: authStatus, linked: isLinked, demoMode },
       profile:
         profile.status === "ready"
@@ -146,6 +149,7 @@ export function useDebugSnapshot({
     [
       activeDropInfo,
       activeTargetGame,
+      appVersion,
       authStatus,
       autoClaim,
       autoSelectEnabled,

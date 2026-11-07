@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Logo } from "@renderer/shared/components/Logo";
 import { Pill } from "@renderer/shared/components/ui/pill";
-import { Sun, Moon, Minus, Square, X, Download, Sparkles } from "@renderer/shared/lib/icons";
+import { Sun, Moon, Minus, Square, X } from "@renderer/shared/lib/icons";
 import { cn } from "@renderer/shared/lib/utils";
 import { useI18n } from "@renderer/shared/i18n";
 
@@ -22,12 +22,12 @@ export type TitlebarProps = {
   theme: TitlebarTheme;
   onThemeToggle: () => void;
 
-  /** Current auto-updater state; drives the "update available / ready" chip. */
-  updateStatus?: { state: TitlebarUpdateState };
+  /** Current auto-updater state; drives the update chip. */
+  updateStatus?: { state: TitlebarUpdateState; version?: string; progress?: number };
   /** Start downloading the available update. */
   onDownloadUpdate?: () => void;
-  /** Restart & install a downloaded update. */
-  onInstallUpdate?: () => void;
+  /** Reopen the "update ready" dialog for a downloaded update. */
+  onShowUpdate?: () => void;
 
   /** Connection / API status pills shown center-right. */
   connectionState?: "connected" | "disconnected" | "connecting";
@@ -41,13 +41,17 @@ export type TitlebarProps = {
 
 const noDrag = { WebkitAppRegion: "no-drag" } as React.CSSProperties;
 
+const UPDATE_CHIP =
+  "inline-flex h-6 items-center gap-2 rounded-full border border-[color:var(--dp-border)] bg-transparent px-2.5 font-mono text-[11px] text-[color:var(--dp-text)] transition-colors";
+const UPDATE_DOT = "h-1.5 w-1.5 flex-none rounded-full";
+
 export function Titlebar({
   title = "droppilot",
   theme,
   onThemeToggle,
   updateStatus,
   onDownloadUpdate,
-  onInstallUpdate,
+  onShowUpdate,
   connectionState,
   apiLatencyMs,
   showWindowControls = true,
@@ -55,6 +59,7 @@ export function Titlebar({
 }: TitlebarProps) {
   const { t } = useI18n();
   const updateState = updateStatus?.state;
+  const downloadPercent = Math.min(100, Math.max(0, Math.round(updateStatus?.progress ?? 0)));
   const [isMaximized, setIsMaximized] = React.useState(false);
 
   // Subscribe to OS-level maximize/unmaximize so the maximize/restore icon swaps
@@ -110,35 +115,57 @@ export function Titlebar({
 
       {/* Center/right status */}
       <div className="ml-auto flex items-center gap-2" style={noDrag}>
-        {/* Update chip — only the "available" state is otherwise invisible
-            (the overlay covers downloading/ready), so surface it here. */}
+        {/* Update chip: available → download, downloading → progress (the app
+            stays usable), downloaded → reopens the "update ready" dialog. */}
         {updateState === "available" && (
           <button
             type="button"
             onClick={onDownloadUpdate}
-            title={t("titlebar.updateAvailable")}
-            className="inline-flex items-center gap-1.5 rounded-[var(--dp-radius-sm)] border border-[color:var(--dp-accent-soft)] bg-[color:var(--dp-accent-soft)] px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.06em] text-[color:var(--dp-accent)] transition-colors hover:bg-[color-mix(in_srgb,var(--dp-accent)_22%,transparent)] hover:text-[color:var(--dp-accent-hover)]"
+            className={cn(UPDATE_CHIP, "hover:bg-[color:var(--dp-bg-elevated-2)]")}
           >
-            <Download size={11} strokeWidth={2} />
-            {t("titlebar.updateAvailable")}
+            <span className={cn(UPDATE_DOT, "bg-[color:var(--dp-accent)]")} aria-hidden="true" />
+            {updateStatus?.version
+              ? t("titlebar.updateAvailable", { version: updateStatus.version })
+              : t("titlebar.updateAvailableShort")}
           </button>
+        )}
+        {updateState === "downloading" && (
+          <span
+            role="progressbar"
+            aria-label={t("titlebar.updateDownloadingLabel")}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={downloadPercent}
+            aria-valuetext={`${downloadPercent} %`}
+            className={UPDATE_CHIP}
+          >
+            <span className={cn(UPDATE_DOT, "bg-[color:var(--dp-accent)]")} aria-hidden="true" />
+            <span aria-hidden="true">
+              {t("titlebar.updateDownloading", { percent: downloadPercent })}
+            </span>
+            <span
+              className="h-[3px] w-14 overflow-hidden rounded-full bg-[color:var(--dp-border)]"
+              aria-hidden="true"
+            >
+              <span
+                className="block h-full bg-[color:var(--dp-accent)] transition-[width] duration-300"
+                style={{ width: `${downloadPercent}%` }}
+              />
+            </span>
+          </span>
         )}
         {updateState === "downloaded" && (
           <button
             type="button"
-            onClick={onInstallUpdate}
-            title={t("titlebar.updateReady")}
-            className="inline-flex items-center gap-1.5 rounded-[var(--dp-radius-sm)] border border-[color:var(--dp-accent-soft)] bg-[color:var(--dp-accent-soft)] px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.06em] text-[color:var(--dp-accent)] transition-colors hover:bg-[color-mix(in_srgb,var(--dp-accent)_22%,transparent)] hover:text-[color:var(--dp-accent-hover)]"
+            onClick={onShowUpdate}
+            className={cn(
+              UPDATE_CHIP,
+              "border-[color:color-mix(in_srgb,var(--dp-signal-ok)_35%,transparent)] text-[color:var(--dp-signal-ok)] hover:bg-[color:var(--dp-bg-elevated-2)]",
+            )}
           >
-            <Sparkles size={11} strokeWidth={2} />
+            <span className={cn(UPDATE_DOT, "bg-[color:var(--dp-signal-ok)]")} aria-hidden="true" />
             {t("titlebar.updateReady")}
           </button>
-        )}
-        {updateState === "downloading" && (
-          <span className="inline-flex items-center gap-1.5 rounded-[var(--dp-radius-sm)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.06em] text-[color:var(--dp-text-dim)]">
-            <Download size={11} strokeWidth={2} className="animate-pulse" />
-            {t("titlebar.updateDownloading")}
-          </span>
         )}
         {connectionState && (
           <Pill

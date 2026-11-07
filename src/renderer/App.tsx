@@ -1,5 +1,6 @@
 import * as React from "react";
-import { AppContent, UpdateOverlay } from "@renderer/shared/components";
+import { AppContent, UpdateDialog } from "@renderer/shared/components";
+import { dismissKey } from "@renderer/shared/components/updateDialogModel";
 import { Titlebar } from "@renderer/shared/components/chrome/Titlebar";
 import { AppNav, type AppNavItem } from "@renderer/shared/components/chrome/AppNav";
 import { AutopilotChip } from "@renderer/shared/components/chrome/AutopilotChip";
@@ -39,6 +40,10 @@ function App() {
 
 type Model = ReturnType<typeof useAppModel>;
 
+/** Height of the custom titlebar (h-9); the update dialog's backdrop starts
+ *  below it so the window controls stay usable. */
+const TITLEBAR_HEIGHT = 36;
+
 function AppShell({ model }: { model: Model }) {
   const { t } = useI18n();
   const {
@@ -53,8 +58,18 @@ function AppShell({ model }: { model: Model }) {
     settingsProps,
     debugSnapshot,
     debugEnabled,
-    updateOverlayProps,
+    updateDialogProps,
   } = model;
+
+  // "later" hides the update dialog for that version; the titlebar's
+  // "restart to update" chip clears it to reopen the dialog.
+  const [dismissedUpdate, setDismissedUpdate] = React.useState<string | null>(null);
+  const updateVersion = updateDialogProps.updateStatus.version;
+  const dismissUpdate = React.useCallback(
+    () => setDismissedUpdate(dismissKey(updateVersion)),
+    [updateVersion],
+  );
+  const reopenUpdate = React.useCallback(() => setDismissedUpdate(null), []);
 
   const {
     theme: titleBarTheme,
@@ -176,10 +191,15 @@ function AppShell({ model }: { model: Model }) {
           onThemeToggle={toggleTheme}
           updateStatus={titleBarProps.updateStatus}
           onDownloadUpdate={titleBarProps.onDownloadUpdate}
-          onInstallUpdate={titleBarProps.onInstallUpdate}
+          onShowUpdate={reopenUpdate}
         />
       )}
-      <UpdateOverlay {...updateOverlayProps} />
+      <UpdateDialog
+        {...updateDialogProps}
+        dismissedVersion={dismissedUpdate}
+        onLater={dismissUpdate}
+        topInset={isMac ? 0 : TITLEBAR_HEIGHT}
+      />
       <AppNav view={navProps.view} onChange={setView} items={navItems} right={navRight} />
       {/* On overview the needs-you panel carries the re-login prompt. */}
       {navProps.view !== "overview" && (

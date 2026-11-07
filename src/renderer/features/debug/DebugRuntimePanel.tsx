@@ -1,8 +1,8 @@
 import * as React from "react";
 import { useI18n } from "@renderer/shared/i18n";
-import { SectionLabel } from "@renderer/shared/components/ui/section-label";
-import { Pill } from "@renderer/shared/components/ui/pill";
+import { cn } from "@renderer/shared/lib/utils";
 import type { ChannelTrackerShardStatus } from "@renderer/shared/types";
+import { summarizeTrackerShards, type TrackerSummaryTone } from "./debugHelpers";
 
 export type DebugFact = {
   key: string;
@@ -17,90 +17,129 @@ export type DebugRuntimePanelProps = {
   formatNumber: (val: number) => string;
 };
 
+const PANEL =
+  "min-w-0 overflow-hidden rounded-[var(--dp-radius-xl)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)]";
+const PANEL_HEAD = "flex items-center gap-2.5 border-b border-[color:var(--dp-border)] px-4 py-3";
+const PANEL_TITLE = "m-0 text-[13px] font-semibold text-[color:var(--dp-text)]";
+
+const SUMMARY_TONE: Record<TrackerSummaryTone, string> = {
+  none: "text-[color:var(--dp-text-dimmer)]",
+  ok: "text-[color:var(--dp-text-dim)]",
+  partial: "text-[color:var(--dp-signal-warn)]",
+  down: "text-[color:var(--dp-signal-err)]",
+};
+
+const SHARD_STATE: Record<ChannelTrackerShardStatus["connectionState"], string> = {
+  connected: "text-[color:var(--dp-signal-ok)]",
+  connecting: "text-[color:var(--dp-signal-warn)]",
+  disconnected: "text-[color:var(--dp-signal-err)]",
+};
+
 export function DebugRuntimePanel({ facts, trackerShards, formatNumber }: DebugRuntimePanelProps) {
   const { t } = useI18n();
+  const runtimeId = React.useId();
+  const trackerId = React.useId();
+  const summary = summarizeTrackerShards(trackerShards);
+
   return (
-    <div className="flex flex-col gap-4">
-      {/* Runtime facts */}
-      <div className="rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] px-5 py-4">
-        <SectionLabel>{t("debug.runtime.title")}</SectionLabel>
-        <div className="mt-1 mb-3 text-[12px] leading-snug text-[color:var(--dp-text-dim)]">
-          {t("debug.runtime.subtitle")}
+    <div className="flex min-w-0 flex-col gap-4">
+      <section aria-labelledby={runtimeId} className={PANEL}>
+        <div className={PANEL_HEAD}>
+          <h2 id={runtimeId} className={PANEL_TITLE}>
+            {t("debug.runtime.title")}
+          </h2>
         </div>
-        <div
-          className="grid gap-2.5"
-          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))" }}
-        >
+        <dl className="m-0 px-4 pb-2 pt-1">
           {facts.map((fact) => (
-            <div key={fact.key} className="min-w-0">
-              <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[color:var(--dp-text-dimmer)] mb-0.5">
+            <div
+              key={fact.key}
+              className="grid grid-cols-[120px_minmax(0,1fr)] gap-3 border-b border-[color:var(--dp-border)] py-[7px] last:border-b-0"
+            >
+              <dt className="font-mono text-[11px] text-[color:var(--dp-text-dimmer)]">
                 {fact.label}
-              </div>
-              <div className="text-[13px] font-medium text-[color:var(--dp-text)] truncate">
-                {fact.value}
-              </div>
-              {fact.meta && (
-                <div className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)] mt-0.5 truncate">
-                  {fact.meta}
-                </div>
-              )}
+              </dt>
+              <dd className="m-0 min-w-0">
+                <span
+                  className="block truncate font-mono text-[12px] text-[color:var(--dp-text)]"
+                  title={fact.value}
+                >
+                  {fact.value}
+                </span>
+                {fact.meta && (
+                  <span className="block truncate font-mono text-[11px] text-[color:var(--dp-text-dimmer)]">
+                    {fact.meta}
+                  </span>
+                )}
+              </dd>
             </div>
           ))}
-        </div>
-      </div>
+        </dl>
+      </section>
 
-      {/* Tracker shards */}
-      <div className="rounded-[var(--dp-radius-lg)] border border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated)] px-5 py-4">
-        <SectionLabel>{t("debug.trackerShards")}</SectionLabel>
-        <div className="mt-1 mb-3 text-[12px] leading-snug text-[color:var(--dp-text-dim)]">
-          {t("debug.trackerShardsHelp")}
+      <section aria-labelledby={trackerId} className={PANEL}>
+        <div className={PANEL_HEAD}>
+          <h2 id={trackerId} className={PANEL_TITLE}>
+            {t("debug.tracker.title")}
+          </h2>
+          <span className={cn("ml-auto font-mono text-[11px]", SUMMARY_TONE[summary.tone])}>
+            {summary.total > 0
+              ? t("debug.tracker.connected", {
+                  connected: formatNumber(summary.connected),
+                  total: formatNumber(summary.total),
+                })
+              : t("debug.tracker.noShards")}
+          </span>
         </div>
-        <div className="mb-3 text-[12px] leading-snug text-[color:var(--dp-text-dim)]">
-          {t("debug.websocketHelp")}
-        </div>
+        <p className="m-0 px-4 pb-1 pt-2.5 text-[12px] leading-normal text-[color:var(--dp-text-dim)]">
+          {t("debug.tracker.help")}
+        </p>
         {trackerShards.length > 0 ? (
-          <ul className="flex flex-col gap-2">
-            {trackerShards.map((shard) => {
-              const tone: "ok" | "warn" | "err" =
-                shard.connectionState === "connected"
-                  ? "ok"
-                  : shard.connectionState === "connecting"
-                    ? "warn"
-                    : "err";
-              return (
-                <li
-                  key={shard.id}
-                  className="flex items-center justify-between gap-3 rounded-[var(--dp-radius-md)] border border-[color:var(--dp-border-soft)] bg-[color:var(--dp-bg-elevated-2)] px-3 py-2"
-                >
-                  <div className="flex flex-col gap-0.5 min-w-0">
-                    <span className="text-[12px] font-medium text-[color:var(--dp-text)] truncate">
-                      {t("debug.trackerShard", { id: String(shard.id) })}
-                    </span>
-                    <span className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)] truncate">
-                      {t("debug.summary.subscriptions", {
-                        active: formatNumber(shard.subscriptions),
-                        desired: formatNumber(shard.desiredSubscriptions),
-                      })}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <Pill tone={tone} dot>
+          <table className="w-full border-collapse font-mono text-[11px] tabular-nums">
+            <thead>
+              <tr className="text-[color:var(--dp-text-dimmer)]">
+                <th scope="col" className="px-4 py-2 text-left font-normal">
+                  {t("debug.tracker.col.shard")}
+                </th>
+                <th scope="col" className="py-2 text-left font-normal">
+                  {t("debug.tracker.col.state")}
+                </th>
+                <th scope="col" className="py-2 text-right font-normal">
+                  {t("debug.tracker.col.subs")}
+                </th>
+                <th scope="col" className="px-4 py-2 text-right font-normal">
+                  {t("debug.tracker.col.reconnects")}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {trackerShards.map((shard) => (
+                <tr key={shard.id} className="border-t border-[color:var(--dp-border)]">
+                  <td className="px-4 py-1.5 text-[color:var(--dp-text)]">#{shard.id}</td>
+                  <td className={cn("py-1.5", SHARD_STATE[shard.connectionState])}>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span
+                        aria-hidden="true"
+                        className="h-1.5 w-1.5 flex-none rounded-full bg-current"
+                      />
                       {t(`control.trackerConn.${shard.connectionState}`)}
-                    </Pill>
-                    <span className="font-mono text-[10px] text-[color:var(--dp-text-dimmer)]">
-                      {t("debug.trackerReconnectsShort")}: {formatNumber(shard.reconnectAttempts)}
                     </span>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+                  </td>
+                  <td className="py-1.5 text-right text-[color:var(--dp-text-dim)]">
+                    {formatNumber(shard.subscriptions)} / {formatNumber(shard.desiredSubscriptions)}
+                  </td>
+                  <td className="px-4 py-1.5 text-right text-[color:var(--dp-text-dim)]">
+                    {formatNumber(shard.reconnectAttempts)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         ) : (
-          <div className="rounded-[var(--dp-radius-md)] border border-dashed border-[color:var(--dp-border)] bg-[color:var(--dp-bg-elevated-2)] px-3 py-4 text-[12px] text-[color:var(--dp-text-dimmer)]">
+          <div className="mx-4 mb-4 mt-2 rounded-[var(--dp-radius-md)] border border-dashed border-[color:var(--dp-border)] px-3 py-4 text-center text-[12px] text-[color:var(--dp-text-dimmer)]">
             {t("debug.summary.noSignal")}
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

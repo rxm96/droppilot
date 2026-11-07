@@ -6,7 +6,6 @@ import type {
   InventoryState,
 } from "@renderer/shared/types";
 import type { FarmPlan } from "@renderer/shared/domain/farmPlan";
-import { sameGameName } from "@renderer/shared/domain/gameName";
 import { ChevronDown } from "@renderer/shared/lib/icons";
 import { cn } from "@renderer/shared/lib/utils";
 import { resolveErrorMessage } from "@renderer/shared/utils/errors";
@@ -16,7 +15,6 @@ import { useInventoryViewState } from "./useInventoryViewState";
 import { DropsHeader } from "./DropsHeader";
 import { DropsFilter } from "./DropsFilter";
 import { DropGroup } from "./DropGroup";
-import { InventoryDrawer } from "./InventoryDrawer";
 
 type InventoryProps = {
   inventory: InventoryState;
@@ -78,23 +76,6 @@ export function InventoryView({
     [activeDrop, allItems, campaigns, farmPlan, filter, rankedGames, state.search, watchingChannel],
   );
 
-  const selectDrop = state.selectDrop;
-  const handleDrawerClose = React.useCallback(() => selectDrop(null), [selectDrop]);
-  const selectedRow = React.useMemo(() => {
-    if (!state.selectedDropId) return null;
-    return (
-      [...view.groups, ...view.expired]
-        .flatMap((g) => g.rows)
-        .find((r) => r.id === state.selectedDropId) ?? null
-    );
-  }, [state.selectedDropId, view]);
-  const selectedCampaign = selectedRow
-    ? (campaigns.find((c) => c.id === selectedRow.item.campaignId) ?? null)
-    : null;
-  const selectedIsRanked = selectedRow
-    ? rankedGames.some((g) => sameGameName(g, selectedRow.item.game))
-    : false;
-
   const inventoryErrorText =
     inventory.status === "error"
       ? resolveErrorMessage(t, { code: inventory.code, message: inventory.message })
@@ -108,9 +89,16 @@ export function InventoryView({
         ? t("drops.empty.noMatch")
         : t("drops.empty.none");
 
+  // From the plan, not the filtered view: a search can hide the watching row.
+  const farmingGame =
+    farmPlan.rows.find((r) => r.kind === "drop" && r.status === "watching")?.game ?? null;
+
   const groupProps = {
-    selectedDropId: state.selectedDropId,
-    onSelectDrop: state.selectDrop,
+    openDropId: state.openDropId,
+    onToggleDrop: state.toggleDrop,
+    campaigns,
+    rankedGames,
+    farmingGame,
     onAddPriorityGame,
     onOpenAccountLink,
   };
@@ -166,17 +154,6 @@ export function InventoryView({
           {inventoryErrorText}
         </div>
       )}
-
-      <InventoryDrawer
-        drop={selectedRow?.item ?? null}
-        status={selectedRow?.status ?? null}
-        watched={selectedRow?.watched ?? null}
-        campaign={selectedCampaign}
-        isPriorityGame={selectedIsRanked}
-        onClose={handleDrawerClose}
-        onOpenAccountLink={onOpenAccountLink}
-        onAddPriorityGame={onAddPriorityGame}
-      />
     </div>
   );
 }

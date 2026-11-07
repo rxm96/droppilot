@@ -38,6 +38,17 @@ export function useUpdateActions({ setUpdateStatus }: Params) {
         });
         return;
       }
+      if (res.ok && res.status === "downloaded") {
+        setUpdateStatus({
+          state: "downloaded",
+          version: typeof res.version === "string" ? res.version : undefined,
+          releaseNotes:
+            typeof (res as { releaseNotes?: unknown }).releaseNotes === "string"
+              ? (res as { releaseNotes?: string }).releaseNotes
+              : undefined,
+        });
+        return;
+      }
       if (res.ok && res.status === "none") {
         setUpdateStatus({ state: "none" });
         return;
