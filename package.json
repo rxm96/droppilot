@@ -59,6 +59,17 @@
       "allowToChangeInstallationDirectory": false
     }
   },
+  "overrides": {
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "^11.0.7"
+    },
+    "app-builder-lib": {
+      "minimatch": "^11.0.7"
+    },
+    "@electron/universal": {
+      "minimatch": "^11.0.7"
+    }
+  },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
@@ -69,7 +80,7 @@
     "@radix-ui/react-slot": "^1.2.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "electron-updater": "^6.8.3",
+    "electron-updater": "^6.8.11",
     "lucide-react": "^1.17.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
@@ -85,20 +96,20 @@
     "@typescript-eslint/parser": "^8.60.0",
     "@vitejs/plugin-react": "^5.2.0",
     "autoprefixer": "^10.5.0",
-    "electron": "^42.3.0",
-    "electron-builder": "^26.8.1",
+    "electron": "^42.11.18",
+    "electron-builder": "^26.18.0",
     "eslint": "^9.39.4",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "playwright": "^1.60.0",
-    "postcss": "^8.5.15",
+    "postcss": "^8.5.32",
     "prettier": "^3.8.3",
     "tailwindcss": "^4.3.0",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^6.0.3",
-    "vite": "^7.3.3",
+    "vite": "^7.3.8",
     "vite-plugin-electron": "^0.29.1",
     "vite-plugin-electron-renderer": "^0.14.7",
-    "vitest": "^4.1.7"
+    "vitest": "^4.1.12"
   }
 }
