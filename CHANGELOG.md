@@ -11,6 +11,11 @@ GitHub Release (which the app's update history shows) is built from that section
 
 ## [Unreleased]
 
+### Fixed
+
+- Security fixes: DropPilot now runs on an updated Electron and update component that close
+  several known vulnerabilities.
+
 ## [4.2.0] - 2026-11-07
 
 ### Added
